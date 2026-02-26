@@ -1,91 +1,101 @@
-"""Main pipeline: fetch → download → parse → translate → tag → build → email."""
+"""Main pipeline: fetch → parse (HTML or PDF) → translate → build site → email."""
 import sys
 import json
-from datetime import date, timedelta
+from datetime import date
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from .config import DATA_DIR
 from .fetch_papers import fetch_daily_papers
 from .download_pdf import download_pdf
+from .parse_arxiv_html import parse_arxiv_html
 from .parse_pdf import parse_pdf
-from .translate import translate_abstract, translate_paper_content
+from .translate import translate_abstract, translate_title, translate_markdown
 from .generate_tags import generate_tags
 from .build_site import build_site
 from .send_email import send_daily_digest
 
 
-def process_paper(paper: dict, date_str: str) -> dict:
-    """Full pipeline for a single paper. Returns enriched paper dict."""
+def _translate_paper_meta(paper: dict, date_str: str) -> dict:
+    """Translate abstract + title + generate tags. Fast, run first."""
     arxiv_id = paper["arxiv_id"]
-    print(f"\n{'='*60}")
-    print(f"Processing: {arxiv_id}")
-    print(f"Title: {paper['title'][:80]}")
 
-    # --- Abstract translation ---
-    abstract_cache = DATA_DIR / date_str / arxiv_id / "abstract_zh.txt"
-    if abstract_cache.exists():
-        paper["abstract_zh"] = abstract_cache.read_text(encoding="utf-8")
+    # Abstract
+    cache = DATA_DIR / date_str / arxiv_id / "abstract_zh.txt"
+    if cache.exists():
+        paper["abstract_zh"] = cache.read_text(encoding="utf-8")
     else:
-        print(f"[main] Translating abstract...")
         try:
             paper["abstract_zh"] = translate_abstract(paper["abstract"])
-            abstract_cache.parent.mkdir(parents=True, exist_ok=True)
-            abstract_cache.write_text(paper["abstract_zh"], encoding="utf-8")
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(paper["abstract_zh"], encoding="utf-8")
         except Exception as e:
-            print(f"[main] Abstract translation failed: {e}")
+            print(f"[meta] Abstract translation failed {arxiv_id}: {e}")
             paper["abstract_zh"] = ""
 
-    # --- Title translation ---
-    title_cache = DATA_DIR / date_str / arxiv_id / "title_zh.txt"
-    if title_cache.exists():
-        paper["title_zh"] = title_cache.read_text(encoding="utf-8")
+    # Title
+    cache = DATA_DIR / date_str / arxiv_id / "title_zh.txt"
+    if cache.exists():
+        paper["title_zh"] = cache.read_text(encoding="utf-8")
     else:
-        print(f"[main] Translating title...")
         try:
-            from .translate import _client, TRANSLATE_MODEL
-            msg = _client.messages.create(
-                model=TRANSLATE_MODEL,
-                max_tokens=256,
-                messages=[{"role": "user", "content": f"請將以下論文標題翻譯成繁體中文（保留英文縮寫和專有名詞），只回覆翻譯結果：\n\n{paper['title']}"}],
-            )
-            paper["title_zh"] = msg.content[0].text.strip()
-            title_cache.parent.mkdir(parents=True, exist_ok=True)
-            title_cache.write_text(paper["title_zh"], encoding="utf-8")
+            paper["title_zh"] = translate_title(paper["title"])
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(paper["title_zh"], encoding="utf-8")
         except Exception as e:
-            print(f"[main] Title translation failed: {e}")
+            print(f"[meta] Title translation failed {arxiv_id}: {e}")
             paper["title_zh"] = ""
 
-    # --- Metadata tags ---
-    print(f"[main] Generating tags...")
+    # Tags
     try:
         paper["tags"] = generate_tags(paper["title"], paper["abstract"], arxiv_id, date_str)
     except Exception as e:
-        print(f"[main] Tag generation failed: {e}")
+        print(f"[meta] Tags failed {arxiv_id}: {e}")
         paper["tags"] = {"domain": [], "method": [], "task": [], "dataset": [], "open_source": False}
 
-    # --- PDF download ---
-    pdf_path = download_pdf(arxiv_id, date_str)
-    if pdf_path is None:
-        print(f"[main] Skipping full translation (PDF unavailable)")
-        paper["content"] = []
-        return paper
+    return paper
 
-    # --- PDF parse ---
-    print(f"[main] Parsing PDF...")
-    try:
-        elements = parse_pdf(pdf_path, arxiv_id, date_str)
-    except Exception as e:
-        print(f"[main] PDF parse failed: {e}")
-        paper["content"] = []
-        return paper
 
-    # --- Full translation ---
-    print(f"[main] Translating full content ({len(elements)} elements)...")
-    try:
-        paper["content"] = translate_paper_content(elements, arxiv_id, date_str)
-    except Exception as e:
-        print(f"[main] Full translation failed: {e}")
-        paper["content"] = elements  # fallback: untranslated
+def process_paper(paper: dict, date_str: str) -> dict:
+    """Full pipeline for a single paper."""
+    arxiv_id = paper["arxiv_id"]
+    print(f"\n{'='*60}\nProcessing: {arxiv_id}\n{paper['title'][:70]}\n{'='*60}")
+
+    # Step 1: meta (fast)
+    paper = _translate_paper_meta(paper, date_str)
+
+    # Step 2: parse content — try HTML first, fall back to PDF
+    parsed = parse_arxiv_html(arxiv_id, date_str)
+
+    if parsed is None:
+        print(f"[main] No HTML version, falling back to PDF for {arxiv_id}")
+        pdf_path = download_pdf(arxiv_id, date_str)
+        if pdf_path is None:
+            print(f"[main] PDF download failed for {arxiv_id}, skipping content")
+            paper["content_md_zh"] = ""
+            paper["figures"] = []
+            return paper
+        try:
+            parsed = parse_pdf(pdf_path, arxiv_id, date_str)
+        except Exception as e:
+            print(f"[main] PDF parse failed {arxiv_id}: {e}")
+            paper["content_md_zh"] = ""
+            paper["figures"] = []
+            return paper
+
+    # Step 3: translate full content
+    markdown = parsed.get("markdown", "")
+    paper["figures"] = parsed.get("figures", [])
+    paper["parse_source"] = parsed.get("source", "unknown")
+
+    if markdown:
+        try:
+            paper["content_md_zh"] = translate_markdown(markdown, arxiv_id, date_str)
+        except Exception as e:
+            print(f"[main] Translation failed {arxiv_id}: {e}")
+            paper["content_md_zh"] = markdown  # fallback: untranslated
+    else:
+        paper["content_md_zh"] = ""
 
     return paper
 
@@ -94,42 +104,44 @@ def run(target_date: date | None = None) -> None:
     if target_date is None:
         target_date = date.today()
     date_str = target_date.isoformat()
-    print(f"\n{'#'*60}")
-    print(f"HF Papers pipeline — {date_str}")
-    print(f"{'#'*60}\n")
+    print(f"\n{'#'*60}\nHF Papers pipeline — {date_str}\n{'#'*60}\n")
 
-    # 1. Fetch paper list
     papers = fetch_daily_papers(target_date)
     if not papers:
-        print(f"[main] No papers found for {date_str}, exiting")
+        print(f"[main] No papers for {date_str}, exiting")
         return
 
-    # 2. Process each paper
-    enriched_papers = []
-    for paper in papers:
-        try:
-            enriched = process_paper(paper, date_str)
-            enriched_papers.append(enriched)
-        except Exception as e:
-            print(f"[main] ERROR processing {paper.get('arxiv_id', '?')}: {e}")
-            enriched_papers.append(paper)  # include with whatever we have
+    print(f"[main] Processing {len(papers)} papers with ThreadPoolExecutor...")
+    enriched: list[dict] = [None] * len(papers)
 
-    # 3. Build site
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        future_to_idx = {
+            ex.submit(process_paper, dict(p), date_str): i
+            for i, p in enumerate(papers)
+        }
+        for future in as_completed(future_to_idx):
+            idx = future_to_idx[future]
+            try:
+                enriched[idx] = future.result()
+            except Exception as e:
+                print(f"[main] Paper {idx} ERROR: {e}")
+                enriched[idx] = papers[idx]
+
+    enriched = [p for p in enriched if p is not None]
+
     print(f"\n[main] Building site...")
-    build_site(date_str, enriched_papers)
+    build_site(date_str, enriched)
 
-    # 4. Send email
-    print(f"\n[main] Sending email digest...")
+    print(f"\n[main] Sending email...")
     try:
-        send_daily_digest(date_str, enriched_papers)
+        send_daily_digest(date_str, enriched)
     except Exception as e:
         print(f"[main] Email failed (non-fatal): {e}")
 
-    print(f"\n[main] Done! Processed {len(enriched_papers)} papers for {date_str}")
+    print(f"\n[main] Done! {len(enriched)} papers for {date_str}")
 
 
 if __name__ == "__main__":
-    # Allow passing a date as CLI argument: python -m src.main 2026-02-25
     target = None
     if len(sys.argv) > 1:
         target = date.fromisoformat(sys.argv[1])

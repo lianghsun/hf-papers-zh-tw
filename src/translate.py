@@ -1,8 +1,7 @@
-"""Translate paper content using Claude API."""
+"""Translate paper Markdown content using Claude API."""
 import re
 import json
 import anthropic
-from pathlib import Path
 
 from .config import ANTHROPIC_API_KEY, TRANSLATE_MODEL, DATA_DIR
 
@@ -13,13 +12,12 @@ SYSTEM_PROMPT = (
     "翻譯規則：\n"
     "1. 翻譯成繁體中文（台灣用語）\n"
     "2. 專有名詞、模型名稱、縮寫保留英文（如 Transformer、RLHF、LoRA、ResNet）\n"
-    "3. 保持學術文章的嚴謹語氣\n"
-    "4. 不省略任何內容，完整翻譯\n"
-    "5. 如果輸入包含 HTML 表格標籤，保留 HTML 結構只翻譯文字\n"
-    "6. LaTeX 公式保持原樣，只翻譯周圍的說明文字"
+    "3. 保持學術文章的嚴謹語氣，不省略任何內容\n"
+    "4. 保留所有 Markdown 格式符號（#、**、*、|、-）\n"
+    "5. 表格的 Markdown 格式（| col | col |）完整保留，只翻譯文字內容\n"
+    "6. [FIGURE:xxx] 和 [FIGURE_CAPTION] 標記保留原樣不翻譯\n"
+    "7. LaTeX 數學式（$...$ 或 $$...$$）保留原樣"
 )
-
-SEP = "|||SEG|||"
 
 
 def translate_abstract(abstract: str) -> str:
@@ -32,99 +30,82 @@ def translate_abstract(abstract: str) -> str:
     return msg.content[0].text.strip()
 
 
-def translate_paper_content(elements: list[dict], arxiv_id: str, date_str: str) -> list[dict]:
-    """
-    Translate all text elements in place, adding 'text_zh' field.
-    Non-text elements (image, formula) pass through unchanged.
-    Results are cached.
-    """
-    cache_path = DATA_DIR / date_str / arxiv_id / "translated.json"
-    if cache_path.exists():
-        print(f"[translate] Using cache for {arxiv_id}")
-        return json.loads(cache_path.read_text())
-
-    result = [dict(e) for e in elements]  # shallow copy
-
-    # Collect indices of translatable text elements
-    translatable_types = {"text", "section", "title", "caption", "footnote"}
-    text_indices = [i for i, e in enumerate(result) if e["type"] in translatable_types]
-
-    # Process in batches (by accumulated character length)
-    batch_indices: list[int] = []
-    batch_chars = 0
-    BATCH_LIMIT = 3000
-
-    def flush_batch():
-        if not batch_indices:
-            return
-        texts = [result[i]["text"] for i in batch_indices]
-        translations = _translate_batch(texts)
-        for idx, trans in zip(batch_indices, translations):
-            result[idx]["text_zh"] = trans
-
-    for i in text_indices:
-        text_len = len(result[i]["text"])
-        if batch_chars + text_len > BATCH_LIMIT and batch_indices:
-            flush_batch()
-            batch_indices = []
-            batch_chars = 0
-        batch_indices.append(i)
-        batch_chars += text_len
-
-    flush_batch()
-
-    # Translate tables separately (keep HTML structure)
-    for i, elem in enumerate(result):
-        if elem["type"] == "table":
-            try:
-                msg = _client.messages.create(
-                    model=TRANSLATE_MODEL,
-                    max_tokens=4096,
-                    system=SYSTEM_PROMPT,
-                    messages=[{
-                        "role": "user",
-                        "content": (
-                            "請翻譯以下 HTML 表格的文字內容，完整保留所有 HTML 標籤和結構：\n\n"
-                            + elem["text"]
-                        ),
-                    }],
-                )
-                result[i]["text_zh"] = msg.content[0].text.strip()
-            except Exception as e:
-                print(f"[translate] Table translation failed: {e}")
-                result[i]["text_zh"] = elem["text"]  # fallback: original
-
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    cache_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
-    print(f"[translate] {arxiv_id}: translated {len(text_indices)} text elements")
-    return result
-
-
-def _translate_batch(texts: list[str]) -> list[str]:
-    """Translate a batch of strings, returning same-length list of translations."""
-    if not texts:
-        return []
-
-    # Join with unique separator
-    combined = f"\n{SEP}\n".join(texts)
-    prompt = (
-        f"請翻譯以下 {len(texts)} 段文字。"
-        f"每段之間以 {SEP} 分隔，請保持完全相同的分隔格式回覆翻譯結果：\n\n"
-        + combined
-    )
-
+def translate_title(title: str) -> str:
     msg = _client.messages.create(
         model=TRANSLATE_MODEL,
-        max_tokens=8192,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
+        max_tokens=256,
+        messages=[{"role": "user", "content":
+            f"請將以下論文標題翻譯成繁體中文（保留英文縮寫和專有名詞），只回覆翻譯結果：\n\n{title}"}],
     )
-    content = msg.content[0].text
+    return msg.content[0].text.strip()
 
-    parts = [p.strip() for p in content.split(SEP)]
 
-    # Ensure we return exactly len(texts) items
-    if len(parts) < len(texts):
-        # Pad with originals for any missing translations
-        parts += texts[len(parts):]
-    return parts[: len(texts)]
+def _split_markdown(markdown: str, max_chars: int = 3000) -> list[str]:
+    """
+    Split Markdown into chunks at section boundaries (# headers).
+    If a section is still too large, further split by paragraphs.
+    """
+    # Split at top-level section headers
+    parts = re.split(r"(?m)^(?=#{1,3} )", markdown)
+    chunks = []
+    current = ""
+
+    for part in parts:
+        if len(current) + len(part) > max_chars and current:
+            chunks.append(current.strip())
+            current = part
+        else:
+            current += part
+
+    if current.strip():
+        # Further split large chunks by paragraphs
+        if len(current) > max_chars:
+            paras = current.split("\n\n")
+            sub = ""
+            for p in paras:
+                if len(sub) + len(p) > max_chars and sub:
+                    chunks.append(sub.strip())
+                    sub = p
+                else:
+                    sub += "\n\n" + p
+            if sub.strip():
+                chunks.append(sub.strip())
+        else:
+            chunks.append(current.strip())
+
+    return [c for c in chunks if c]
+
+
+def translate_markdown(markdown: str, arxiv_id: str, date_str: str) -> str:
+    """
+    Translate full paper Markdown, chunked by sections.
+    Results are cached.
+    """
+    cache_path = DATA_DIR / date_str / arxiv_id / "translated_md.txt"
+    if cache_path.exists():
+        print(f"[translate] Using cache for {arxiv_id}")
+        return cache_path.read_text(encoding="utf-8")
+
+    chunks = _split_markdown(markdown)
+    print(f"[translate] {arxiv_id}: {len(chunks)} chunks to translate")
+
+    translated_chunks = []
+    for i, chunk in enumerate(chunks):
+        print(f"[translate] {arxiv_id} chunk {i+1}/{len(chunks)} ({len(chunk)} chars)")
+        try:
+            msg = _client.messages.create(
+                model=TRANSLATE_MODEL,
+                max_tokens=8192,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content":
+                    f"請翻譯以下論文段落（保留所有 Markdown 格式）：\n\n{chunk}"}],
+            )
+            translated_chunks.append(msg.content[0].text.strip())
+        except Exception as e:
+            print(f"[translate] Chunk {i+1} failed: {e}, using original")
+            translated_chunks.append(chunk)
+
+    result = "\n\n".join(translated_chunks)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(result, encoding="utf-8")
+    return result
