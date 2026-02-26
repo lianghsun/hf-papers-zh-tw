@@ -18,6 +18,11 @@ def fetch_daily_papers(target_date: date) -> list[dict]:
 
     print(f"[fetch] Fetching papers for {date_str} from HF API...")
     resp = httpx.get(HF_API, params={"date": date_str}, timeout=30)
+
+    if resp.status_code in (400, 404):
+        print(f"[fetch] HF API returned {resp.status_code} for {date_str} — papers not published yet or date unavailable")
+        return []
+
     resp.raise_for_status()
     raw = resp.json()
 

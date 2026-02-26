@@ -49,6 +49,7 @@ jobs:
 
       - name: Build pagefind search index
         run: npx --yes pagefind --source docs
+        continue-on-error: true   # pagefind fails gracefully if docs/ is empty
 
       - name: Commit and push results
         run: |
