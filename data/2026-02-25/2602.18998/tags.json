@@ -1,0 +1,24 @@
+{
+  "domain": [
+    "NLP",
+    "Code"
+  ],
+  "method": [
+    "LLM",
+    "Agent",
+    "Test-time Scaling",
+    "Sequential Scaling",
+    "Parallel Scaling"
+  ],
+  "task": [
+    "Agent Evaluation",
+    "Tool Use",
+    "Reasoning",
+    "Code Generation",
+    "Search"
+  ],
+  "dataset": [
+    "General AgentBench"
+  ],
+  "open_source": true
+}

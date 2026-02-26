@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通過主動重建學習檢測語言模型訓練數據 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">通過主動重建學習檢測語言模型訓練數據</h1>
+  
+  <div class="en-title">Learning to Detect Language Model Training Data via Active Reconstruction</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Junjie Oscar Yin, John X. Morris, Vitaly Shmatikov, Sewon Min, Hannaneh Hajishirzi</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.19020" target="_blank">2602.19020</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.19020" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.19020" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.19020" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+    <span class="tag method">Reinforcement Learning</span><span class="tag method">Membership Inference Attack</span><span class="tag method">Policy Finetuning</span>
+    <span class="tag task">Membership Inference</span><span class="tag task">Data Detection</span><span class="tag task">Model Security</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+檢測大語言模型（LLM）訓練資料通常被框架化為成員推斷攻擊（MIA）問題。然而，傳統的 MIA 被動地對固定的模型權重進行操作，使用對數概率或文本生成。在本研究中，我們引入主動資料重建攻擊（ADRA），一類透過訓練主動誘導模型重建給定文本的 MIA 方法。我們假設訓練資料的可重建性優於非成員資料，並且可以利用它們的可重建性差異進行成員推斷。基於強化學習（RL）能夠強化權重中已編碼行為的發現，我們利用策略上的 RL 來主動引發資料重建，方法是從目標模型初始化一個策略進行微調。為了有效地將 RL 用於 MIA，我們設計了重建指標和對比獎勵。所得的演算法 ADRA 及其自適應變體 ADRA+，在候選資料池中改進了重建和檢測性能。實驗顯示，我們的方法在檢測預訓練、後訓練和蒸餾資料方面始終優於現有 MIA，相比之前最佳方法平均改進 10.7%。特別地，ADRA+ 在 BookMIA 預訓練檢測上相比 Min-K%++ 改進 18.8%，在 AIME 後訓練檢測上改進 7.6%。</p>
+  
+  <div class="abstract-en">Detecting LLM training data is generally framed as a membership inference attack (MIA) problem. However, conventional MIAs operate passively on fixed model weights, using log-likelihoods or text generations. In this work, we introduce Active Data Reconstruction Attack (ADRA), a family of MIA that actively induces a model to reconstruct a given text through training. We hypothesize that training data are more reconstructible than non-members, and the difference in their reconstructibility can be exploited for membership inference. Motivated by findings that reinforcement learning (RL) sharpens behaviors already encoded in weights, we leverage on-policy RL to actively elicit data reconstruction by finetuning a policy initialized from the target model. To effectively use RL for MIA, we design reconstruction metrics and contrastive rewards. The resulting algorithms, ADRA and its adaptive variant ADRA+, improve both reconstruction and detection given a pool of candidate data. Experiments show that our methods consistently outperform existing MIAs in detecting pre-training, post-training, and distillation data, with an average improvement of 10.7\% over the previous runner-up. In particular, \MethodPlus~improves over Min-K\%++ by 18.8\% on BookMIA for pre-training detection and by 7.6\% on AIME for post-training detection.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

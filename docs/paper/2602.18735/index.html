@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LaS-Comp：具有潛在空間一致性的零樣本3D補全 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">LaS-Comp：具有潛在空間一致性的零樣本3D補全</h1>
+  
+  <div class="en-title">LaS-Comp: Zero-shot 3D Completion with Latent-Spatial Consistency</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Weilong Yan, Haipeng Li, Hao Xu, Nianjin Ye, Yihao Ai, Shuaicheng Liu, Jingyu Hu</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.18735" target="_blank">2602.18735</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.18735" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.18735" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.18735" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span>
+    <span class="tag method">Diffusion</span><span class="tag method">3D Foundation Models</span><span class="tag method">Generative Priors</span>
+    <span class="tag task">3D Shape Completion</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+本論文介紹 LaS-Comp，一種零樣本且類別無關的方法，利用 3D 基礎模型豐富的幾何先驗，實現跨多種不完整觀測類型的 3D 形狀補全。我們的貢獻有三方面：首先，通過互補的兩階段設計來利用這些強大的生成先驗進行補全：(i) 顯式替換階段保留不完整觀測的幾何特性，以確保忠實的補全；(ii) 隱式精化階段確保觀測區域與合成區域之間的無縫邊界。其次，我們的框架無需訓練，並與不同的 3D 基礎模型相容。第三，我們引入 Omni-Comp，一個綜合基準，結合真實世界和合成資料，包含多樣且具有挑戰性的不完整模式，實現更全面且逼真的評估。定量和定性實驗均表明我們的方法優於先前的最先進方法。我們的程式碼和資料將在 https://github.com/DavidYan2001/LaS-Comp 提供。</p>
+  
+  <div class="abstract-en">This paper introduces LaS-Comp, a zero-shot and category-agnostic approach that leverages the rich geometric priors of 3D foundation models to enable 3D shape completion across diverse types of partial observations. Our contributions are threefold: First,  harnesses these powerful generative priors for completion through a complementary two-stage design: (i) an explicit replacement stage that preserves the partial observation geometry to ensure faithful completion; and (ii) an implicit refinement stage ensures seamless boundaries between the observed and synthesized regions. Second, our framework is training-free and compatible with different 3D foundation models. Third, we introduce Omni-Comp, a comprehensive benchmark combining real-world and synthetic data with diverse and challenging partial patterns, enabling a more thorough and realistic evaluation. Both quantitative and qualitative experiments demonstrate that our approach outperforms previous state-of-the-art approaches. Our code and data will be available at https://github.com/DavidYan2001/LaS-Comp{LaS-Comp}.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <p>[26] Zitian Huang, Yikuan Yu, Jiawen Xu, Feng Ni, 和 Xinyi Le。PF-Net: Point Fractal Network for 3D Point Cloud Completion。IEEE 計算機視覺與模式識別會議（CVPR），第 7662-7670 頁，2020 年。2</p>
+    
+  
+    
+      <p>[39] Ruoshi Liu, Rundi Wu, Basile Van Hoorick, Pavel Tokmakov, Sergey Zakharov, and Carl Vondrick. Zero-1-to-3: Zero-shot One Image to 3D Object. 在 IEEE 國際電腦視覺會議（ICCV），頁碼 9298-9309，2023。3
+
+[40] Zhengzhe Liu, Jingyu Hu, Ka-Hei Hui, Xiaojuan Qi, Daniel Cohen-Or, and Chi-Wing Fu. Exim: 用於文本引導 3D 形狀生成的混合顯式-隱式表示。ACM 圖形學交易（SIGGRAPH Asia），42(6)：1-12，2023。2
+
+[41] Shitong Luo and Wei Hu. 用於 3D 點雲生成的擴散機率模型。在 IEEE 電腦視覺與模式識別會議（CVPR），頁碼 2837-2845，2021。2
+
+[42] Zhaoyang Lyu, Zhifeng Kong, Xudong Xu, Liang Pan, and Dahua Lin. 用於 3D 點雲補全的條件點擴散-精化範式。在國際學習表示會議（ICLR），2022。2
+
+[43] Mark Pauly, Niloy J Mitra, Joachim Giesen, Markus H Gross, and Leonidas J Guibas. 基於例子的 3D 掃描補全。在 Eurographics 幾何處理研討會（SGP），2005。1
+
+[44] Mark Pauly, Niloy J Mitra, Johannes Wallner, Helmut Pottmann, and Leonidas J Guibas. 在 3D 幾何中發現結構規律性。ACM 圖形學交易（SIGGRAPH），頁碼 1-11，2008。1
+
+[45] Songyou Peng, Chiyu &#34;Max&#34; Jiang, Yiyi Liao, Michael Niemeyer, Marc Pollefeys, and Andreas Geiger. Shape As Points: 可微分的泊松求解器。在神經信息處理系統會議（NeurIPS），2021。5, 6
+
+[46] Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Björn Ommer. 使用潛在擴散模型的高分辨率影像合成。在 IEEE 電腦視覺與模式識別會議（CVPR），頁碼 10684-10695，2022。3
+
+[47] Chao-Hui Shen, Hongbo Fu, Kang Chen, and Shi-Min Hu. 通過部分組裝進行結構恢復。ACM 圖形學交易（SIGGRAPH），31(6)：1-11，2012。1
+
+[48] Minneapolis Sung, Vladimir G Kim, Roland Angst, and Leonidas Guibas. 用於形狀補全的數據驅動結構先驗。ACM 圖形學交易（SIGGRAPH），34(6)：1-11，2015。1
+
+[49] Jiaxiang Tang, Zhaoxi Chen, Xiaokang Chen, Tengfei Wang, Gang Zeng, and Ziwei Liu. LGM: 用於高分辨率 3D 內容創建的大規模多視圖高斯模型。在歐洲電腦視覺會議（ECCV），頁碼 1-18，2024。3
+
+[50] Sebastian Thrun and Ben Wegbreit. 對稱性中的形狀。在 IEEE 國際電腦視覺會議（ICCV），頁碼 1824-1831，2005。1
+
+[51] Jun Wang, Ying Cui, Dongyan Guo, Junxia Li, Qingshan Liu, and Chunhua Shen. PointAttN: 點雲補全只需要注意力機制。在 AAAI 人工智慧會議（AAAI），頁碼 5472-5480，2024。2
+
+[52] Penghao Wang, Yiyang He, Xin Lv, Yukai Zhou, Lan Xu, Jingyi Yu, and Jiayuan Gu. PartNeXt: 下一代</p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

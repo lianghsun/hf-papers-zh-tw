@@ -1,0 +1,84 @@
+[
+  {
+    "type": "image",
+    "fig_name": "p4_fig1.png",
+    "page": 4
+  },
+  {
+    "type": "caption",
+    "text": "Figure 2: The structure of QRRanker is illustrated in the middle, where the highlighted heads are QR heads for document scoring. As QRRanker can be aware of memory enhancement to capture more contextual information, we can construct memories for narratives and dialogues, which is shown on the left. The right part demonstrates the rank-rerank pipeline of qa for narratives/wiki/dialogues, which involves no sophisticated design.",
+    "page": 4,
+    "text_zh": "圖 2：QRRanker 的結構如中間所示，其中高亮的頭部是用於文件評分的 QR 頭。由於 QRRanker 能夠利用記憶增強來捕捉更多上下文資訊，我們可以為敘述文和對話構建記憶，如左側所示。右側部分展示了用於敘述文/維基/對話的 QA 排序-重排序流程，涉及的設計並不複雜。"
+  },
+  {
+    "type": "text",
+    "text": "After establishing the evidence, we retrieve a top-50 candidate set for each question using Wen3-Embedding-8B and form a listwise instance by labeling retrieved candidates that match the pre-constructed evidence as positive, while treating the remaining retrieved candidates as negatives.",
+    "page": 4,
+    "text_zh": "在建立證據後，我們使用 Wen3-Embedding-8B 為每個問題檢索前 50 個候選文件，並通過將檢索到的候選文件中與預先構建的證據匹配的標記為正樣本，而將其餘的檢索候選文件視為負樣本，來形成列表式實例。"
+  },
+  {
+    "type": "text",
+    "text": "Optionally, we construct a *summary prefix* by mapping the retrieved chunks to their corresponding summaries, and prepend these summaries before the chunk list, i.e., X = [M; C]. Alg. 1 summarizes this construction on NarrativeQA; MuSiQue follows the same procedure except that relevant evidence directly comes from their official supporting facts. We describe how the summaries are constructed in the next subsection.",
+    "page": 4,
+    "text_zh": "我們可以選擇性地通過將檢索到的塊映射到相應的摘要來構建*摘要前綴*，並將這些摘要添加在塊列表之前，即 X = [M; C]。演算法 1 總結了 NarrativeQA 上的這個構建過程；MuSiQue 遵循相同的程序，除了相關證據直接來自其官方支持事實。我們在下一小節中描述摘要的構建方式。"
+  },
+  {
+    "type": "section",
+    "text": "4.1.2 Summary Construction",
+    "page": 4,
+    "text_zh": "4.1.2 摘要構建"
+  },
+  {
+    "type": "text",
+    "text": "To provide high-level semantic guidance and support long-context narrative understanding, we construct summaries as auxiliary memory context. When used, summaries are prepended as a global prefix to the retrieved chunk list, so the model can leverage both coarse-grained context and fine-grained evidence. We explore two complementary strategies for constructing summaries.",
+    "page": 4,
+    "text_zh": "為了提供高級語義指導並支持長上下文敘述文理解，我們將摘要構建為輔助記憶上下文。使用時，摘要會作為全局前綴添加到檢索到的塊列表前面，以便模型能夠同時利用粗粒度上下文和細粒度證據。我們探索兩種互補的摘要構建策略。"
+  },
+  {
+    "type": "text",
+    "text": "**Block-based Summary.** For long narrative books, we construct block-level summaries that respect the sequential nature of storytelling. Specifically, we split each book into blocks (20 consecutive chunks per block) and generate one summary per block. (see Appendix A.1)",
+    "page": 4,
+    "text_zh": "**基於塊的摘要。** 對於長篇敘述性書籍，我們構建尊重敘事順序性質的塊級摘要。具體來說，我們將每部書籍分成塊（每個塊 20 個連續的塊），並為每個塊生成一個摘要。（見附錄 A.1）"
+  },
+  {
+    "type": "text",
+    "text": "**Event-centric Summary.** For dialogue-based data, we extract structured events from conversations and form an event-centric summary. Each",
+    "page": 4,
+    "text_zh": "**以事件為中心的摘要。** 對於基於對話的資料，我們從對話中提取結構化事件並形成以事件為中心的摘要。每個"
+  },
+  {
+    "type": "text",
+    "text": "event is represented by a short description and is linked to its source utterances, enabling traceability to the original dialogue. (see Appendix A.2).",
+    "page": 4,
+    "text_zh": "事件由簡短描述表示，並連結到其來源語句，使得能夠追溯到原始對話。（見附錄 A.2）。"
+  },
+  {
+    "type": "section",
+    "text": "4.2 QR Training",
+    "page": 4,
+    "text_zh": "4.2 QR 訓練"
+  },
+  {
+    "type": "text",
+    "text": "Obtaining QR heads precomputed by the QR score mentioned in Sec. 3, our training scheme focuses on training these heads. For a question *Q* and the top 50 candidate documents *C* = [*c*₁, ..., *c*₅₀] ranked by a retriever (e.g., embedding models like Wen3-Embedding), where gold (positive) documents are *G* = [*c*g₀, ..., *c*gm], the prompt input to QRRanker is constructed by concatenating *C* and *Q* in order with some instructions: *P* = Inst(*C*, *Q*), where the instruction template is provided in Appendix A.3.",
+    "page": 4,
+    "text_zh": "獲得由第 3 節中提到的 QR 分數預先計算的 QR 頭後，我們的訓練方案專注於訓練這些頭。對於一個問題 *Q* 和由檢索器（例如嵌入模型如 Wen3-Embedding）排序的前 50 個候選文件 *C* = [*c*₁, ..., *c*₅₀]，其中金標籤（正樣本）文件為 *G* = [*c*g₀, ..., *c*gm]，輸入到 QRRanker 的提示詞通過按順序連接 *C* 和 *Q* 以及一些指令來構建：*P* = Inst(*C*, *Q*)，其中指令模板提供在附錄 A.3 中。"
+  },
+  {
+    "type": "text",
+    "text": "The prompt *P* is fed into the model, and in every attention head, the attention score is computed as $A_h^{P→P}$. We locate the position of *Q* and *c*ᵢ ∈ *C* and take out the query-focused part $A_h^{Q→cᵢ}$. The retrieval score of the passage *c*ᵢ computed by the QR head *h* ∈ *H*QR is:",
+    "page": 4,
+    "text_zh": "將提示詞 *P* 輸入到模型中，在每個注意力頭中，注意力分數計算為 $A_h^{P→P}$。我們定位 *Q* 和 *c*ᵢ ∈ *C* 的位置，並提取查詢聚焦部分 $A_h^{Q→cᵢ}$。QR 頭 *h* ∈ *H*QR 計算的通道 *c*ᵢ 的檢索分數為："
+  },
+  {
+    "type": "formula",
+    "text": "$$s_{c_i}^h = \\frac{1}{|Q|} \\sum_{i \\in c_i} \\sum_{j \\in Q} A_h^{Q \\to c_i} [i, j] \\qquad (2)$$",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "where the score computing is illustrated in Fig. 1. Then, the final retrieval score is obtained by summing up all scores provided by QR heads: $s_{c_i} = \\sum_{h \\in H_{QR}} s_{c_i}^h$. Additionally, $s_{c_i}^h$ can also be computed by aggregating the maximum attention item, like used in approaches like ColBERT (Khattab and Zaharia, 2020), which achieves similar performance, so we do not discuss it here.",
+    "page": 4,
+    "text_zh": "其中分數計算如圖 1 所示。隨後，最終檢索分數是透過將 QR heads 提供的所有分數相加而獲得的：$s_{c_i} = \\sum_{h \\in H_{QR}} s_{c_i}^h$。此外，$s_{c_i}^h$ 也可以透過聚合最大注意力項來計算，如 ColBERT（Khattab and Zaharia, 2020）等方法所使用的方式，其達到了相似的效能，因此本文不在此詳細討論。"
+  }
+]

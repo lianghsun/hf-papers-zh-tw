@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通信啟發的結構化影像表示標記化 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">通信啟發的結構化影像表示標記化</h1>
+  
+  <div class="en-title">Communication-Inspired Tokenization for Structured Image Representations</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Aram Davtyan, Yusuf Sahin, Yasaman Haghighi, Sebastian Stapf, Pablo Acuaviva, Alexandre Alahi, Paolo Favaro</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.20731" target="_blank">2602.20731</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.20731" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.20731" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.20731" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Transformer</span><span class="tag method">Flow Matching</span><span class="tag method">Discrete Tokenization</span><span class="tag method">Recurrent Encoding</span>
+    <span class="tag task">Image Tokenization</span><span class="tag task">Image Reconstruction</span><span class="tag task">Semantic Representation Learning</span><span class="tag task">Compositional Generalization</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+離散影像 tokenizer 已成為現代視覺和多模態系統的關鍵元件，為基於 transformer 的架構提供了序列化介面。然而，大多數現有方法主要仍優化於重建和壓縮，通常產生捕捉局部紋理而非物體級語義結構的 token。受人類溝通的增量和組成特性啟發，我們引入 COMmunication 啟發的 Tokenization（COMiT），一個用於學習結構化離散視覺 token 序列的框架。COMiT 通過迭代觀察局部影像裁剪和循環更新其離散表示，在固定 token 預算內構造潛在訊息。在每一步，模型整合新的視覺資訊，同時精煉和重新組織現有的 token 序列。經過數個編碼迭代後，最終訊息條件化一個 flow-matching 解碼器來重建完整影像。編碼和解碼都在單一 transformer 模型內實現，並使用 flow-matching 重建和語義表示對齐損失組合的端到端訓練。我們的實驗證明，雖然語義對齐提供了基礎，但專注的序列 tokenization 對於引發可解釋的物體中心 token 結構，以及顯著改善相比先前方法的組合泛化和關係推理至關重要。</p>
+  
+  <div class="abstract-en">Discrete image tokenizers have emerged as a key component of modern vision and multimodal systems, providing a sequential interface for transformer-based architectures. However, most existing approaches remain primarily optimized for reconstruction and compression, often yielding tokens that capture local texture rather than object-level semantic structure. Inspired by the incremental and compositional nature of human communication, we introduce COMmunication inspired Tokenization (COMiT), a framework for learning structured discrete visual token sequences. COMiT constructs a latent message within a fixed token budget by iteratively observing localized image crops and recurrently updating its discrete representation. At each step, the model integrates new visual information while refining and reorganizing the existing token sequence. After several encoding iterations, the final message conditions a flow-matching decoder that reconstructs the full image. Both encoding and decoding are implemented within a single transformer model and trained end-to-end using a combination of flow-matching reconstruction and semantic representation alignment losses. Our experiments demonstrate that while semantic alignment provides grounding, attentive sequential tokenization is critical for inducing interpretable, object-centric token structure and substantially improving compositional generalization and relational reasoning over prior methods.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

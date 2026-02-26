@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>發現並修正缺陷：通過智能體數據合成使 VLMs 和 Diffusion Models 理解視覺偽影 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">發現並修正缺陷：通過智能體數據合成使 VLMs 和 Diffusion Models 理解視覺偽影</h1>
+  
+  <div class="en-title">See and Fix the Flaws: Enabling VLMs and Diffusion Models to Comprehend Visual Artifacts via Agentic Data Synthesis</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Jaehyun Park, Minyoung Ahn, Minkyu Kim, Jonghyun Lee, Jae-Gil Lee, Dongmin Park</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.20951" target="_blank">2602.20951</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.20951" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.20951" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.20951" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Diffusion Models</span><span class="tag method">Transformer</span><span class="tag method">Agent-based Synthesis</span>
+    <span class="tag task">Image Generation</span><span class="tag task">Artifact Detection</span><span class="tag task">Image Quality Enhancement</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+儘管擴散模型最近取得了進展，AI 生成的圖像仍然常常包含損害真實感的視覺瑕疵。雖然更深入的預訓練和更大的模型可能會減少瑕疵，但無法保證能完全消除這些瑕疵，這使得瑕疵緩解成為一個極其關鍵的研究領域。以往的瑕疵感知方法依賴於人工標註的瑕疵資料集，這些資料集成本高昂且難以擴展，突顯了需要一種自動化方法來可靠地獲取瑕疵註解資料集的迫切性。本文提出了 ArtiAgent，它能高效地創建真實圖像和瑕疵注入圖像的配對。該方法包含三個智能體：感知智能體從真實圖像中識別和定位實體及子實體；合成智能體透過在擴散 Transformer 中進行新穎的逐塊嵌入操作來引入瑕疵；策展智能體對合成的瑕疵進行過濾，並為每個實例生成局部和全局解釋。使用 ArtiAgent，我們合成了 100K 張圖像，並在多種應用中展示了有效性和多功能性。程式碼可在提供的連結取得。</p>
+  
+  <div class="abstract-en">Despite recent advances in diffusion models, AI generated images still often contain visual artifacts that compromise realism. Although more thorough pre-training and bigger models might reduce artifacts, there is no assurance that they can be completely eliminated, which makes artifact mitigation a highly crucial area of study. Previous artifact-aware methodologies depend on human-labeled artifact datasets, which are costly and difficult to scale, underscoring the need for an automated approach to reliably acquire artifact-annotated datasets. In this paper, we propose ArtiAgent, which efficiently creates pairs of real and artifact-injected images. It comprises three agents: a perception agent that recognizes and grounds entities and subentities from real images, a synthesis agent that introduces artifacts via artifact injection tools through novel patch-wise embedding manipulation within a diffusion transformer, and a curation agent that filters the synthesized artifacts and generates both local and global explanations for each instance. Using ArtiAgent, we synthesize 100K images with rich artifact annotations and demonstrate both efficacy and versatility across diverse applications. Code is available at link.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <p>[51] Junyan Ye, Baichuan Zhou, Zilong Huang, Junan Zhang, Tianyi Bai, Hengrui Kang, Jun He, Honglin Lin, Zihao Wang, Tong Wu 及其他人。Loki：使用大型多模態模型的綜合合成資料檢測基準。Arxiv 預印本 Arxiv:2410.09732，2024。3、6、15</p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

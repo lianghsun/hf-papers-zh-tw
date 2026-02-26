@@ -1,0 +1,24 @@
+{
+  "domain": [
+    "NLP",
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Late Interaction",
+    "Attention-Guided Clustering",
+    "Vector Compression",
+    "Hierarchical Pooling"
+  ],
+  "task": [
+    "Information Retrieval",
+    "Multi-Vector Indexing"
+  ],
+  "dataset": [
+    "BEIR",
+    "ViDoRe",
+    "MSR-VTT",
+    "MultiVENT 2.0"
+  ],
+  "open_source": true
+}

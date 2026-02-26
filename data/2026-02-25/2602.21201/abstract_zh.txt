@@ -1,0 +1,1 @@
+我們報告了由 Gemini 3 Deep Think 驅動的數學研究代理 Aletheia（Feng et al., 2026b）在首屆 FirstProof 挑戰賽中的表現。在挑戰賽允許的時間範圍內，根據專家多數意見評估，Aletheia 自主解決了 10 個問題中的 6 個（第 2、5、7、8、9、10 題）；我們注意到專家僅在第 8 題上未達成一致意見。為了完全透明起見，我們說明了我們對 FirstProof 的理解，並公開了有關實驗和評估的詳細信息。原始提示和輸出可在 https://github.com/google-deepmind/superhuman/tree/main/aletheia 取得。

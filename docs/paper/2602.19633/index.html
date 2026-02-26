@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TAPE: 語言模型代理中的工具導向自適應規劃與受限執行 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">TAPE: 語言模型代理中的工具導向自適應規劃與受限執行</h1>
+  
+  <div class="en-title">TAPE: Tool-Guided Adaptive Planning and Constrained Execution in Language Model Agents</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Jongwon Jeong, Jungtaek Kim, Kangwook Lee</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.19633" target="_blank">2602.19633</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.19633" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.19633" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.19633" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+    <span class="tag method">Planning</span><span class="tag method">Constrained Decoding</span><span class="tag method">Graph-based Planning</span><span class="tag method">External Solver</span>
+    <span class="tag task">Task Planning</span><span class="tag task">Constrained Execution</span><span class="tag task">Sequential Decision Making</span><span class="tag task">Question Answering</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+語言模型（LM）代理在需要與環境進行多次交互的任務中展現出了顯著的能力。然而，在單一錯誤往往導致不可恢復失敗的環境中，特別是在嚴格的可行性約束下，它們仍然容易受到影響。我們系統性地分析了現有的代理框架，將不完善的規劃和隨機執行確定為主要原因。為了應對這些挑戰，我們提出了工具引導的自適應規劃與約束執行框架（TAPE）。TAPE 通過將多個規劃聚合成圖形並採用外部求解器來識別可行路徑，從而增強了規劃能力。在執行階段，TAPE 採用約束解碼來減少採樣噪聲，同時在環境反饋偏離預期狀態時自適應地重新規劃。在 Sokoban、ALFWorld、MuSiQue 和 GSM8K-Hard 的實驗表明，TAPE 持續優於現有框架，在困難設置上取得特別顯著的改進，平均在困難設置上將成功率提高了 21.0 個百分點，對於較弱的基礎模型平均提高了 20.0 個百分點。代碼和數據可在此處獲得。</p>
+  
+  <div class="abstract-en">Language Model (LM) agents have demonstrated remarkable capabilities in solving tasks that require multiple interactions with the environment. However, they remain vulnerable in environments where a single error often leads to irrecoverable failure, particularly under strict feasibility constraints. We systematically analyze existing agent frameworks, identifying imperfect planning and stochastic execution as the primary causes. To address these challenges, we propose Tool-guided Adaptive Planning with constrained Execution (TAPE). TAPE enhances planning capability by aggregating multiple plans into a graph and employing an external solver to identify a feasible path. During execution, TAPE employs constrained decoding to reduce sampling noise, while adaptively re-planning whenever environmental feedback deviates from the intended state. Experiments across Sokoban, ALFWorld, MuSiQue, and GSM8K-Hard demonstrate that TAPE consistently outperforms existing frameworks, with particularly large gains on hard settings, improving success rates by 21.0 percentage points on hard settings on average, and by 20.0 percentage points for weaker base models on average. Code and data available at here.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

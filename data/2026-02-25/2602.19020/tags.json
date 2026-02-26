@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "NLP",
+    "RL"
+  ],
+  "method": [
+    "Reinforcement Learning",
+    "Membership Inference Attack",
+    "Policy Finetuning"
+  ],
+  "task": [
+    "Membership Inference",
+    "Data Detection",
+    "Model Security"
+  ],
+  "dataset": [
+    "BookMIA",
+    "AIME"
+  ],
+  "open_source": false
+}

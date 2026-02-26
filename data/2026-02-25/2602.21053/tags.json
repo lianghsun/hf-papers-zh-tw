@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "VLM",
+    "Agent",
+    "Self-correction",
+    "Iterative Reasoning"
+  ],
+  "task": [
+    "OCR",
+    "Visual Understanding",
+    "Reasoning"
+  ],
+  "dataset": [
+    "OCRBench v2"
+  ],
+  "open_source": true
+}

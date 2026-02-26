@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "NLP",
+    "Code"
+  ],
+  "method": [
+    "LLM",
+    "Program Evolution",
+    "Genetic Algorithm",
+    "AlphaEvolve"
+  ],
+  "task": [
+    "Information Retrieval",
+    "Ranking"
+  ],
+  "dataset": [
+    "BEIR",
+    "BRIGHT",
+    "TREC DL 19",
+    "TREC DL 20"
+  ],
+  "open_source": false
+}

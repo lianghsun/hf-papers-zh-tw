@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PETS：朝向高效測試時間自洽性的最優軌跡分配之原理性框架 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">PETS：朝向高效測試時間自洽性的最優軌跡分配之原理性框架</h1>
+  
+  <div class="en-title">PETS: A Principled Framework Towards Optimal Trajectory Allocation for Efficient Test-Time Self-Consistency</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Zhangyi Liu, Huaizhi Qu, Xiaowei Yin, He Sun, Yanjun Han, Tianlong Chen, Zhun Deng</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.16745" target="_blank">2602.16745</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.16745" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.16745" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.16745" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">Theory</span>
+    <span class="tag method">Self-Consistency</span><span class="tag method">Majority Voting</span><span class="tag method">Budget Allocation</span><span class="tag method">Crowdsourcing</span>
+    <span class="tag task">Question Answering</span><span class="tag task">Test-Time Scaling</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+測試時間縮放（Test-time scaling）能夠通過聚合隨機推理軌跡來改進模型性能。然而，在有限預算限制下實現樣本高效的測試時間自一致性仍然是一個開放問題。我們引入 PETS（Principled and Efficient Test-Time Self-Consistency），它通過優化框架對軌跡分配進行了有原則的研究。我們方法的核心是自一致性率（self-consistency rate），這是一項新度量標準，定義為與無限預算多數投票的一致程度。這個公式化使樣本高效的測試時間分配在理論上有根有據，並便於進行嚴格分析。我們研究了離線和在線兩種設置。在離線情況下，所有問題都是事先已知的，我們通過將推理軌跡建模為工作者（worker），將軌跡分配與眾包這一經典且發展成熟的領域相聯繫。這個視角使我們能夠利用豐富的現有理論，進而得出理論保證和高效的基於多數投票的分配演算法。在線上串流情況下，問題按順序到達且必須實時進行分配，我們提出了一種受離線框架啟發的新方法。我們的方法根據問題難度調整預算，同時保持強大的理論保證和計算效率。實驗表明 PETS 始終優於均勻分配。在 GPQA 上，PETS 在兩種設置下都實現了完美的自一致性，同時相對於均勻分配將採樣預算分別減少了 75%（離線）和 55%（在線）。代碼可在 https://github.com/ZDCSlab/PETS 獲得。</p>
+  
+  <div class="abstract-en">Test-time scaling can improve model performance by aggregating stochastic reasoning trajectories. However, achieving sample-efficient test-time self-consistency under a limited budget remains an open challenge. We introduce PETS (Principled and Efficient Test-TimeSelf-Consistency), which initiates a principled study of trajectory allocation through an optimization framework. Central to our approach is the self-consistency rate, a new measure defined as agreement with the infinite-budget majority vote. This formulation makes sample-efficient test-time allocation theoretically grounded and amenable to rigorous analysis. We study both offline and online settings. In the offline regime, where all questions are known in advance, we connect trajectory allocation to crowdsourcing, a classic and well-developed area, by modeling reasoning traces as workers. This perspective allows us to leverage rich existing theory, yielding theoretical guarantees and an efficient majority-voting-based allocation algorithm. In the online streaming regime, where questions arrive sequentially and allocations must be made on the fly, we propose a novel method inspired by the offline framework. Our approach adapts budgets to question difficulty while preserving strong theoretical guarantees and computational efficiency. Experiments show that PETS consistently outperforms uniform allocation. On GPQA, PETS achieves perfect self-consistency in both settings while reducing the sampling budget by up to 75% (offline) and 55% (online) relative to uniform allocation. Code is available at https://github.com/ZDCSlab/PETS.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

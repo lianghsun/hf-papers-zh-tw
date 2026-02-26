@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR-Agent：具備能力與記憶反思的代理型 OCR — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">OCR-Agent：具備能力與記憶反思的代理型 OCR</h1>
+  
+  <div class="en-title">OCR-Agent: Agentic OCR with Capability and Memory Reflection</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Shimin Wen, Zeyu Zhang, Xingdou Bian, Hongjie Zhu, Lulu He, Layi Shama, Daji Ergu, Ying Cai</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.21053" target="_blank">2602.21053</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.21053" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.21053" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.21053" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">VLM</span><span class="tag method">Agent</span><span class="tag method">Self-correction</span><span class="tag method">Iterative Reasoning</span>
+    <span class="tag task">OCR</span><span class="tag task">Visual Understanding</span><span class="tag task">Reasoning</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+大型視覺語言模型（VLMs）已透過反覆優化方法在複雜視覺理解任務上展示出顯著的潛力。然而，這些模型普遍缺乏有效的自我修正機制，使得它們難以獨立地糾正認知偏差。因此，在多輪修訂過程中，它們往往陷入重複且無效的嘗試，無法實現答案品質的穩定改善。為了解決這個問題，我們提出了一個新穎的反覆自我修正框架，賦予模型兩項關鍵能力：能力反思（Capability Reflection）和記憶反思（Memory Reflection）。該框架引導模型首先透過能力反思診斷錯誤並生成修正計畫，隨後利用記憶反思來回顧過去的嘗試以避免重複並探索新的解決方案，最後透過嚴謹的重新推理來優化答案。在具有挑戰性的 OCRBench v2 基準測試上的實驗表明，OCR-Agent 在英文子集上超越現有開源最先進模型 InternVL3-8B 達 +2.0，在中文子集上達 +1.2，同時在視覺理解（79.9）和推理（66.5）方面取得最先進的結果，甚至超越了更大的微調模型。我們的方法表明，結構化的自我意識反思可以顯著增強 VLMs 的推理穩健性，而無需額外訓練。程式碼：https://github.com/AIGeeksGroup/OCR-Agent。</p>
+  
+  <div class="abstract-en">Large Vision-Language Models (VLMs) have demonstrated significant potential on complex visual understanding tasks through iterative optimization methods.However, these models generally lack effective self-correction mechanisms, making it difficult for them to independently rectify cognitive biases. Consequently, during multi-turn revisions, they often fall into repetitive and ineffective attempts, failing to achieve stable improvements in answer quality.To address this issue, we propose a novel iterative self-correction framework that endows models with two key capabilities: Capability Reflection and Memory Reflection. This framework guides the model to first diagnose errors and generate a correction plan via Capability Reflection, then leverage Memory Reflection to review past attempts to avoid repetition and explore new solutions, and finally, optimize the answer through rigorous re-reasoning. Experiments on the challenging OCRBench v2 benchmark show that OCR-Agent outperforms the current open-source SOTA model InternVL3-8B by +2.0 on English and +1.2 on Chinese subsets, while achieving state-of-the-art results in Visual Understanding (79.9) and Reasoning (66.5) - surpassing even larger fine-tuned models. Our method demonstrates that structured, self-aware reflection can significantly enhance VLMs&#39; reasoning robustness without additional training. Code: https://github.com/AIGeeksGroup/OCR-Agent.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

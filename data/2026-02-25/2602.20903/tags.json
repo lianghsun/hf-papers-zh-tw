@@ -1,0 +1,22 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal",
+    "RL"
+  ],
+  "method": [
+    "Reinforcement Learning",
+    "OCR",
+    "Diffusion Models",
+    "Reward Model"
+  ],
+  "task": [
+    "Text-to-Image Generation",
+    "Visual Text Rendering",
+    "Structural Anomaly Detection"
+  ],
+  "dataset": [
+    "TextPecker (character-level structural-anomaly annotation dataset)"
+  ],
+  "open_source": false
+}

@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Transformer",
+    "Attention Mechanism",
+    "Reranking"
+  ],
+  "task": [
+    "Information Retrieval",
+    "Passage Ranking",
+    "Question Answering"
+  ],
+  "dataset": [
+    "Wikipedia",
+    "LoCoMo"
+  ],
+  "open_source": false
+}

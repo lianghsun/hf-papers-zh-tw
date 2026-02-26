@@ -1,0 +1,72 @@
+[
+  {
+    "type": "image",
+    "fig_name": "p4_fig1.png",
+    "page": 4
+  },
+  {
+    "type": "caption",
+    "text": "Figure 2: The structure of QRRanker is illustrated in the middle, where the highlighted heads are QR heads for document scoring. As QRRanker can be aware of memory enhancement to capture more contextual information, we can construct memories for narratives and dialogues, which is shown on the left. The right part demonstrates the rank-rerank pipeline of qa for narratives/wiki/dialogues, which involves no sophisticated design.",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "After establishing the evidence, we retrieve a top-50 candidate set for each question using Wen3-Embedding-8B and form a listwise instance by labeling retrieved candidates that match the pre-constructed evidence as positive, while treating the remaining retrieved candidates as negatives.",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "Optionally, we construct a *summary prefix* by mapping the retrieved chunks to their corresponding summaries, and prepend these summaries before the chunk list, i.e., X = [M; C]. Alg. 1 summarizes this construction on NarrativeQA; MuSiQue follows the same procedure except that relevant evidence directly comes from their official supporting facts. We describe how the summaries are constructed in the next subsection.",
+    "page": 4
+  },
+  {
+    "type": "section",
+    "text": "4.1.2 Summary Construction",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "To provide high-level semantic guidance and support long-context narrative understanding, we construct summaries as auxiliary memory context. When used, summaries are prepended as a global prefix to the retrieved chunk list, so the model can leverage both coarse-grained context and fine-grained evidence. We explore two complementary strategies for constructing summaries.",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "**Block-based Summary.** For long narrative books, we construct block-level summaries that respect the sequential nature of storytelling. Specifically, we split each book into blocks (20 consecutive chunks per block) and generate one summary per block. (see Appendix A.1)",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "**Event-centric Summary.** For dialogue-based data, we extract structured events from conversations and form an event-centric summary. Each",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "event is represented by a short description and is linked to its source utterances, enabling traceability to the original dialogue. (see Appendix A.2).",
+    "page": 4
+  },
+  {
+    "type": "section",
+    "text": "4.2 QR Training",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "Obtaining QR heads precomputed by the QR score mentioned in Sec. 3, our training scheme focuses on training these heads. For a question *Q* and the top 50 candidate documents *C* = [*c*₁, ..., *c*₅₀] ranked by a retriever (e.g., embedding models like Wen3-Embedding), where gold (positive) documents are *G* = [*c*g₀, ..., *c*gm], the prompt input to QRRanker is constructed by concatenating *C* and *Q* in order with some instructions: *P* = Inst(*C*, *Q*), where the instruction template is provided in Appendix A.3.",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "The prompt *P* is fed into the model, and in every attention head, the attention score is computed as $A_h^{P→P}$. We locate the position of *Q* and *c*ᵢ ∈ *C* and take out the query-focused part $A_h^{Q→cᵢ}$. The retrieval score of the passage *c*ᵢ computed by the QR head *h* ∈ *H*QR is:",
+    "page": 4
+  },
+  {
+    "type": "formula",
+    "text": "$$s_{c_i}^h = \\frac{1}{|Q|} \\sum_{i \\in c_i} \\sum_{j \\in Q} A_h^{Q \\to c_i} [i, j] \\qquad (2)$$",
+    "page": 4
+  },
+  {
+    "type": "text",
+    "text": "where the score computing is illustrated in Fig. 1. Then, the final retrieval score is obtained by summing up all scores provided by QR heads: $s_{c_i} = \\sum_{h \\in H_{QR}} s_{c_i}^h$. Additionally, $s_{c_i}^h$ can also be computed by aggregating the maximum attention item, like used in approaches like ColBERT (Khattab and Zaharia, 2020), which achieves similar performance, so we do not discuss it here.",
+    "page": 4
+  }
+]

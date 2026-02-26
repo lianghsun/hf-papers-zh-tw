@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "CV",
+    "Medical"
+  ],
+  "method": [
+    "Musculoskeletal Modeling",
+    "3D Pose Lifting",
+    "Multi-view Reconstruction"
+  ],
+  "task": [
+    "3D Pose Estimation",
+    "Keypoint Detection",
+    "Spine Motion Tracking"
+  ],
+  "dataset": [
+    "SIMSPINE"
+  ],
+  "open_source": true
+}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>任意模態中的多向量索引壓縮 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">任意模態中的多向量索引壓縮</h1>
+  
+  <div class="en-title">Multi-Vector Index Compression in Any Modality</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Hanxiang Qin, Alexander Martin, Rohan Jha, Chunsheng Zuo, Reno Kriz, Benjamin Van Durme</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.21202" target="_blank">2602.21202</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.21202" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.21202" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.21202" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Late Interaction</span><span class="tag method">Attention-Guided Clustering</span><span class="tag method">Vector Compression</span><span class="tag method">Hierarchical Pooling</span>
+    <span class="tag task">Information Retrieval</span><span class="tag task">Multi-Vector Indexing</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+我們研究高效的多向量檢索，適用於任何模態的晚期交互（late interaction）。晚期交互已成為文本、圖像、視覺文件和視頻資訊檢索的主導範式，但其計算和儲存成本隨著文件長度線性成長，這對於圖像、視頻和音頻豐富的語料庫而言成本高昂。為了解決此限制，我們探索查詢無關（query-agnostic）的方法，在固定向量預算的約束下壓縮多向量文件表示。我們介紹四種索引壓縮方法：序列調整大小（sequence resizing）、記憶令牌（memory tokens）、分層池化（hierarchical pooling）和一種新穎的注意力引導聚類（attention-guided clustering, AGC）。AGC 使用注意力引導機制來識別文件中語義上最顯著的區域作為聚類質心，並對令牌聚合進行加權。我們在跨越文本（BEIR）、視覺文件（ViDoRe）和視頻（MSR-VTT、MultiVENT 2.0）的檢索任務上評估這些方法，結果顯示注意力引導聚類持續優於其他參數化壓縮方法（序列調整大小和記憶令牌），相比非參數化分層聚類提供更大的索引大小靈活性，並相比完整、未壓縮的索引實現具競爭力或改進的性能。源程式碼可於以下位置取得：github.com/hanxiangqin/omni-col-press。</p>
+  
+  <div class="abstract-en">We study efficient multi-vector retrieval for late interaction in any modality. Late interaction has emerged as a dominant paradigm for information retrieval in text, images, visual documents, and videos, but its computation and storage costs grow linearly with document length, making it costly for image-, video-, and audio-rich corpora. To address this limitation, we explore query-agnostic methods for compressing multi-vector document representations under a constant vector budget. We introduce four approaches for index compression: sequence resizing, memory tokens, hierarchical pooling, and a novel attention-guided clustering (AGC). AGC uses an attention-guided mechanism to identify the most semantically salient regions of a document as cluster centroids and to weight token aggregation. Evaluating these methods on retrieval tasks spanning text (BEIR), visual-document (ViDoRe), and video (MSR-VTT, MultiVENT 2.0), we show that attention-guided clustering consistently outperforms other parameterized compression methods (sequence resizing and memory tokens), provides greater flexibility in index size than non-parametric hierarchical clustering, and achieves competitive or improved performance compared to a full, uncompressed index. The source code is available at: github.com/hanxiangqin/omni-col-press.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <p>[36] Quentin Macé, António Loison, 和 Manuel Fayssé。2025。ViDoRe Benchmark V2：提升視覺檢索的標準。arXiv:2505.17166 [cs] doi:10.48550/arXiv.2505.17166</p>
+    
+  
+    
+      <p>[56] Senqiao Yang, Yukang Chen, Zhuotao Tian, Chengyao Wang, Jingyao Li, Bei Yu, 和 Jiaya Jia。2025。VisionZip：Vision Language Models 中更長未必更好。於 IEEE/CVF 電腦視覺與模式識別會議論文集。IEEE，美國田納西州納什維爾，19792-19802。</p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

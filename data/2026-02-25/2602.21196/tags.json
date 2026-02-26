@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Transformer",
+    "Context Parallelism",
+    "Attention Mechanism",
+    "Memory Optimization"
+  ],
+  "task": [
+    "Long Sequence Processing",
+    "Model Training"
+  ],
+  "dataset": [],
+  "open_source": false
+}

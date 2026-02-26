@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>論數據工程在擴展LLM終端能力中的應用 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">論數據工程在擴展LLM終端能力中的應用</h1>
+  
+  <div class="en-title">On Data Engineering for Scaling LLM Terminal Capabilities</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Renjie Pi, Grace Lam, Mohammad Shoeybi, Pooya Jannaty, Bryan Catanzaro, Wei Ping</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.21193" target="_blank">2602.21193</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.21193" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.21193" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.21193" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">Code</span>
+    <span class="tag method">Synthetic Data Generation</span><span class="tag method">Curriculum Learning</span><span class="tag method">Fine-tuning</span>
+    <span class="tag task">Terminal Command Generation</span><span class="tag task">Agent Training</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+儘管大型語言模型的終端能力最近取得快速進展，但最先進終端代理背後的訓練資料策略在很大程度上仍未公開。我們通過對終端代理資料工程實踐的系統研究來填補這一空白，做出了兩個關鍵貢獻：(1) Terminal-Task-Gen，一個輕量級合成任務生成管道，支持基於種子和基於技能的任務構建，以及 (2) 資料和訓練策略的全面分析，包括篩選、課程學習、長上下文訓練和縮放行為。我們的管道產生了 Terminal-Corpus，一個大規模開源終端任務資料集。使用此資料集，我們訓練了 Nemotron-Terminal，一系列從 Qwen3（8B、14B、32B）初始化的模型，在 Terminal-Bench 2.0 上取得了實質性的進展：Nemotron-Terminal-8B 從 2.5% 改進到 13.0%，Nemotron-Terminal-14B 從 4.0% 改進到 20.2%，Nemotron-Terminal-32B 從 3.4% 改進到 27.4%，其性能與規模顯著更大的模型相當。為了加速這一領域的研究，我們在 https://huggingface.co/collections/nvidia/nemotron-terminal 開源了我們的模型檢查點和大部分合成資料集。</p>
+  
+  <div class="abstract-en">Despite rapid recent progress in the terminal capabilities of large language models, the training data strategies behind state-of-the-art terminal agents remain largely undisclosed. We address this gap through a systematic study of data engineering practices for terminal agents, making two key contributions: (1) Terminal-Task-Gen, a lightweight synthetic task generation pipeline that supports seed-based and skill-based task construction, and (2) a comprehensive analysis of data and training strategies, including filtering, curriculum learning, long context training, and scaling behavior. Our pipeline yields Terminal-Corpus, a large-scale open-source dataset for terminal tasks. Using this dataset, we train Nemotron-Terminal, a family of models initialized from Qwen3(8B, 14B, 32B) that achieve substantial gains on Terminal-Bench 2.0: Nemotron-Terminal-8B improves from 2.5% to 13.0% Nemotron-Terminal-14B improves from 4.0% to 20.2%, and Nemotron-Terminal-32B improves from 3.4% to 27.4%, matching the performance of significantly larger models. To accelerate research in this domain, we open-source our model checkpoints and most of our synthetic datasets at https://huggingface.co/collections/nvidia/nemotron-terminal.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <p>[21] MAA. Aime 2024 基準測試：來自美國邀請數學考試的問題。https://huggingface.co/datasets/Maxwell-Jia/AIME_2024，2024 年。用於評估語言模型數學推理能力的 AIME 2024 問題基準測試。7</p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,22 @@
+[
+  {
+    "type": "text",
+    "text": "- Avoid on-the-nose ac or e\n- Prefer neutral, common",
+    "page": 26
+  },
+  {
+    "type": "text",
+    "text": "Do NOT leak the twist in names or state:\n- Avoid personalized context fields\n- Avoid on-the-nose action/entity names\n- Prefer neutral, common verbs.\n\nAVAILABLE ACTIONS\n[",
+    "page": 26
+  },
+  {
+    "type": "text",
+    "text": "{actions_library}\n\nOUTPUT FORMAT\n============\n[schema_context]\n\nOutput ONLY the YAML.",
+    "page": 26
+  },
+  {
+    "type": "caption",
+    "text": "Listing 4: Synthetic Generation - Planner Agent User Prompt - First draft of the scenario YAML",
+    "page": 26
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "domain": [
+    "NLP",
+    "Theory"
+  ],
+  "method": [
+    "Transformer",
+    "Linear Attention",
+    "Sequence Modeling"
+  ],
+  "task": [
+    "Sequence Modeling"
+  ],
+  "dataset": [],
+  "open_source": false
+}

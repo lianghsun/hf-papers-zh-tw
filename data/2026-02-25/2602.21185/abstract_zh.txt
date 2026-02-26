@@ -1,0 +1,3 @@
+# 論文摘要翻譯
+
+均勻態離散擴散模型（Uniform-state discrete diffusion models）因其自我修正的能力而在少步驟生成和引導中表現卓越，相比於自迴歸或 Masked 擴散模型在這些設定中更受青睞。然而，隨著步驟數量增加，它們的採樣品質在祖先採樣器（ancestral samplers）上達到平台期。我們引入了一個預測器-校正器（Predictor-Corrector, PC）採樣器族群用於離散擴散，該族群泛化了先前的方法並適用於任意噪聲過程。當與均勻態擴散配對時，我們的採樣器在語言和圖像建模上都超越了祖先採樣，在 OpenWebText 上達到了更低的生成困惑度（matched unigram entropy），在 CIFAR10 上達到了更好的 FID/IS 分數。至關重要的是，不同於傳統採樣器，我們的 PC 方法會隨著採樣步驟增加而持續改進。綜合這些發現，我們對 Masked 擴散是基於擴散的語言建模必然未來這一假設提出了質疑。除了採樣外，我們為 Gaussian 鬆弛訓練階段開發了一種記憶高效的課程（memory-efficient curriculum），相比於 Duo 減少了 25% 的訓練時間和 33% 的記憶佔用，同時在 OpenWebText 和 LM1B 上保持了相當的困惑度以及強大的下游任務性能。我們在以下網址發布了程式碼、檢查點和影片教程：https://s-sahoo.com/duo-ch2

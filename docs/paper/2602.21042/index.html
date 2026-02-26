@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniOCR：少數民族語言通用光學字符識別 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">OmniOCR：少數民族語言通用光學字符識別</h1>
+  
+  <div class="en-title">OmniOCR: Generalist OCR for Ethnic Minority Languages</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Bonan Liu, Zeyu Zhang, Bingbing Meng, Han Wang, Hanshuo Zhang, Chengping Wang, Daji Ergu, Ying Cai</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.21042" target="_blank">2602.21042</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.21042" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.21042" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.21042" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">NLP</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Dynamic LoRA</span><span class="tag method">Sparsity Regularization</span>
+    <span class="tag task">Optical Character Recognition</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+光學字符識別（OCR）在深度學習和多模態模型的推動下已快速發展，然而大多數方法主要聚焦於資源充足的文字系統，如拉丁字和漢字。少數民族語言仍未得到充分探索，因為其複雜的書寫系統、稀缺的標註資料，以及多樣化的歷史和現代文字形式，使得在低資源或零樣本設定下的泛化面臨挑戰。為解決這些問題，我們提出 OmniOCR，一個針對少數民族文字的通用框架。OmniOCR 引入動態低秩適應（Dynamic LoRA）技術，在層和文字之間分配模型容量，實現高效的適應同時保留知識。稀疏性正則化對冗餘更新進行剪枝，確保緊湊高效的適應而無需額外推理成本。在藏文 MNIST、水語、古義字和東巴象形文的評估表明，OmniOCR 優於零樣本基礎模型和標準微調方法，以優異的參數效率達到最先進的準確度，與現有最佳基線模型相比，在這四個資料集上的準確度提升了 39%-66%。程式碼：https://github.com/AIGeeksGroup/OmniOCR。</p>
+  
+  <div class="abstract-en">Optical character recognition (OCR) has advanced rapidly with deep learning and multimodal models, yet most methods focus on well-resourced scripts such as Latin and Chinese. Ethnic minority languages remain underexplored due to complex writing systems, scarce annotations, and diverse historical and modern forms, making generalization in low-resource or zero-shot settings challenging. To address these challenges, we present OmniOCR, a universal framework for ethnic minority scripts. OmniOCR introduces Dynamic Low-Rank Adaptation (Dynamic LoRA) to allocate model capacity across layers and scripts, enabling effective adaptation while preserving knowledge.A sparsity regularization prunes redundant updates, ensuring compact and efficient adaptation without extra inference cost. Evaluations on TibetanMNIST, Shui, ancient Yi, and Dongba show that OmniOCR outperforms zero-shot foundation models and standard post training, achieving state-of-the-art accuracy with superior parameter efficiency, and compared with the state-of-the-art baseline models, it improves accuracy by 39%-66% on these four datasets. Code: https://github.com/AIGeeksGroup/OmniOCR.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

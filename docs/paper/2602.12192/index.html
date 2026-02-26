@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>查詢焦點和記憶感知重排器用於長文本處理 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">查詢焦點和記憶感知重排器用於長文本處理</h1>
+  
+  <div class="en-title">Query-focused and Memory-aware Reranker for Long Context Processing</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Yuqing Li, Jiangnan Li, Mo Yu, Guoxuan Ding, Zheng Lin, Weiping Wang, Jie Zhou</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.12192" target="_blank">2602.12192</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.12192" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.12192" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.12192" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">Transformer</span><span class="tag method">Attention Mechanism</span><span class="tag method">Reranking</span>
+    <span class="tag task">Information Retrieval</span><span class="tag task">Passage Ranking</span><span class="tag task">Question Answering</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+基於對大型語言模型中檢索頭（retrieval heads）的現有分析，我們提出了一個替代性的重排序框架，該框架訓練模型使用所選頭部的注意力分數來估計段落-查詢的相關性。這種方法提供了一個列表式解決方案，在排序過程中充分利用整個候選列表中的整體資訊。同時，它自然地產生連續的相關性分數，能夠在任意檢索資料集上進行訓練，無需依賴 Likert 量表監督。我們的框架輕量且有效，只需要小規模模型（例如 4B 參數）即可達到強大的性能。廣泛的實驗表明，我們的方法在多個領域（包括維基百科和長敘述資料集）上優於現有的最先進的逐點式和列表式重排序器。它進一步在 LoCoMo 基準上建立了新的最先進結果，該基準評估對話理解和記憶使用的能力。我們進一步展示了我們的框架支持靈活的擴展。例如，用上下文資訊增強候選段落進一步提高了排序準確性，而從中間層訓練注意力頭增強了效率，同時不犧牲性能。</p>
+  
+  <div class="abstract-en">Built upon the existing analysis of retrieval heads in large language models, we propose an alternative reranking framework that trains models to estimate passage-query relevance using the attention scores of selected heads. This approach provides a listwise solution that leverages holistic information within the entire candidate shortlist during ranking. At the same time, it naturally produces continuous relevance scores, enabling training on arbitrary retrieval datasets without requiring Likert-scale supervision. Our framework is lightweight and effective, requiring only small-scale models (e.g., 4B parameters) to achieve strong performance. Extensive experiments demonstrate that our method outperforms existing state-of-the-art pointwise and listwise rerankers across multiple domains, including Wikipedia and long narrative datasets. It further establishes a new state-of-the-art on the LoCoMo benchmark that assesses the capabilities of dialogue understanding and memory usage. We further demonstrate that our framework supports flexible extensions. For example, augmenting candidate passages with contextual information further improves ranking accuracy, while training attention heads from middle layers enhances efficiency without sacrificing performance.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <figure class="paper-figure">
+        <img src="../../figures/2026-02-25/2602.12192/p4_fig1.png"
+             alt="Figure 1" loading="lazy">
+      </figure>
+    
+  
+    
+      <p><em>圖 2：QRRanker 的結構如中間所示，其中高亮的頭部是用於文件評分的 QR 頭。由於 QRRanker 能夠利用記憶增強來捕捉更多上下文資訊，我們可以為敘述文和對話構建記憶，如左側所示。右側部分展示了用於敘述文/維基/對話的 QA 排序-重排序流程，涉及的設計並不複雜。</em></p>
+    
+  
+    
+      <p>在建立證據後，我們使用 Wen3-Embedding-8B 為每個問題檢索前 50 個候選文件，並通過將檢索到的候選文件中與預先構建的證據匹配的標記為正樣本，而將其餘的檢索候選文件視為負樣本，來形成列表式實例。</p>
+    
+  
+    
+      <p>我們可以選擇性地通過將檢索到的塊映射到相應的摘要來構建*摘要前綴*，並將這些摘要添加在塊列表之前，即 X = [M; C]。演算法 1 總結了 NarrativeQA 上的這個構建過程；MuSiQue 遵循相同的程序，除了相關證據直接來自其官方支持事實。我們在下一小節中描述摘要的構建方式。</p>
+    
+  
+    
+      <h2>4.1.2 摘要構建</h2>
+    
+  
+    
+      <p>為了提供高級語義指導並支持長上下文敘述文理解，我們將摘要構建為輔助記憶上下文。使用時，摘要會作為全局前綴添加到檢索到的塊列表前面，以便模型能夠同時利用粗粒度上下文和細粒度證據。我們探索兩種互補的摘要構建策略。</p>
+    
+  
+    
+      <p>**基於塊的摘要。** 對於長篇敘述性書籍，我們構建尊重敘事順序性質的塊級摘要。具體來說，我們將每部書籍分成塊（每個塊 20 個連續的塊），並為每個塊生成一個摘要。（見附錄 A.1）</p>
+    
+  
+    
+      <p>**以事件為中心的摘要。** 對於基於對話的資料，我們從對話中提取結構化事件並形成以事件為中心的摘要。每個</p>
+    
+  
+    
+      <p>事件由簡短描述表示，並連結到其來源語句，使得能夠追溯到原始對話。（見附錄 A.2）。</p>
+    
+  
+    
+      <h2>4.2 QR 訓練</h2>
+    
+  
+    
+      <p>獲得由第 3 節中提到的 QR 分數預先計算的 QR 頭後，我們的訓練方案專注於訓練這些頭。對於一個問題 *Q* 和由檢索器（例如嵌入模型如 Wen3-Embedding）排序的前 50 個候選文件 *C* = [*c*₁, ..., *c*₅₀]，其中金標籤（正樣本）文件為 *G* = [*c*g₀, ..., *c*gm]，輸入到 QRRanker 的提示詞通過按順序連接 *C* 和 *Q* 以及一些指令來構建：*P* = Inst(*C*, *Q*)，其中指令模板提供在附錄 A.3 中。</p>
+    
+  
+    
+      <p>將提示詞 *P* 輸入到模型中，在每個注意力頭中，注意力分數計算為 $A_h^{P→P}$。我們定位 *Q* 和 *c*ᵢ ∈ *C* 的位置，並提取查詢聚焦部分 $A_h^{Q→cᵢ}$。QR 頭 *h* ∈ *H*QR 計算的通道 *c*ᵢ 的檢索分數為：</p>
+    
+  
+    
+      <div class="formula">$$s_{c_i}^h = \frac{1}{|Q|} \sum_{i \in c_i} \sum_{j \in Q} A_h^{Q \to c_i} [i, j] \qquad (2)$$</div>
+    
+  
+    
+      <p>其中分數計算如圖 1 所示。隨後，最終檢索分數是透過將 QR heads 提供的所有分數相加而獲得的：$s_{c_i} = \sum_{h \in H_{QR}} s_{c_i}^h$。此外，$s_{c_i}^h$ 也可以透過聚合最大注意力項來計算，如 ColBERT（Khattab and Zaharia, 2020）等方法所使用的方式，其達到了相似的效能，因此本文不在此詳細討論。</p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

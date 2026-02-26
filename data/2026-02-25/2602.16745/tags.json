@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "NLP",
+    "Theory"
+  ],
+  "method": [
+    "Self-Consistency",
+    "Majority Voting",
+    "Budget Allocation",
+    "Crowdsourcing"
+  ],
+  "task": [
+    "Question Answering",
+    "Test-Time Scaling"
+  ],
+  "dataset": [
+    "GPQA"
+  ],
+  "open_source": true
+}

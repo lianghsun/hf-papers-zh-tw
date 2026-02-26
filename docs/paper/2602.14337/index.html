@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LongCLI-Bench：長序列代理程式設計在命令行介面中的初步基準測試與研究 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">LongCLI-Bench：長序列代理程式設計在命令行介面中的初步基準測試與研究</h1>
+  
+  <div class="en-title">LongCLI-Bench: A Preliminary Benchmark and Study for Long-horizon Agentic Programming in Command-Line Interfaces</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Yukang Feng, Jianwen Sun, Zelai Yang, Jiaxin Ai, Chuanhao Li, Zizhen Li, Fanrui Zhang, Kang He, Rui Ma, Jifan Lin, Jie Sun, Yang Xiao, Sizhuo Zhou, Wenxiao Wu, Yiming Liu, Pengfei Liu, Yu Qiao, Shenglin Zhang, Kaipeng Zhang</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.14337" target="_blank">2602.14337</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.14337" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.14337" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.14337" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">Code</span>
+    <span class="tag method">Agent</span><span class="tag method">LLM</span><span class="tag method">Planning</span>
+    <span class="tag task">Long-horizon Programming</span><span class="tag task">Command-Line Task Execution</span><span class="tag task">Software Engineering</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+近期 AI 輔助程式設計的進展使得代理能夠透過命令列介面執行複雜的工作流程，然而現有的基準測試受限於短期任務範圍、GitHub 爬蟲的資料污染，以及缺乏細粒度的評估指標，無法嚴格評估現實軟體工程中必需的長期規劃和執行能力。為了解決這些問題，我們推出 LongCLI-Bench，一個全面的基準測試，旨在評估代理在長期、現實任務中的能力。我們從超過 1,000 個電腦科學課程作業和現實工作流程中精心挑選了 20 個高品質、長期任務，涵蓋四個工程類別：從零開始、功能添加、臭蟲修復和重構。我們為 LongCLI-Bench 提出了雙集測試協議，該協議測量需求滿足度（失敗轉通過）和迴歸避免（通過轉通過），並納入步驟級評分以精確定位執行失敗。廣泛的實驗顯示，即使是最先進的代理在 LongCLI-Bench 上的通過率也低於 20%。步驟級分析進一步表明，大多數任務在完成度不足 30% 時停滯，突顯出關鍵失敗往往發生在早期階段。儘管自我修正能夠帶來邊際收益，但透過計畫注入和互動式指導的人-代理協作能產生顯著更高的改進。這些結果強調，未來的研究必須強調開發協同人-代理工作流程，同時推進代理的規劃和執行能力，以克服長期任務性能中的關鍵挑戰。</p>
+  
+  <div class="abstract-en">Recent advances in AI-assisted programming have empowered agents to execute complex workflows via command-line interfaces, however, existing benchmarks are limited by short task horizons, data contamination from GitHub scraping, and a lack of fine-grained evaluation metrics, fail to rigorously evaluate the long-horizon planning and execution capabilities essential for realistic software engineering. To address these gaps, we introduce LongCLI-Bench, a comprehensive benchmark designed to evaluate agentic capabilities across long-horizon, realistic tasks. We curated 20 high-quality, long-horizon tasks from over 1,000 computer science assignments and real-world workflows, covering four engineering categories: from scratch, feature addition, bug fixing, and refactoring. We propose a dual-set testing protocol for LongCLI-Bench, which measures requirement fulfillment (fail-to-pass) and regression avoidance (pass-to-pass), and incorporates step-level scoring to pinpoint execution failures. Extensive experiments reveal that even state-of-the-art agents achieve pass rates below 20% in LongCLI-Bench. Step-level analysis further indicates that the majority of tasks stall at less than 30% completion, highlighting that critical failures often occur in the early stages. Although self-correction offers marginal gains, human-agent collaboration through plan injection and interactive guidance yields significantly higher improvements. These results highlight that future research must emphasize the development of synergistic human-agent workflows alongside advances in agents&#39; planning and execution capabilities to overcome key challenges in long-horizon task performance.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

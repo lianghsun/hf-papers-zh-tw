@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "CV",
+    "RL",
+    "Multimodal"
+  ],
+  "method": [
+    "Reinforcement Learning",
+    "Tool Use",
+    "Rollout Strategy",
+    "Reward Shaping"
+  ],
+  "task": [
+    "Image Understanding",
+    "Video Understanding",
+    "Visual Reasoning",
+    "Multi-turn Reasoning"
+  ],
+  "dataset": [],
+  "open_source": true
+}

@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion Models",
+    "Transformer",
+    "Agent-based Synthesis"
+  ],
+  "task": [
+    "Image Generation",
+    "Artifact Detection",
+    "Image Quality Enhancement"
+  ],
+  "dataset": [
+    "ArtiAgent (100K artifact-annotated images)"
+  ],
+  "open_source": true
+}

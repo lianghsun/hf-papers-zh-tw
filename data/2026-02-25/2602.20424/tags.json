@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "NLP",
+    "RL"
+  ],
+  "method": [
+    "Language Models",
+    "Evaluation Framework"
+  ],
+  "task": [
+    "Agent Evaluation",
+    "Instruction Following",
+    "Goal Fulfillment"
+  ],
+  "dataset": [
+    "Implicit Intelligence",
+    "Agent-as-a-World"
+  ],
+  "open_source": false
+}

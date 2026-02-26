@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高效推理的藝術：數據、獎勵和優化 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">高效推理的藝術：數據、獎勵和優化</h1>
+  
+  <div class="en-title">The Art of Efficient Reasoning: Data, Reward, and Optimization</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Taiqiang Wu, Zenan Zu, Bo Zhou, Ngai Wong</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.20945" target="_blank">2602.20945</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.20945" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.20945" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.20945" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+    <span class="tag method">Chain-of-Thought</span><span class="tag method">Reinforcement Learning</span><span class="tag method">Reward Shaping</span>
+    <span class="tag task">Reasoning</span><span class="tag task">Text Generation</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+大型語言模型（LLMs）持續受益於大規模思維鏈（Chain-of-Thought, CoT）推理，但同時也面臨沉重的計算開銷。為解決此問題，高效推理旨在透過強化學習（Reinforcement Learning, RL）進行獎勵塑形，激勵簡短而準確的思考軌跡。在本論文中，我們系統性地調查 LLMs 高效推理的機制。為進行全面評估，我們倡導採用更精細的指標，包括基於正確性的長度分佈以及涵蓋 2k 到 32k tokens 廣泛範圍內的性能表現。首先，我們揭示訓練過程遵循兩階段範式：長度自適應與推理精化。隨後，我們進行廣泛實驗（約 0.2 百萬 GPU 小時），在統一協議下解構訓練提示詞與推出、獎勵塑形以及最佳化策略。特別是，一個關鍵發現是在相對較簡單的提示詞上進行訓練，確保正獎勵信號的密度，從而避免長度崩潰。同時，所學習的長度偏差可以跨領域推廣。我們將所有發現凝煉為寶貴的洞察與實踐指南，並進一步在 Qwen3 系列中驗證，涵蓋 0.6B 到 30B，展示其穩健性與泛化能力。</p>
+  
+  <div class="abstract-en">Large Language Models (LLMs) consistently benefit from scaled Chain-of-Thought (CoT) reasoning, but also suffer from heavy computational overhead. To address this issue, efficient reasoning aims to incentivize short yet accurate thinking trajectories, typically through reward shaping with Reinforcement Learning (RL). In this paper, we systematically investigate the mechanics of efficient reasoning for LLMs. For comprehensive evaluation, we advocate for more fine-grained metrics, including length distribution conditioned on correctness and performance across a wide spectrum of token budgets ranging from 2k to 32k. First, we reveal that the training process follows a two-stage paradigm: length adaptation and reasoning refinement. After that, we conduct extensive experiments (about 0.2 million GPU hours) in a unified protocol, deconstructing training prompts and rollouts, reward shaping, and optimization strategies. In particular, a key finding is to train on relatively easier prompts, ensuring the density of positive reward signals and thus avoiding the length collapse. Meanwhile, the learned length bias can be generalized across domains. We distill all findings into valuable insights and practical guidelines, and further validate them across the Qwen3 series, ranging from 0.6B to 30B, demonstrating the robustness and generalization.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

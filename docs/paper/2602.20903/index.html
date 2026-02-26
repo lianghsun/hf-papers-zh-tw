@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TextPecker：獎勵結構異常量化以增強視覺文本渲染 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">TextPecker：獎勵結構異常量化以增強視覺文本渲染</h1>
+  
+  <div class="en-title">TextPecker: Rewarding Structural Anomaly Quantification for Enhancing Visual Text Rendering</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Hanshen Zhu, Yuliang Liu, Xuecheng Wu, An-Lan Wang, Hao Feng, Dingkang Yang, Chao Feng, Can Huang, Jingqun Tang, Xiang Bai</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.20903" target="_blank">2602.20903</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.20903" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.20903" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.20903" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span><span class="tag domain">RL</span>
+    <span class="tag method">Reinforcement Learning</span><span class="tag method">OCR</span><span class="tag method">Diffusion Models</span><span class="tag method">Reward Model</span>
+    <span class="tag task">Text-to-Image Generation</span><span class="tag task">Visual Text Rendering</span><span class="tag task">Structural Anomaly Detection</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 視覺文字渲染的結構異常感知強化學習策略
+
+視覺文字渲染（VTR）在文字轉圖像生成中仍然是一項關鍵挑戰，即使是先進的模型也經常產生具有結構異常的文字，例如扭曲、模糊和不對齊。然而，我們發現領先的 MLLM 和專業 OCR 模型在很大程度上無法感知這些結構異常，為 VTR 評估和基於強化學習的優化都造成了關鍵瓶頸。因此，即使是最先進的生成器（例如 SeedDream4.0、Qwen-Image）仍然難以渲染結構忠實的文字。為了解決這個問題，我們提出了 TextPecker，一種即插即用的結構異常感知強化學習策略，可以減輕嘈雜的獎勵信號並與任何文字轉圖像生成器相配合。為了實現這一能力，我們構建了具有字符級結構異常標註的識別數據集，並開發了筆劃編輯合成引擎以擴展結構錯誤覆蓋範圍。實驗表明 TextPecker 持續改進多種文字轉圖像模型；即使在經過充分優化的 Qwen-Image 上，它也能為中文文字渲染顯著提升平均 4% 的結構保真度和 8.7% 的語義對齊，確立了高保真 VTR 的新技術水平。本工作填補了 VTR 優化的空白，為實現可靠且結構忠實的視覺文字生成提供了基礎性步驟。</p>
+  
+  <div class="abstract-en">Visual Text Rendering (VTR) remains a critical challenge in text-to-image generation, where even advanced models frequently produce text with structural anomalies such as distortion, blurriness, and misalignment. However, we find that leading MLLMs and specialist OCR models largely fail to perceive these structural anomalies, creating a critical bottleneck for both VTR evaluation and RL-based optimization. As a result, even state-of-the-art generators (e.g., SeedDream4.0, Qwen-Image) still struggle to render structurally faithful text. To address this, we propose TextPecker, a plug-and-play structural anomaly perceptive RL strategy that mitigates noisy reward signals and works with any textto-image generator. To enable this capability, we construct a recognition dataset with character-level structural-anomaly annotations and develop a stroke-editing synthesis engine to expand structural-error coverage. Experiments show that TextPecker consistently improves diverse text-to-image models; even on the well-optimized Qwen-Image, it significantly yields average gains of 4% in structural fidelity and 8.7% in semantic alignment for Chinese text rendering, establishing a new state-of-the-art in high-fidelity VTR. Our work fills a gap in VTR optimization, providing a foundational step towards reliable and structural faithful visual text generation.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <h2># 參考文獻</h2>
+    
+  
+    
+      <p>[1] Shuai Bai, Keqin Chen, Xuejing Liu, Jialin Wang, Wenbin Ge, Sibo Song, Kai Dang, Peng Wang, Shijie Wang, Jun Tang, Humen Zhong, Yuanzhi Zhu, Mingkun Yang, Zhaohai Li, Jianqiang Wan, Pengfei Wang, Wei Ding, Zheren Fu, Yiheng Xu, Jiabo Ye, Xi Zhang, Tianbao Xie, Zesen Cheng, Hang Zhang, Zhibo Yang, Haiyang Xu, and Junyang Lin. Qwen2.5-vl 技術報告。arXiv preprint arXiv:2502.13923, 2025。1, 2, 3, 5
+[2] James Betker, Gabriel Goh, Li Jing, Tim Brooks, Jianfeng Wang, Linjie Li, Long Ouyang, Juntang Zhuang, Joyce Lee, Yufei Guo, et al. 透過更優質的標題改進影像生成。計算機科學。https://cdn.openai.com/papers/dall-e-3.pdf, 2(3):8, 2023。1
+[3] ByteDance。Seedream4.0。https://seed.bytedance.com/en/seedream4_0, 2025。訪問時間：2025-09-22。1, 2, 3
+[4] ByteDance。Doubao-seed-1.6。https://seed.bytedance.com/en/seed1_6, 2025。訪問時間：2025-09-22。5, 6
+[5] ByteDance。Doubao-seed-1.6-thinking。https://seed.bytedance.com/en/seed1_6, 2025。訪問時間：2025-09-22。5, 6
+[6] Jingjing Chang, Yixiao Fang, Peng Xing, Shuhan Wu, Wei Cheng, Rui Wang, Xianfang Zeng, Gang Yu, and Hai-Bao Chen。OneIG-Bench：影像生成的全維度細緻評估。arXiv preprint arXiv:2506.07977, 2025。1, 2, 5, 6, 12, 14, 16, 17
+[7] Jingye Chen, Yupan Huang, Tengchao Lv, Lei Cui, Qifeng Chen, and Furu Wei。TextDiffuser：作為文字繪製者的擴散模型。NIPS, 36:9353-9387, 2023。2
+[8] Jingye Chen, Yupan Huang, Tengchao Lv, Lei Cui, Qifeng Chen, and Furu Wei。TextDiffuser-2：釋放語言模型在文字渲染中的力量。在 ECCV 中，頁碼 386-402。Springer, 2024。2
+[9] Jiuhai Chen, Le Xue, Zhiyang Xu, Xichen Pan, Shusheng Yang, Can Qin, An Yan, Honglu Zhou, Zeyuan Chen, Lifu Huang, et al。BLIP-30 Next：原生影像生成的下一個前沿。arXiv preprint arXiv:2510.15857, 2025。1, 3
+[10] Gheorghe Comanici, Eric Bieber, Mike Schaekermann, Ice Pasupat, Noveen Sachdeva, Inderjit Dhillon, Marcel Blistein, Ori Ram, Dan Zhang, Evan Rosen, et al。Gemini 2.5：透過進階推理、多模態、長上下文和下一代代理能力推進前沿。arXiv preprint arXiv:2507.06261, 2025。1, 18
+[11] Gheorghe Comanici, Eric Bieber, Mike Schaekermann, Ice Pasupat, Noveen Sachdeva, Inderjit Dhillon, Marcel Blistein, Ori Ram, Dan Zhang, Evan Rosen, et al。Gemini 2.5：透過進階推理、多模態、長上下文和下一代代理能力推進前沿。arXiv preprint arXiv:2507.06261, 2025。5, 6, 12, 13
+[12] Chaorui Deng, Deyao Zhu, Kunchang Li, Chenhui Gou, Feng Li, Zeyu Wang, Shu Zhong, Weihao Yu, Xiaonan Nie, Ziang Song, et al。統一多模態預訓練中的新興特性。arXiv preprint arXiv:2505.14683, 2025。1, 2
+[13] Ming Ding, Zhuoyi Yang, Wenyi Hong, Wendi Zheng, Chang Zhou, Da Yin, Junyang Lin, Xu Zou, Zhou Shao, Hongxia Yang, et al。CogView：透過 Transformer 掌握文字轉影像生成。NIPS, 34:19822-19835, 2021。4, 15</p>
+    
+  
+    
+      <p>[14] Nikai Du, Zhennan Chen, Shan Gao, Zhizhou Chen, Xi Chen, Zhengkai Jiang, Jian Yang, and Ying Tai. Textcrafter: Accurately rendering multiple texts in complex visual scenes. arXiv preprint arXiv:2503.23461, 2025. 1, 2, 5, 6, 14, 16, 17</p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

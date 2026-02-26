@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Flow-based Diffusion",
+    "Continuous Denoising",
+    "Distillation"
+  ],
+  "task": [
+    "Text Generation",
+    "Language Modeling"
+  ],
+  "dataset": [
+    "LM1B",
+    "OWT"
+  ],
+  "open_source": true
+}

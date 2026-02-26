@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "Code",
+    "Theory"
+  ],
+  "method": [
+    "LLM",
+    "Chain-of-Thought",
+    "Deep Think"
+  ],
+  "task": [
+    "Mathematical Reasoning",
+    "Theorem Proving"
+  ],
+  "dataset": [
+    "FirstProof"
+  ],
+  "open_source": true
+}

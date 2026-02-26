@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "CV",
+    "Robotics",
+    "Multimodal",
+    "RL"
+  ],
+  "method": [
+    "Vision-Language Model",
+    "Diffusion Model",
+    "Physics Simulation"
+  ],
+  "task": [
+    "Vision Reasoning",
+    "Action Planning",
+    "Physical Constraint Understanding",
+    "Long-horizon Manipulation"
+  ],
+  "dataset": [
+    "CHAIN"
+  ],
+  "open_source": true
+}

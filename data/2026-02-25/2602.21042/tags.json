@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "CV",
+    "NLP",
+    "Multimodal"
+  ],
+  "method": [
+    "Dynamic LoRA",
+    "Sparsity Regularization"
+  ],
+  "task": [
+    "Optical Character Recognition"
+  ],
+  "dataset": [
+    "TibetanMNIST",
+    "Shui",
+    "ancient Yi",
+    "Dongba"
+  ],
+  "open_source": true
+}

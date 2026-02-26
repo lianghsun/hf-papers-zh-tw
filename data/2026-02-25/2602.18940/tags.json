@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Agent",
+    "Tool-use",
+    "LLM-based evaluation"
+  ],
+  "task": [
+    "Report Evaluation",
+    "Research Quality Assessment",
+    "Factual Verification"
+  ],
+  "dataset": [],
+  "open_source": false
+}

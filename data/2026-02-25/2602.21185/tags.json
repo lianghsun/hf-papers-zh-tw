@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "NLP",
+    "CV"
+  ],
+  "method": [
+    "Diffusion",
+    "Predictor-Corrector Sampling"
+  ],
+  "task": [
+    "Text Generation",
+    "Image Generation"
+  ],
+  "dataset": [
+    "OpenWebText",
+    "LM1B",
+    "CIFAR10"
+  ],
+  "open_source": true
+}

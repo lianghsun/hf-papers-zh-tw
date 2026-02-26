@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "CV"
+  ],
+  "method": [
+    "Diffusion",
+    "3D Foundation Models",
+    "Generative Priors"
+  ],
+  "task": [
+    "3D Shape Completion"
+  ],
+  "dataset": [
+    "Omni-Comp"
+  ],
+  "open_source": true
+}

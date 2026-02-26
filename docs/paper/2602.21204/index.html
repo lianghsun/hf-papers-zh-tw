@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>測試時訓練與 KV Binding 本質上是線性注意力機制 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">測試時訓練與 KV Binding 本質上是線性注意力機制</h1>
+  
+  <div class="en-title">Test-Time Training with KV Binding Is Secretly Linear Attention</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Junchen Liu, Sven Elflein, Or Litany, Zan Gojcic, Ruilong Li</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.21204" target="_blank">2602.21204</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.21204" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.21204" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.21204" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">Theory</span>
+    <span class="tag method">Transformer</span><span class="tag method">Linear Attention</span><span class="tag method">Sequence Modeling</span>
+    <span class="tag task">Sequence Modeling</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+測試時訓練（Test-time training, TTT）搭配 KV binding 作為序列建模層，通常被解釋為一種線上後設學習（online meta-learning），在測試時記憶化鍵值對應。然而，我們的分析揭示了多個現象與這種基於記憶化的解釋相悖。基於這些發現，我們重新審視 TTT 的公式化，證明一大類 TTT 架構可以表示為學習線性注意力算子（learned linear attention operator）的形式。除了解釋先前令人困惑的模型行為外，這個視角還帶來多項實際的好處：它使原理性的架構簡化成為可能，允許完全並行的公式化同時保持效能並改進效率，並提供將多種 TTT 變體系統化地化約為標準線性注意力形式的方法。總體而言，我們的研究結果將 TTT 重新定義不是測試時記憶化，而是具有增強表示能力的學習線性注意力。</p>
+  
+  <div class="abstract-en">Test-time training (TTT) with KV binding as sequence modeling layer is commonly interpreted as a form of online meta-learning that memorizes a key-value mapping at test time. However, our analysis reveals multiple phenomena that contradict this memorization-based interpretation. Motivated by these findings, we revisit the formulation of TTT and show that a broad class of TTT architectures can be expressed as a form of learned linear attention operator. Beyond explaining previously puzzling model behaviors, this perspective yields multiple practical benefits: it enables principled architectural simplifications, admits fully parallel formulations that preserve performance while improving efficiency, and provides a systematic reduction of diverse TTT variants to a standard linear attention form. Overall, our results reframe TTT not as test-time memorization, but as learned linear attention with enhanced representational capacity.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

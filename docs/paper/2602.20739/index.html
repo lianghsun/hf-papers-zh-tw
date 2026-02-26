@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyVision-RL：通過強化學習打造開放式智能視覺模型 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">PyVision-RL：通過強化學習打造開放式智能視覺模型</h1>
+  
+  <div class="en-title">PyVision-RL: Forging Open Agentic Vision Models via RL</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Shitian Zhao, Shaoheng Lin, Ming Li, Haoquan Zhang, Wenshuo Peng, Kaipeng Zhang, Chen Wei</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.20739" target="_blank">2602.20739</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.20739" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.20739" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.20739" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">RL</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Reinforcement Learning</span><span class="tag method">Tool Use</span><span class="tag method">Rollout Strategy</span><span class="tag method">Reward Shaping</span>
+    <span class="tag task">Image Understanding</span><span class="tag task">Video Understanding</span><span class="tag task">Visual Reasoning</span><span class="tag task">Multi-turn Reasoning</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+代理多模態模型的強化學習經常遭遇交互崩潰問題，即模型學會減少工具使用和多步推理，限制了代理行為的優勢。我們引入 PyVision-RL，一個為開源權重多模態模型設計的強化學習框架，可以穩定訓練並維持交互。我們的方法結合過度採樣-過濾-排序展開策略與累積工具獎勵，以防止崩潰並鼓勵多步工具使用。使用統一的訓練流程，我們開發了用於影像和視訊理解的 PyVision-Image 和 PyVision-Video。對於視訊推理，PyVision-Video 採用按需上下文構建，在推理過程中有選擇地採樣任務相關的幀，以顯著減少視覺標記使用。實驗結果展示了強大的性能和改進的效率，證明了持續交互和按需視覺處理對於可擴展多模態代理至關重要。</p>
+  
+  <div class="abstract-en">Reinforcement learning for agentic multimodal models often suffers from interaction collapse, where models learn to reduce tool usage and multi-turn reasoning, limiting the benefits of agentic behavior. We introduce PyVision-RL, a reinforcement learning framework for open-weight multimodal models that stabilizes training and sustains interaction. Our approach combines an oversampling-filtering-ranking rollout strategy with an accumulative tool reward to prevent collapse and encourage multi-turn tool use. Using a unified training pipeline, we develop PyVision-Image and PyVision-Video for image and video understanding. For video reasoning, PyVision-Video employs on-demand context construction, selectively sampling task-relevant frames during reasoning to significantly reduce visual token usage. Experiments show strong performance and improved efficiency, demonstrating that sustained interaction and on-demand visual processing are critical for scalable multimodal agents.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <figure class="paper-figure">
+        <img src="../../figures/2026-02-25/2602.20739/p24_fig1.png"
+             alt="Figure 1" loading="lazy">
+      </figure>
+    
+  
+    
+      <p><em>**圖 20.** VSI-Bench 上物件計數的案例研究。此任務要求 PyVision-Video 計數給定影片中的特定物件。在本案例中，首先，PyVision-Video 從影片中均勻採樣 15 幀。隨後，它在第 700 幀和第 1100 幀識別出 2 張不同的桌子。為了查看是否有額外的桌子或相同的桌子是否從不同角度顯示，該模型在第 600 到第 1200 幀之間的影片片段中採樣更多幀。最後，基於構建的上下文，PyVision-Video 識別出兩張不同的桌子，一張木桌配有花瓶和椅子，另一張配有紅色支架和電視。</em></p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

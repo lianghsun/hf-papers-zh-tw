@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "Code"
+  ],
+  "method": [
+    "Agent",
+    "LLM",
+    "Planning"
+  ],
+  "task": [
+    "Long-horizon Programming",
+    "Command-Line Task Execution",
+    "Software Engineering"
+  ],
+  "dataset": [
+    "LongCLI-Bench"
+  ],
+  "open_source": false
+}

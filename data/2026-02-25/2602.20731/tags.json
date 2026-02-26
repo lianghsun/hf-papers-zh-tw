@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Transformer",
+    "Flow Matching",
+    "Discrete Tokenization",
+    "Recurrent Encoding"
+  ],
+  "task": [
+    "Image Tokenization",
+    "Image Reconstruction",
+    "Semantic Representation Learning",
+    "Compositional Generalization"
+  ],
+  "dataset": [],
+  "open_source": false
+}

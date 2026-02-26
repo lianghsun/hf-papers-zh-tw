@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>一步式語言模型化透過連續去噪 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">一步式語言模型化透過連續去噪</h1>
+  
+  <div class="en-title">One-step Language Modeling via Continuous Denoising</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Chanhyuk Lee, Jaehoon Yoo, Manan Agarwal, Sheel Shah, Jerry Huang, Aditi Raghunathan, Seunghoon Hong, Nicholas M. Boffi, Jinwoo Kim</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.16813" target="_blank">2602.16813</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.16813" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.16813" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.16813" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">Flow-based Diffusion</span><span class="tag method">Continuous Denoising</span><span class="tag method">Distillation</span>
+    <span class="tag task">Text Generation</span><span class="tag task">Language Modeling</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+基於離散擴散的語言模型因其相比自迴歸模型提供更快生成速度的潛力而受到廣泛關注。然而在實踐中，這些模型在少步驟（few-step）情景下表現出樣本品質的急劇下降，未能實現這一承諾。本文顯示利用基於流的連續去噪的語言模型可以在品質和速度上都優於離散擴散。通過重新審視離散模態上的流的基礎理論，我們構建了一個流基語言模型（FLM），它在獨熱編碼令牌上執行歐幾里得去噪。我們證明該模型可以通過交叉熵目標預測乾淨數據進行訓練，其中我們引入了簡單的時間重參數化，大幅改進了訓練穩定性和生成品質。通過將 FLM 蒸餾到其相關的流映射中，我們獲得了一個蒸餾流映射語言模型（FMLM），能夠執行少步驟生成。在 LM1B 和 OWT 語言數據集上，FLM 實現了與最先進離散擴散模型相匹配的生成品質。使用 FMLM，我們的方法在各方面都優於最近的少步驟語言模型，其單步生成超過了它們的八步品質。我們的工作質疑了廣泛持有的假設——即離散擴散過程對於離散模態上的生成建模是必要的，並為大規模加速流基語言模型開闢了道路。代碼可在 https://github.com/david3684/flm 獲取。</p>
+  
+  <div class="abstract-en">Language models based on discrete diffusion have attracted widespread interest for their potential to provide faster generation than autoregressive models. In practice, however, they exhibit a sharp degradation of sample quality in the few-step regime, failing to realize this promise. Here we show that language models leveraging flow-based continuous denoising can outperform discrete diffusion in both quality and speed. By revisiting the fundamentals of flows over discrete modalities, we build a flow-based language model (FLM) that performs Euclidean denoising over one-hot token encodings. We show that the model can be trained by predicting the clean data via a cross entropy objective, where we introduce a simple time reparameterization that greatly improves training stability and generation quality. By distilling FLM into its associated flow map, we obtain a distilled flow map language model (FMLM) capable of few-step generation. On the LM1B and OWT language datasets, FLM attains generation quality matching state-of-the-art discrete diffusion models. With FMLM, our approach outperforms recent few-step language models across the board, with one-step generation exceeding their 8-step quality. Our work calls into question the widely held hypothesis that discrete diffusion processes are necessary for generative modeling over discrete modalities, and paves the way toward accelerated flow-based language modeling at scale. Code is available at https://github.com/david3684/flm.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

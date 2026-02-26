@@ -1,0 +1,15 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Prompt Optimization",
+    "Language Models"
+  ],
+  "task": [
+    "Text Anonymization",
+    "Privacy Protection"
+  ],
+  "dataset": [],
+  "open_source": true
+}

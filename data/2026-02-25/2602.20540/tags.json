@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP",
+    "Other"
+  ],
+  "method": [
+    "Generative AI",
+    "Machine Learning",
+    "Data Standardization"
+  ],
+  "task": [
+    "Dwell Time Prediction",
+    "Text Standardization"
+  ],
+  "dataset": [],
+  "open_source": false
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conv-FinRe：一個實用導向的金融推薦對話與縱向基準測試 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">Conv-FinRe：一個實用導向的金融推薦對話與縱向基準測試</h1>
+  
+  <div class="en-title">Conv-FinRe: A Conversational and Longitudinal Benchmark for Utility-Grounded Financial Recommendation</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Yan Wang, Yi Han, Lingfei Qian, Yueru He, Xueqing Peng, Dongji Feng, Zhuohan Xie, Vincent Jim Zhang, Rosie Guo, Fengran Mo, Jimin Huang, Yankai Chen, Xue Liu, Jian-Yun Nie</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.16990" target="_blank">2602.16990</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.16990" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.16990" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.16990" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">LLM</span><span class="tag method">Conversational AI</span>
+    <span class="tag task">Financial Recommendation</span><span class="tag task">Ranking</span><span class="tag task">Dialogue</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+大多數推薦系統基準測試評估模型模仿使用者行為的程度。然而，在金融顧問領域，觀測到的行為可能受到市場波動而產生雜訊或目光短淺，並且可能與使用者的長期目標相衝突。因此，將使用者的選擇視為唯一的真實標準會將行為模仿與決策品質混為一談。我們推出 Conv-FinRe，一個對話式和縱向的股票推薦基準測試，用於評估 LLM 超越行為匹配的能力。給定入門面談、逐步的市場背景和顧問對話，模型必須在固定的投資期限內生成股票排名。重要的是，Conv-FinRe 提供多視角參考，區分描述性行為與根植於投資者特定風險偏好的規範性效用，使我們能夠診斷 LLM 是否遵循理性分析、模仿使用者雜訊或受市場動量驅動。我們從真實市場數據和人類決策軌跡構建該基準測試，建立受控的顧問對話，並評估一套最先進的 LLM。研究結果揭示了理性決策品質與行為一致性之間的持久張力：在基於效用的排名上表現良好的模型通常無法匹配使用者選擇，而行為對齊的模型可能會過度擬合短期雜訊。該數據集已在 Hugging Face 上公開發布，程式碼庫可在 GitHub 上獲得。</p>
+  
+  <div class="abstract-en">Most recommendation benchmarks evaluate how well a model imitates user behavior. In financial advisory, however, observed actions can be noisy or short-sighted under market volatility and may conflict with a user&#39;s long-term goals. Treating what users chose as the sole ground truth, therefore, conflates behavioral imitation with decision quality. We introduce Conv-FinRe, a conversational and longitudinal benchmark for stock recommendation that evaluates LLMs beyond behavior matching. Given an onboarding interview, step-wise market context, and advisory dialogues, models must generate rankings over a fixed investment horizon. Crucially, Conv-FinRe provides multi-view references that distinguish descriptive behavior from normative utility grounded in investor-specific risk preferences, enabling diagnosis of whether an LLM follows rational analysis, mimics user noise, or is driven by market momentum. We build the benchmark from real market data and human decision trajectories, instantiate controlled advisory conversations, and evaluate a suite of state-of-the-art LLMs. Results reveal a persistent tension between rational decision quality and behavioral alignment: models that perform well on utility-based ranking often fail to match user choices, whereas behaviorally aligned models can overfit short-term noise. The dataset is publicly released on Hugging Face, and the codebase is available on GitHub.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP",
+    "RL"
+  ],
+  "method": [
+    "Chain-of-Thought",
+    "Reinforcement Learning",
+    "Reward Shaping"
+  ],
+  "task": [
+    "Reasoning",
+    "Text Generation"
+  ],
+  "dataset": [],
+  "open_source": false
+}

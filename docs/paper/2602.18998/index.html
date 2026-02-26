@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通用 LLM 代理的基準測試時間縮放 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">通用 LLM 代理的基準測試時間縮放</h1>
+  
+  <div class="en-title">Benchmark Test-Time Scaling of General LLM Agents</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Xiaochuan Li, Ryan Ming, Pranav Setlur, Abhijay Paladugu, Andy Tang, Hao Kang, Shuai Shao, Rong Jin, Chenyan Xiong</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.18998" target="_blank">2602.18998</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.18998" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.18998" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.18998" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">Code</span>
+    <span class="tag method">LLM</span><span class="tag method">Agent</span><span class="tag method">Test-time Scaling</span><span class="tag method">Sequential Scaling</span><span class="tag method">Parallel Scaling</span>
+    <span class="tag task">Agent Evaluation</span><span class="tag task">Tool Use</span><span class="tag task">Reasoning</span><span class="tag task">Code Generation</span><span class="tag task">Search</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># LLM 智能體通用基準測試
+
+LLM 智能體越來越需要作為通用系統來運作，以解決開放性的用戶請求。雖然現有基準測試側重於領域感知的環境來開發專門化智能體，但評估通用智能體需要更加真實的設置，使其在統一環境中跨越多項技能和工具進行運作。我們引入 General AgentBench，一個提供統一框架的基準測試，用於在搜尋、編碼、推理和工具使用等領域評估通用 LLM 智能體。利用 General AgentBench，我們系統地研究了在順序擴展（迭代交互）和平行擴展（採樣多個軌跡）下的測試時間擴展行為。對十個領先 LLM 智能體的評估揭示了從領域特定評估轉移到此通用智能體設置時的顯著性能衰退。此外，我們發現由於兩個根本限制——順序擴展中的上下文天花板和平行擴展中的驗證差距——兩種擴展方法在實踐中都無法產生有效的性能改進。代碼已在 https://github.com/cxcscmu/General-AgentBench 公開發佈。</p>
+  
+  <div class="abstract-en">LLM agents are increasingly expected to function as general-purpose systems capable of resolving open-ended user requests. While existing benchmarks focus on domain-aware environments for developing specialized agents, evaluating general-purpose agents requires more realistic settings that challenge them to operate across multiple skills and tools within a unified environment. We introduce General AgentBench, a benchmark that provides such a unified framework for evaluating general LLM agents across search, coding, reasoning, and tool-use domains. Using General AgentBench, we systematically study test-time scaling behaviors under sequential scaling (iterative interaction) and parallel scaling (sampling multiple trajectories). Evaluation of ten leading LLM agents reveals a substantial performance degradation when moving from domain-specific evaluations to this general-agent setting. Moreover, we find that neither scaling methodology yields effective performance improvements in practice, due to two fundamental limitations: context ceiling in sequential scaling and verification gap in parallel scaling. Code is publicly available at https://github.com/cxcscmu/General-AgentBench.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

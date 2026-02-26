@@ -1,0 +1,12 @@
+[
+  {
+    "type": "image",
+    "fig_name": "p24_fig1.png",
+    "page": 24
+  },
+  {
+    "type": "caption",
+    "text": "**Figure 20.** Case Study of Object Counting on VSI-Bench. This task requires PyVision-Video to count a specific object in a given video. In this case, first, PyVision-Video uniformly samples 15 frames from the video. Then, it identifies 2 different tables in frame 700 and frame 1100. To see if there are additional tables or if the same tables are shown from different angles, the model samples more frames of the video clip between frame 600 to frame 1200. Finally, based on the constructed context, PyVision-Video recognizes two different tables, one wooden table with a vase and chairs and one with a red stand and a TV on top.",
+    "page": 24
+  }
+]

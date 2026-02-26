@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>從試錯中學習：具身 LLM 的反思性測試時間規劃 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">從試錯中學習：具身 LLM 的反思性測試時間規劃</h1>
+  
+  <div class="en-title">Learning from Trials and Errors: Reflective Test-Time Planning for Embodied LLMs</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Yining Hong, Huang Huang, Manling Li, Li Fei-Fei, Jiajun Wu, Yejin Choi</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.21198" target="_blank">2602.21198</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.21198" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.21198" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.21198" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">RL</span><span class="tag domain">Robotics</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Test-Time Planning</span><span class="tag method">Test-Time Training</span><span class="tag method">LLM</span><span class="tag method">Reflection</span>
+    <span class="tag task">Task Planning</span><span class="tag task">Robot Control</span><span class="tag task">Long-Horizon Decision Making</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+具身 LLM 為機器人賦予高階任務推理能力，但它們無法反思出現了什麼問題或原因為何，導致部署變成一連串獨立試驗，錯誤重複發生而非累積成經驗。基於人類反思型實踐者的概念，我們引入反思性測試時規劃（Reflective Test-Time Planning），整合兩種反思模式：行動中反思（reflection-in-action），其中代理使用測試時縮放在執行前透過內部反思生成並評估多個候選動作；以及行動後反思（reflection-on-action），利用測試時訓練在執行後基於外部反思更新其內部反思模型和動作策略。我們也包含回溯性反思，使代理能重新評估較早的決策，並透過事後知識進行模型更新，以達成適當的長視野信用分配。在我們新設計的長視野家務基準和 MuJoCo 櫥櫃組裝基準上的實驗顯示相比於基線模型有顯著改進，消融研究驗證了行動中反思和行動後反思的互補角色。定性分析包括實體機器人試驗，強調了透過反思進行的行為修正。</p>
+  
+  <div class="abstract-en">Embodied LLMs endow robots with high-level task reasoning, but they cannot reflect on what went wrong or why, turning deployment into a sequence of independent trials where mistakes repeat rather than accumulate into experience. Drawing upon human reflective practitioners, we introduce Reflective Test-Time Planning, which integrates two modes of reflection: reflection-in-action, where the agent uses test-time scaling to generate and score multiple candidate actions using internal reflections before execution; and reflection-on-action, which uses test-time training to update both its internal reflection model and its action policy based on external reflections after execution. We also include retrospective reflection, allowing the agent to re-evaluate earlier decisions and perform model updates with hindsight for proper long-horizon credit assignment. Experiments on our newly-designed Long-Horizon Household benchmark and MuJoCo Cupboard Fitting benchmark show significant gains over baseline models, with ablative studies validating the complementary roles of reflection-in-action and reflection-on-action. Qualitative analyses, including real-robot trials, highlight behavioral correction through reflection.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

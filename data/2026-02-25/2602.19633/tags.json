@@ -1,0 +1,25 @@
+{
+  "domain": [
+    "NLP",
+    "RL"
+  ],
+  "method": [
+    "Planning",
+    "Constrained Decoding",
+    "Graph-based Planning",
+    "External Solver"
+  ],
+  "task": [
+    "Task Planning",
+    "Constrained Execution",
+    "Sequential Decision Making",
+    "Question Answering"
+  ],
+  "dataset": [
+    "Sokoban",
+    "ALFWorld",
+    "MuSiQue",
+    "GSM8K-Hard"
+  ],
+  "open_source": true
+}

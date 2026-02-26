@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuantVLA：視覺-語言-動作模型的尺度校準後訓練量化 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">QuantVLA：視覺-語言-動作模型的尺度校準後訓練量化</h1>
+  
+  <div class="en-title">QuantVLA: Scale-Calibrated Post-Training Quantization for Vision-Language-Action Models</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Jingxuan Zhang, Yunta Hsieh, Zhongwei Wang, Haokun Lin, Xin Wang, Ziqi Wang, Yingtie Lei, Mi Zhang</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.20309" target="_blank">2602.20309</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.20309" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.20309" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.20309" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span><span class="tag domain">Robotics</span><span class="tag domain">RL</span>
+    <span class="tag method">Quantization</span><span class="tag method">Post-Training Quantization</span><span class="tag method">Diffusion Transformer</span><span class="tag method">Attention Temperature Matching</span>
+    <span class="tag task">Action Prediction</span><span class="tag task">Embodied AI</span><span class="tag task">Robot Control</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+視覺-語言-動作（VLA）模型統一了具身智能體的感知、語言和控制能力，但在實際部署中面臨重大挑戰，特別是隨著模型擴展到更長的時間範圍和更大的主幹網路時，計算和記憶體需求迅速增加。為了解決這些瓶頸，我們引入了 QuantVLA，一個無訓練的後訓練量化（PTQ）框架。據我們所知，這是首個針對 VLA 系統的 PTQ 方法，也是首個成功量化擴散 Transformer（DiT）動作頭的方法。QuantVLA 包含三個經過尺度校準的組件：（1）選擇性量化佈局，將語言主幹和 DiT 中的所有線性層整數化，同時保持注意力投影為浮點格式以保留原始運算子排程；（2）注意力溫度匹配，一種輕量級的逐頭縮放機制，用於穩定注意力 logits，並在推論時折疊到反量化尺度中；（3）輸出頭平衡，一種逐層殘差介面校準，用於緩解投影後的能量漂移。該框架無需額外訓練，僅使用一個小型無標籤校準緩衝區，並支援低位寬權重和激活值的整數核心，同時保持架構不變。在 LIBERO 上的代表性 VLA 模型中，QuantVLA 超越了全精度基線的任務成功率，在量化組件上達到約 70% 的相對記憶體節省，並在端到端推論延遲上實現 1.22 倍的加速，為在嚴格的計算、記憶體和功耗限制下實現可擴展的低位寬具身智能提供了實用途徑。</p>
+  
+  <div class="abstract-en">Vision-language-action (VLA) models unify perception, language, and control for embodied agents but face significant challenges in practical deployment due to rapidly increasing compute and memory demands, especially as models scale to longer horizons and larger backbones. To address these bottlenecks, we introduce QuantVLA, a training-free post-training quantization (PTQ) framework that, to our knowledge, is the first PTQ approach for VLA systems and the first to successfully quantize a diffusion transformer (DiT) action head. QuantVLA incorporates three scale-calibrated components: (1) a selective quantization layout that integerizes all linear layers in both the language backbone and the DiT while keeping attention projections in floating point to preserve the original operator schedule; (2) attention temperature matching, a lightweight per-head scaling mechanism that stabilizes attention logits and is folded into the dequantization scales at inference; and (3) output head balancing, a per-layer residual interface calibration that mitigates post-projection energy drift. The framework requires no additional training, uses only a small unlabeled calibration buffer, and supports integer kernels for low-bit weights and activations while leaving the architecture unchanged. Across representative VLA models on LIBERO, QuantVLA exceeds the task success rates of full-precision baselines, achieves about 70% relative memory savings on the quantized components, and delivers a 1.22x speedup in end-to-end inference latency, providing a practical pathway toward scalable low-bit embodied intelligence under strict compute, memory, and power constraints.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

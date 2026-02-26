@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "NLP",
+    "Code"
+  ],
+  "method": [
+    "Synthetic Data Generation",
+    "Curriculum Learning",
+    "Fine-tuning"
+  ],
+  "task": [
+    "Terminal Command Generation",
+    "Agent Training"
+  ],
+  "dataset": [
+    "Terminal-Corpus",
+    "Terminal-Bench 2.0"
+  ],
+  "open_source": true
+}

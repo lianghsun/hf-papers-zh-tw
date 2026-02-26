@@ -1,0 +1,18 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "LLM",
+    "Conversational AI"
+  ],
+  "task": [
+    "Financial Recommendation",
+    "Ranking",
+    "Dialogue"
+  ],
+  "dataset": [
+    "Conv-FinRe"
+  ],
+  "open_source": true
+}

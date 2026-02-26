@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>解開的尤利西斯：通過頭向分塊實現記憶高效的上下文並行 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">解開的尤利西斯：通過頭向分塊實現記憶高效的上下文並行</h1>
+  
+  <div class="en-title">Untied Ulysses: Memory-Efficient Context Parallelism via Headwise Chunking</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Ravi Ghadia, Maksim Abraham, Sergei Vorobyov, Max Ryabinin</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.21196" target="_blank">2602.21196</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.21196" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.21196" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.21196" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">Transformer</span><span class="tag method">Context Parallelism</span><span class="tag method">Attention Mechanism</span><span class="tag method">Memory Optimization</span>
+    <span class="tag task">Long Sequence Processing</span><span class="tag task">Model Training</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+使用 Transformer 模型高效處理長序列通常需要通過上下文並行化在加速器之間分割計算。這類方法中的主流方法，例如 Ring Attention 或 DeepSpeed Ulysses，能夠在上下文維度上進行擴展，但不著重於記憶體效率，這限制了它們能支援的序列長度。更先進的技術，例如 Fully Pipelined Distributed Transformer 或啟動值卸載，可以進一步延伸可能的上下文長度，但代價是訓練吞吐量的降低。在本論文中，我們提出 UPipe，一種簡單但有效的上下文並行化技術，在注意力頭級別進行細粒度分塊。該技術顯著減少了自注意力的啟動值記憶體使用，突破了啟動值記憶體的瓶頸，釋放了更長的上下文長度。我們的方法將 32B Transformer 中注意力層的中間張量記憶體使用量減少了多達 87.5%，同時在訓練速度方面與先前的上下文並行化技術相當。UPipe 在單個 8×H100 節點上訓練 Llama3-8B 時可支援 5M tokens 的上下文長度，相比之前的方法改進超過 25%。</p>
+  
+  <div class="abstract-en">Efficiently processing long sequences with Transformer models usually requires splitting the computations across accelerators via context parallelism. The dominant approaches in this family of methods, such as Ring Attention or DeepSpeed Ulysses, enable scaling over the context dimension but do not focus on memory efficiency, which limits the sequence lengths they can support. More advanced techniques, such as Fully Pipelined Distributed Transformer or activation offloading, can further extend the possible context length at the cost of training throughput. In this paper, we present UPipe, a simple yet effective context parallelism technique that performs fine-grained chunking at the attention head level. This technique significantly reduces the activation memory usage of self-attention, breaking the activation memory barrier and unlocking much longer context lengths. Our approach reduces intermediate tensor memory usage in the attention layer by as much as 87.5% for 32B Transformers, while matching previous context parallelism techniques in terms of training speed. UPipe can support the context length of 5M tokens when training Llama3-8B on a single 8timesH100 node, improving upon prior methods by over 25%.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026-02-25 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="date-nav">
+  
+  <span class="current">2026-02-25</span>
+  
+</div>
+
+<h1 class="page-title">2026-02-25</h1>
+<p class="page-subtitle">32 篇論文</p>
+
+<div class="paper-list">
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21193</span>
+      <span>▲ 3</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21193/index.html" style="color:inherit;">
+        論數據工程在擴展LLM終端能力中的應用
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">On Data Engineering for Scaling LLM Terminal Capabilities</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+儘管大型語言模型的終端能力最近取得快速進展，但最先進終端代理背後的訓練資料策略在很大程度上仍未公開。我們通過對終端代理資料工程實踐的系統研究來填補這一空白，做出了兩個關鍵貢獻：(1) Terminal-Task-Gen，一個輕量級合成任務生成管道，支持基於種子和基於技能的任務構建，以及 (2) 資料和訓練策略的全面分析，包括篩選、課程學習、長上下文訓練和縮放行為。我們的管道產生了 Terminal-Corpus，一個大規模開源終端任務資料集。使用此資料集，我們訓練了 Nemotron-Terminal，一系列從 Qwen3（8B、14B、32B）初始化的模型，在 Terminal-Bench 2.0 上取得了實質性的進展：Nemotron-Terminal-8B 從 2.5% 改進到 13.0%，Nemotron-Terminal-14B 從 4.0% 改進到 20.2%，Nemotron-Terminal-32B 從 3.4% 改進到 27.4%，其性能與規模顯著更大的模型相當。為了加速這一領域的研究，我們在 https://huggingface.co/collections/nvidia/nemotron-terminal 開源了我們的模型檢查點和大部分合成資料集。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Code</span>
+        <span class="tag method">Synthetic Data Generation</span><span class="tag method">Curriculum Learning</span><span class="tag method">Fine-tuning</span>
+        <span class="tag task">Terminal Command Generation</span><span class="tag task">Agent Training</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21193/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21193" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.12192</span>
+      <span>▲ 4</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.12192/index.html" style="color:inherit;">
+        查詢焦點和記憶感知重排器用於長文本處理
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Query-focused and Memory-aware Reranker for Long Context Processing</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+基於對大型語言模型中檢索頭（retrieval heads）的現有分析，我們提出了一個替代性的重排序框架，該框架訓練模型使用所選頭部的注意力分數來估計段落-查詢的相關性。這種方法提供了一個列表式解決方案，在排序過程中充分利用整個候選列表中的整體資訊。同時，它自然地產生連續的相關性分數，能夠在任意檢索資料集上進行訓練，無需依賴 Likert 量表監督。我們的框架輕量且有效，只需要小規模模型（例如 4B 參數）即可達到強大的性能。廣泛的實驗表明，我們的方法在多個領域（包括維基百科和長敘述資料集）上優於現有的最先進的逐點式和列表式重排序器。它進一步在 LoCoMo 基準上建立了新的最先進結果，該基準評估對話理解和記憶使用的能力。我們進一步展示了我們的框架支持靈活的擴展。例如，用上下文資訊增強候選段落進一步提高了排序準確性，而從中間層訓練注意力頭增強了效率，同時不犧牲性能。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Transformer</span><span class="tag method">Attention Mechanism</span><span class="tag method">Reranking</span>
+        <span class="tag task">Information Retrieval</span><span class="tag task">Passage Ranking</span><span class="tag task">Question Answering</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.12192/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.12192" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20739</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20739/index.html" style="color:inherit;">
+        PyVision-RL：通過強化學習打造開放式智能視覺模型
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">PyVision-RL: Forging Open Agentic Vision Models via RL</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+代理多模態模型的強化學習經常遭遇交互崩潰問題，即模型學會減少工具使用和多步推理，限制了代理行為的優勢。我們引入 PyVision-RL，一個為開源權重多模態模型設計的強化學習框架，可以穩定訓練並維持交互。我們的方法結合過度採樣-過濾-排序展開策略與累積工具獎勵，以防止崩潰並鼓勵多步工具使用。使用統一的訓練流程，我們開發了用於影像和視訊理解的 PyVision-Image 和 PyVision-Video。對於視訊推理，PyVision-Video 採用按需上下文構建，在推理過程中有選擇地採樣任務相關的幀，以顯著減少視覺標記使用。實驗結果展示了強大的性能和改進的效率，證明了持續交互和按需視覺處理對於可擴展多模態代理至關重要。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">RL</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Reinforcement Learning</span><span class="tag method">Tool Use</span><span class="tag method">Rollout Strategy</span><span class="tag method">Reward Shaping</span>
+        <span class="tag task">Image Understanding</span><span class="tag task">Video Understanding</span><span class="tag task">Visual Reasoning</span><span class="tag task">Multi-turn Reasoning</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20739/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20739" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21204</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21204/index.html" style="color:inherit;">
+        測試時訓練與 KV Binding 本質上是線性注意力機制
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Test-Time Training with KV Binding Is Secretly Linear Attention</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+測試時訓練（Test-time training, TTT）搭配 KV binding 作為序列建模層，通常被解釋為一種線上後設學習（online meta-learning），在測試時記憶化鍵值對應。然而，我們的分析揭示了多個現象與這種基於記憶化的解釋相悖。基於這些發現，我們重新審視 TTT 的公式化，證明一大類 TTT 架構可以表示為學習線性注意力算子（learned linear attention operator）的形式。除了解釋先前令人困惑的模型行為外，這個視角還帶來多項實際的好處：它使原理性的架構簡化成為可能，允許完全並行的公式化同時保持效能並改進效率，並提供將多種 TTT 變體系統化地化約為標準線性注意力形式的方法。總體而言，我們的研究結果將 TTT 重新定義不是測試時記憶化，而是具有增強表示能力的學習線性注意力。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Theory</span>
+        <span class="tag method">Transformer</span><span class="tag method">Linear Attention</span><span class="tag method">Sequence Modeling</span>
+        <span class="tag task">Sequence Modeling</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21204/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21204" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21015</span>
+      <span>▲ 3</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21015/index.html" style="color:inherit;">
+        從感知到行動：視覺推理的互動式基準
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">From Perception to Action: An Interactive Benchmark for Vision Reasoning</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+理解物理結構對於具身智能體、互動式設計和長視野操控等實際應用至關重要。然而，現有的視覺-語言模型（VLM）評估仍然集中於結構無關的單輪設置（例如視覺問答），無法評估智能體對幾何、接觸和支撐關係如何聯合制約動態環境中可能行為的推理能力。為了解決這一差距，我們引入了行為與互動因果層級（CHAIN）基準測試，這是一個互動式的三維物理驅動測試平台，旨在評估模型是否能夠理解、規劃和執行基於物理約束的結構化行為序列。CHAIN 將評估範疇從被動感知轉變為主動問題求解，涵蓋互鎖機械謎題、三維堆疊和包裝等任務。我們在統一的互動式設置下對最先進的 VLM 和基於擴散的模型進行了全面研究。我們的結果表明，表現最佳的模型仍然難以內化物理結構和因果約束，常常無法產生可靠的長視野規劃，並且無法穩健地將感知到的結構轉化為有效的行為。該項目可於 https://social-ai-studio.github.io/CHAIN/ 獲得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Robotics</span><span class="tag domain">Multimodal</span><span class="tag domain">RL</span>
+        <span class="tag method">Vision-Language Model</span><span class="tag method">Diffusion Model</span><span class="tag method">Physics Simulation</span>
+        <span class="tag task">Vision Reasoning</span><span class="tag task">Action Planning</span><span class="tag task">Physical Constraint Understanding</span><span class="tag task">Long-horizon Manipulation</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21015/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21015" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21202</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21202/index.html" style="color:inherit;">
+        任意模態中的多向量索引壓縮
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Multi-Vector Index Compression in Any Modality</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+我們研究高效的多向量檢索，適用於任何模態的晚期交互（late interaction）。晚期交互已成為文本、圖像、視覺文件和視頻資訊檢索的主導範式，但其計算和儲存成本隨著文件長度線性成長，這對於圖像、視頻和音頻豐富的語料庫而言成本高昂。為了解決此限制，我們探索查詢無關（query-agnostic）的方法，在固定向量預算的約束下壓縮多向量文件表示。我們介紹四種索引壓縮方法：序列調整大小（sequence resizing）、記憶令牌（memory tokens）、分層池化（hierarchical pooling）和一種新穎的注意力引導聚類（attention-guided clustering, AGC）。AGC 使用注意力引導機制來識別文件中語義上最顯著的區域作為聚類質心，並對令牌聚合進行加權。我們在跨越文本（BEIR）、視覺文件（ViDoRe）和視頻（MSR-VTT、MultiVENT 2.0）的檢索任務上評估這些方法，結果顯示注意力引導聚類持續優於其他參數化壓縮方法（序列調整大小和記憶令牌），相比非參數化分層聚類提供更大的索引大小靈活性，並相比完整、未壓縮的索引實現具競爭力或改進的性能。源程式碼可於以下位置取得：github.com/hanxiangqin/omni-col-press。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Late Interaction</span><span class="tag method">Attention-Guided Clustering</span><span class="tag method">Vector Compression</span><span class="tag method">Hierarchical Pooling</span>
+        <span class="tag task">Information Retrieval</span><span class="tag task">Multi-Vector Indexing</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21202/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21202" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20951</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20951/index.html" style="color:inherit;">
+        發現並修正缺陷：通過智能體數據合成使 VLMs 和 Diffusion Models 理解視覺偽影
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">See and Fix the Flaws: Enabling VLMs and Diffusion Models to Comprehend Visual Artifacts via Agentic Data Synthesis</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+儘管擴散模型最近取得了進展，AI 生成的圖像仍然常常包含損害真實感的視覺瑕疵。雖然更深入的預訓練和更大的模型可能會減少瑕疵，但無法保證能完全消除這些瑕疵，這使得瑕疵緩解成為一個極其關鍵的研究領域。以往的瑕疵感知方法依賴於人工標註的瑕疵資料集，這些資料集成本高昂且難以擴展，突顯了需要一種自動化方法來可靠地獲取瑕疵註解資料集的迫切性。本文提出了 ArtiAgent，它能高效地創建真實圖像和瑕疵注入圖像的配對。該方法包含三個智能體：感知智能體從真實圖像中識別和定位實體及子實體；合成智能體透過在擴散 Transformer 中進行新穎的逐塊嵌入操作來引入瑕疵；策展智能體對合成的瑕疵進行過濾，並為每個實例生成局部和全局解釋。使用 ArtiAgent，我們合成了 100K 張圖像，並在多種應用中展示了有效性和多功能性。程式碼可在提供的連結取得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion Models</span><span class="tag method">Transformer</span><span class="tag method">Agent-based Synthesis</span>
+        <span class="tag task">Image Generation</span><span class="tag task">Artifact Detection</span><span class="tag task">Image Quality Enhancement</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20951/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20951" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.18940</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.18940/index.html" style="color:inherit;">
+        DREAM：具有代理度量的深度研究評估
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">DREAM: Deep Research Evaluation with Agentic Metrics</div>
+    
+    <div class="paper-card-abstract"># 深度研究代理的評估框架
+
+深度研究代理可以生成分析師級別的報告，但由於缺乏單一的基準真實值和研究品質的多維性質，評估這些報告仍然具有挑戰性。最近的基準測試提出了不同的方法論，但它們受到「合成幻象」的影響，其中強大的表面流暢性和引用對齐可能掩蓋潛在的事實和推理缺陷。我們透過引入跨越四個垂直領域的分類法來描述這一差距，該分類法揭示了一個關鍵的能力不匹配：靜態評估器本質上缺乏評估時間有效性和事實正確性所需的工具使用能力。為了解決這個問題，我們提出了 DREAM（Deep Research Evaluation with Agentic Metrics），這是一個透過使評估本身具有代理特性來實現能力對等原則的框架。DREAM 透過結合查詢無關指標與由工具調用代理生成的自適應指標的評估協議來構造評估，從而實現時間感知覆蓋、基於事實的驗證和系統性推理探測。受控評估表明 DREAM 對事實和時間衰變的敏感度顯著高於現有基準測試，提供了一個可擴展的、無參考的評估範式。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Agent</span><span class="tag method">Tool-use</span><span class="tag method">LLM-based evaluation</span>
+        <span class="tag task">Report Evaluation</span><span class="tag task">Research Quality Assessment</span><span class="tag task">Factual Verification</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.18940/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.18940" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.14337</span>
+      <span>▲ 3</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.14337/index.html" style="color:inherit;">
+        LongCLI-Bench：長序列代理程式設計在命令行介面中的初步基準測試與研究
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">LongCLI-Bench: A Preliminary Benchmark and Study for Long-horizon Agentic Programming in Command-Line Interfaces</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+近期 AI 輔助程式設計的進展使得代理能夠透過命令列介面執行複雜的工作流程，然而現有的基準測試受限於短期任務範圍、GitHub 爬蟲的資料污染，以及缺乏細粒度的評估指標，無法嚴格評估現實軟體工程中必需的長期規劃和執行能力。為了解決這些問題，我們推出 LongCLI-Bench，一個全面的基準測試，旨在評估代理在長期、現實任務中的能力。我們從超過 1,000 個電腦科學課程作業和現實工作流程中精心挑選了 20 個高品質、長期任務，涵蓋四個工程類別：從零開始、功能添加、臭蟲修復和重構。我們為 LongCLI-Bench 提出了雙集測試協議，該協議測量需求滿足度（失敗轉通過）和迴歸避免（通過轉通過），並納入步驟級評分以精確定位執行失敗。廣泛的實驗顯示，即使是最先進的代理在 LongCLI-Bench 上的通過率也低於 20%。步驟級分析進一步表明，大多數任務在完成度不足 30% 時停滯，突顯出關鍵失敗往往發生在早期階段。儘管自我修正能夠帶來邊際收益，但透過計畫注入和互動式指導的人-代理協作能產生顯著更高的改進。這些結果強調，未來的研究必須強調開發協同人-代理工作流程，同時推進代理的規劃和執行能力，以克服長期任務性能中的關鍵挑戰。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">Code</span>
+        <span class="tag method">Agent</span><span class="tag method">LLM</span><span class="tag method">Planning</span>
+        <span class="tag task">Long-horizon Programming</span><span class="tag task">Command-Line Task Execution</span><span class="tag task">Software Engineering</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.14337/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.14337" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20309</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20309/index.html" style="color:inherit;">
+        QuantVLA：視覺-語言-動作模型的尺度校準後訓練量化
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">QuantVLA: Scale-Calibrated Post-Training Quantization for Vision-Language-Action Models</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+視覺-語言-動作（VLA）模型統一了具身智能體的感知、語言和控制能力，但在實際部署中面臨重大挑戰，特別是隨著模型擴展到更長的時間範圍和更大的主幹網路時，計算和記憶體需求迅速增加。為了解決這些瓶頸，我們引入了 QuantVLA，一個無訓練的後訓練量化（PTQ）框架。據我們所知，這是首個針對 VLA 系統的 PTQ 方法，也是首個成功量化擴散 Transformer（DiT）動作頭的方法。QuantVLA 包含三個經過尺度校準的組件：（1）選擇性量化佈局，將語言主幹和 DiT 中的所有線性層整數化，同時保持注意力投影為浮點格式以保留原始運算子排程；（2）注意力溫度匹配，一種輕量級的逐頭縮放機制，用於穩定注意力 logits，並在推論時折疊到反量化尺度中；（3）輸出頭平衡，一種逐層殘差介面校準，用於緩解投影後的能量漂移。該框架無需額外訓練，僅使用一個小型無標籤校準緩衝區，並支援低位寬權重和激活值的整數核心，同時保持架構不變。在 LIBERO 上的代表性 VLA 模型中，QuantVLA 超越了全精度基線的任務成功率，在量化組件上達到約 70% 的相對記憶體節省，並在端到端推論延遲上實現 1.22 倍的加速，為在嚴格的計算、記憶體和功耗限制下實現可擴展的低位寬具身智能提供了實用途徑。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span><span class="tag domain">Robotics</span><span class="tag domain">RL</span>
+        <span class="tag method">Quantization</span><span class="tag method">Post-Training Quantization</span><span class="tag method">Diffusion Transformer</span><span class="tag method">Attention Temperature Matching</span>
+        <span class="tag task">Action Prediction</span><span class="tag task">Embodied AI</span><span class="tag task">Robot Control</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20309/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20309" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.16990</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.16990/index.html" style="color:inherit;">
+        Conv-FinRe：一個實用導向的金融推薦對話與縱向基準測試
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Conv-FinRe: A Conversational and Longitudinal Benchmark for Utility-Grounded Financial Recommendation</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+大多數推薦系統基準測試評估模型模仿使用者行為的程度。然而，在金融顧問領域，觀測到的行為可能受到市場波動而產生雜訊或目光短淺，並且可能與使用者的長期目標相衝突。因此，將使用者的選擇視為唯一的真實標準會將行為模仿與決策品質混為一談。我們推出 Conv-FinRe，一個對話式和縱向的股票推薦基準測試，用於評估 LLM 超越行為匹配的能力。給定入門面談、逐步的市場背景和顧問對話，模型必須在固定的投資期限內生成股票排名。重要的是，Conv-FinRe 提供多視角參考，區分描述性行為與根植於投資者特定風險偏好的規範性效用，使我們能夠診斷 LLM 是否遵循理性分析、模仿使用者雜訊或受市場動量驅動。我們從真實市場數據和人類決策軌跡構建該基準測試，建立受控的顧問對話，並評估一套最先進的 LLM。研究結果揭示了理性決策品質與行為一致性之間的持久張力：在基於效用的排名上表現良好的模型通常無法匹配使用者選擇，而行為對齊的模型可能會過度擬合短期雜訊。該數據集已在 Hugging Face 上公開發布，程式碼庫可在 GitHub 上獲得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">LLM</span><span class="tag method">Conversational AI</span>
+        <span class="tag task">Financial Recommendation</span><span class="tag task">Ranking</span><span class="tag task">Dialogue</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.16990/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.16990" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.19633</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.19633/index.html" style="color:inherit;">
+        TAPE: 語言模型代理中的工具導向自適應規劃與受限執行
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">TAPE: Tool-Guided Adaptive Planning and Constrained Execution in Language Model Agents</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+語言模型（LM）代理在需要與環境進行多次交互的任務中展現出了顯著的能力。然而，在單一錯誤往往導致不可恢復失敗的環境中，特別是在嚴格的可行性約束下，它們仍然容易受到影響。我們系統性地分析了現有的代理框架，將不完善的規劃和隨機執行確定為主要原因。為了應對這些挑戰，我們提出了工具引導的自適應規劃與約束執行框架（TAPE）。TAPE 通過將多個規劃聚合成圖形並採用外部求解器來識別可行路徑，從而增強了規劃能力。在執行階段，TAPE 採用約束解碼來減少採樣噪聲，同時在環境反饋偏離預期狀態時自適應地重新規劃。在 Sokoban、ALFWorld、MuSiQue 和 GSM8K-Hard 的實驗表明，TAPE 持續優於現有框架，在困難設置上取得特別顯著的改進，平均在困難設置上將成功率提高了 21.0 個百分點，對於較弱的基礎模型平均提高了 20.0 個百分點。代碼和數據可在此處獲得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+        <span class="tag method">Planning</span><span class="tag method">Constrained Decoding</span><span class="tag method">Graph-based Planning</span><span class="tag method">External Solver</span>
+        <span class="tag task">Task Planning</span><span class="tag task">Constrained Execution</span><span class="tag task">Sequential Decision Making</span><span class="tag task">Question Answering</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.19633/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.19633" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.16745</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.16745/index.html" style="color:inherit;">
+        PETS：朝向高效測試時間自洽性的最優軌跡分配之原理性框架
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">PETS: A Principled Framework Towards Optimal Trajectory Allocation for Efficient Test-Time Self-Consistency</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+測試時間縮放（Test-time scaling）能夠通過聚合隨機推理軌跡來改進模型性能。然而，在有限預算限制下實現樣本高效的測試時間自一致性仍然是一個開放問題。我們引入 PETS（Principled and Efficient Test-Time Self-Consistency），它通過優化框架對軌跡分配進行了有原則的研究。我們方法的核心是自一致性率（self-consistency rate），這是一項新度量標準，定義為與無限預算多數投票的一致程度。這個公式化使樣本高效的測試時間分配在理論上有根有據，並便於進行嚴格分析。我們研究了離線和在線兩種設置。在離線情況下，所有問題都是事先已知的，我們通過將推理軌跡建模為工作者（worker），將軌跡分配與眾包這一經典且發展成熟的領域相聯繫。這個視角使我們能夠利用豐富的現有理論，進而得出理論保證和高效的基於多數投票的分配演算法。在線上串流情況下，問題按順序到達且必須實時進行分配，我們提出了一種受離線框架啟發的新方法。我們的方法根據問題難度調整預算，同時保持強大的理論保證和計算效率。實驗表明 PETS 始終優於均勻分配。在 GPQA 上，PETS 在兩種設置下都實現了完美的自一致性，同時相對於均勻分配將採樣預算分別減少了 75%（離線）和 55%（在線）。代碼可在 https://github.com/ZDCSlab/PETS 獲得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Theory</span>
+        <span class="tag method">Self-Consistency</span><span class="tag method">Majority Voting</span><span class="tag method">Budget Allocation</span><span class="tag method">Crowdsourcing</span>
+        <span class="tag task">Question Answering</span><span class="tag task">Test-Time Scaling</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.16745/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.16745" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21198</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21198/index.html" style="color:inherit;">
+        從試錯中學習：具身 LLM 的反思性測試時間規劃
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Learning from Trials and Errors: Reflective Test-Time Planning for Embodied LLMs</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+具身 LLM 為機器人賦予高階任務推理能力，但它們無法反思出現了什麼問題或原因為何，導致部署變成一連串獨立試驗，錯誤重複發生而非累積成經驗。基於人類反思型實踐者的概念，我們引入反思性測試時規劃（Reflective Test-Time Planning），整合兩種反思模式：行動中反思（reflection-in-action），其中代理使用測試時縮放在執行前透過內部反思生成並評估多個候選動作；以及行動後反思（reflection-on-action），利用測試時訓練在執行後基於外部反思更新其內部反思模型和動作策略。我們也包含回溯性反思，使代理能重新評估較早的決策，並透過事後知識進行模型更新，以達成適當的長視野信用分配。在我們新設計的長視野家務基準和 MuJoCo 櫥櫃組裝基準上的實驗顯示相比於基線模型有顯著改進，消融研究驗證了行動中反思和行動後反思的互補角色。定性分析包括實體機器人試驗，強調了透過反思進行的行為修正。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">RL</span><span class="tag domain">Robotics</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Test-Time Planning</span><span class="tag method">Test-Time Training</span><span class="tag method">LLM</span><span class="tag method">Reflection</span>
+        <span class="tag task">Task Planning</span><span class="tag task">Robot Control</span><span class="tag task">Long-Horizon Decision Making</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21198/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21198" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20945</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20945/index.html" style="color:inherit;">
+        高效推理的藝術：數據、獎勵和優化
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">The Art of Efficient Reasoning: Data, Reward, and Optimization</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+大型語言模型（LLMs）持續受益於大規模思維鏈（Chain-of-Thought, CoT）推理，但同時也面臨沉重的計算開銷。為解決此問題，高效推理旨在透過強化學習（Reinforcement Learning, RL）進行獎勵塑形，激勵簡短而準確的思考軌跡。在本論文中，我們系統性地調查 LLMs 高效推理的機制。為進行全面評估，我們倡導採用更精細的指標，包括基於正確性的長度分佈以及涵蓋 2k 到 32k tokens 廣泛範圍內的性能表現。首先，我們揭示訓練過程遵循兩階段範式：長度自適應與推理精化。隨後，我們進行廣泛實驗（約 0.2 百萬 GPU 小時），在統一協議下解構訓練提示詞與推出、獎勵塑形以及最佳化策略。特別是，一個關鍵發現是在相對較簡單的提示詞上進行訓練，確保正獎勵信號的密度，從而避免長度崩潰。同時，所學習的長度偏差可以跨領域推廣。我們將所有發現凝煉為寶貴的洞察與實踐指南，並進一步在 Qwen3 系列中驗證，涵蓋 0.6B 到 30B，展示其穩健性與泛化能力。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+        <span class="tag method">Chain-of-Thought</span><span class="tag method">Reinforcement Learning</span><span class="tag method">Reward Shaping</span>
+        <span class="tag task">Reasoning</span><span class="tag task">Text Generation</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20945/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20945" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20731</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20731/index.html" style="color:inherit;">
+        通信啟發的結構化影像表示標記化
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Communication-Inspired Tokenization for Structured Image Representations</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+離散影像 tokenizer 已成為現代視覺和多模態系統的關鍵元件，為基於 transformer 的架構提供了序列化介面。然而，大多數現有方法主要仍優化於重建和壓縮，通常產生捕捉局部紋理而非物體級語義結構的 token。受人類溝通的增量和組成特性啟發，我們引入 COMmunication 啟發的 Tokenization（COMiT），一個用於學習結構化離散視覺 token 序列的框架。COMiT 通過迭代觀察局部影像裁剪和循環更新其離散表示，在固定 token 預算內構造潛在訊息。在每一步，模型整合新的視覺資訊，同時精煉和重新組織現有的 token 序列。經過數個編碼迭代後，最終訊息條件化一個 flow-matching 解碼器來重建完整影像。編碼和解碼都在單一 transformer 模型內實現，並使用 flow-matching 重建和語義表示對齐損失組合的端到端訓練。我們的實驗證明，雖然語義對齐提供了基礎，但專注的序列 tokenization 對於引發可解釋的物體中心 token 結構，以及顯著改善相比先前方法的組合泛化和關係推理至關重要。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Transformer</span><span class="tag method">Flow Matching</span><span class="tag method">Discrete Tokenization</span><span class="tag method">Recurrent Encoding</span>
+        <span class="tag task">Image Tokenization</span><span class="tag task">Image Reconstruction</span><span class="tag task">Semantic Representation Learning</span><span class="tag task">Compositional Generalization</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20731/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20731" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21196</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21196/index.html" style="color:inherit;">
+        解開的尤利西斯：通過頭向分塊實現記憶高效的上下文並行
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Untied Ulysses: Memory-Efficient Context Parallelism via Headwise Chunking</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+使用 Transformer 模型高效處理長序列通常需要通過上下文並行化在加速器之間分割計算。這類方法中的主流方法，例如 Ring Attention 或 DeepSpeed Ulysses，能夠在上下文維度上進行擴展，但不著重於記憶體效率，這限制了它們能支援的序列長度。更先進的技術，例如 Fully Pipelined Distributed Transformer 或啟動值卸載，可以進一步延伸可能的上下文長度，但代價是訓練吞吐量的降低。在本論文中，我們提出 UPipe，一種簡單但有效的上下文並行化技術，在注意力頭級別進行細粒度分塊。該技術顯著減少了自注意力的啟動值記憶體使用，突破了啟動值記憶體的瓶頸，釋放了更長的上下文長度。我們的方法將 32B Transformer 中注意力層的中間張量記憶體使用量減少了多達 87.5%，同時在訓練速度方面與先前的上下文並行化技術相當。UPipe 在單個 8×H100 節點上訓練 Llama3-8B 時可支援 5M tokens 的上下文長度，相比之前的方法改進超過 25%。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Transformer</span><span class="tag method">Context Parallelism</span><span class="tag method">Attention Mechanism</span><span class="tag method">Memory Optimization</span>
+        <span class="tag task">Long Sequence Processing</span><span class="tag task">Model Training</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21196/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21196" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21185</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21185/index.html" style="color:inherit;">
+        擴散對偶性，第二章：Ψ-採樣器與高效課程
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">The Diffusion Duality, Chapter II: Ψ-Samplers and Efficient Curriculum</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+均勻態離散擴散模型（Uniform-state discrete diffusion models）因其自我修正的能力而在少步驟生成和引導中表現卓越，相比於自迴歸或 Masked 擴散模型在這些設定中更受青睞。然而，隨著步驟數量增加，它們的採樣品質在祖先採樣器（ancestral samplers）上達到平台期。我們引入了一個預測器-校正器（Predictor-Corrector, PC）採樣器族群用於離散擴散，該族群泛化了先前的方法並適用於任意噪聲過程。當與均勻態擴散配對時，我們的採樣器在語言和圖像建模上都超越了祖先採樣，在 OpenWebText 上達到了更低的生成困惑度（matched unigram entropy），在 CIFAR10 上達到了更好的 FID/IS 分數。至關重要的是，不同於傳統採樣器，我們的 PC 方法會隨著採樣步驟增加而持續改進。綜合這些發現，我們對 Masked 擴散是基於擴散的語言建模必然未來這一假設提出了質疑。除了採樣外，我們為 Gaussian 鬆弛訓練階段開發了一種記憶高效的課程（memory-efficient curriculum），相比於 Duo 減少了 25% 的訓練時間和 33% 的記憶佔用，同時在 OpenWebText 和 LM1B 上保持了相當的困惑度以及強大的下游任務性能。我們在以下網址發布了程式碼、檢查點和影片教程：https://s-sahoo.com/duo-ch2</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">CV</span>
+        <span class="tag method">Diffusion</span><span class="tag method">Predictor-Corrector Sampling</span>
+        <span class="tag task">Text Generation</span><span class="tag task">Image Generation</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21185/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21185" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20424</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20424/index.html" style="color:inherit;">
+        隱性智能 -- 評估代理對用戶未明言事項的理解
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Implicit Intelligence -- Evaluating Agents on What Users Don&#39;t Say</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+對 AI 代理的真實世界請求本質上是不完整指定的。自然人類溝通依賴於說話者期望聽者推斷的共享背景和未明確說明的限制條件。當前的代理基準測試主要評估顯式指令遵循，但未能評估代理是否能夠推理跨越無障礙需求、隱私邊界、災難性風險和情境約束的隱含要求。我們提出了 Implicit Intelligence 這一評估框架，用於測試 AI 代理是否能夠超越提示遵循而成為真正的目標實現者，並配合 Agent-as-a-World (AaW) 這一工具，其中互動世界以人類可讀的 YAML 檔案定義，並由語言模型進行模擬。我們的情景具有用戶請求表面上的簡潔性、正確解決方案中隱藏的複雜性，以及通過環境探索發現約束條件的可發現性。在對 16 個前沿和開源權重模型進行 205 個情景的評估時，我們發現即使表現最佳的模型也只能達到 48.3% 的情景通過率，這表明在縮小字面指令遵循與類人情境推理之間的差距方面仍有大幅改進的空間。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+        <span class="tag method">Language Models</span><span class="tag method">Evaluation Framework</span>
+        <span class="tag task">Agent Evaluation</span><span class="tag task">Instruction Following</span><span class="tag task">Goal Fulfillment</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20424/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20424" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.18998</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.18998/index.html" style="color:inherit;">
+        通用 LLM 代理的基準測試時間縮放
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Benchmark Test-Time Scaling of General LLM Agents</div>
+    
+    <div class="paper-card-abstract"># LLM 智能體通用基準測試
+
+LLM 智能體越來越需要作為通用系統來運作，以解決開放性的用戶請求。雖然現有基準測試側重於領域感知的環境來開發專門化智能體，但評估通用智能體需要更加真實的設置，使其在統一環境中跨越多項技能和工具進行運作。我們引入 General AgentBench，一個提供統一框架的基準測試，用於在搜尋、編碼、推理和工具使用等領域評估通用 LLM 智能體。利用 General AgentBench，我們系統地研究了在順序擴展（迭代交互）和平行擴展（採樣多個軌跡）下的測試時間擴展行為。對十個領先 LLM 智能體的評估揭示了從領域特定評估轉移到此通用智能體設置時的顯著性能衰退。此外，我們發現由於兩個根本限制——順序擴展中的上下文天花板和平行擴展中的驗證差距——兩種擴展方法在實踐中都無法產生有效的性能改進。代碼已在 https://github.com/cxcscmu/General-AgentBench 公開發佈。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Code</span>
+        <span class="tag method">LLM</span><span class="tag method">Agent</span><span class="tag method">Test-time Scaling</span><span class="tag method">Sequential Scaling</span><span class="tag method">Parallel Scaling</span>
+        <span class="tag task">Agent Evaluation</span><span class="tag task">Tool Use</span><span class="tag task">Reasoning</span><span class="tag task">Code Generation</span><span class="tag task">Search</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.18998/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.18998" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.16932</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.16932/index.html" style="color:inherit;">
+        RankEvolve：透過LLM驅動進化自動發現檢索演算法
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">RankEvolve: Automating the Discovery of Retrieval Algorithms via LLM-Driven Evolution</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+BM25 和具有 Dirichlet 平滑的查詢概似度等檢索演算法仍然是強大且高效的第一階段排序器，但改進主要依賴於參數調整和人類直覺。我們調查大型語言模型是否能在評估器和進化搜尋的指導下，自動發現改進的詞彙檢索演算法。我們推出 RankEvolve，一個基於 AlphaEvolve 的程式進化架構，其中候選排序演算法表示為可執行程式碼，並根據 12 個來自 BEIR 和 BRIGHT 的資訊檢索資料集的檢索效能，進行迭代的變異、重組和選擇。RankEvolve 從兩個種子程式開始：BM25 和具有 Dirichlet 平滑的查詢概似度。進化後的演算法是新穎的、有效的，並在完整的 BEIR 和 BRIGHT 基準測試以及 TREC DL 19 和 20 上展現出良好的遷移性能。我們的結果表明，評估器引導的 LLM 程式進化是自動發現新型排序演算法的務實途徑。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Code</span>
+        <span class="tag method">LLM</span><span class="tag method">Program Evolution</span><span class="tag method">Genetic Algorithm</span><span class="tag method">AlphaEvolve</span>
+        <span class="tag task">Information Retrieval</span><span class="tag task">Ranking</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.16932/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.16932" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.16813</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.16813/index.html" style="color:inherit;">
+        一步式語言模型化透過連續去噪
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">One-step Language Modeling via Continuous Denoising</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+基於離散擴散的語言模型因其相比自迴歸模型提供更快生成速度的潛力而受到廣泛關注。然而在實踐中，這些模型在少步驟（few-step）情景下表現出樣本品質的急劇下降，未能實現這一承諾。本文顯示利用基於流的連續去噪的語言模型可以在品質和速度上都優於離散擴散。通過重新審視離散模態上的流的基礎理論，我們構建了一個流基語言模型（FLM），它在獨熱編碼令牌上執行歐幾里得去噪。我們證明該模型可以通過交叉熵目標預測乾淨數據進行訓練，其中我們引入了簡單的時間重參數化，大幅改進了訓練穩定性和生成品質。通過將 FLM 蒸餾到其相關的流映射中，我們獲得了一個蒸餾流映射語言模型（FMLM），能夠執行少步驟生成。在 LM1B 和 OWT 語言數據集上，FLM 實現了與最先進離散擴散模型相匹配的生成品質。使用 FMLM，我們的方法在各方面都優於最近的少步驟語言模型，其單步生成超過了它們的八步品質。我們的工作質疑了廣泛持有的假設——即離散擴散過程對於離散模態上的生成建模是必要的，並為大規模加速流基語言模型開闢了道路。代碼可在 https://github.com/david3684/flm 獲取。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Flow-based Diffusion</span><span class="tag method">Continuous Denoising</span><span class="tag method">Distillation</span>
+        <span class="tag task">Text Generation</span><span class="tag task">Language Modeling</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.16813/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.16813" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21201</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21201/index.html" style="color:inherit;">
+        《Aletheia 自主應對 FirstProof》
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Aletheia tackles FirstProof autonomously</div>
+    
+    <div class="paper-card-abstract">我們報告了由 Gemini 3 Deep Think 驅動的數學研究代理 Aletheia（Feng et al., 2026b）在首屆 FirstProof 挑戰賽中的表現。在挑戰賽允許的時間範圍內，根據專家多數意見評估，Aletheia 自主解決了 10 個問題中的 6 個（第 2、5、7、8、9、10 題）；我們注意到專家僅在第 8 題上未達成一致意見。為了完全透明起見，我們說明了我們對 FirstProof 的理解，並公開了有關實驗和評估的詳細信息。原始提示和輸出可在 https://github.com/google-deepmind/superhuman/tree/main/aletheia 取得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">Code</span><span class="tag domain">Theory</span>
+        <span class="tag method">LLM</span><span class="tag method">Chain-of-Thought</span><span class="tag method">Deep Think</span>
+        <span class="tag task">Mathematical Reasoning</span><span class="tag task">Theorem Proving</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21201/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21201" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20792</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20792/index.html" style="color:inherit;">
+        SIMSPINE：具備生物力學意識的3D脊椎運動標註與基準測試模擬框架
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">SIMSPINE: A Biomechanics-Aware Simulation Framework for 3D Spine Motion Annotation and Benchmarking</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+脊椎運動建模對於理解人類生物力學至關重要，然而由於脊椎複雜的多關節運動學和缺乏大規模的 3D 標註，該領域在電腦視覺中仍未得到充分探索。我們提出一個生物力學感知的關鍵點模擬框架，該框架使用肌肉骨骼建模來擴充現有的人體姿態資料集，並產生解剖學上一致的 3D 脊椎關鍵點。利用此框架，我們建立了第一個開放資料集，名為 SIMSPINE，該資料集為室內多攝影機捕捉中的自然全身運動提供了脊椎骨級別的稀疏 3D 標註，無需外部限制。擁有 214 萬個影格，這使得能夠從微妙的姿勢變化中進行脊椎運動學的資料驅動學習，並彌合肌肉骨骼模擬與電腦視覺之間的差距。此外，我們發佈了預訓練的基礎模型，涵蓋微調的 2D 檢測器、單目 3D 姿態提升模型和多視角重構管線，為生物力學有效的脊椎運動估計建立了一個統一的基準。具體而言，我們的 2D 脊椎基礎模型在控制環境中將最先進的結果從 0.63 改進到 0.80 AUC，在野生環境脊椎追蹤中從 0.91 改進到 0.93 AP。綜合而言，該模擬框架和 SIMSPINE 資料集透過在自然條件下實現可重現的、解剖學上有根據的 3D 脊椎估計，推進了基於視覺的生物力學、運動分析和數位人類建模的研究。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Medical</span>
+        <span class="tag method">Musculoskeletal Modeling</span><span class="tag method">3D Pose Lifting</span><span class="tag method">Multi-view Reconstruction</span>
+        <span class="tag task">3D Pose Estimation</span><span class="tag task">Keypoint Detection</span><span class="tag task">Spine Motion Tracking</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20792/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20792" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21053</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21053/index.html" style="color:inherit;">
+        OCR-Agent：具備能力與記憶反思的代理型 OCR
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">OCR-Agent: Agentic OCR with Capability and Memory Reflection</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+大型視覺語言模型（VLMs）已透過反覆優化方法在複雜視覺理解任務上展示出顯著的潛力。然而，這些模型普遍缺乏有效的自我修正機制，使得它們難以獨立地糾正認知偏差。因此，在多輪修訂過程中，它們往往陷入重複且無效的嘗試，無法實現答案品質的穩定改善。為了解決這個問題，我們提出了一個新穎的反覆自我修正框架，賦予模型兩項關鍵能力：能力反思（Capability Reflection）和記憶反思（Memory Reflection）。該框架引導模型首先透過能力反思診斷錯誤並生成修正計畫，隨後利用記憶反思來回顧過去的嘗試以避免重複並探索新的解決方案，最後透過嚴謹的重新推理來優化答案。在具有挑戰性的 OCRBench v2 基準測試上的實驗表明，OCR-Agent 在英文子集上超越現有開源最先進模型 InternVL3-8B 達 +2.0，在中文子集上達 +1.2，同時在視覺理解（79.9）和推理（66.5）方面取得最先進的結果，甚至超越了更大的微調模型。我們的方法表明，結構化的自我意識反思可以顯著增強 VLMs 的推理穩健性，而無需額外訓練。程式碼：https://github.com/AIGeeksGroup/OCR-Agent。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">VLM</span><span class="tag method">Agent</span><span class="tag method">Self-correction</span><span class="tag method">Iterative Reasoning</span>
+        <span class="tag task">OCR</span><span class="tag task">Visual Understanding</span><span class="tag task">Reasoning</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21053/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21053" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21042</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21042/index.html" style="color:inherit;">
+        OmniOCR：少數民族語言通用光學字符識別
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">OmniOCR: Generalist OCR for Ethnic Minority Languages</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+光學字符識別（OCR）在深度學習和多模態模型的推動下已快速發展，然而大多數方法主要聚焦於資源充足的文字系統，如拉丁字和漢字。少數民族語言仍未得到充分探索，因為其複雜的書寫系統、稀缺的標註資料，以及多樣化的歷史和現代文字形式，使得在低資源或零樣本設定下的泛化面臨挑戰。為解決這些問題，我們提出 OmniOCR，一個針對少數民族文字的通用框架。OmniOCR 引入動態低秩適應（Dynamic LoRA）技術，在層和文字之間分配模型容量，實現高效的適應同時保留知識。稀疏性正則化對冗餘更新進行剪枝，確保緊湊高效的適應而無需額外推理成本。在藏文 MNIST、水語、古義字和東巴象形文的評估表明，OmniOCR 優於零樣本基礎模型和標準微調方法，以優異的參數效率達到最先進的準確度，與現有最佳基線模型相比，在這四個資料集上的準確度提升了 39%-66%。程式碼：https://github.com/AIGeeksGroup/OmniOCR。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">NLP</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Dynamic LoRA</span><span class="tag method">Sparsity Regularization</span>
+        <span class="tag task">Optical Character Recognition</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21042/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21042" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20743</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20743/index.html" style="color:inherit;">
+        適應性文本匿名化：通過提示詞優化學習隱私-效用權衡
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Adaptive Text Anonymization: Learning Privacy-Utility Trade-offs via Prompt Optimization</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+文本文件的匿名化是一個高度具有上下文敏感性的問題：隱私保護與效用保存之間的適當平衡因資料領域、隱私目標和下遊應用而異。然而，現有的匿名化方法依賴於靜態的、人工設計的策略，缺乏靈活性以適應多樣化的需求，且往往無法跨領域進行推廣。我們引入了自適應文本匿名化，這是一個新的任務制定方式，其中匿名化策略自動適應特定的隱私-效用需求。我們提出了一個任務特定的提示最佳化框架，該框架自動為語言模型構造匿名化指令，使其能夠適應不同的隱私目標、領域和下遊使用模式。為了評估我們的方法，我們提出了一個涵蓋五個資料集的基準測試，這些資料集具有多樣化的領域、隱私限制和效用目標。在所有評估的設置中，我們的框架相比於現有的基線方法始終能實現更優的隱私-效用權衡，同時保持計算效率高，並在開源語言模型上有效，其性能可與更大型的閉源模型相媲美。此外，我們展示了我們的方法能夠發現新穎的匿名化策略，這些策略能夠探索隱私-效用權衡前沿上的不同點。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Prompt Optimization</span><span class="tag method">Language Models</span>
+        <span class="tag task">Text Anonymization</span><span class="tag task">Privacy Protection</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20743/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20743" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.19020</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.19020/index.html" style="color:inherit;">
+        通過主動重建學習檢測語言模型訓練數據
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Learning to Detect Language Model Training Data via Active Reconstruction</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+檢測大語言模型（LLM）訓練資料通常被框架化為成員推斷攻擊（MIA）問題。然而，傳統的 MIA 被動地對固定的模型權重進行操作，使用對數概率或文本生成。在本研究中，我們引入主動資料重建攻擊（ADRA），一類透過訓練主動誘導模型重建給定文本的 MIA 方法。我們假設訓練資料的可重建性優於非成員資料，並且可以利用它們的可重建性差異進行成員推斷。基於強化學習（RL）能夠強化權重中已編碼行為的發現，我們利用策略上的 RL 來主動引發資料重建，方法是從目標模型初始化一個策略進行微調。為了有效地將 RL 用於 MIA，我們設計了重建指標和對比獎勵。所得的演算法 ADRA 及其自適應變體 ADRA+，在候選資料池中改進了重建和檢測性能。實驗顯示，我們的方法在檢測預訓練、後訓練和蒸餾資料方面始終優於現有 MIA，相比之前最佳方法平均改進 10.7%。特別地，ADRA+ 在 BookMIA 預訓練檢測上相比 Min-K%++ 改進 18.8%，在 AIME 後訓練檢測上改進 7.6%。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+        <span class="tag method">Reinforcement Learning</span><span class="tag method">Membership Inference Attack</span><span class="tag method">Policy Finetuning</span>
+        <span class="tag task">Membership Inference</span><span class="tag task">Data Detection</span><span class="tag task">Model Security</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.19020/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.19020" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.18735</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.18735/index.html" style="color:inherit;">
+        LaS-Comp：具有潛在空間一致性的零樣本3D補全
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">LaS-Comp: Zero-shot 3D Completion with Latent-Spatial Consistency</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+本論文介紹 LaS-Comp，一種零樣本且類別無關的方法，利用 3D 基礎模型豐富的幾何先驗，實現跨多種不完整觀測類型的 3D 形狀補全。我們的貢獻有三方面：首先，通過互補的兩階段設計來利用這些強大的生成先驗進行補全：(i) 顯式替換階段保留不完整觀測的幾何特性，以確保忠實的補全；(ii) 隱式精化階段確保觀測區域與合成區域之間的無縫邊界。其次，我們的框架無需訓練，並與不同的 3D 基礎模型相容。第三，我們引入 Omni-Comp，一個綜合基準，結合真實世界和合成資料，包含多樣且具有挑戰性的不完整模式，實現更全面且逼真的評估。定量和定性實驗均表明我們的方法優於先前的最先進方法。我們的程式碼和資料將在 https://github.com/DavidYan2001/LaS-Comp 提供。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span>
+        <span class="tag method">Diffusion</span><span class="tag method">3D Foundation Models</span><span class="tag method">Generative Priors</span>
+        <span class="tag task">3D Shape Completion</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.18735/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.18735" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.16603</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.16603/index.html" style="color:inherit;">
+        FlowPrefill：將搶佔與預填充調度粒度解耦以緩解 LLM 服務中的行頭阻塞問題
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">FlowPrefill: Decoupling Preemption from Prefill Scheduling Granularity to Mitigate Head-of-Line Blocking in LLM Serving</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+大型語言模型（LLMs）的需求不斷增長，要求服務系統能夠處理多個並行請求並滿足不同的服務等級目標（SLOs）。這加劇了計算密集型預填充（prefill）階段的隊首阻塞（HoL blocking）問題，其中長時間運行的請求會佔用資源並延遲高優先級請求，導致廣泛的首令牌時間（TTFT）SLO 違規。雖然分塊預填充（chunked prefill）實現了可中斷性，但它在響應性和吞吐量之間引入了固有的權衡：減小塊大小可改善響應延遲但降低計算效率，而增加塊大小則最大化吞吐量但加劇阻塞。這要求採用自適應搶佔機制。然而，動態平衡執行粒度與調度開銷仍然是一個關鍵挑戰。
+
+本文提出 FlowPrefill，一個針對 TTFT 和有效吞吐量（goodput）優化的服務系統，通過將搶佔粒度與調度頻率解耦來解決這一衝突。為實現自適應預填充調度，FlowPrefill 引入了兩項關鍵創新：1) **算子級搶佔**（Operator-Level Preemption），利用算子邊界實現細粒度執行中斷，而無需與固定小塊相關的效率損失；2) **事件驅動調度**（Event-Driven Scheduling），僅在請求到達或完成事件時觸發調度決策，從而支持高效的搶佔響應性，同時最小化控制平面開銷。在真實生產跡跡上的評估表明，FlowPrefill 相比最先進的系統將最大有效吞吐量提高了最多 5.6 倍，同時滿足異構 SLOs。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Scheduling</span><span class="tag method">Preemption</span><span class="tag method">Operator-Level Optimization</span>
+        <span class="tag task">LLM Serving</span><span class="tag task">Request Scheduling</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.16603/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.16603" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20903</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20903/index.html" style="color:inherit;">
+        TextPecker：獎勵結構異常量化以增強視覺文本渲染
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">TextPecker: Rewarding Structural Anomaly Quantification for Enhancing Visual Text Rendering</div>
+    
+    <div class="paper-card-abstract"># 視覺文字渲染的結構異常感知強化學習策略
+
+視覺文字渲染（VTR）在文字轉圖像生成中仍然是一項關鍵挑戰，即使是先進的模型也經常產生具有結構異常的文字，例如扭曲、模糊和不對齊。然而，我們發現領先的 MLLM 和專業 OCR 模型在很大程度上無法感知這些結構異常，為 VTR 評估和基於強化學習的優化都造成了關鍵瓶頸。因此，即使是最先進的生成器（例如 SeedDream4.0、Qwen-Image）仍然難以渲染結構忠實的文字。為了解決這個問題，我們提出了 TextPecker，一種即插即用的結構異常感知強化學習策略，可以減輕嘈雜的獎勵信號並與任何文字轉圖像生成器相配合。為了實現這一能力，我們構建了具有字符級結構異常標註的識別數據集，並開發了筆劃編輯合成引擎以擴展結構錯誤覆蓋範圍。實驗表明 TextPecker 持續改進多種文字轉圖像模型；即使在經過充分優化的 Qwen-Image 上，它也能為中文文字渲染顯著提升平均 4% 的結構保真度和 8.7% 的語義對齊，確立了高保真 VTR 的新技術水平。本工作填補了 VTR 優化的空白，為實現可靠且結構忠實的視覺文字生成提供了基礎性步驟。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span><span class="tag domain">RL</span>
+        <span class="tag method">Reinforcement Learning</span><span class="tag method">OCR</span><span class="tag method">Diffusion Models</span><span class="tag method">Reward Model</span>
+        <span class="tag task">Text-to-Image Generation</span><span class="tag task">Visual Text Rendering</span><span class="tag task">Structural Anomaly Detection</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20903/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20903" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.20540</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.20540/index.html" style="color:inherit;">
+        生成式AI與機器學習協作在容器滯港時間預測中的應用：基於數據標準化
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Generative AI and Machine Learning Collaboration for Container Dwell Time Prediction via Data Standardization</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+進口集裝箱滯留時間（ICDT）預測是提高集裝箱碼頭生產力的關鍵任務，因為準確的預測能夠減少場地起重機的集裝箱重新處理操作。實現此目標需要準確預測個別集裝箱的滯留時間。然而，影響滯留時間的主要決定因素——貨主資訊和貨物資訊——被記錄為非結構化文本，這限制了它們在機器學習模型中的有效利用。本研究通過提出一個將生成式人工智慧（Gen AI）與機器學習相結合的協作框架來解決此限制。所提出的框架採用 Gen AI 將非結構化資訊標準化為國際標準代碼，並由電子數據交換狀態更新觸發動態重新預測，使機器學習模型能夠準確預測 ICDT。在真實集裝箱碼頭數據上進行的廣泛實驗表明，與不利用標準化資訊的傳統模型相比，所提出的方法在平均絕對誤差方面實現了 13.88% 的改進。此外，將改進的預測應用於集裝箱堆放策略可實現搬運次數最多減少 14.68%，從而從實證上驗證了 Gen AI 在增強集裝箱碼頭運營生產力方面的潛力。總體而言，本研究提供了關於在港口物流中採用 Gen AI 及其有效性的技術和方法論洞見。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Other</span>
+        <span class="tag method">Generative AI</span><span class="tag method">Machine Learning</span><span class="tag method">Data Standardization</span>
+        <span class="tag task">Dwell Time Prediction</span><span class="tag task">Text Standardization</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.20540/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.20540" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

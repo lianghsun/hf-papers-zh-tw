@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal",
+    "Robotics",
+    "RL"
+  ],
+  "method": [
+    "Quantization",
+    "Post-Training Quantization",
+    "Diffusion Transformer",
+    "Attention Temperature Matching"
+  ],
+  "task": [
+    "Action Prediction",
+    "Embodied AI",
+    "Robot Control"
+  ],
+  "dataset": [
+    "LIBERO"
+  ],
+  "open_source": false
+}

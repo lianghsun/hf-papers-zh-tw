@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowPrefill：將搶佔與預填充調度粒度解耦以緩解 LLM 服務中的行頭阻塞問題 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">FlowPrefill：將搶佔與預填充調度粒度解耦以緩解 LLM 服務中的行頭阻塞問題</h1>
+  
+  <div class="en-title">FlowPrefill: Decoupling Preemption from Prefill Scheduling Granularity to Mitigate Head-of-Line Blocking in LLM Serving</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Chia-chi Hsieh, Zan Zong, Xinyang Chen, Jianjiang Li, Jidong Zhai, Lijie Wen</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.16603" target="_blank">2602.16603</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.16603" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.16603" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.16603" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">Scheduling</span><span class="tag method">Preemption</span><span class="tag method">Operator-Level Optimization</span>
+    <span class="tag task">LLM Serving</span><span class="tag task">Request Scheduling</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+大型語言模型（LLMs）的需求不斷增長，要求服務系統能夠處理多個並行請求並滿足不同的服務等級目標（SLOs）。這加劇了計算密集型預填充（prefill）階段的隊首阻塞（HoL blocking）問題，其中長時間運行的請求會佔用資源並延遲高優先級請求，導致廣泛的首令牌時間（TTFT）SLO 違規。雖然分塊預填充（chunked prefill）實現了可中斷性，但它在響應性和吞吐量之間引入了固有的權衡：減小塊大小可改善響應延遲但降低計算效率，而增加塊大小則最大化吞吐量但加劇阻塞。這要求採用自適應搶佔機制。然而，動態平衡執行粒度與調度開銷仍然是一個關鍵挑戰。
+
+本文提出 FlowPrefill，一個針對 TTFT 和有效吞吐量（goodput）優化的服務系統，通過將搶佔粒度與調度頻率解耦來解決這一衝突。為實現自適應預填充調度，FlowPrefill 引入了兩項關鍵創新：1) **算子級搶佔**（Operator-Level Preemption），利用算子邊界實現細粒度執行中斷，而無需與固定小塊相關的效率損失；2) **事件驅動調度**（Event-Driven Scheduling），僅在請求到達或完成事件時觸發調度決策，從而支持高效的搶佔響應性，同時最小化控制平面開銷。在真實生產跡跡上的評估表明，FlowPrefill 相比最先進的系統將最大有效吞吐量提高了最多 5.6 倍，同時滿足異構 SLOs。</p>
+  
+  <div class="abstract-en">The growing demand for large language models (LLMs) requires serving systems to handle many concurrent requests with diverse service level objectives (SLOs). This exacerbates head-of-line (HoL) blocking during the compute-intensive prefill phase, where long-running requests monopolize resources and delay higher-priority ones, leading to widespread time-to-first-token (TTFT) SLO violations. While chunked prefill enables interruptibility, it introduces an inherent trade-off between responsiveness and throughput: reducing chunk size improves response latency but degrades computational efficiency, whereas increasing chunk size maximizes throughput but exacerbates blocking. This necessitates an adaptive preemption mechanism. However, dynamically balancing execution granularity against scheduling overheads remains a key challenge.
+  In this paper, we propose FlowPrefill, a TTFT-goodput-optimized serving system that resolves this conflict by decoupling preemption granularity from scheduling frequency. To achieve adaptive prefill scheduling, FlowPrefill introduces two key innovations: 1) Operator-Level Preemption, which leverages operator boundaries to enable fine-grained execution interruption without the efficiency loss associated with fixed small chunking; and 2) Event-Driven Scheduling, which triggers scheduling decisions only upon request arrival or completion events, thereby supporting efficient preemption responsiveness while minimizing control-plane overhead. Evaluation on real-world production traces shows that FlowPrefill improves maximum goodput by up to 5.6times compared to state-of-the-art systems while satisfying heterogeneous SLOs.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <p>[41] Ruاليn Qin, Zheming Li, Weiran He, Jialei Cui, Heyi Tang, Feng Ren, Teng Ma, Shangming Cai, Yineng Zhang, Mingxing Zhang 等人。2024。Mooncake：一種用於 LLM 服務的 KVCache 中心分散式架構。ACM 儲存交易 (2024)。</p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

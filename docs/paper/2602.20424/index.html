@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>隱性智能 -- 評估代理對用戶未明言事項的理解 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← 2026-02-25 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">隱性智能 -- 評估代理對用戶未明言事項的理解</h1>
+  
+  <div class="en-title">Implicit Intelligence -- Evaluating Agents on What Users Don&#39;t Say</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Ved Sirdeshmukh, Marc Wetter</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.20424" target="_blank">2602.20424</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.20424" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.20424" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/2602.20424" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+    <span class="tag method">Language Models</span><span class="tag method">Evaluation Framework</span>
+    <span class="tag task">Agent Evaluation</span><span class="tag task">Instruction Following</span><span class="tag task">Goal Fulfillment</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+對 AI 代理的真實世界請求本質上是不完整指定的。自然人類溝通依賴於說話者期望聽者推斷的共享背景和未明確說明的限制條件。當前的代理基準測試主要評估顯式指令遵循，但未能評估代理是否能夠推理跨越無障礙需求、隱私邊界、災難性風險和情境約束的隱含要求。我們提出了 Implicit Intelligence 這一評估框架，用於測試 AI 代理是否能夠超越提示遵循而成為真正的目標實現者，並配合 Agent-as-a-World (AaW) 這一工具，其中互動世界以人類可讀的 YAML 檔案定義，並由語言模型進行模擬。我們的情景具有用戶請求表面上的簡潔性、正確解決方案中隱藏的複雜性，以及通過環境探索發現約束條件的可發現性。在對 16 個前沿和開源權重模型進行 205 個情景的評估時，我們發現即使表現最佳的模型也只能達到 48.3% 的情景通過率，這表明在縮小字面指令遵循與類人情境推理之間的差距方面仍有大幅改進的空間。</p>
+  
+  <div class="abstract-en">Real-world requests to AI agents are fundamentally underspecified. Natural human communication relies on shared context and unstated constraints that speakers expect listeners to infer. Current agentic benchmarks test explicit instruction-following but fail to evaluate whether agents can reason about implicit requirements spanning accessibility needs, privacy boundaries, catastrophic risks, and contextual constraints. We present Implicit Intelligence, an evaluation framework testing whether AI agents can move beyond prompt-following to become genuine goal-fulfillers, paired with Agent-as-a-World (AaW), a harness where interactive worlds are defined in human-readable YAML files and simulated by language models. Our scenarios feature apparent simplicity in user requests, hidden complexity in correct solutions, and discoverability of constraints through environmental exploration. Evaluating 16 frontier and open-weight models across 205 scenarios, we find that even the best-performing model achieves only 48.3% scenario pass rate, revealing substantial room for improvement in bridging the gap between literal instruction-following and human-like contextual reasoning.</div>
+  
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  
+    
+      <p>避免直白的行為或實體
+- 偏好中立、常見的表達方式</p>
+    
+  
+    
+      <p>不要在名稱或狀態中洩露轉折：
+- 避免個人化的上下文欄位
+- 避免直白的行為/實體名稱
+- 偏好中立、常見的動詞。
+
+可用行為
+[</p>
+    
+  
+    
+      <p>{actions_library}
+
+輸出格式
+============
+[schema_context]
+
+僅輸出 YAML。</p>
+    
+  
+    
+      <p><em>列表 4：合成生成 - 規劃代理使用者提示 - 情境 YAML 的初稿</em></p>
+    
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

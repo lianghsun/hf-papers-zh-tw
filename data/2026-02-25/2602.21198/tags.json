@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "RL",
+    "Robotics",
+    "Multimodal"
+  ],
+  "method": [
+    "Test-Time Planning",
+    "Test-Time Training",
+    "LLM",
+    "Reflection"
+  ],
+  "task": [
+    "Task Planning",
+    "Robot Control",
+    "Long-Horizon Decision Making"
+  ],
+  "dataset": [
+    "Long-Horizon Household Benchmark",
+    "MuJoCo Cupboard Fitting Benchmark"
+  ],
+  "open_source": false
+}
