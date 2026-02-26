@@ -131,6 +131,8 @@ def parse_pdf(pdf_path: Path, arxiv_id: str, date_str: str) -> list[dict]:
             raw_elements = _fallback_parse_page(page, page_num)
 
         for elem in raw_elements:
+            if not isinstance(elem, dict):
+                continue  # skip malformed elements (e.g. int) from DotsOCR
             category = elem.get("category", "Text")
             elem_type = CATEGORY_TYPE_MAP.get(category)
             bbox = elem.get("bbox", [])
