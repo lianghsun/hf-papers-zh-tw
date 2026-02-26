@@ -72,6 +72,7 @@
   
     <p>arXiv:2602.20739v1 [cs.AI] 24 Mar 2026</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig1.png" loading="lazy" alt="Figure 1"></figure>
 <p><strong>圖 1.</strong> <em>PyVision-RL 的 agentic scaffolds。</em> 我們在 Python 動態工具的統一框架下設計了兩個 agentic scaffolds，用於影像和影片理解。對於 PyVision-Image，系統提示和影像提示都被注入到 MLLM 上下文中，並且影像也被載入到 Python 執行時環境中。對於 PyVision-Video，只有系統提示被注入到 MLLM 上下文中，而影片僅被載入到執行時環境中。給定一個查詢，模型會將推理與可執行的程式碼區塊（<em>code_block_0</em>）交錯進行，以處理多模態輸入。執行結果（<em>mm_clue_0</em>），包括文字輸出和渲染影像，被附加到上下文中並反饋給模型。此互動迴圈重複進行，直到產生最終答案。透過首先限制影片輸入至執行時環境，PyVision-Video 實現了按需上下文構建，其中代理可以在推理過程中有選擇地取樣和繪製任務相關的幀，大幅提升視覺令牌效率（圖 2）。</p>
 <p>穩定代理-環境互動的機制，以及 (2) 一種累積工具獎勵，明確激勵持續的多輪工具使用。使用統一的訓練管道，我們引入了兩個模型：<strong>PyVision-Image</strong> 用於影像理解，以及 <strong>PyVision-Video</strong> 用於影片理解。特別地，<strong>PyVision-Video</strong> 採用按需上下文構建，其中完整影片僅被載入到 Python 執行時環境中，模型在推理過程中通過 Python 程式碼有選擇地取樣和繪製任務相關幀。此 agentic 幀擷取策略避免了統一幀取樣，大幅減少視覺令牌消耗，同時提升推理效率。</p>
 <p>我們的模型取得了強有力的實證結果。<strong>PyVision-Image</strong> 在視覺搜尋、多模態推理和 agentic 推理基準測試中達到最先進的性能，在 V*（Wu &amp; Xie, 2024）上超越 DeepEyes-v2（Hong et al., 2025）+6.9%，在 WeMath（Qiao et al., 2025a）上超越 +9.6%。<strong>PyVision-Video</strong> 超越了 VITAL（Zhang et al., 2025a），一個具有影片剪輯工具的多模態代理，在 VSI-Bench（Yang et al., 2024）上達到 +2.2%，同時使用明顯較少的視覺令牌。透過按需上下文構建的推動，<strong>PyVision-Video</strong> 達到了有利的性能-效率權衡，每個樣本平均使用 5K 視覺令牌，相比 Qwen2.5-VL-7B 的 45K，卻能達到更高的準確度：<strong>PyVision-Video</strong> 為 44.0%，Qwen2.5-VL-7B 為 38.0%。</p>
@@ -81,6 +82,7 @@
 <p><strong>工具整合多模態推理。</strong> 與僅依賴文本推理的多模態推理模型不同（Wang et al., 2025a；Deng et al., 2025；Xie et al., 2025），工具整合多模態推理明確地將工具調用和執行的視覺輸出納入推理過程（Wang et al., 2024c）。例如，在分析高解析度影像時，模型可能會對感興趣的區域進行裁剪或放大以改進理解。</p>
 <p>現有方法大致分為兩類。靜態工具集預定義了一組固定的任務特定工具。對於視覺搜索，模型配備了在系統提示中指定的手工設計裁剪和縮放操作（Zheng et al., 2025c；Lai et al., 2025；Su et al., 2025a；Hu et al., 2024；Surís et al., 2023；Gupta &amp; Kembhavi, 2023；Song et al., 2026）。類似的設計擴展到長影片推理，其中使用預定義的影片剪輯工具（Zhang et al., 2025a；Yang et al., 2025；Gao et al., 2025b；Meng et al., 2025b）。相比之下，動態工具將 Python 作為基本工具，允許模型即時實現任務特定的操作（Zhao et al., 2025a；Zhang et al., 2025b；Hou et al., 2025；Song et al., 2025；Guo et al., 2025b；Hong et al., 2025）。雖然此範例在影像任務中已展現強大的成果，但尚未應用於影片推理。我們的方法 <strong>PyVision-RL</strong> 採用 Python 作為基本工具，分別為影像和影片理解任務啟用動態工具。</p>
 <h1 id="pyvision-rl">PyVision-RL：透過強化學習打造開放式智能視覺模型</h1>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig2.png" loading="lazy" alt="Figure 2"></figure>
 <p>圖 2. 幀採樣與按需上下文構建的比較。(a) 傳統視頻多模態大型語言模型（MLLM），例如 Wen-VL 系列，透過均勻採樣幀並將其直接注入模型上下文來處理視頻。(b) 在 PyVision-Video 中，我們採用按需上下文構建：視頻僅加載到 Python 運行時中，模型在推理過程中透過 Python 代碼選擇性地採樣和繪製相關幀，大幅提升了令牌效率。</p>
 <p><strong>多模態大型語言模型的強化學習。</strong> 繼 DeepSeek-R1（Guo et al., 2025a）取得成功之後，越來越多的工作開始應用強化學習來增強 LLM 和多模態大型語言模型（MLLM）的推理和工具使用能力（Meng et al., 2025a；Yu et al., 2025；Zheng et al., 2025a）。這些方法大多採用無評論家的強化學習演算法。</p>
 <p>現有方法可根據其技術重點進行廣泛分類。許多工作提出了改進的優勢估計方案（Liu et al., 2025c；Hu, 2025）。其他方法修改了 PPO 風格的剪裁機制以更好地適應 LLM 訓練（Yu et al., 2025；Chen et al., 2025a；Zheng et al., 2025b；Zhao et al., 2025b；Gao et al., 2025a）。另一類工作解決了強化學習管道中的訓練推理不匹配問題（Yao et al.；Liu et al., 2025b），而最近的研究則致力於穩定大型混合專家（MoE）模型的強化學習訓練（Ma et al., 2025；Xiao et al., 2026）。</p>
@@ -319,6 +321,7 @@
 <p>最後，即使在有效且正確的 rollouts 中，獎勵塑造也可能引入微妙的優化問題。特別是，當群組內存在多個正確的軌跡但工具呼叫計數不同時，群組級別正規化可能會為正確但更簡潔的解決方案分配負優勢，在訓練期間抑制有用的行為。</p>
 <p>為了解決這些挑戰，我們採用了 rollout 生成的過度採樣、過濾和排序框架。具體來說，我們首先過度採樣 rollouts，然後應用線上過濾來移除獎勵方差為零的群組和與代理-環境互動破損的 rollouts。在剩餘的候選者中，我們按群組級別獎勵標準差對 rollout 群組進行排序，這可作為樣本難度的代理（Jiang et al., 2024；Zhu et al., 2025），並保留排名前列的群組用於訓練。此策略優先考慮提供信息性學習訊號的中等難度 rollouts，同時也大幅降低了具有負優勢的正確樣本的流行程度，從而實現更穩定和高效的智能體 RL（第 4.3 節）。我們將此策略稱為 <em>Standard Deviation Sorting</em>。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig3.png" loading="lazy" alt="Figure 3"></figure>
 <p><strong>圖 3.</strong> <strong>PyVision-Image</strong> 的 RL 訓練動態。我們的訓練演算法產生穩定的優化和穩定改進的性能。熵損失和梯度範數在訓練過程中平緩下降，表示穩定的 RL 動態。同時，V* 上的驗證性能、準確性獎勵、回應長度和工具呼叫平均數量持續增加，顯示模型學習了持續的長期視野工具使用行為。</p>
 <h2 id="34">3.4. 最佳化與資料收集</h2>
 <h3 id="grpo">移除 GRPO 中的標準差正規化。</h3>
@@ -333,6 +336,7 @@
 <p><strong>PyVision-Image</strong> 基於 Qwen2.5-VL-7B 構建，要求在輸入前調整極小或極大影像的大小。根據 Mini-o3（Lai et al., 2025），我們使用兩個閾值控制影像調整大小，最小像素設置為 3,136，最大像素設置為 2,000,000，能夠高效處理高解析度影像。</p>
 <p><strong>PyVision-Image</strong> 和 <strong>PyVision-Video</strong> 都使用相同的超參數訓練 700 個 RL 步驟：過採樣批次大小 32、訓練批次大小 16、組別大小 8，以及在 8 個 H100 GPU 上的學習率 $1 \times 10^{-6}$。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig4.png" loading="lazy" alt="Figure 4"></figure>
 <p><strong>圖 4. VSI-Bench 上的效率效能權衡。</strong> 得益於按需上下文構建，PyVision-Video 在推理期間有選擇性地採樣任務相關幀，相比 Qwen2.5-VL 系列等幀採樣基線，以更少的視覺標記達到更高的準確度。</p>
 <h2 id="4">4. 實驗</h2>
 <p><strong>評估設置。</strong> 在評估過程中，<strong>PyVision-Image</strong> 對 V<em> 使用 0.01 的溫度，對其他基準測試使用 0.5 的溫度搭配 top-k 20，而 </em><em>PyVision-Video</em>* 使用 0.01 的溫度。鑑於 RL 微調所帶來的長視野推理能力，我們將最大回合預算設置為 30，最大上下文長度設置為 32K 個 token。我們在以下基準測試上評估我們的模型：</p>
@@ -341,9 +345,12 @@
 <p><strong>智能推理。</strong> TIR-Bench（Li et al., 2025b）包含<em>需要</em>多回合工具使用的任務。我們在此基準測試上評估 <strong>PyVision-Image</strong>，以評估其智能推理能力和動態工具的有效性。</p>
 <p><strong>空間推理。</strong> 我們在 VSI-Bench（Yang et al., 2024）上為 <strong>PyVision-Video</strong> 進行基準測試，以評估其在給定環境視頻時的空間推理能力。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig5.png" loading="lazy" alt="Figure 5"></figure>
 <p><strong>圖 5. 訓練組件的消融。</strong> 我們在七個基準測試（V<em> avg@32、HRBench-4K、HRBench-8K、MathVision、MathVerse、WeMath 和 DynaMath）上報告了不同訓練配置下的平均性能，每次消融我們方法的一個組件。</em>Ours<em> 設置使用 4 的最大回合預算，包括累積工具獎勵，對推出組應用標準差排序，並在優勢估計中移除標準差歸一化項。所有其他設置相對於 </em>Ours* 恰好修改一個組件。總體而言，我們觀察到：(1) 應用標準差排序或移除標準差歸一化始終改善性能，以及 (2) 納入累積工具獎勵或增加最大回合預算在後期訓練階段導致更大的性能收益。例如，在第 600 步，最大回合預算為 4 的性能比預算為 2 的性能高 1.93%。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig6.png" loading="lazy" alt="Figure 6"></figure>
 <p><strong>圖 6.</strong> 具有負優勢的正樣本比率。具有負優勢的正樣本是正確的軌跡，由於在組內的工具調用相對較少而獲得負優勢。我們比較了應用和不應用基於標準差的推出排序的每個訓練批次中此類樣本的比例。應用標準差排序在整個訓練過程中顯著降低了這個比率。</p>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig7.png" loading="lazy" alt="Figure 7"></figure>
 <p><strong>圖 7.</strong> RL 訓練期間工具調用的平均次數。我們消融了累積工具獎勵和最大回合預算。不使用累積工具獎勵，平均工具調用次數快速下降並穩定在低值。相比之下，納入累積工具獎勵鼓勵持續的工具使用，較高的最大回合預算導致工具調用的更大幅度和更快速度的增加。</p>
 <h2 id="41">4.1. 主要結果</h2>
 <p><strong>在圖像基準上的強性能。</strong> 表 1 總結了 <em>PyVision-Image</em> 在視覺搜尋、多模態推理和代理推理基準上的性能。所比較的方法分為兩類：(1) 使用預定義的靜態工具集進行訓練的模型（例如，裁剪和放大），包括 Pixel-Reasoner (Su et al., 2025a)、Mini-o3 (Lai et al., 2025) 和 DeepEyes (Zheng et al., 2025c; Hong et al., 2025)，以及 (2) 使用 Python 解釋器作為基本工具的模型，包括 Thyme (Zhang et al., 2025b)、CodeV (Hou et al., 2025)、CodeDance (Song et al., 2025)、CodeVision (Guo et al., 2025b) 和 DeepEyes-v2 (Hong et al., 2025)。我們的方法採用後者。</p>
@@ -899,20 +906,30 @@ els via mixed preference optimization。<em>arXiv preprint</em>
 <p>\boxed{"最終答案放在這裡}</p>
 <p></answer></p>
 <p>構造的不可或缺的部分</p>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig8.png" loading="lazy" alt="Figure 8"></figure>
 <p>圖 8</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig9.png" loading="lazy" alt="Figure 9"></figure>
 <p>圖 9</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig10.png" loading="lazy" alt="Figure 10"></figure>
 <p><strong>圖 10.</strong> 推出生成的過採樣-過濾-排名框架概述。首先，我們從提示池中過採樣 $\alpha * B$ 個提示，其中 $B$ 是批次大小，$\alpha$ 是過採樣參數。然後，每個提示被發送到推出工作者以生成 $G$ 個推出，其中 $G$ 是 GRPO 類似 RL 演算法中的組大小。在生成的推出中，其中一些是損壞的。對於這些 $\alpha * B * G$ 個推出，我們使用獎勵模型給它們分配獎勵，並計算每個推出的組級標準差。基於它是否損壞及其組級標準差，我們過濾並排序這些推出，並保留前 $B * G$ 個推出作為訓練樣本。</p>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig11.png" loading="lazy" alt="Figure 11"></figure>
 <p><strong>圖 11.</strong> 左圖：我們展示了 PyVision-Image 的 SFT 資料分佈，包含圖表理解資料（來自 ChartQA）、信息圖理解資料（來自 InfoVQA）、醫學理解資料（來自 GMAI-Reasoning）、數學資料（來自 MMK-12）和通用 VQA 資料（來自 LLaVA-CoT 和 MMPR）。右圖：我們展示了 PyVision-Image 的 RL 資料分佈，包含視覺搜尋資料（來自 DeepEyes 和 Mini-o3）和多模態推理資料（來自 V-Thinker 和 WeMath-v2）。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig12.png" loading="lazy" alt="Figure 12"></figure>
 <p>圖 12. <strong>左圖：</strong> 我們展示了 PyVision-Video 的 SFT 資料分佈，包含視覺空間推理資料（來自 SpaceR）和長視頻理解資料（來自 LongVILA）。<strong>右圖：</strong> PyVision-Video 訓練中使用的 RL 資料全部是視覺空間推理資料，來自 SpaceR。</p>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig13.png" loading="lazy" alt="Figure 13"></figure>
 <p>圖 13. 不同 RL 訓練設置的性能比較。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig14.png" loading="lazy" alt="Figure 14"></figure>
 <p><strong>圖 14.</strong> PyVision-Video 的 RL 過程的訓練動態。我們的演算法實現了穩定的訓練和持續的性能提升。熵損失保持在適度水平，梯度範數穩步下降，表明 RL 優化穩定。VSI-Bench-subset 的驗證分數、準確度獎勵、回應長度和平均工具調用次數在 RL 過程中穩步增加，表明模型學習到了持續的、長地平線的工具使用行為。為了在訓練期間使驗證高效，我們從 VSI-Bench 中隨機抽樣 400 個樣本作為驗證資料集，命名為 VSI-Bench-subset。</p>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig15.png" loading="lazy" alt="Figure 15"></figure>
 <p><strong>圖 15。</strong> 工具調用的平均次數以及負優勢正樣本的比例。我們視覺化呈現 PyVision-Image 的工具調用平均曲線和負優勢正樣本比例曲線。這兩個指標呈現負相關。受此觀察啟發，我們假設工具調用平均值增加的主要原因來自於正確樣本的負信號，但使用相對較少的工具。</p>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig16.png" loading="lazy" alt="Figure 16"></figure>
 <p><strong>圖 16。</strong> 在優勢估計中有/無標準差歸一化項的優勢分佈。在我們的實驗中，沒有標準差歸一化項的估計優勢能使性能改進更加穩定。我們比較了使用和不使用此項計算的優勢分佈——不使用該項的優勢呈現較低的方差，使強化學習訓練更加穩定。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig17.png" loading="lazy" alt="Figure 17"></figure>
 <p>圖 17。 TIR-Bench 上顏色 VQA 的案例研究。此任務要求 PyVision-Image 分析影像中的像素。此案例說明 PyVision-Image 如何處理顏色 VQA 任務，該任務需要像素級影像處理。PyVision-Image 首先放大並顯示影像，然後繪製像素強度的直方圖以檢查是否存在任何顯著差異。所得直方圖顯示相似的分佈，基於此像素級分析，PyVision-Image 得出正確答案。</p>
 <hr />
 <p>此影像不包含任何表格。</p>
@@ -924,17 +941,22 @@ els via mixed preference optimization。<em>arXiv preprint</em>
 | F. 305° |</p>
 <p>| 315° 是唯一符合視覺證據的選項。 |</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig19.png" loading="lazy" alt="Figure 19"></figure>
 <p>圖 19。 VSI-Bench 上絕對距離的案例研究。此任務要求 <em>PyVision-Video</em> 首先定位目標物體，然後估計其距離或物理尺寸。在此案例中，<em>PyVision-Video</em> 從室內影片估計一張桌子的最長尺寸。該模型首先執行均勻幀採樣以識別桌子和附近椅子清晰可見的視圖。使用標準餐椅作為參考物體，<em>PyVision-Video</em> 估計像素對釐米的比例並將桌子的像素跨度轉換為物理測量值。發現桌子的水平長度明顯大於其寬度，而高度無法直接觀察，根據典型傢俱比例已知其較小。最後，<em>PyVision-Video</em> 估計桌子的最長尺寸為 270cm。</p>
 <blockquote>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig20.png" loading="lazy" alt="Figure 20"></figure>
 <p><strong>圖 20.</strong> VSI-Bench 上物件計數的案例研究。此任務要求 <em>PyVision-Video</em> 在給定的 <em>影片</em> 中計數特定物件。在此案例中，首先，<em>PyVision-Video</em> 從影片中均勻採樣 15 幀。然後，它在第 700 幀和第 1100 幀中識別了 2 個不同的桌子。為了查看是否有其他桌子或相同的桌子是否從不同角度展示，模型對第 600 到第 1200 幀之間的影片片段進行更多幀採樣。最後，基於構建的上下文，<em>PyVision-Video</em> 識別出兩個不同的桌子，一個木製桌子配有花瓶和椅子，另一個配有紅色架子和其上的電視。</p>
 </blockquote>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig21.png" loading="lazy" alt="Figure 21"></figure>
 <p><strong>圖 21.</strong> <em>PyVision-Image</em> 在多功能基準上的工具分類分佈。在視覺搜尋任務上，<em>PyVision-Image</em> 幾乎只使用 <em>crop</em> 工具。在多模態推理任務上，<em>PyVision-Image</em> 顯著使用更多的 <em>numerical_analysis</em> 工具。在代理推理任務上（即 TIR-Bench），<em>PyVision-Image</em> 使用更多樣化的工具，包括 <em>segmentation</em>、<em>renderverified</em>、<em>もいい</em> 和一些長尾操作，展現動態工具的適應性和靈活性。</p>
 <hr />
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig22.png" loading="lazy" alt="Figure 22"></figure>
 <p><strong>圖 22.</strong> PyVision-Image 工具使用數量的分佈。我們繪製了不同基準和模型之間的工具呼叫數量分佈。具有較大最大轉折預算的模型在所有基準上明顯表現出更多的工具呼叫。在所有基準上，使用最大轉折預算為 4 進行 700 步訓練的 PyVision-Image 在大多數樣本上使用超過 3 個轉折，展現長期視野的工具使用能力。</p>
+<figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig23.png" loading="lazy" alt="Figure 23"></figure>
 <p><strong>圖 23.</strong> <em>PyVision-Video</em> 在 VSI-Bench 上的工具分類。我們繪製了 PyVision-Video 在 VSI-Bench 上的工具使用類別分佈。由於按需上下文構建機制，87.4% 的工具呼叫是 fetch{"bbox": [112, 1007, 585, 1249], "category": "Picture"}, {"bbox": [618, 1016, 1091, 1298], "category": "Picture"}, {"bbox": [110, 1270, 582, 1410], "category": "Caption", "text": "<strong>圖 24.</strong> PyVision-Video 工具使用數量的分佈。PyVision-Video 在 VSI-Bench 上展現長期視野的多轉折工具使用能力，即大多數樣本通過 3 個轉折解決，某些樣本通過 9 個轉折解決。"}, {"bbox": [617, 1313, 1090, 1390], "category": "Caption", "text": ""}]</p>
 <hr />
-<p><em>圖 25. 不含操作的完整工具分佈。</em> 在此圖中，我們展示了完整的工具分佈，包括 <em>no operation</em> 作為一個類別，其表示生成的 Python 程式碼只繪製原始影像而無進一步操作。我們發現 <em>no operation</em> 佔據了很大部分，表明 <em>PyVision-Image</em> 重複繪製原始影像以重新審視視覺提示。</p><hr><h2>圖表</h2><div class="figures-gallery"><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig6.png" loading="lazy" alt="圖 1"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig28.png" loading="lazy" alt="圖 2"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig14.png" loading="lazy" alt="圖 3"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig15.png" loading="lazy" alt="圖 4"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig29.png" loading="lazy" alt="圖 5"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig7.png" loading="lazy" alt="圖 6"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig5.png" loading="lazy" alt="圖 7"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig17.png" loading="lazy" alt="圖 8"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig16.png" loading="lazy" alt="圖 9"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig4.png" loading="lazy" alt="圖 10"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig12.png" loading="lazy" alt="圖 11"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig13.png" loading="lazy" alt="圖 12"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig1.png" loading="lazy" alt="圖 13"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig3.png" loading="lazy" alt="圖 14"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig11.png" loading="lazy" alt="圖 15"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig10.png" loading="lazy" alt="圖 16"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig2.png" loading="lazy" alt="圖 17"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig21.png" loading="lazy" alt="圖 18"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig20.png" loading="lazy" alt="圖 19"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig22.png" loading="lazy" alt="圖 20"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig23.png" loading="lazy" alt="圖 21"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig9.png" loading="lazy" alt="圖 22"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig27.png" loading="lazy" alt="圖 23"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig26.png" loading="lazy" alt="圖 24"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig32.png" loading="lazy" alt="圖 25"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig8.png" loading="lazy" alt="圖 26"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig24.png" loading="lazy" alt="圖 27"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig30.png" loading="lazy" alt="圖 28"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig18.png" loading="lazy" alt="圖 29"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig19.png" loading="lazy" alt="圖 30"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig31.png" loading="lazy" alt="圖 31"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig25.png" loading="lazy" alt="圖 32"></figure></div>
+<p><em>圖 25. 不含操作的完整工具分佈。</em> 在此圖中，我們展示了完整的工具分佈，包括 <em>no operation</em> 作為一個類別，其表示生成的 Python 程式碼只繪製原始影像而無進一步操作。我們發現 <em>no operation</em> 佔據了很大部分，表明 <em>PyVision-Image</em> 重複繪製原始影像以重新審視視覺提示。</p><hr><h2>圖表</h2><div class="figures-gallery"><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig18.png" loading="lazy" alt="fig18.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig24.png" loading="lazy" alt="fig24.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig25.png" loading="lazy" alt="fig25.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig26.png" loading="lazy" alt="fig26.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig27.png" loading="lazy" alt="fig27.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig28.png" loading="lazy" alt="fig28.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig29.png" loading="lazy" alt="fig29.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig30.png" loading="lazy" alt="fig30.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig31.png" loading="lazy" alt="fig31.png"></figure><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/fig32.png" loading="lazy" alt="fig32.png"></figure></div>
   
 </div>
 

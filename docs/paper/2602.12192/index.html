@@ -37,7 +37,7 @@
     <span>arXiv: <a href="https://arxiv.org/abs/2602.12192" target="_blank">2602.12192</a></span>
     
     <span style="color:var(--text-muted);font-size:0.8rem;">
-      來源：PDF + DotsOCR
+      來源：arxiv HTML
     </span>
     
   </div>
@@ -70,7 +70,260 @@
 <!-- Full translated content -->
 <div class="paper-body">
   
-    <p style="color:var(--text-muted);font-style:italic;">全文翻譯尚未生成。</p>
+    <h1 id="_1">面向查詢和記憶感知的長上下文處理重排器</h1>
+<p>基於現有的大語言模型中檢索頭的分析，我們提出了一個替代性的重排框架，訓練模型使用選定頭部的注意力分數來估計文章-查詢相關性。
+此方法提供了一個列表級別的解決方案，在排序過程中利用整個候選簡表中的整體資訊。同時，它自然產生連續的相關性分數，使得可以在任意檢索資料集上進行訓練，無需 Likert 尺度標註。
+我們的框架輕量級且有效，僅需小規模模型（如 4B 參數）即可達到強大性能。
+廣泛的實驗表明，我們的方法在多個領域（包括 Wikipedia 和長敘事資料集）上優於現有的最先進的點級別和列表級別重排器。它進一步在 LoCoMo 基準上建立了新的最先進結果，該基準評估對話理解和記憶使用的能力。
+我們進一步證明了我們的框架支持靈活的擴展。例如，用上下文資訊增強候選文章進一步改進排序準確度，而從中間層訓練注意力頭增強了效率而不犧牲性能 1 1 1 模型可在 https://huggingface.co/MindscapeRAG/QRRanker 獲得。</p>
+<p>面向查詢和記憶感知的長上下文處理重排器</p>
+<p>Yuqing Li 1,2 † † 腳註：平等貢獻。Jiangnan Li 3 1 1 腳註: 1 Mo Yu 3 1 1 腳註: 1 Guoxuan Ding 1,2 Zheng Lin 1,2 † † 腳註：通訊作者。Weiping Wang 1 Jie Zhou 3 1 中國科學院信息工程研究所 2 中國科學院大學網絡空間安全學院 3 騰訊公司微信人工智能中心模式識別中心 liyuqing@iie.ac.cn {jiangnanli,moyumyu}@tencent.com</p>
+<h2 id="1">1 介紹</h2>
+<p>嵌入模型，尤其是基於 LLM 構建的模型，已取得成功並使生成模型（RAG）和代理能夠高效地處理長輸入或大型輸入語料庫 Zhang et al. ( 2025b ); Zhao et al. ( 2025 ); Babakhin et al. ( 2025 ); Li et al. ( 2025a )。
+然而，嵌入模型也存在限制，這一點已被 Weller et al. ( 2025 ) 從理論上證明並通過實驗說明。他們揭示了一個「幾何瓶頸」，其中固定維度的向量無法編碼查詢-文檔交互的組合複雜性。
+此外，相似度測度的歸納偏置限制了其適用領域，而在這些領域中可能需要其他類型的關係來進行檢索，例如因果關係、關聯和類比。</p>
+<p>長期以來的研究在嵌入模型返回的候選列表上應用額外的重排序模塊來解決這一挑戰。
+重排序器使用更大的模型和更強大的表示方式（如交叉注意力）。LLM 的快速發展推動了許多基於 LLM 的重排序器的發佈，以受益於 LLM 的推理能力 Zhang et al. ( 2025b ); Sun et al. ( 2025 ); Liu et al. ( 2025a ); Pradeep et al. ( 2023b )。
+這些重排序器可以採用逐點或列表式的方法。
+逐點方法會喪失對候選列表的全局視圖，但可以給出分數。
+另一方面，列表式方法直接繼承了主幹 LLM 的長上下文推理和文本生成能力，具有對候選列表的整體視圖，但下一個 token 預測限制了細粒度分數的預測，預測的浮點數並不總是能準確反映真實的信度 Liu et al. ( 2025b ); Lin et al. ( 2024 )。
+因此，它們採用 Likert 評分制度，要求模型為每個輸入文檔輸出五點或十點量表分數。
+這限制了可用訓練數據的數量。</p>
+<p>在這項工作中，我們基於現有對 LLM 中檢索頭的分析提出了一種替代方案 Wu et al. ( 2024 ); Zhang et al. ( 2025a )。
+這些工作識別了兩種相關類型的頭：檢索頭和查詢聚焦檢索 (QR) 頭。兩者都指注意力模式反映檢索行為的注意力頭。
+具體來說，當將相關和干擾段落的長上下文與查詢連接時，這些頭被定義為在相關段落上放置顯著注意力權重的頭，使得注意力權重的排名與關聯度排名相關。</p>
+<p>雖然現有研究主要關注於探測和理解此類頭的功能，但我們的工作更進一步，通過訓練 LLM 來優化一小組檢索頭的排名準確性。通過這種方式，我們實現了一個 LLM 排序器，其被優化以用注意力權重對段落進行排名。這種列表式解決方案，名為 QRRanker，可以自然地使用連續關聯度分數，而不受 Likert 量表監督的限制，因此可以在任意檢索數據集上進行訓練。</p>
+<p>我們的 QRRanker 在實踐中具有多個良好特性。首先，檢索頭即使在主幹模型相對較小的情況下（例如 4B 參數）也能得到有效訓練。這使得列表式方法能夠以更高的效率運行。
+其次，通過在訓練過程中將共享的上下文信息預置到候選項的基礎上，可以輕鬆且高效地用全局上下文增強輸入候選段落，這對於長敘述理解至關重要。
+最後，我們觀察到我們的 QRRanker 對頭的選擇相當穩健，使用來自中間層的頭進行訓練不會導致性能下降。這允許我們在訓練和推理過程中去掉 LLM 的更高層，這可以大大降低模型的延遲。</p>
+<p>在各種領域的實驗中，包括 Wikipedia QA 任務（Musique Trivedi et al. ( 2022 )、HotpotQA Yang et al. ( 2018 )）、長敘述 QA 任務（NarrativeQA Kočiskỳ et al. ( 2018 )、DetectiveQA Xu et al. ( 2025b )）和長上下文對話（LoCoMo Maharana et al. ( 2024 )），都證明了我們 QRRanker 的優勢。
+作為一個多功能的排序框架，我們的方法不僅優於最先進的通用逐點和列表式模型（如 Qwen-Rerank 和 GroupRank），而且在領域特定的排序方法上也持續改進，例如用於 Wikipedia QA 的 HippoRAG-v2 Guti'errez et al. ( 2025 ) 以及在 LoCoMo 上的一系列最近的記憶增強方法 Li et al. ( 2025b ); Rasmussen et al. ( 2025 ); Hu et al. ( 2026a )。</p>
+<h2 id="2">2 相關工作</h2>
+<p><strong>重排序 (Reranking)</strong></p>
+<p>排序技術公認基於兩種結構構建：Siamese network（Bi-encoder；Koch et al. 2015）和 Cross-encoder（Thakur et al., 2021）。嵌入模型（Zhang et al., 2025b）是通常用於使用儲存的嵌入對整個文件語料庫進行排序的第一種方法。然而，它們受到「幾何瓶頸」的限制，無法編碼查詢和文件之間更細粒度的交互。Cross-encoder 可以緩解這一限制，它透過與查詢的交叉注意力對每個文件進行評分。對每對查詢-文件進行專門重新編碼的計算負擔限制了 cross-encoder 只能對由 bi-encoder 排序的前 n 個文件進行重排序，從而產生了前文件的精緻排序。因此，cross-encoder 被稱為重排序器（Reranker）。</p>
+<p>在 LLM 時代，重排序器也被深入探索。它們可以分為兩類：Pointwise 和 Listwise。Pointwise 描述文件成對評分的範例，這是實踐中的主要方向（Qin et al. 2024；Sun et al. 2023；Liu et al. 2025a；Zhuang et al. 2025），例如 Qwen3（Zhang et al., 2025b）、Jina、mGTE（Zhang et al., 2024）、BGE-m3（Chen et al. 2024）重排序器。Pointwise 模型獨立編碼文件，無法掌握全局資訊。為此，Listwise 模型充分利用 LLM 的生成能力。它們（Pradeep et al. 2023a, b）將文件連接成列表並相應地生成重排序結果。進一步地，使用 RL 進行微調後，模型可以先思考（Sun et al. 2023；Liu et al. 2025a；Qin et al. 2025；Ma et al. 2023；Sun et al. 2025），然後給出答案，達到顯著的性能。然而，Listwise 模型需要訓練資料提供特定的文件排序甚至分數，導致資料收集和構建的負擔。此外，LLM 的生成不穩定（例如，生成不正確的格式），特別是在引入思考過程時。正如 Wu et al.（2024）和 Zhang et al.（2025a）研究的那樣，LLM 本質上具有檢索能力，檢索注意力頭可以被提取來排序文件，達到具有競爭力的性能。儘管如此，這些頭在轉移到新任務時可能會改變，需要額外的種子資料集來提取它們。為此，我們提議訓練選定的頭，這確保了更好的可遷移性。</p>
+<p><strong>記憶體利用 (Memory Utilization)</strong></p>
+<p>記憶體構建和利用以緩解長文本處理的問題成為當今的熱點。對於長故事理解，Li et al.（2025a）構建全局記憶以增強檢索和生成。對於對話管理，設計了複雜的圖（Jiang et al. 2026；Xu et al. 2025a；Rasmussen et al. 2025；Hu et al. 2026b, a）、樹（Li et al. 2026）和事件、人物角色和文本塊的系統（Chhikara et al. 2025；Li et al. 2025b；Nan et al. 2025；Tao et al. 2026；Zou et al. 2026），以準確提取相關的對話歷史供進一步使用。然而，以簡單的記憶體構建進行更好和更強大的歷史搜尋，可以勝過複雜的記憶體管理，我們將展示我們達到此目標的解決方案。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.12192/x1.png" loading="lazy"></figure> 圖 1：檢索分數和 QR 分數基於 (QR) 注意力頭的注意力分數計算。在此圖中，Doc2 是黃金文件（塊）。</p>
+<h2 id="3-qr-head">3 預備知識：QR-head</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.12192/x2.png" loading="lazy"></figure> 圖 2：QRRanker 的結構如圖中所示，其中高亮的頭部為用於文件評分的 QR 頭部。由於 QRRanker 能夠利用記憶增強來捕捉更多的語境資訊，我們可以為敘述文本和對話構建記憶，如左側所示。右側部分展示了用於敘述文本/維基百科/對話的 QA 的排名-重新排名流程，其中不涉及複雜的設計。</p>
+<p>本節首先介紹查詢焦點檢索頭部（Query-Focused Retrieval heads，QR-head）的定義。</p>
+<p>如 Wu et al. ( 2024 ) 和 Zhang et al. ( 2025a ) 所介紹的那樣，在多頭自注意力模組中的所有頭部中，有些扮演著檢索器的關鍵角色。這些頭部在編碼問題時，會更多地關注語境中包含回答問題的資訊的部分。Zhang et al. ( 2025a ) 將其命名為 QR-heads，並通過 QR score 來識別它們。</p>
+<p>形式上，對於一個問題 $Q$，其對應的語境 $C$ 被分割成一個塊列表 $[c_{0},c_{1},...,c_{n}]$，其中 $G=[c_{g0},...,c_{gm}]$ 是回答問題的黃金塊。當使用 $C$ 和 $Q$ 編碼提示時，注意力頭部 $h$ 在 $Q$ 和每個塊 $c_{i}$ 之間的注意力分數表示為 $A^{Q\rightarrow c_{i}}<em>{h}\in\mathbb{R}^{|Q|\times|c</em>{i}|}$。頭部的 QR score 通過對黃金塊的注意力分數進行求和來計算：</p>
+<p>|  | $$\texttt{QRScore}<em>{h}=\frac{1}{|Q|}\sum</em>{c_{i}\in G}\sum_{w_{q}\in Q}\sum_{w_{c}\in c_{i}}{A^{Q\rightarrow c_{i}}<em>{h}[w</em>{q},w_{c}]},$$ |  | (1) |
+| --- | --- | --- | --- |</p>
+<p>其中 $w_{c}$ 和 $w_{Q}$ 分別是黃金塊 $c_{i}$ 和 $Q$ 中的標記。QR score 衡量頭部 $h$ 關注黃金塊的程度。更高的數值表示該頭部具有識別 $G$ 的潛力。QR score 將在種子資料集上針對每個頭部 $h\in H$ 進行計算和平均，將 $H$ 按降序排序，然後選擇排名前 16 的頭部作為 QR 頭部（$h\in H_{QR}$）。我們通過來自 NarrativeQA 的 1000 個隨機樣本為 Qwen3-4B-Instruct-2507 Yang et al. ( 2025 ) 選擇 QR 頭部。</p>
+<p>QR 頭部以類似於公式 1 的方式計算塊 $c_{i}$ 的檢索分數，其中將 $\sum_{c\in G}$ 替換為 $\sum_{h\in H_{QR}}$。Zhang et al. ( 2025a ) 進一步添加了分數校準以減輕注意力權重中的內在偏差，這涉及編碼一個空查詢 $N$="N/A" 並減去其 $\frac{1}{|N|}\sum_{w_{q}\in N}A^{N\rightarrow c_{i}}$。值得注意的是，通過我們的 QR 訓練，校準變為可選的。</p>
+<h2 id="4">4 方法</h2>
+<p>我們的 QRRanker 是一個 Listwise 方法，在單一推論過程中重新排序所有文檔，遵循所謂的「prompt-decoders」Pradeep et al. ( 2023a )。值得注意的是，QRRanker 不涉及任何生成過程，而只是用問題和文檔預填充提示，並取得注意力分數，這樣在時間和資源方面更加友善。儘管原始的 QR 檢索器（Zhang et al. , 2025a）配備一組預先計算的 QR 頭可以遷移到新任務，但效能可能不夠穩定，因為 QR 頭在新任務上可能會改變。為此，我們提出了 QRRanker 的專門訓練流程。我們首先構建 Listwise 訓練實例，然後使用對比排序目標來最佳化預先計算的 QR 頭。</p>
+<h3 id="41-qr">4.1 QR 訓練的資料構建</h3>
+<p>演算法 1 在 NarrativeQA 上使用可選摘要前綴構建列表式訓練實例</p>
+<h4 id="411">4.1.1 列表式訓練實例</h4>
+<p>我們透過合併 MuSiQue Trivedi et al. ( 2022 ) 和 NarrativeQA Kočiskỳ et al. ( 2018 ) 來建立統一的訓練集。我們首先為每個問題確定證據塊。對於 MuSiQue，我們直接使用原始標註中的官方支持事實作為證據。對於 NarrativeQA，由於未提供黃金塊，我們遵循 Li et al. ( 2025a ) 來構建銀色證據塊。</p>
+<p>建立證據後，我們使用 Qwen3-Embedding-8B 為每個問題檢索前 50 個候選集，並透過將與預構建證據相符的檢索候選標記為正樣本，同時將剩餘的檢索候選視為負樣本，來形成列表式實例。</p>
+<p>選擇性地，我們透過將檢索到的塊對應到其相應的摘要來構建摘要前綴，並將這些摘要前置於塊列表之前，即 $X = [M; C]$。演算法 1 總結了 NarrativeQA 上的此構建；MuSiQue 遵循相同的程序，只不過相關證據直接來自其官方支持事實。我們在下一小節中描述摘要的構建方式。</p>
+<h4 id="412">4.1.2 摘要構建</h4>
+<p>為了提供高層級的語意指導並支援長文本敘事理解，我們構建摘要作為輔助記憶上下文。使用時，摘要被前置為檢索塊列表的全域前綴，以便模型可以同時利用粗粒度上下文和細粒度證據。
+我們探索了兩種互補的摘要構建策略。</p>
+<p><strong>基於塊的摘要。</strong></p>
+<p>對於冗長的敘事書籍，我們構建尊重故事講述順序性質的塊級摘要。具體來說，我們將每本書分成若干塊（每塊 20 個連續塊），並為每個塊生成一個摘要。（參見附錄 A.1）</p>
+<p><strong>以事件為中心的摘要。</strong></p>
+<p>對於基於對話的資料，我們從對話中提取結構化事件，並形成以事件為中心的摘要。每個事件由簡短描述表示，並連結到其來源話語，從而能追溯到原始對話。（參見附錄 A.2）</p>
+<h3 id="42-qr">4.2 QR 訓練</h3>
+<p>透過第 3 節中提到的 QR 分數獲得預先計算的 QR 頭，我們的訓練方案專注於訓練這些頭。對於一個問題 Q Q 和由檢索器（例如 Qwen3-Embedding 等嵌入模型）排序的前 50 個候選文件 C = [ c 1 , … , c 50 ] C=[c_{1},...,c_{50}]，其中金標（正樣本）文件為 G = [ c g ​ 0 , . . , c g ​ m ] G=[c_{g0},..,c_{gm}]，QRRanker 的提示輸入是透過按順序連接 C C 和 Q Q 以及一些指令來構造的：P = Inst ​ ( C , Q ) \texttt{P}=\text{Inst}(C,Q)，其中指令範本在附錄 A.3 中提供。</p>
+<p>提示 P 被饋入模型，在每個注意力頭中，注意力分數被計算為 A h P → P A^{\texttt{P}\rightarrow\texttt{P}}<em>{h}。我們定位 Q Q 和 c i ∈ C c</em>{i}\in C 的位置，並提取以問題為中心的部分 A h Q → c i A^{Q\rightarrow c_{i}}<em>{h}。由 QR 頭 h ∈ H Q ​ R h\in H</em>{QR} 計算的段落 c i c_{i} 的檢索分數為：</p>
+<p>|  | s c i h = 1 | Q | ​ ∑ i ∈ c i ∑ j ∈ Q A h Q → c i ​ [ i , j ] , s_{c_{i}}^{h}=\frac{1}{|Q|}\sum_{i\in c_{i}}\sum_{j\in Q}A^{Q\rightarrow c_{i}}_{h}[i,j], |  | (2) |
+| --- | --- | --- | --- |</p>
+<p>其中分數計算如圖 1 所示。然後，最終檢索分數是透過將所有 QR 頭提供的分數相加得到的：s c i = ∑ h ∈ H Q ​ R s c i h s_{c_{i}}=\sum_{h\in H_{QR}}{s_{c_{i}}^{h}}。此外，s c i h s_{c_{i}}^{h} 也可以透過聚合最大注意力項進行計算，如 ColBERT Khattab and Zaharia ( 2020 ) 等方法所使用的那樣，這可以達到類似的效能，因此我們在此不討論。</p>
+<p>我們隨後使用樣本級對比損失優化文件分數 S = [ s c 1 , … , s c 50 ] S=[s_{c_{1}},...,s_{c_{50}}]。在傳統的對比場景中，分數 s c i s_{c_{i}} 通常穩定地範圍在 [0, 1]，而在我們的情況下，s c i s_{c_{i}} 可能受到指令中的標記影響（例如頭對注意力陷阱的敏感性），這可能導致樣本的範圍不穩定。因此，溫度參數可能不適合用於縮放分數。為此，我們使用最大最小歸一化來歸一化分數，其形式如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>S = s ​ c ​ a ​ l ​ e × ( S − min ​ ( S ) ) max ​ ( S ) − min ​ ( S ) , S=\frac{scale\times(S-\text{min}(S))}{\text{max}(S)-\text{min}(S)},</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 s ​ c ​ a ​ l ​ e scale 是一個因子，用於將範圍縮放到 [0, s ​ c ​ a ​ l ​ e scale ] 以保持穩定性。</p>
+<p>原始的對比損失一次採樣一個正樣本文件；然而，前 50 個文件可能包含多個正樣本文件。如果按照原始設定，這可能是次優的，因為未選中的正樣本文件會被忽略。我們提出了一個對比損失的群組版本，以同時優化它們：</p>
+<p>|  | L s ​ a ​ m ​ p ​ l ​ e = 1 | G | ​ ∑ c p ∈ G log ​ τ ​ ( s c p ) τ ​ ( s c p ) + ∑ c n ∈ C ∖ G τ ​ ( s c n ) , L_{sample}=\frac{1}{|G|}\sum_{c_{p}\in G}\text{log}\frac{\tau(s_{c_{p}})}{\tau(s_{c_{p}})+\sum_{c_{n}\in C\setminus G}\tau(s_{c_{n}})}, |  | (4) |
+| --- | --- | --- | --- |</p>
+<p>其中 τ \tau 表示指數函數。上述目標將每個正樣本文件視為獨立的子樣本，並在樣本內計算平均損失。對於資料集，該目標與傳統對比損失一致。</p>
+<p>由於我們的 QRRanker 可以有感知記憶能力，以整合更廣泛的上下文訊息，在 QR 訓練期間，我們可以選擇性地在候選文件列表 C C 之前附加一個記憶前置字首 M M（例如從檢索塊映射得到的摘要）。產生的 QRRanker 提示被構造為 P = Inst ​ ( M , C , Q ) \texttt{P}=\text{Inst}(M,C,Q)。</p>
+<p>表 1：按 Recall@{k} 測量的檢索和重排效能。'–' 表示相應論文中未報告該指標。對於 Wikipedia QA，我們重排由 Qwen3-Embedding-8B 檢索的前 50 個候選；對於 Story QA，我們重排由 SFT-Embedding-8B 檢索的前 50 個候選。DetectiveQA 分數是在英文和中文集合上的平均值。Overall 列報告在四個資料集上平均的 avg@3/avg@5/avg@10。粗體數字表示每一列的最佳結果。∗ 為了公平起見，所有重排器都採用單次執行進行評估。</p>
+<p>表 2：LoCoMo 上的檢索和重排效能。</p>
+<h2 id="5">5 實驗設置</h2>
+<h3 id="51">5.1 資料集</h3>
+<p>為了在多種檢索設置中評估 QRRanker，我們在涵蓋維基百科多跳問答、長文本故事問答和對話記憶的基準上進行實驗。</p>
+<p>維基百科多跳問答</p>
+<p>對於基於事實的多跳檢索，我們在 HotpotQA Yang et al. ( 2018 ) 和 MuSiQue Trivedi et al. ( 2022 ) 上進行評估。為確保公平比較，我們採用 HippoRAG Guti'errez et al. ( 2025 ) 提供的語料庫和測試分割，保持候選段落池的一致性。</p>
+<p>長文本故事問答</p>
+<p>我們利用需要在擴展文本上進行複雜推理的資料集，具體包括：
+(1) HELMET 基準中的 NarrativeQA Yen et al. ( 2024 )，包含 1,272 個問題，最長文件達 518k 令牌。
+(2) DetectiveQA Xu et al. ( 2025b ) 是一個雙語偵探故事資料集，平均長度超過 100k 令牌，需要在分散的情節點上進行精確證據定位。</p>
+<p>長文本對話記憶</p>
+<p>我們在 LoCoMo Maharana et al. ( 2024 ) 上評估我們的模型，這是一個為長文本對話記憶而設計的大規模基準。該資料集包含跨 10 個不同使用者群組的 50 個多場景對話，每個對話平均約 9,000 令牌。遵循先前的工作，我們報告四個細粒度類別的性能表現：單跳、多跳、時間推理和開放領域。</p>
+<h3 id="52">5.2 基準</h3>
+<p>我們將 QRRanker 與廣泛的檢索和記憶框架進行評估。</p>
+<p>對於維基百科問答和長文本故事任務上的通用重排序，我們將 QRRanker 與兩類模型進行比較：
+(1) 嵌入模型：Qwen3-Embedding (4B/8B) Zhang et al. ( 2025b ) 和 SFT-Embedding-8B，後者是在我們構建的資料上從 Qwen3-Embedding-8B 微調而來。
+(2) 重排序方法：HippoRAG Jimenez Gutierrez et al. ( 2024 ); Guti'errez et al. ( 2025 )、GroupRank-32B Sun et al. ( 2025 )、Qwen3-Reranker-4B（開箱即用）Zhang et al. ( 2025b ) 以及在與我們的 QRRanker 相同資料上訓練的 Qwen3-Reranker-4B 變體。我們也將未訓練的 QRHead 納入為基準。</p>
+<p>對於 LoCoMo 上的長文本對話任務，我們將 QRRanker 與一系列強大的基準進行比較，包括：A-Mem Xu et al. ( 2025a )、MemoryOS Li et al. ( 2025b )、Zep Rasmussen et al. ( 2025 )、Mem0 Chhikara et al. ( 2025 )、Nemori Nan et al. ( 2025 ) 和 LightMem Fang et al. ( 2025 )；TiMem Li et al. ( 2026 )、Synapse Jiang et al. ( 2026 )、Membox Tao et al. ( 2026 )、CompassMem Hu et al. ( 2026b ) 和 ES-Mem Zou et al. ( 2026 )；SimpleMem Liu et al. ( 2026 )。詳細的基準描述見附錄 B。</p>
+<h3 id="53-implementation-details">5.3 Implementation Details</h3>
+<p>Our QRRanker is trained on Qwen3 - 4B - Instruct - 2507 , with QR heads selected as described in Appendix C . In the training process, the s ​ c ​ a ​ l ​ e scale factor in the max-min norm is set to 8; the batch size is set to 1; the gradient accumulating step is set to 4; the learning rate is set to 1e-5. We utilize the DeepSpeed ZERO2 strategy and train QRRanker using 8 H20 GPUs.</p>
+<p>For downstream QA evaluation, we use task-specific prompting for generation; the full prompt templates for NarrativeQA, DetectiveQA, and LoCoMo are provided in Appendix A .
+We employ Qwen3-8B as the generator for NarrativeQA and DetectiveQA, where books are chunked into non-overlapping passages of ∼ \sim 200 tokens.
+For the LoCoMo benchmark, we utilize GPT-4o-mini and GPT-5-mini as the generators. We segment the dialogue history into small chunks, ensuring that utterance continuity is preserved, with an average chunk size of 258 tokens. When enabling the memory-aware setting, we prepend a summary prefix before the ranked chunk list. We cap the summary prefix at 512 tokens and select summaries based on their coverage of the retrieved/reranked chunks.</p>
+<h2 id="6-results">6 Results</h2>
+<p>Table 3: Comparison with SOTA Memory and Agent frameworks on the LoCoMo. Results marked with † \dagger are derived from ES-Mem Zou et al. ( 2026 ) . For QRRanker, we rerank the top-50 chunks retrieved by SFT-Emb-8B and utilize only the top-3 chunks as context for generation, without additional memory mechanisms. ‘–’ indicates the metric is not reported in the corresponding paper.</p>
+<h3 id="61">6.1 主要結果</h3>
+<p>我們進行了跨越三個不同領域的廣泛實驗：Wikipedia 多跳問答、長文本故事問答和對話記憶。這些實驗涵蓋五個英文和中文資料集。表 1 和表 2 展示了按 Recall@k 測量的整體重排性能。結果表明，我們提出的 QRRanker 在所有資料集上都能一致地達到最佳性能。它大幅優於純嵌入式檢索、強基線模型如 Qwen-Reranker 和普通現成 QRHeads 變體。此外，我們在表 3 和表 4 中評估了在 Narrative QA 和對話記憶上的下游生成任務。在這些任務中，我們的 QRRanker 產生了持續的改進，並展現了從檢索重排到終端任務的強大泛化能力。</p>
+<p>重排性能。</p>
+<p>我們首先分析 QRRanker 在重排嵌入式方法檢索的前 50 個候選結果時的檢索效果。如表 1 所示，QRRanker 建立了新的最先進基準。它大幅超越強基線模型 Qwen-Reranker-4B，並顯著提高了平均召回率。在 Musique 和 HotpotQA 等 Wikipedia 資料集上，QRRanker 超越了複雜的基於圖的方法，如 HippoRAG（Gutié rrez et al. (2025)）。值得注意的是，儘管模型輕量得多，它還超越了 GroupRank-32B 的性能。這表明我們的方法比簡單的分組評分或圖遍歷更有效地捕捉段落間的依賴關係。特別是在故事領域，性能差距尤其明顯，其中上下文追蹤至關重要。例如，QRRanker 在 NarrativeQA 上達到 54.93 的 Recall@10，而 GroupRank 為 48.83，普通 QRHeads 為 48.89。最後，在 LoCoMo（表 2）上，QRRanker 保持相同的優勢，表明其在從長對話歷史中檢索相關上下文的有效性。</p>
+<p>長文本故事問答性能。</p>
+<p>表 4：NarrativeQA 和 DetectiveQA 上的問答性能。所有方法均使用 R@3 檢索的文本塊作為生成的上下文（Qwen3-8B 作為生成器）。</p>
+<p>高質量的檢索應該轉化為改進的生成準確度。我們在敘事理解資料集上進行了評估。如表 4 所示，QRRanker 顯著改進了下游問答性能。在 NarrativeQA 上，它達到 33.61 F1，超越了訓練過的 Qwen3-Reranker-4B（30.51）。在 DetectiveQA 上，準確度從 SFT-Embedding-8B 的 62.85 提升到 QRRanker 的 67.25。
+這些結果表明 QRRanker 選擇的證據不僅在語義上相關，而且更好地符合答案生成所需的推理。</p>
+<p>對話記憶性能</p>
+<p>如表 3 所總結，QRRanker 在 LoCoMo 上展示了卓越的效率，在輸入預算極其緊湊的情況下達到了最佳的整體 F1。通過直接使用原始對話歷史中平均僅 854 個令牌（前 3 個文本塊），我們的方法在使用 GPT-4o-mini 時達到 57.03 的整體 F1，使用 GPT-5-mini 時達到 57.32。相比之下，許多記憶增強框架需要實質上更大的預算來維護顯式記憶存儲或圖。我們的方法則是對嵌入式檢索器檢索的前 50 個文本塊進行重排，並僅將前排名的少量原始對話文本塊供給生成器。這種輕量級設計保持了高推理效率和低系統複雜性，同時仍能捕捉長距離依賴關係，在我們的比較中產生了 LoCoMo 上之前報告結果中最高的整體 F1。</p>
+<h3 id="62-results-with-contextual-information">6.2 Results with Contextual Information</h3>
+<p>Table 5: Recall@3 comparison of QRRanker with chunk-only inputs versus a summary prefix (+Sum) as contextual memory. Δ \Delta indicates the absolute change after adding the summary prefix.</p>
+<p>As shown in Table 5 , equipping QRRanker with a summary prefix consistently improves ranking performance across long-dialogue and long-context story benchmarks. This suggests that the summary provides global contextual guidance, complementing the fine-grained evidence from retrieved chunks.
+Moreover, we test summary-based memory on Wikipedia-based multi-hop QA. We build a hierarchical clustering tree over retrieved passages and use parent summaries as the prefix. However, this strategy brings no gains and can even degrade performance, suggesting that abstracted global summaries are less helpful when evidence is highly localized in Wikipedia passages.</p>
+<h3 id="63-results-with-heads-from-different-layer-levels">6.3 Results with Heads from Different Layer- Levels</h3>
+<p>QRRanker uses static preset heads, which invokes our curiosity about the heads from which level of layers are suitable as starters for QR training. We propose a variant that dynamically selects heads from a range of continuous layers for every sample. The variant totally picks up 16 heads from layer l s l_{s} to l e l_{e} with 16 / ( l e − l s ) 16/(l_{e}-l_{s}) heads per layer, where l s l_{s} - l e l_{e} determines the level of layers ( i.e. , low, middle, high). Details of the variant are elaborated in Appendix D . We train and evaluate both QRRanker and its variants on the NarrativeQA dataset.</p>
+<p>Table 6: Retrieval performance on NarrativeQA of QRRanker and its variants adapted on different levels of layers. l s − l e l_{s}-l_{e} denotes the layers with head selection.</p>
+<p>As shown in Tab. 6 , training models with lower layers 10-17 shows a significant performance drop, while middle layers 17-24 and top layer 28-35 almost keep the same performance as QRRanker. Intuitively, lower layers truncate too much knowledge from higher layers, and heads in the middle-to-top layers are more likely to be retrievers. The outcome aligns with the phenomenon that QR heads in QRRanker are all positioned in the middle layers (17-24). Interestingly, we compare QR heads in QRRanker with those selected by the variant (17-24), and the degree of overlap is pretty low. It indicates that, with QR training, such potential is activated, which shows that our method can utilize the robustness of heads, even not QR heads, from the middle to the top. This provides a way to only focus on heads in the middle and truncate the higher layers for a smaller and faster ranker. We quantify the inference efficiency benefits of this middle-layer truncation in Section 6.4 .</p>
+<h3 id="64">6.4 推理效率</h3>
+<p>我們進一步調查了我們的方法在一組 20 個查詢上相比於基線方法的計算效率。
+如表 7 所示，QRRanker 相比於 Qwen3-Reranker-4B 實現了更低的 P50/P95 延遲，同時也減少了計算量（TFLOPs）和峰值記憶體。此外，QRRanker(middle) 通過在第 24 層之後截斷模型並丟棄更高層，進一步改進了效率。它以額外減少計算量和記憶體的方式實現了最佳的 P50/P95 延遲。對於 Qwen3-Reranker-4B，我們報告了兩種推理設置。在 batch=50 時，所有 50 個 chunk–query 對在單次前向傳播中被處理。在 batch=1 時，50 個對通過 50 次獨立的前向傳播被處理，這大大增加了延遲。總的來說，QRRanker 提供了更好的性能和成本權衡，而截斷的中層變體提供了一個特別輕量且快速的選項。</p>
+<p>表 7：延遲（P50/P95）、計算量（每個查詢的 TFLOPs）和峰值 GPU 記憶體中的推理效率比較。所有模型在相同的硬體和推理設置下對 20 個查詢進行評估。對於 Qwen3-Reranker-4B，batch=50 在單次前向傳播中處理 50 個 chunk–query 對，而 batch=1 通過 50 次獨立的前向傳播處理 50 個對。QRRanker(middle) 在第 24 層之後截斷模型。</p>
+<h2 id="7">7 結論</h2>
+<p>在本論文中，我們呈現了 QRRanker，一個建立在 LLM 中 Query-focused Retrieval（QR）頭部基礎上的輕量級且高效的列表式重新排序框架。通過顯式訓練選定的 QR 頭部進行排序，QRRanker 產生實值關聯性分數，並在推理時執行重新排序而無需生成。
+在跨越維基百科多跳問答、長上下文故事問答和對話記憶的五個資料集上，QRRanker 持續改進重新排序品質和下游問答性能。QRRanker 仍然實用於小型骨幹網路（例如 4B），並提供清晰的推理效率優勢。此外，它支援簡單的擴展，例如用於全局上下文的可選摘要前綴和用於進一步提高效率的中層頭部選擇。</p>
+<h2 id="_2">參考文獻</h2>
+<ul>
+<li>Y. Babakhin, R. Osmulski, R. Ak, G. Moreira, M. Xu, B. Schifferer, B. Liu, and E. Oldridge (2025) Llama-embed-nemotron-8b: a universal text embedding model for multilingual and cross-lingual tasks . External Links: 2511.07025 , Link Cited by: §1 .</li>
+<li>J. Chen, S. Xiao, P. Zhang, K. Luo, D. Lian, and Z. Liu (2024) M3-embedding: multi-linguality, multi-functionality, multi-granularity text embeddings through self-knowledge distillation . In Findings of the Association for Computational Linguistics, ACL 2024, 曼谷，泰國及虛擬會議，2024年8月11-16日 , L. Ku, A. Martins, and V. Srikumar (Eds.) , Findings of ACL , Vol. ACL 2024 , pp. 2318–2335 . External Links: Link , Document Cited by: §2 .</li>
+<li>P. Chhikara, D. Khant, S. Aryan, T. Singh, and D. Yadav (2025) Mem0: building production-ready ai agents with scalable long-term memory . arXiv preprint arXiv:2504.19413 . Cited by: 4th item , §2 , §5.2 , Table 3 .</li>
+<li>J. Fang, X. Deng, H. Xu, Z. Jiang, Y. Tang, Z. Xu, S. Deng, Y. Yao, M. Wang, S. Qiao, et al. (2025) Lightmem: lightweight and efficient memory-augmented generation . arXiv preprint arXiv:2510.18866 . Cited by: 8th item , §5.2 , Table 3 .</li>
+<li>W. Fedus, B. Zoph, and N. Shazeer (2022) Switch transformers: scaling to trillion parameter models with simple and efficient sparsity . J. Mach. Learn. Res. 23 , pp. 120:1–120:39 . External Links: Link Cited by: Appendix D .</li>
+<li>B. J. Gutierrez, Y. Shu, W. Qi, S. Zhou, and Y. Su (2025) From rag to memory: non-parametric continual learning for large language models . In arXiv.org , External Links: Document Cited by: §1 , §5.1 , §5.2 , §6.1 .</li>
+<li>C. Hu, X. Gao, Z. Zhou, D. Xu, Y. Bai, X. Li, H. Zhang, T. Li, C. Zhang, L. Bing, et al. (2026a) EverMemOS: a self-organizing memory operating system for structured long-horizon reasoning . arXiv preprint arXiv:2601.02163 . Cited by: §1 , §2 .</li>
+<li>Y. Hu, J. Liu, J. Tan, Y. Zhu, and Z. Dou (2026b) Memory matters more: event-centric memory as a logic map for agent searching and reasoning . arXiv preprint arXiv:2601.04726 . Cited by: 1st item , §2 , §5.2 , Table 3 .</li>
+<li>H. Jiang, J. Chen, Y. Pan, L. Chen, W. You, Y. Zhou, R. Zhang, Y. Abate, and T. Liu (2026) SYNAPSE: empowering llm agents with episodic-semantic memory via spreading activation . arXiv preprint arXiv:2601.02744 . Cited by: 1st item , §2 , §5.2 , Table 3 .</li>
+<li>B. Jimenez Gutierrez, Y. Shu, Y. Gu, M. Yasunaga, and Y. Su (2024) Hipporag: neurobiologically inspired long-term memory for large language models . Advances in Neural Information Processing Systems 37 , pp. 59532–59569 . Cited by: §5.2 .</li>
+<li>O. Khattab and M. Zaharia (2020) Colbert: efficient and effective passage search via contextualized late interaction over bert . In Proceedings of the 43rd International ACM SIGIR conference on research and development in Information Retrieval , pp. 39–48 . Cited by: §4.2 .</li>
+<li>G. Koch, R. Zemel, R. Salakhutdinov, et al. (2015) Siamese neural networks for one-shot image recognition . In ICML deep learning workshop , Vol. 2 , pp. 1–30 . Cited by: §2 .</li>
+<li>T. Kočiskỳ, J. Schwarz, P. Blunsom, C. Dyer, K. M. Hermann, G. Melis, and E. Grefenstette (2018) The narrativeqa reading comprehension challenge . Transactions of the Association for Computational Linguistics 6 , pp. 317–328 . External Links: Link Cited by: §1 , §4.1.1 .</li>
+<li>K. Li, X. Yu, Z. Ni, Y. Zeng, Y. Xu, Z. Zhang, X. Li, J. Sang, X. Duan, X. Wang, et al. (2026) TiMem: temporal-hierarchical memory consolidation for long-horizon conversational agents . arXiv preprint arXiv:2601.02845 . Cited by: 1st item , §2 , §5.2 , Table 3 .</li>
+<li>Y. Li, J. Li, Z. Lin, Z. Zhou, J. Wu, W. Wang, J. Zhou, and M. Yu (2025a) Mindscape-aware retrieval augmented generation for improved long context understanding . arXiv preprint arXiv:2512.17220 . Cited by: §1 , §2 , §4.1.1 , 5 .</li>
+<li>Z. Li, C. Xi, C. Li, D. Chen, B. Chen, S. Song, S. Niu, H. Wang, J. Yang, C. Tang, et al. (2025b) Memos: a memory os for ai system . arXiv preprint arXiv:2507.03724 . Cited by: 6th item , §1 , §2 , §5.2 , Table 3 .</li>
+<li>L. Lin, J. Fu, P. Liu, Q. Li, Y. Gong, J. Wan, F. Zhang, Z. Wang, D. Zhang, and K. Gai (2024) Just ask one more time! self-agreement improves reasoning of language models in (almost) all scenarios . In Findings of the Association for Computational Linguistics: ACL 2024 , pp. 3829–3852 . Cited by: §1 .</li>
+<li>J. Liu, Y. Su, P. Xia, S. Han, Z. Zheng, C. Xie, M. Ding, and H. Yao (2026) SimpleMem: efficient lifelong memory for llm agents . arXiv preprint arXiv:2601.02553 . Cited by: 1st item , §5.2 , Table 3 .</li>
+<li>W. Liu, X. Ma, W. Sun, Y. Zhu, Y. Li, D. Yin, and Z. Dou (2025a) Reasonrank: empowering passage ranking with strong reasoning ability . arXiv preprint arXiv:2508.07050 . Cited by: §1 , §2 .</li>
+<li>X. Liu, T. Chen, L. Da, C. Chen, Z. Lin, and H. Wei (2025b) Uncertainty quantification and confidence calibration in large language models: a survey . In Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining V. 2 , pp. 6107–6117 . Cited by: §1 .</li>
+<li>X. Ma, X. Zhang, R. Pradeep, and J. Lin (2023) Zero-shot listwise document reranking with a large language model . CoRR abs/2305.02156 . External Links: Link , Document , 2305.02156 Cited by: §2 .</li>
+<li>A. Maharana, D. Lee, S. Tulyakov, M. Bansal, F. Barbieri, and Y. Fang (2024) Evaluating very long-term conversational memory of llm agents . In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pp. 13851–13870 . Cited by: §1 , §5.1 .</li>
+<li>J. Nan, W. Ma, W. Wu, and Y. Chen (2025) Nemori: self-organizing agent memory inspired by cognitive science . arXiv preprint arXiv:2508.03341 . Cited by: 5th item , §2 , §5.2 , Table 3 .</li>
+<li>R. Pradeep, S. Sharifymoghaddam, and J. Lin (2023a) Rankvicuna: zero-shot listwise document reranking with open-source large language models . arXiv preprint arXiv:2309.15088 . Cited by: §2 , §4 .</li>
+<li>R. Pradeep, S. Sharifymoghaddam, and J. Lin (2023b) RankZephyr: effective and robust zero-shot listwise reranking is a breeze! . arXiv preprint arXiv:2312.02724 . Cited by: §1 , §2 .</li>
+<li>X. Qin, J. Bai, J. Li, Z. Jia, and Z. Zheng (2025) TongSearch-qr: reinforced query reasoning for retrieval . CoRR abs/2506.11603 . External Links: Link , Document , 2506.11603 Cited by: §2 .</li>
+<li>Z. Qin, R. Jagerman, K. Hui, H. Zhuang, J. Wu, L. Yan, J. Shen, T. Liu, J. Liu, D. Metzler, X. Wang, and M. Bendersky (2024) Large language models are effective text rankers with pairwise ranking prompting . In Findings of the Association for Computational Linguistics: NAACL 2024，墨西哥城，墨西哥，2024年6月16-21日 , K. Duh, H. Gómez-Adorno, and S. Bethard (Eds.) , Findings of ACL , Vol. NAACL 2024 , pp. 1504–1518 . External Links: Link , Document Cited by: §2 .</li>
+<li>P. Rasmussen, P. Paliychuk, T. Beauvais, J. Ryan, and D. Chalef (2025) Zep: a temporal knowledge graph architecture for agent memory . arXiv preprint arXiv:2501.13956 . Cited by: 7th item , §1 , §2 , §5.2 , Table 3 .</li>
+<li>D. Sun, M. Long, D. Yang, Y. Jiao, Z. Tan, J. Feng, J. Wang, Y. Shen, P. Wei, J. Wang, et al. (2025) GroupRank: a groupwise reranking paradigm driven by reinforcement learning . arXiv preprint arXiv:2511.11653 . Cited by: §1 , §2 , §5.2 .</li>
+<li>W. Sun, L. Yan, X. Ma, S. Wang, P. Ren, Z. Chen, D. Yin, and Z. Ren (2023) Is chatgpt good at search? investigating large language models as re-ranking agents . In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing, EMNLP 2023，新加坡，2023年12月6-10日 , H. Bouamor, J. Pino, and K. Bali (Eds.) , pp. 14918–14937 . External Links: Link , Document Cited by: §2 .</li>
+<li>D. Tao, G. Ma, Y. Huang, and M. Jiang (2026) Membox: weaving topic continuity into long-range memory for llm agents . arXiv preprint arXiv:2601.03785 . Cited by: 3rd item , §2 , §5.2 , Table 3 .</li>
+<li>N. Thakur, N. Reimers, J. Daxenberger, and I. Gurevych (2021) Augmented SBERT: data augmentation method for improving bi-encoders for pairwise sentence scoring tasks . In Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, NAACL-HLT 2021，線上，2021年6月6-11日 , K. Toutanova, A. Rumshisky, L. Zettlemoyer, D. Hakkani-Tür, I. Beltagy, S. Bethard, R. Cotterell, T. Chakraborty, and Y. Zhou (Eds.) , pp. 296–310 . External Links: Link , Document Cited by: §2 .</li>
+<li>H. Trivedi, N. Balasubramanian, T. Khot, and A. Sabharwal (2022) ♫ MuSiQue: multihop questions via single-hop question composition . Transactions of the Association for Computational Linguistics 10 , pp. 539–554 . Cited by: §1 , §4.1.1 , §5.1 .</li>
+<li>O. Weller, M. Boratko, I. Naim, and J. Lee (2025) On the theoretical limitations of embedding-based retrieval . arXiv preprint arXiv:2508.21038 . Cited by: §1 .</li>
+<li>W. Wu, Y. Wang, G. Xiao, H. Peng, and Y. Fu (2024) Retrieval head mechanistically explains long-context factuality . ArXiv abs/2404.15574 . External Links: Link Cited by: §1 , §2 , §3 .</li>
+<li>W. Xu, Z. Liang, K. Mei, H. Gao, J. Tan, and Y. Zhang (2025a) A-mem: agentic memory for llm agents . arXiv preprint arXiv:2502.12110 . Cited by: §2 , §5.2 , Table 3 .</li>
+<li>Z. Xu, J. Ye, X. Liu, X. Liu, T. Sun, Z. Liu, Q. Guo, L. Li, Q. Liu, X. Huang, and X. Qiu (2025b) DetectiveQA: evaluating long-context reasoning on detective novels . In Workshop on Reasoning and Planning for Large Language Models , External Links: Link Cited by: §1 , §5.1 .</li>
+<li>A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao, C. Huang, C. Lv, et al. (2025) Qwen3 technical report . arXiv preprint arXiv:2505.09388 . Cited by: §3 .</li>
+<li>Z. Yang, P. Qi, S. Zhang, Y. Bengio, W. Cohen, R. Salakhutdinov, and C. D. Manning (2018) HotpotQA: a dataset for diverse, explainable multi-hop question answering . In Proceedings of the 2018 conference on empirical methods in natural language processing , pp. 2369–2380 . Cited by: §1 , §5.1 .</li>
+<li>H. Yen, T. Gao, M. Hou, K. Ding, D. Fleischer, P. Izsak, M. Wasserblat, and D. Chen (2024) Helmet: how to evaluate long-context language models effectively and thoroughly . arXiv preprint arXiv:2410.02694 . Cited by: §5.1 .</li>
+<li>W. Zhang, F. Yin, H. Yen, D. Chen, and X. Ye (2025a) Query-focused retrieval heads improve long-context reasoning and re-ranking . arXiv preprint arXiv:2506.09944 . Cited by: §1 , §2 , §3 , §3 , §4 .</li>
+<li>X. Zhang, Y. Zhang, D. Long, W. Xie, Z. Dai, J. Tang, H. Lin, B. Yang, P. Xie, F. Huang, M. Zhang, W. Li, and M. Zhang (2024) MGTE: generalized long-context text representation and reranking models for multilingual text retrieval . In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing: EMNLP 2024 - Industry Track，邁阿密，美國佛羅里達州，2024年11月12-16日 , F. Dernoncourt, D. Preotiuc-Pietro, and A. Shimorina (Eds.) , pp. 1393–1412 . External Links: Link , Document Cited by: §2 .</li>
+<li>Y. Zhang, M. Li, D. Long, X. Zhang, H. Lin, B. Yang, P. Xie, A. Yang, D. Liu, J. Lin, et al. (2025b) Qwen3 embedding: advancing text embedding and reranking through foundation models . arXiv preprint arXiv:2506.05176 . Cited by: §1 , §1 , §2 , §2 , §5.2 .</li>
+<li>X. Zhao, X. Hu, Z. Shan, S. Huang, Y. Zhou, X. Zhang, Z. Sun, Z. Liu, D. Li, X. Wei, et al. (2025) Kalm-embedding-v2: superior training techniques and data inspire a versatile embedding model . arXiv preprint arXiv:2506.20923 . Cited by: §1 .</li>
+<li>S. Zhuang, X. Ma, B. Koopman, J. Lin, and G. Zuccon (2025) Rank-r1: enhancing reasoning in llm-based document rerankers via reinforcement learning . CoRR abs/2503.06034 . External Links: Link , Document , 2503.06034 Cited by: §2 .</li>
+<li>H. Zou, T. Sun, C. He, Y. Tian, Z. Li, L. Jin, N. Liu, J. Zhong, and K. Wei (2026) ES-mem: event segmentation-based memory for long-term dialogue agents . arXiv preprint arXiv:2601.07582 . Cited by: 2nd item , §2 , §5.2 , Table 3 , Table 3 .</li>
+</ul>
+<h2 id="a">附錄 A 提示詞範本</h2>
+<h3 id="a1">A.1 基於區塊的摘要生成提示詞</h3>
+<h3 id="a2">A.2 事件中心摘要生成</h3>
+<h3 id="a3-qrranker">A.3 QRRanker 指令範本</h3>
+<h3 id="a4-locomo">A.4 LoCoMo 問答提示詞</h3>
+<h3 id="a5-narrativeqa">A.5 NarrativeQA 提示詞</h3>
+<h3 id="a6-detectiveqa">A.6 DetectiveQA 提示詞</h3>
+<h2 id="b-locomo">附錄 B LoCoMo 基準方法</h2>
+<p>我們在 LoCoMo 上將 QRRanker 與一組記憶增強基準方法進行比較。以下是各方法的簡要說明。</p>
+<ul>
+<li>• TiMem Li et al. ( 2026 ) : 使用時間階層結構組織記憶，以有效檢索長期資訊。</li>
+</ul>
+<p>TiMem Li et al. ( 2026 ) : 使用時間階層結構組織記憶，以有效檢索長期資訊。</p>
+<ul>
+<li>• SimpleMem Liu et al. ( 2026 ) : 將對話歷史壓縮為緊湊的語義記憶，以減少冗餘性和上文長度。</li>
+</ul>
+<p>SimpleMem Liu et al. ( 2026 ) : 將對話歷史壓縮為緊湊的語義記憶，以減少冗餘性和上文長度。</p>
+<ul>
+<li>• SYNAPSE Jiang et al. ( 2026 ) : 將記憶建模為動態圖，並透過擴散激活檢索相關項目。</li>
+</ul>
+<p>SYNAPSE Jiang et al. ( 2026 ) : 將記憶建模為動態圖，並透過擴散激活檢索相關項目。</p>
+<ul>
+<li>• CompassMem Hu et al. ( 2026b ) : 將互動分段成事件，並構建事件級結構以指導檢索和推理。</li>
+<li>• ES-Mem Zou et al. ( 2026 ) : 使用事件分段為對話代理建立連貫的長期記憶。</li>
+<li>• Membox Tao et al. ( 2026 ) : 將對話打包為主題一致的記憶單元，以在長上文中保持主題連續性。</li>
+<li>• Mem0 Chhikara et al. ( 2025 ) : 一個「以記憶為中心」的架構，動態提取、整合和檢索來自對話的重要資訊，以建立和維護可擴展的長期記憶。</li>
+<li>• Nemori Nan et al. ( 2025 ) : 採用雙步對齊原則將對話流結構化為語義連貫的事件分段，並利用預測-校準原則主動從預測偏差中學習，實現知識的自適應演化。</li>
+<li>• MemoryOS Li et al. ( 2025b ) : 一個受作業系統啟發的 AI 記憶系統，具有儲存、更新、檢索和生成模組的階層架構。它透過 FIFO 對話鏈和基於熱度的分段分頁來優化動態更新。</li>
+<li>• Zep Rasmussen et al. ( 2025 ) : 利用動態且時間感知的知識圖譜引擎，將非結構化對話數據與結構化業務數據整合，同時保留其歷史關係。</li>
+<li>• LightMem Fang et al. ( 2025 ) : 一個受認知啟發的架構，具有感覺和短期模組，用於輕量級壓縮和整合。獨特之處在於它在「睡眠時間」期間更新長期記憶，以將鞏固與線上推理解耦，在性能和效率之間取得平衡。</li>
+</ul>
+<p>CompassMem Hu et al. ( 2026b ) : 將互動分段成事件，並構建事件級結構以指導檢索和推理。</p>
+<p>ES-Mem Zou et al. ( 2026 ) : 使用事件分段為對話代理建立連貫的長期記憶。</p>
+<p>Membox Tao et al. ( 2026 ) : 將對話打包為主題一致的記憶單元，以在長上文中保持主題連續性。</p>
+<p>Mem0 Chhikara et al. ( 2025 ) : 一個「以記憶為中心」的架構，動態提取、整合和檢索來自對話的重要資訊，以建立和維護可擴展的長期記憶。</p>
+<p>Nemori Nan et al. ( 2025 ) : 採用雙步對齐原則將對話流結構化為語義連貫的事件分段，並利用預測-校準原則主動從預測偏差中學習，實現知識的自適應演化。</p>
+<p>MemoryOS Li et al. ( 2025b ) : 一個受作業系統啟發的 AI 記憶系統，具有儲存、更新、檢索和生成模組的階層架構。它透過 FIFO 對話鏈和基於熱度的分段分頁來優化動態更新。</p>
+<p>Zep Rasmussen et al. ( 2025 ) : 利用動態且時間感知的知識圖譜引擎，將非結構化對話數據與結構化業務數據整合，同時保留其歷史關係。</p>
+<p>LightMem Fang et al. ( 2025 ) : 一個受認知啟發的架構，具有感覺和短期模組，用於輕量級壓縮和整合。獨特之處在於它在「睡眠時間」期間更新長期記憶，以將鞏固與線上推理解耦，在性能和效率之間取得平衡。</p>
+<h2 id="appendix-c-qr-heads-for-qwen3-4b-instruct-2507">Appendix C QR Heads for Qwen3-4B-Instruct-2507</h2>
+<p>We compute the QR scores of all attention heads in Qwen3 - 4B - Instruct - 2507 using 1000 random samples from NarrativeQA. The top 16 heads with the largest QR scores are selected as QR heads for retrieval and further training. As Qwen3 - 4B - Instruct - 2507 contains 36 layers of 32-head self-attention, the QR heads (demonstrated as l l – h h , where 0 ≤ l &lt; 36 0\leq l&lt;36 denotes the layer and 0 ≤ h &lt; 32 0\leq h&lt;32 denotes the head in this layer) are: 20-15 , 21-11 , 17-27 , 23-10 , 22-4 , 21-10 , 21-8 , 21-18 , 18-15 , 18-19 , 17-25 , 17-17 , 24-13 , 17-4 , 19-12 , 21-31 .</p>
+<h2 id="appendix-d-variant-with-semi-auto-head-selection">Appendix D Variant with Semi-Auto Head Selection</h2>
+<p>QRRanker statically trains and utilizes a group of precomputed QR heads. If we use a set of seed samples from another task to recompute QR scores, the QR heads may be different from the current ones. Our initial motivation for using the precomputed QR heads is that they provide a proper initialization. Along with training, heads will be forced to learn such a retrieval ability. We are curious about which part of heads are better suited to be a good starter, as QR heads do. Therefore, we propose a variant of QRRanker with semi-automatic head selection, which is limited to selecting heads from a local range of layers, but is free to choose heads from every layer for every sample.</p>
+<p>We set layers for head selection ranged from l s l_{s} to l e l_{e} , where 0 &lt; l s &lt; l e ≤ 36 0&lt;l_{s}&lt;l_{e}\leq 36 . We restrict that the number of selected heads must equal 16 (the number of QR heads), and therefore, for simplified control, the model should select n = 16 / ( l e − l s ) n=16/(l_{e}-l_{s}) heads per layer. To achieve selection, we follow the router technique of Mixture-of-Expert (Fedus et al. , 2022 ) and add a gate to these layers. Instead of choosing MLPs for every token, our gate chooses n n heads for a sample. For selecting heads, we concatenate a repeat question Q ′ = [ t h i n k ] Q [ / t h i n k ] Q^{{}^{\prime}}=[think]Q[/think] after the original question Q Q , where Q ′ Q^{{}^{\prime}} is used for head selection and Q Q is still for score computing. A gate of layer l i l_{i} is a linear map from the dimension 32 ∗ d h 32*d_{h} to 32 32 , with the trainable parameter W l i ∈ ℝ d × 32 W_{l_{i}}\in\mathbb{R}^{d\times 32} . The head score is computed by:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>S l i = q l i ⋅ W l i , \displaystyle S_{l_{i}}=q_{l_{i}}\cdot W_{l_{i}},</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>S l i = mean ​ ( softmax ​ ( S l i ) , d = 0 ) , \displaystyle S_{l_{i}}=\text{mean}(\text{softmax}(S_{l_{i}}),\text{d}=0),</td>
+<td></td>
+<td>(6)</td>
+</tr>
+</tbody>
+</table>
+<p>where q l i ∈ ℝ | Q ′ | × d q_{l_{i}}\in\mathbb{R}^{|Q^{{}^{\prime}}|\times d} is the hidden states of tokens in Q ′ Q^{{}^{\prime}} at layer l i l_{i} , d d is the dimension of the hidden state, cat ( ⋅ \cdot ) is concatenating all query states along the head, mean( ⋅ \cdot , d=0) is averaging the score along the number of tokens in Q ′ Q^{{}^{\prime}} , and S l i ∈ ℝ 32 S_{l_{i}}\in\mathbb{R}^{32} is the head score. We then choose the top- n n highest head scores S l i Q = [ s h ​ 0 l i , … , s h ​ n l i ] S_{l_{i}}^{Q}=[s_{h0}^{l_{i}},...,s_{hn}^{l_{i}}] and the corresponding heads. Following MoE, S l i Q S_{l_{i}}^{Q} is normalized to 1. After picking up heads for all layers with gates, these heads participate in computing retrieval scores, and the retrieval score will be multiplied by its head score S l i Q ​ [ x ] , 0 &lt; x &lt; n S_{l_{i}}^{Q}[x],0&lt;x&lt;n for the purpose of backward gradients. These gates will learn to select heads for samples during the QR training.</p>
+<p>在第 6.3 節中，我們訓練 QRRanker 和僅使用來自 NarrativeQA 的訓練資料的變體，並使用 NarrativeQA 的評估集進行評估。訓練超參數設定與第 5.3 節中的相同。我們探索可用於選擇和訓練類似 QR 的頭部的層。</p>
   
 </div>
 

@@ -38,6 +38,64 @@ def _copy_figures(date_str: str, arxiv_id: str) -> None:
             shutil.copy2(fig, dst / fig.name)
 
 
+def _insert_pdf_figures_inline(content_html: str, figures: list[dict], figures_base: str) -> str:
+    """
+    Insert PDF figures inline at the position of their captions in the HTML.
+    Looks for <p> tags starting with 'Figure N.' or '圖 N.' and inserts
+    the corresponding figN.png image immediately before each caption paragraph.
+    Falls back to appending remaining figures at the end if no caption found.
+    """
+    # Build map: figure_number -> filename  (e.g. {1: "fig1.png", 2: "fig2.png"})
+    fig_map: dict[int, str] = {}
+    for fig in figures:
+        m = re.match(r"fig(\d+)\.", fig["name"], re.IGNORECASE)
+        if m:
+            fig_map[int(m.group(1))] = fig["name"]
+
+    if not fig_map:
+        return content_html
+
+    inserted = set()
+
+    def _replace_caption(match: re.Match) -> str:
+        full_tag = match.group(0)
+        n = int(match.group(1))
+        fname = fig_map.get(n)
+        if fname and n not in inserted:
+            inserted.add(n)
+            img = (
+                f'<figure class="paper-figure">'
+                f'<img src="{figures_base}{fname}" loading="lazy" alt="Figure {n}">'
+                f'</figure>\n'
+            )
+            return img + full_tag
+        return full_tag
+
+    # Match <p> starting with Figure N. / 圖 N.
+    # Handles both plain and <strong>-wrapped captions, e.g.:
+    #   <p>圖 2. ...          → plain
+    #   <p><strong>圖 1.</strong>  → bold with closing tag after period
+    pattern = re.compile(
+        r'<p>(?:<strong>)?(?:Figure|Fig\.?|圖)\s+(\d+)\.?(?:</strong>)?',
+        re.IGNORECASE,
+    )
+    content_html = pattern.sub(_replace_caption, content_html)
+
+    # Append any figures whose captions were not found in the text
+    missing = [fig_map[n] for n in sorted(fig_map) if n not in inserted]
+    if missing:
+        content_html += '<hr><h2>圖表</h2><div class="figures-gallery">'
+        for fname in missing:
+            content_html += (
+                f'<figure class="paper-figure">'
+                f'<img src="{figures_base}{fname}" loading="lazy" alt="{fname}">'
+                f'</figure>'
+            )
+        content_html += '</div>'
+
+    return content_html
+
+
 def build_paper_page(paper: dict, date_str: str) -> None:
     arxiv_id = paper["arxiv_id"]
     out_dir = DOCS_DIR / "paper" / arxiv_id
@@ -64,18 +122,9 @@ def build_paper_page(paper: dict, date_str: str) -> None:
             content_html
         )
 
-    # For PDF-parsed papers: append figures gallery at the end
+    # For PDF-parsed papers: insert figures inline at their natural reading position
     if paper.get("parse_source") == "pdf" and paper.get("figures"):
-        figs_html = '<hr><h2>圖表</h2><div class="figures-gallery">'
-        for i, fig in enumerate(paper["figures"], 1):
-            figs_html += (
-                f'<figure class="paper-figure">'
-                f'<img src="{figures_base}{fig["name"]}" loading="lazy" alt="圖 {i}">'
-                f'{"<figcaption>" + fig["caption"] + "</figcaption>" if fig.get("caption") else ""}'
-                f'</figure>'
-            )
-        figs_html += "</div>"
-        content_html += figs_html
+        content_html = _insert_pdf_figures_inline(content_html, paper["figures"], figures_base)
 
     tmpl = jinja_env.get_template("paper.html")
     html = tmpl.render(
