@@ -22,7 +22,7 @@
     
 
 <div class="paper-page-header">
-  <a href="../../2026-02-25/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+  <a href="../../2026-02-25/index.html" style="font-size:0.85rem;color:var(--text-muted);">
     ← 2026-02-25 論文列表
   </a>
   <h1 style="margin-top:0.75rem;">PyVision-RL：通過強化學習打造開放式智能視覺模型</h1>
@@ -35,11 +35,16 @@
     <span>Shitian Zhao, Shaoheng Lin, Ming Li, Haoquan Zhang, Wenshuo Peng, Kaipeng Zhang, Chen Wei</span>
     
     <span>arXiv: <a href="https://arxiv.org/abs/2602.20739" target="_blank">2602.20739</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：PDF + DotsOCR
+    </span>
+    
   </div>
 
   <div class="paper-links">
     <a href="https://arxiv.org/pdf/2602.20739" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
-    <a href="https://arxiv.org/abs/2602.20739" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://arxiv.org/abs/2602.20739" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
     <a href="https://huggingface.co/papers/2602.20739" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
   </div>
 
@@ -62,21 +67,877 @@
   
 </div>
 
-<!-- Full paper content -->
+<!-- Full translated content -->
 <div class="paper-body">
   
-    
-      <figure class="paper-figure">
-        <img src="../../figures/2026-02-25/2602.20739/p24_fig1.png"
-             alt="Figure 1" loading="lazy">
-      </figure>
-    
-  
-    
-      <p><em>**圖 20.** VSI-Bench 上物件計數的案例研究。此任務要求 PyVision-Video 計數給定影片中的特定物件。在本案例中，首先，PyVision-Video 從影片中均勻採樣 15 幀。隨後，它在第 700 幀和第 1100 幀識別出 2 張不同的桌子。為了查看是否有額外的桌子或相同的桌子是否從不同角度顯示，該模型在第 600 到第 1200 幀之間的影片片段中採樣更多幀。最後，基於構建的上下文，PyVision-Video 識別出兩張不同的桌子，一張木桌配有花瓶和椅子，另一張配有紅色支架和電視。</em></p>
-    
+    <p>arXiv:2602.20739v1 [cs.AI] 24 Mar 2026</p>
+<hr />
+<p><strong>圖 1.</strong> <em>PyVision-RL 的 agentic scaffolds。</em> 我們在 Python 動態工具的統一框架下設計了兩個 agentic scaffolds，用於影像和影片理解。對於 PyVision-Image，系統提示和影像提示都被注入到 MLLM 上下文中，並且影像也被載入到 Python 執行時環境中。對於 PyVision-Video，只有系統提示被注入到 MLLM 上下文中，而影片僅被載入到執行時環境中。給定一個查詢，模型會將推理與可執行的程式碼區塊（<em>code_block_0</em>）交錯進行，以處理多模態輸入。執行結果（<em>mm_clue_0</em>），包括文字輸出和渲染影像，被附加到上下文中並反饋給模型。此互動迴圈重複進行，直到產生最終答案。透過首先限制影片輸入至執行時環境，PyVision-Video 實現了按需上下文構建，其中代理可以在推理過程中有選擇地取樣和繪製任務相關的幀，大幅提升視覺令牌效率（圖 2）。</p>
+<p>穩定代理-環境互動的機制，以及 (2) 一種累積工具獎勵，明確激勵持續的多輪工具使用。使用統一的訓練管道，我們引入了兩個模型：<strong>PyVision-Image</strong> 用於影像理解，以及 <strong>PyVision-Video</strong> 用於影片理解。特別地，<strong>PyVision-Video</strong> 採用按需上下文構建，其中完整影片僅被載入到 Python 執行時環境中，模型在推理過程中通過 Python 程式碼有選擇地取樣和繪製任務相關幀。此 agentic 幀擷取策略避免了統一幀取樣，大幅減少視覺令牌消耗，同時提升推理效率。</p>
+<p>我們的模型取得了強有力的實證結果。<strong>PyVision-Image</strong> 在視覺搜尋、多模態推理和 agentic 推理基準測試中達到最先進的性能，在 V*（Wu &amp; Xie, 2024）上超越 DeepEyes-v2（Hong et al., 2025）+6.9%，在 WeMath（Qiao et al., 2025a）上超越 +9.6%。<strong>PyVision-Video</strong> 超越了 VITAL（Zhang et al., 2025a），一個具有影片剪輯工具的多模態代理，在 VSI-Bench（Yang et al., 2024）上達到 +2.2%，同時使用明顯較少的視覺令牌。透過按需上下文構建的推動，<strong>PyVision-Video</strong> 達到了有利的性能-效率權衡，每個樣本平均使用 5K 視覺令牌，相比 Qwen2.5-VL-7B 的 45K，卻能達到更高的準確度：<strong>PyVision-Video</strong> 為 44.0%，Qwen2.5-VL-7B 為 38.0%。</p>
+<p>總結而言，我們提出 <strong>PyVision-RL</strong>，一個統一的 agentic 強化學習框架，用於開放權重的多模態模型，能夠進行基於工具的影像和影片推理。透過結合過度取樣-篩選-排名展開策略和累積工具獎勵，我們的方法防止了互動崩潰，並有效激勵了多輪代理行為。生成的模型 <strong>PyVision-Image</strong> 和 <strong>PyVision-Video</strong></p>
+<p>Video，證明了當以適當的激勵進行訓練時，持續互動和工具使用仍然是多模態推理的強大機制，達到了最先進的性能，同時大幅提升令牌效率，特別是對於影片理解。</p>
+<h2 id="2"><strong>2. 相關研究</strong></h2>
+<p><strong>工具整合多模態推理。</strong> 與僅依賴文本推理的多模態推理模型不同（Wang et al., 2025a；Deng et al., 2025；Xie et al., 2025），工具整合多模態推理明確地將工具調用和執行的視覺輸出納入推理過程（Wang et al., 2024c）。例如，在分析高解析度影像時，模型可能會對感興趣的區域進行裁剪或放大以改進理解。</p>
+<p>現有方法大致分為兩類。靜態工具集預定義了一組固定的任務特定工具。對於視覺搜索，模型配備了在系統提示中指定的手工設計裁剪和縮放操作（Zheng et al., 2025c；Lai et al., 2025；Su et al., 2025a；Hu et al., 2024；Surís et al., 2023；Gupta &amp; Kembhavi, 2023；Song et al., 2026）。類似的設計擴展到長影片推理，其中使用預定義的影片剪輯工具（Zhang et al., 2025a；Yang et al., 2025；Gao et al., 2025b；Meng et al., 2025b）。相比之下，動態工具將 Python 作為基本工具，允許模型即時實現任務特定的操作（Zhao et al., 2025a；Zhang et al., 2025b；Hou et al., 2025；Song et al., 2025；Guo et al., 2025b；Hong et al., 2025）。雖然此範例在影像任務中已展現強大的成果，但尚未應用於影片推理。我們的方法 <strong>PyVision-RL</strong> 採用 Python 作為基本工具，分別為影像和影片理解任務啟用動態工具。</p>
+<h1 id="pyvision-rl">PyVision-RL：透過強化學習打造開放式智能視覺模型</h1>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-25/2602.20739/2" loading="lazy"></figure> [FIGURE_CAPTION]圖 2. 幀採樣與按需上下文構建的比較。(a) 傳統視頻多模態大型語言模型（MLLM），例如 Wen-VL 系列，透過均勻採樣幀並將其直接注入模型上下文來處理視頻。(b) 在 PyVision-Video 中，我們採用按需上下文構建：視頻僅加載到 Python 運行時中，模型在推理過程中透過 Python 代碼選擇性地採樣和繪製相關幀，大幅提升了令牌效率。</p>
+<p><strong>多模態大型語言模型的強化學習。</strong> 繼 DeepSeek-R1（Guo et al., 2025a）取得成功之後，越來越多的工作開始應用強化學習來增強 LLM 和多模態大型語言模型（MLLM）的推理和工具使用能力（Meng et al., 2025a；Yu et al., 2025；Zheng et al., 2025a）。這些方法大多採用無評論家的強化學習演算法。</p>
+<p>現有方法可根據其技術重點進行廣泛分類。許多工作提出了改進的優勢估計方案（Liu et al., 2025c；Hu, 2025）。其他方法修改了 PPO 風格的剪裁機制以更好地適應 LLM 訓練（Yu et al., 2025；Chen et al., 2025a；Zheng et al., 2025b；Zhao et al., 2025b；Gao et al., 2025a）。另一類工作解決了強化學習管道中的訓練推理不匹配問題（Yao et al.；Liu et al., 2025b），而最近的研究則致力於穩定大型混合專家（MoE）模型的強化學習訓練（Ma et al., 2025；Xiao et al., 2026）。</p>
+<h2 id="3-pyvision-rl">3. 方法：PyVision-RL</h2>
+<p>本節介紹 PyVision-RL，這是我們用於訓練具有動態工具使用能力的開放權重多模態模型的智能強化學習框架。PyVision-RL 採用 Python 作為原始工具，並將其與統一的智能架構相結合，該架構支持圖像和視頻理解。該框架設計用以防止強化學習期間的交互崩潰，並實現高效的多模態推理。我們首先描述智能架構和交互協議，隨後介紹我們的強化學習公式和訓練策略，這些策略改進了回滾品質並維持了多輪工具使用。</p>
+<h3 id="31-agentic-scaffold-python">3.1. Agentic Scaffold: Python 作為原始工具</h3>
+<p><strong>互動協議。</strong> 如圖 1 所示，MLLM 被提示交替進行自然語言推理與可執行程式碼。具體來說，模型生成推理文字和程式碼區塊 code_block_i，這些被包裝在 <code>...</code> 標籤中。環境執行每個程式碼區塊並返回執行結果 mm.Clue_i，包裝在 <interpreter>...</interpreter> 標籤中。此互動迴圈持續進行，直到模型生成最終答案，包裝在 <answer>...</answer> 中。所有中間推理、程式碼和執行輸出都附加到上下文中。</p>
+<p><strong>多模態線索注入。</strong> 對於圖像和影片問答等多模態理解任務，多模態線索（圖像或影片）必須注入到 MLLM 上下文和 Python 執行環境中。我們針對圖像和影片輸入採用不同的設計。</p>
+<p>針對圖像任務，我們將圖像注入到 MLLM 上下文和 Python 運行時中，使代理能在推理過程中引用和操作圖像。</p>
+<p>針對影片任務，先前的工作通常依賴統一幀採樣來構建視覺輸入。相反，PyVision-Video 採用按需上下文構建：完整影片僅載入到 Python 運行時中，代理通過系統提示被指示使用 Python 程式碼有選擇性地採樣和繪製幀。這啟用了代理幀擷取，其中代理根據查詢或啟發式策略動態選擇要視覺化的幀。例如，對於查詢「演員在影片後半部分做什麼？」，代理僅從影片的後半部分採樣幀。此方法在大幅減少視覺 token 使用量的同時，提升了效能（圖 2）。</p>
+<h3 id="32">3.2. 累積工具獎勵</h3>
+<p>先前的研究發現，在強化學習訓練過程中，工具調用的平均次數會穩定地減少，通常導致一種模式崩潰的形式，其中模型學會調用很少或不調用任何工具（Hong et al., 2025; Zhang et al., 2025b）。為了在數百或數千個步驟上實現穩定的強化學習訓練並持續取得進展，以及防止多輪工具使用中的崩潰，我們引入了一個具有累積工具獎勵的強化學習目標。除了改善訓練穩定性外，這個獎勵明確激勵多輪工具使用，如圖 7 所示。</p>
+<p>具體而言，每個回合（rollout）使用答案準確性和工具使用情況的組合進行評估。回合完成後，我們驗證最終答案的正確性，產生準確性獎勵 $R_{acc} \in {0, 1}$。此外，我們計算與工具調用次數成正比的累積工具獎勵</p>
+<p>6</p>
+<hr />
+<p><strong>表 1. PyVision-Image 在多個基準上的性能。</strong> 我們將 PyVision-Image 與使用靜態工具集或動態工具的先前方法進行比較，所有方法均基於 Qwen2.5-VL-7B，涵蓋三個任務類別：視覺搜索、多模態推理和代理推理。PyVision-Image 在所有三個領域都達到了最先進的結果。對於視覺搜索，它在 V*、HRBench-4K 和 HRBench-8K 上分別相比 Qwen2.5-VL-7B 提高 +10.2%、+6.5% 和 +6.4%。對於多模態推理，它在 DynaMath、MathVerse 和 WeMath 上分別超過 DeepEyes-v2 +4.4%、+3.1% 和 +9.6%。對於代理推理，它在 TIR-Bench 上相比 Qwen2.5-VL-7B 達到 +7.3% 的收益。這些結果證明了動態工具在多種多模態任務中的靈活性和廣泛有效性。標有 † 的結果報告 avg@32。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>視覺搜索</th>
+<th></th>
+<th></th>
+<th>多模態推理</th>
+<th></th>
+<th></th>
+<th>代理推理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>V*</td>
+<td>HRBench-4K</td>
+<td>HRBench-8K</td>
+<td>DynaMath</td>
+<td>MathVerse</td>
+<td>MathVision</td>
+<td>WeMath</td>
+</tr>
+<tr>
+<td>Qwen2.5-VL-7B (Bai et al., 2025)</td>
+<td>78.5</td>
+<td>71.6</td>
+<td>67.9</td>
+<td>53.3</td>
+<td>45.6</td>
+<td>25.6</td>
+<td>34.6</td>
+</tr>
+<tr>
+<td><strong>靜態工具集</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Pixel-Reasoner (Su et al., 2025a)</td>
+<td>84.3</td>
+<td>74.0</td>
+<td>66.9</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Mini-o3 (Lai et al., 2025)</td>
+<td>88.2<sup>†</sup></td>
+<td>77.5</td>
+<td>73.3</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>DeepEyes (Zheng et al., 2025c)</td>
+<td>85.6</td>
+<td>75.1</td>
+<td>72.6</td>
+<td>55.0</td>
+<td>47.3</td>
+<td>26.6</td>
+<td>38.9</td>
+</tr>
+<tr>
+<td><strong>動態工具</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Thyme (Zhang et al., 2025b)</td>
+<td>82.2</td>
+<td>77.0</td>
+<td>72.0</td>
+<td>-</td>
+<td>-</td>
+<td>27.6</td>
+<td>39.3</td>
+</tr>
+<tr>
+<td>CodeV (Hou et al., 2025)</td>
+<td>84.8</td>
+<td>76.1</td>
+<td>71.3</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>CodeDance (Song et al., 2025)</td>
+<td>84.8</td>
+<td>75.2</td>
+<td>72.3</td>
+<td>-</td>
+<td>46.8</td>
+<td><strong>29.6</strong></td>
+<td>39.6</td>
+</tr>
+<tr>
+<td>CodeVision (Guo et al., 2025b)</td>
+<td>83.7</td>
+<td>75.6</td>
+<td>72.2</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>DeepEyes-v2 (Hong et al., 2025)</td>
+<td>81.8</td>
+<td>77.9</td>
+<td>73.8</td>
+<td>57.2</td>
+<td>52.7</td>
+<td>28.9</td>
+<td>38.1</td>
+</tr>
+<tr>
+<td>PyVision-Image</td>
+<td><strong>88.7</strong><sup>†</sup></td>
+<td><strong>78.1</strong></td>
+<td><strong>74.3</strong></td>
+<td><strong>61.6</strong></td>
+<td><strong>55.8</strong></td>
+<td>28.7</td>
+<td><strong>47.7</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>表 2. VSI-Bench 上的性能比較。</strong> 我們將 PyVision-Video 與 Video-R1（使用純文本推理的視頻理解模型）和 VITAL（具有預定義視頻裁剪工具的代理視頻模型）進行比較。所有方法都基於 Qwen2.5-VL-7B 並使用強化學習進行訓練。PyVision-Video 相比 Qwen2.5-VL-7B 基線達到 7.3% 的絕對改進，證明了動態工具在空間推理中的有效性。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>平均</th>
+<th>物件計數</th>
+<th>絕對距離</th>
+<th>物件大小</th>
+<th>房間大小</th>
+<th>相對距離</th>
+<th>相對方向</th>
+<th>路線規劃</th>
+<th>近似順序</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen2.5-VL-7B (Bai et al., 2025)</td>
+<td>36.7</td>
+<td>41.9</td>
+<td>21.4</td>
+<td>50.4</td>
+<td>36.8</td>
+<td>38.5</td>
+<td>40.9</td>
+<td>29.9</td>
+<td>34.1</td>
+</tr>
+<tr>
+<td>Video-R1 (Feng et al., 2025)</td>
+<td>37.1</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>VITAL (Zhang et al., 2025a)</td>
+<td>41.8</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>PyVision-Video</td>
+<td><strong>44.0</strong></td>
+<td><strong>53.8</strong></td>
+<td><strong>25.8</strong></td>
+<td><strong>50.8</strong></td>
+<td><strong>38.2</strong></td>
+<td><strong>44.8</strong></td>
+<td><strong>46.3</strong></td>
+<td><strong>26.3</strong></td>
+<td><strong>58.6</strong></td>
+</tr>
+</tbody>
+</table>
+<p>調用次數，由 $0.1 \cdot n_{tc}$ 給出，其中 $n_{tc}$ 表示回合期間的工具調用總次數。這個累積工具獎勵只有在答案正確時才會添加到最終獎勵中，確保激勵工具使用而不獎勵無效或不正確的工具調用。</p>
+<p>最終的強化學習目標如下：</p>
+<p>$$R = R_{\text{acc}} + 0.1 \cdot n_{\text{tc}} \cdot \underbrace{1}<em>{\substack{\text{累積工具獎勵} \ n</em>{\text{acc}}=1}} \quad (1)$$</p>
+<h3 id="33-rollouts">3.3. 過度採樣-過濾-排序 Rollouts</h3>
+<p>當將 vanilla GRPO 從純文本推理擴展到智能體 RL 時，rollout 品質和分佈成為訓練穩定性和效率的主導因素。在實踐中，我們觀察到生成的 rollouts 中有相當大的部分要麼提供很少的學習訊號，要麼會主動破壞訓練。例如，當查詢對於當前策略過於困難時，群組內的所有 rollouts 可能都會獲得零獎勵，導致群組級別正規化後的優勢為零，對學習沒有任何梯度貢獻。同樣，在我們的獎勵設計下，所有 rollouts 都正確但具有相同工具呼叫計數的群組也會崩潰為零優勢，有效地浪費了訓練計算。</p>
+<p>第二個挑戰源於智能體-環境交互的固有不確定性。在 rollout 生成過程中，智能體可能會因為超時、執行時失敗或無效的多模態輸出（例如，超出影像限制或無法呈現任何影像）而產生無效或不可執行的 Python 程式碼。如果處理不當，這種破損的軌跡可能會中斷或崩潰 RL 訓練，這在先前的智能體 RL 工作中也有觀察到（Xue et al., 2025；Luo et al., 2025）。為了確保訓練穩定，因此有必要在策略優化之前檢測並排除格式錯誤的 rollouts。</p>
+<p>最後，即使在有效且正確的 rollouts 中，獎勵塑造也可能引入微妙的優化問題。特別是，當群組內存在多個正確的軌跡但工具呼叫計數不同時，群組級別正規化可能會為正確但更簡潔的解決方案分配負優勢，在訓練期間抑制有用的行為。</p>
+<p>為了解決這些挑戰，我們採用了 rollout 生成的過度採樣、過濾和排序框架。具體來說，我們首先過度採樣 rollouts，然後應用線上過濾來移除獎勵方差為零的群組和與代理-環境互動破損的 rollouts。在剩餘的候選者中，我們按群組級別獎勵標準差對 rollout 群組進行排序，這可作為樣本難度的代理（Jiang et al., 2024；Zhu et al., 2025），並保留排名前列的群組用於訓練。此策略優先考慮提供信息性學習訊號的中等難度 rollouts，同時也大幅降低了具有負優勢的正確樣本的流行程度，從而實現更穩定和高效的智能體 RL（第 4.3 節）。我們將此策略稱為 <em>Standard Deviation Sorting</em>。</p>
+<hr />
+<p><strong>圖 3.</strong> <strong>PyVision-Image</strong> 的 RL 訓練動態。我們的訓練演算法產生穩定的優化和穩定改進的性能。熵損失和梯度範數在訓練過程中平緩下降，表示穩定的 RL 動態。同時，V* 上的驗證性能、準確性獎勵、回應長度和工具呼叫平均數量持續增加，顯示模型學習了持續的長期視野工具使用行為。</p>
+<h2 id="34">3.4. 最佳化與資料收集</h2>
+<h3 id="grpo">移除 GRPO 中的標準差正規化。</h3>
+<p>我們採用 GRPO (Shao et al., 2024) 作為強化學習訓練的基礎演算法。令 $\pi_{\theta}$ 表示策略模型，$x$ 從訓練資料集 $\mathcal{D}$ 中取樣。對於每個輸入 $x$，我們生成 $G$ 個 rollout $y_{i=1}^G$ 並在 rollout 級別計算獎勵。然而，與原始 GRPO 不同的是，我們遵循最近關於改進大型語言模型強化學習訓練穩定性和效能的研究成果 (Luo et al., 2025; Liu et al., 2025a:c; Zheng et al., 2025a)，移除了組內優勢計算中的標準差正規化項。每個 token 的優勢計算如下：</p>
+<p>$$ \hat{A}<em>{i,t} = R(x, y_i) - \text{mean} \left( {R(x, y_i)}</em>{i=1}^G \right). \quad (2) $$</p>
+<p>其中 $R(x, y_i)$ 表示 rollout 級別的獎勵。我們在第 4.2 節中經驗性地驗證了移除標準差正規化的有效性。</p>
+<h3 id="sft">SFT 資料收集和訓練</h3>
+<p>我們首先獲得 SFT 模型作為冷啟動，以賦予基礎模型基本的多輪工具使用能力。具體地，我們使用 GPT-4.1 生成的合成資料訓練 <strong>PyVision-Image-SFT</strong>（Zhao et al., 2025a）。為確保多輪工具使用跨領域的廣泛泛化，SFT 資料涵蓋多模態推理（MMK12（Meng et al., 2025a））、醫學推理（GMAI-Reasoning（Su et al., 2025b））、圖表理解（ChartQA（Masry et al., 2022）、InfoVQA（Mathew et al., 2022））和一般視覺問答（MMPR（Wang et al., 2024b））。我們篩選出答案錯誤或工具使用輪數少於兩輪的樣本，得到 7K 個高品質 SFT 範例，強調持續互動。</p>
+<p>對於 <strong>PyVision-Video-SFT</strong>，按需上下文構建是基礎模型中不存在的新穎能力。因此，我們精心策劃了一個包含 44K 個樣本的 SFT 資料集，涵蓋空間推理（Ouyang et al., 2025）和長視訊推理（Chen et al., 2025b；2024），使用與影像相同的合成和篩選管道。</p>
+<p>兩個 SFT 模型都使用 LLA-MA-Factory（Zheng et al., 2024）在單一節點上訓練，訓練一個時期。</p>
+<p><strong>RL 資料收集和訓練。</strong> 在使用 SFT 初始化模型後，我們進一步應用強化學習以專門化代理行為。對於 PyVision-Image，RL 訓練專注於視覺搜尋和多模態推理任務。我們從 Deep-Eyes（Zheng et al., 2025c）和 Mini-o3（Lai et al., 2025）收集 44K 個視覺搜尋樣本，從 V-Thinker（Qiao et al., 2025b）和 WeMath（Qiao et al., 2025c）收集多模態推理資料。對於 PyVision-Video，我們專注於空間推理，從 SpaceR（Ouyang et al., 2025）收集 15K 個樣本。詳細的資料組成統計數據在附錄第 B.2 節提供。</p>
+<p><strong>PyVision-Image</strong> 基於 Qwen2.5-VL-7B 構建，要求在輸入前調整極小或極大影像的大小。根據 Mini-o3（Lai et al., 2025），我們使用兩個閾值控制影像調整大小，最小像素設置為 3,136，最大像素設置為 2,000,000，能夠高效處理高解析度影像。</p>
+<p><strong>PyVision-Image</strong> 和 <strong>PyVision-Video</strong> 都使用相同的超參數訓練 700 個 RL 步驟：過採樣批次大小 32、訓練批次大小 16、組別大小 8，以及在 8 個 H100 GPU 上的學習率 $1 \times 10^{-6}$。</p>
+<hr />
+<p><strong>圖 4. VSI-Bench 上的效率效能權衡。</strong> 得益於按需上下文構建，PyVision-Video 在推理期間有選擇性地採樣任務相關幀，相比 Qwen2.5-VL 系列等幀採樣基線，以更少的視覺標記達到更高的準確度。</p>
+<h2 id="4">4. 實驗</h2>
+<p><strong>評估設置。</strong> 在評估過程中，<strong>PyVision-Image</strong> 對 V<em> 使用 0.01 的溫度，對其他基準測試使用 0.5 的溫度搭配 top-k 20，而 </em><em>PyVision-Video</em>* 使用 0.01 的溫度。鑑於 RL 微調所帶來的長視野推理能力，我們將最大回合預算設置為 30，最大上下文長度設置為 32K 個 token。我們在以下基準測試上評估我們的模型：</p>
+<p><strong>視覺搜尋。</strong> 為了評估模型的智能視覺感知能力，我們在 V*（Wu &amp; Xie, 2024）、HRBench-4K（Wang et al., 2025b）和 HRBench-8K（Wang et al., 2025b）上評估我們的模型。由於 V 僅包含 191 個樣本，我們使用 avg@32 指標報告結果。</p>
+<p><strong>多模態推理。</strong> 我們在多模態數學基準測試上評估 <strong>PyVision-Image</strong>，包括 MathVerse（Zhang et al., 2024）、MathVision（Wang et al., 2024a）、WeMath（Qiao et al., 2025a）和 DynaMath（Zou et al., 2024）。</p>
+<p><strong>智能推理。</strong> TIR-Bench（Li et al., 2025b）包含<em>需要</em>多回合工具使用的任務。我們在此基準測試上評估 <strong>PyVision-Image</strong>，以評估其智能推理能力和動態工具的有效性。</p>
+<p><strong>空間推理。</strong> 我們在 VSI-Bench（Yang et al., 2024）上為 <strong>PyVision-Video</strong> 進行基準測試，以評估其在給定環境視頻時的空間推理能力。</p>
+<hr />
+<p><strong>圖 5. 訓練組件的消融。</strong> 我們在七個基準測試（V<em> avg@32、HRBench-4K、HRBench-8K、MathVision、MathVerse、WeMath 和 DynaMath）上報告了不同訓練配置下的平均性能，每次消融我們方法的一個組件。</em>Ours<em> 設置使用 4 的最大回合預算，包括累積工具獎勵，對推出組應用標準差排序，並在優勢估計中移除標準差歸一化項。所有其他設置相對於 </em>Ours* 恰好修改一個組件。總體而言，我們觀察到：(1) 應用標準差排序或移除標準差歸一化始終改善性能，以及 (2) 納入累積工具獎勵或增加最大回合預算在後期訓練階段導致更大的性能收益。例如，在第 600 步，最大回合預算為 4 的性能比預算為 2 的性能高 1.93%。</p>
+<hr />
+<p><strong>圖 6.</strong> 具有負優勢的正樣本比率。具有負優勢的正樣本是正確的軌跡，由於在組內的工具調用相對較少而獲得負優勢。我們比較了應用和不應用基於標準差的推出排序的每個訓練批次中此類樣本的比例。應用標準差排序在整個訓練過程中顯著降低了這個比率。</p>
+<p><strong>圖 7.</strong> RL 訓練期間工具調用的平均次數。我們消融了累積工具獎勵和最大回合預算。不使用累積工具獎勵，平均工具調用次數快速下降並穩定在低值。相比之下，納入累積工具獎勵鼓勵持續的工具使用，較高的最大回合預算導致工具調用的更大幅度和更快速度的增加。</p>
+<h2 id="41">4.1. 主要結果</h2>
+<p><strong>在圖像基準上的強性能。</strong> 表 1 總結了 <em>PyVision-Image</em> 在視覺搜尋、多模態推理和代理推理基準上的性能。所比較的方法分為兩類：(1) 使用預定義的靜態工具集進行訓練的模型（例如，裁剪和放大），包括 Pixel-Reasoner (Su et al., 2025a)、Mini-o3 (Lai et al., 2025) 和 DeepEyes (Zheng et al., 2025c; Hong et al., 2025)，以及 (2) 使用 Python 解釋器作為基本工具的模型，包括 Thyme (Zhang et al., 2025b)、CodeV (Hou et al., 2025)、CodeDance (Song et al., 2025)、CodeVision (Guo et al., 2025b) 和 DeepEyes-v2 (Hong et al., 2025)。我們的方法採用後者。</p>
+<p><em>PyVision-Image</em> 在所有評估任務中始終保持強大的性能。在視覺搜尋基準上，其性能優於所有競爭方法，與基礎模型 <em>Qwen2.5-VL-7B</em> 相比，在 V<em>、HRBench-4K 和 HRBench-8K 上分別達到 +10.2%、+6.5% 和 +6.4% 的絕對改進。這些結果表明 </em>PyVision-Image* 大幅增強了細粒度視覺定位和代理感知能力。</p>
+<p>在多模態推理基準上，<em>PyVision-Image</em> 在 DynaMath、Math-Verse 和 WeMath 上建立了新的最先進成果，超越了之前最佳模型 <em>DeepEyes-v2</em>，分別提高了 +4.4%、+3.1% 和 +9.6%。這表明代理強化學習所帶來的改進不僅局限於面向感知的任務，還能有效地轉移到複雜的多模態數學推理。</p>
+<p>最後，在需要多輪工具使用的代理推理任務上，<em>PyVision-Image</em> 相比基礎模型改進了 +3.8% 的性能，突顯了動態工具調用對長視界推理的有效性。</p>
+<p><strong>視頻基準上的令牌效率。</strong> 圖 2 對比了大多數 MLLM 採用的傳統視頻處理策略（它們均勻地從輸入視頻中採樣幀）與 <em>PyVision-Video</em> 中使用的按需幀檢索。<em>PyVision-Video</em> 並不固定於某個特定的幀採樣率，而是透過 Python 程式碼動態查詢視頻、根據模型推理從完整幀序列中提取信息豐富的關鍵幀，並選擇性地將其納入 MLLM 上下文。這種按需上下文構建消除了冗餘的視覺令牌，同時保留了與任務相關的信息。</p>
+<p>在定量方面，圖 4 比較了 <em>PyVision-Video</em>、<em>Qwen2.5-VL-7B</em>、<em>Video-R1</em> (Feng et al., 2025) 和 <em>SpaceR</em> (Ouyang et al., 2025) 在 VSI-Bench 上每個樣本消耗的視覺令牌平均值。<em>PyVision-Video</em> 平均每個樣本使用約 5K 視覺令牌，達到 44.0% 的性能。相比之下，<em>Qwen2.5-VL-7B</em> 在 1.0 FPS 採樣時達到最佳性能 (38.0%)，代價是每個樣本消耗約 45K 視覺令牌。<em>Video-R1</em> 和 <em>SpaceR</em> 將令牌使用量降低到每個樣本約 25K，其中 <em>SpaceR</em> 達到與 <em>PyVision-Video</em> 相當的性能 (45.6%)。總體而言，<em>PyVision-Video</em> 在 VSI-Bench 上實現了視覺令牌效率和推理性能之間最有利的權衡，證明了代理、按需幀選擇可以顯著減少上下文長度而不犧牲準確性。總體而言，<em>PyVision-Video</em> 在視覺令牌效率和推理性能之間達到了最有利的權衡，證明了代理、按需幀選擇可以在不犧牲準確性的情況下大幅縮短上下文長度。</p>
+<p>表 2 展示了 VSI-Bench 上的各類別結果 (Yang et al., 2024)。<em>PyVision-Video</em> 的性能優於 <em>Video-R1</em> 和</p>
+<hr />
+<p>VITAL，與 Qwen2.5-VL-7B 相比性能提高了 +7.3%。我們在圖 19 和 20 中進一步展示了定性範例，這些圖視覺化展示了 PyVision-Video 如何僅識別並納入最具信息價值的幀用於空間推理。</p>
+<h2 id="42">4.2. 消融研究</h2>
+<p>為了評估我們方法中各個組件的貢獻，我們進行了全面的消融研究，檢驗最大輪次預算、累積工具獎勵、標準差排序以及在 RL 訓練過程中移除標準差歸一化的效果。我們的最終訓練演算法被用作基線，我們通過一次移除一個組件來進行消融。整體消融結果總結於 Fig. 5。</p>
+<p><strong>Max Turn Budget.</strong> 我們首先檢驗最大輪次預算對模型性能的影響。在我們的基線設定中，最大輪次預算設置為 4，我們將其與降低到 2 輪的設定進行比較。在 RL 訓練的早期階段（例如在 300 或 400 步時），增加輪次預算不會導致立即的性能提升。然而，隨著訓練的進行，更大輪次預算的優勢變得明顯：在 600 個訓練步驟時，以最大輪次預算 4 訓練的模型明顯優於以預算 2 訓練的模型。這表明更大的輪次預算增加了模型的性能上界，其優勢在 RL 優化的後期階段才顯現出來。</p>
+<p><strong>Accumulative Tool Reward.</strong> 接下來，我們研究累積工具獎勵的效果。在基線中，我們在 RL 訓練期間應用係數為 0.1 的累積工具獎勵（式 (1)）。為了消融其效果，我們重新進行訓練，將係數設置為 0。移除累積工具獎勵導致訓練過程中工具使用的明顯減少，如 Fig. 7 所示。在 Fig. 5 中，沒有累積工具獎勵的模型在 RL 訓練的早期階段達到稍好的性能。然而，隨著訓練超過 500 步，其性能落後於基線。這表明雖然累積工具獎勵可能會減緩早期優化，但它在實現更強的長視野推理和改進最終性能方面發揮了至關重要的作用。</p>
+<p><strong>Standard Deviation Sorting and Normalization.</strong> 最後，我們分析標準差排序和歸一化。如 Fig. 5 所示，在 RL 訓練期間移除標準差排序會降低早期的性能，表明其在獎勵嘈雜時對於穩定優化的重要性。同時，在優勢計算中保留常見的標準差歸一化導致隨著訓練進行持續的性能波動，這表明它對學習動態引入了過多的變異並阻礙了收斂。</p>
+<h2 id="43">4.3. <strong>分析</strong></h2>
+<p><strong>RL 訓練動態。</strong> 我們在圖 3 中視覺化了 PyVision-Image 的 RL 訓練動態。在我們的訓練算法下，優化過程在整個訓練過程中保持穩定：熵損失和梯度範數穩定下降，而工具呼叫的平均次數、準確度獎勵和回應長度持續增加。工具使用量和回應長度的增長表明 RL 成功地激勵了每個隔閡內持續的多輪交互。此外，在 V* 上的驗證性能在訓練期間單調遞增，展示了有效的泛化能力。</p>
+<p><strong>標準差排序如何運作？</strong> 我們的消融研究表明，移除標準差排序會導致性能大幅下降（圖 5），表明該元件在訓練中扮演重要角色。我們為其有效性提供了兩個互補的解釋。</p>
+<p>首先，從課程學習的角度來看，群組級別的標準差可作為樣本難度的代理。具有較高獎勵方差的群組通常包含正確和不正確的軌跡，對應於既不過於簡單也不過於困難的當前策略情況。相比之下，所有軌跡都正確或都不正確的群組展現低方差，提供有限的學習信號。透過優先考慮具有較高標準差的群組，標準差排序鼓勵策略從在當前訓練階段最具信息量的中等難度樣本中學習，符合課程學習原則（Jiang et al., 2024）。</p>
+<p>其次，標準差排序減緩了具有負優勢的正樣本普遍存在的問題。這些樣本對應於正確的軌跡，但由於其群組內的工具呼叫相對較少而獲得負優勢。雖然正確，但這些樣本在策略更新期間被抑制，導致期望行為的壓縮。如圖 6 所示，應用標準差排序在整個訓練期間顯著減少了這些樣本的比例。這表明該方法不僅透過選擇資訊量豐富的樣本來改進優化，還透過抑制由群組級別標準化效應引起的不利梯度信號。</p>
+<ol>
+<li><strong>結論</strong></li>
+</ol>
+<p>我們提出了 PyVision-RL，一個統一的代理多模態框架，用於圖像和視頻理解，採用 Python 進行動態工具化。為了穩定工具使用的 RL，我們引入了一個過採樣–篩選–排序框架用於軌跡生成，並表明增加最大輪預算導致更高的性能上限。實證上，PyVision-Image 在各項基準上取得強大性能，超越先前的代理 MLLM。</p>
+<h1 id="pyvision-rl_1">PyVision-RL：透過強化學習打造開放式代理視覺模型</h1>
+<p>PyVision-Video 展現出有效的空間推理能力，同時大幅降低視覺 token 使用量，在 VSI-Bench 上達成了有利的準確度-效率權衡。這些結果突顯出動態工具與持續互動對於多模態代理推理的有效性。</p>
+<h2 id="_1">影響聲明</h2>
+<p>在本論文中，我們提出 <strong>PyVision-Image</strong> 和 <strong>PyVision-Video</strong>，兩個代理視覺模型，能夠執行影像和影片理解任務。這兩個模型增進了多模態代理的開發。但是，由於這些模型使用 Python 作為原始工具，它可能會存取主機檔案系統並造成損害。因此，<strong>PyVision-Image</strong> 和 <strong>PyVision-Video</strong> 的部署需要仔細考慮這些影響。</p>
+<h2 id="_2">參考文獻</h2>
+<ul>
+<li>Bai, S., Chen, K., Liu, X., Wang, J., Ge, W., Song, S., Dang, K., Wang, P., Wang, S., Tang, J., 等。Qwen2.5-vl technical report。arXiv:2502.13923, 2025。</li>
+<li>Chen, A., Li, A., Gong, B., Jiang, B., Fei, B., Yang, B., Shan, B., Yu, C., Wang, C., Zhu, C., 等。Minimax-m1: Scaling test-time compute efficiently with lightning attention。arXiv preprint arXiv:2506.13585, 2025a。</li>
+<li>Chen, Y., Xue, F., Li, D., Hu, Q., Zhu, L., Li, X., Fang, Y., Tang, H., Yang, S., Liu, Z., 等。Longvila: Scaling long-context visual language models for long videos。arXiv preprint arXiv:2408.10188, 2024。</li>
+<li>Chen, Y., Huang, W., Shi, B., Hu, Q., Ye, H., Zhu, L., Liu, Z., Molchanov, P., Kautz, J., Qi, X., 等。Scaling rl to long videos。arXiv preprint arXiv:2507.07966, 2025b。</li>
+<li>Deng, Y., Bansal, H., Yin, F., Peng, N., Wang, W., and Chang, K.-W。Openvlthinker: An early exploration to complex vision-language reasoning via iterative self-improvement。arXiv preprint arXiv:2503.17352, 2025。</li>
+<li>Feng, K., Gong, K., Li, B., Guo, Z., Wang, Y., Peng, T., Wu, J., Zhang, X., Wang, B., and Yue, X。Video-r1: Reinforcing video reasoning in mllms。arXiv preprint arXiv:2503.21776, 2025。</li>
+<li>Gao, C., Zheng, C., Chen, X.-H., Dang, K., Liu, S., Yu, B., Yang, A., Bai, S., Zhou, J., and Lin, J。Soft adaptive policy optimization。arXiv preprint arXiv:2511.20347, 2025a。</li>
+<li>Gao, H., Bao, Y., Tu, X., Xu, Y., Jin, Y., Mu, Y., Zhong, B., Yue, L., and Zhang, M.-L。Agentic video intelligence: A flexible framework for advanced video exploration and understanding。arXiv preprint arXiv:2511.14446, 2025b。</li>
+</ul>
+<p>Guo, D., Yang, D., Zhang, H., Song, J., Zhang, R., Xu, R., Zhu, Q., Ma, S., Wang, P., Bi, X., 等。Deepseek-r1: Incentivizing reasoning capability in llms via reinforcement learning。arXiv preprint arXiv:2501.12948, 2025a。</p>
+<p>Guo, Z., Hong, M., Zhang, F., Jia, K., and Jin, T。Thinking with programming vision: Towards a unified view for thinking with images。arXiv preprint arXiv:2512.03746, 2025b。</p>
+<p>Gupta, T. and Kembhavi, A。Visual programming: Compositional visual reasoning without training。In CVPR, 2023。</p>
+<p>Hong, J., Zhao, C., Zhu, C., Lu, W., Xu, G., and Yu, X。Deepeyesv2: Toward agentic multimodal model。arXiv preprint arXiv:2511.05271, 2025。</p>
+<p>Hou, X., Xu, S., Biyani, M., Li, M., Liu, J., Hollon, T. C., and Wang, B。Codev: Code with images for faithful visual reasoning via tool-aware policy optimization。arXiv preprint arXiv:2511.19661, 2025。</p>
+<p>Hu, J。Reinforce++: A simple and efficient approach for aligning large language models。arXiv preprint arXiv:2501.03262, 2025。</p>
+<p>Hu, Y., Shi, W., Fu, X., Roth, D., Ostendorf, M., Zettle-moyer, L., Smith, N. A., and Krishna, R。Visual sketchpad: Sketching as a visual chain of thought for multimodal language models。In NeurIPS, 2024。</p>
+<p>Jaech, A., Kalai, A., Lerer, A., Richardson, A., El-Kishky, A., Low, A., Helyar, A., Madry, A., Beutel, A., Caneey, A., 等。Openai o1 system card。arXiv preprint arXiv:2412.16720, 2024。</p>
+<p>Jiang, Y., Zhou, A., Feng, Z., Malladi, S., and Kolter, J. Z。Adaptive data optimization: Dynamic sample selection with scaling laws。arXiv preprint arXiv:2410.11820, 2024。</p>
+<p>Lai, X., Li, J., Li, W., Liu, T., Li, T., and Zhao, H。Mini-o3: Scaling up reasoning patterns and interaction turns for visual search。arXiv preprint arXiv:2509.07969, 2025。</p>
+<p>Li, M., Zhong, J., Zhao, S., Lai, Y., Zhang, H., Zhu, W. B., and Zhang, K。Think or not think: A study of explicit thinking in rule-based visual reinforcement fine-tuning。arXiv preprint arXiv:2503.16188, 2025a。</p>
+<p>Li, M., Zhong, J., Zhao, S., Zhang, H., Lin, S., Lai, Y., Wei, C., Psounis, K., and Zhang, K。Tir-bench: A comprehensive benchmark for agentic thinking-with-images reasoning。arXiv preprint arXiv:2511.01833, 2025b。</p>
+<p>Liu, A., Mei, A., Lin, B., Xue, B., Wang, B., Xu, B., Wu, B., Zhang, B., Lin, C., Dong, C., 等。Deepseek-v3。</p>
+<hr />
+<p>2: Pushing the frontier of open large language models。
+arXiv preprint arXiv:2021.02556, 2025a。</p>
+<p>Liu, L., Yao, F., Zhang, D., Dong, C., Shang, J., and Gao, J。
+Flashrl: 8bit rollouts, full power rl, 2025b。</p>
+<p>Liu, Z., Chen, C., Li, W., Qi, P., Pang, T., Du, C., Lee,
+W. S., and Lin, M。Understanding r1-zero-like training:
+A critical perspective。<em>arXiv preprint arXiv:2503.20783,</em>
+2025c。</p>
+<p>Luo, M., Jain, N., Singh, J., Tan, S., Patel, A., Wu, Q.,
+Ariyak, A., Cai, C., Tarun Venkat, S. Z., Athiwaratkun,
+B., Roongta, M., Zhang, C., Li, L. E., Popa, R. A., Sen,
+K., and Stoica, I。Deepswe: Training a state-of-the-art
+coding agent from scratch by scaling rl, 2025。Notion
+Blog。</p>
+<p>Ma, W., Zhang, H., Zhao, L., Song, Y., Wang, Y., Sui, Z.,
+and Luo, F。Stabilizing moe reinforcement learning by
+aligning training and inference routers。<em>arXiv preprint</em>
+<em>arXiv:2510.11370, 2025。</em></p>
+<p>Masry, A., Do, X. L., Tan, J. Q., Joty, S., and Hoque, E。
+Chartqa: A benchmark for question answering about
+charts with visual and logical reasoning。In <em>Findings of
+the association for computational linguistics: ACL 2022</em>,
+pp. 2263–2279, 2022。</p>
+<p>Mathew, M., Bagal, V., Tito, R., Karatzas, D., Valveny,
+E., and Jawahar, C。Infographicvqa。In <em>Proceedings
+of the IEEE/CVF Winter Conference on Applications of
+Computer Vision</em>, pp. 1697–1706, 2022。</p>
+<p>Meng, F., Du, L., Liu, Z., Zhou, Z., Lu, Q., Fu, D., Han, T.,
+Shi, B., Wang, W., He, J., 等。Mm-eureka: Exploring
+the frontiers of multimodal reasoning with rule-based
+reinforcement learning。<em>arXiv preprint arXiv:2503.07365</em>,<br />
+2025a。</p>
+<p>Meng, J., Li, X., Wang, H., Tan, Y., Zhang, T., Kong, L.,
+Tong, Y., Wang, A., Teng, Z., Wang, Y., 等。Open-o3
+video: Grounded video reasoning with explicit spatio-
+temporal evidence。<em>arXiv preprint arXiv:2510.20579,</em>
+2025b。</p>
+<p>OpenAI。Thinking with images, 2025。
+URL https://openai.com/index_thinking-with-images/。</p>
+<p>Ouyang, K., Liu, Y., Wu, H., Liu, Y., Zhou, H., Zhou,
+J., Meng, F., and Sun, X。Spacer: Reinforcing mllms in
+video spatial reasoning。arXiv preprint arXiv:2504.01805,
+2025。</p>
+<p>Qiao, R., Tan, Q., Dong, G., MinhuiWu, M., Sun, C., Song,
+X., Wang, J., Gongque, Z., Lei, S., Zhang, Y., 等。We-
+math: Does your large multimodal model achieve human-
+like mathematical reasoning?。In Proceedings of the 63rd</p>
+<p><em>Annual Meeting of the Association for Computational</em>
+<em>Linguistics (Volume 1: Long Papers)</em>, pp. 20023–20070,
+2025a。</p>
+<p>Qiao, R., Tan, Q., Yang, M., Dong, G., Yang, P., Lang,
+S., Wan, E., Wang, X., Xu, Y., Yang, L., 等。V-
+thinker: Interactive thinking with images。<em>arXiv preprint</em>
+<em>arXiv:2511.04460, 2025b。</em></p>
+<p>Qiao, R., Tan, Q., Yang, P., Wang, Y., Wang, X., Wan,
+E., Zhou, S., Dong, G., Zeng, Y., Xu, Y., 等。We-
+math 2.0: A versatile mathbook system for incentiviz-
+ing visual mathematical reasoning。<em>arXiv preprint</em>
+<em>arXiv:2508.10433, 2025c。</em></p>
+<p>Shao, Z., Wang, P., Zhu, Q., Xu, R., Song, J., Bi, X., Zhang,
+H., Zhang, M., Li, Y., Wu, Y., 等。Deepseekmath: Push-
+ing the limits of mathematical reasoning in open language
+models。<em>arXiv preprint arXiv:2402.03300, 2024。</em></p>
+<p>Song, M., Sun, H., Gu, J., Li, L., Xu, L., Krishna, R.,
+and Cheng, Y。Adareasoner: Dynamic tool orchest-
+ration for iterative visual reasoning。<em>arXiv preprint</em>
+<em>arXiv:2601.18631, 2026。</em></p>
+<p>Song, Q., Li, H., Yu, Y., Zhou, H., Yang, L., Bai, S., She,
+Q., Huang, Z., and Zhao, Y。Codedance: A dynamic tool-
+integrated mllm for executable visual reasoning。<em>arXiv</em>
+<em>preprint arXiv:2512.17312, 2025。</em></p>
+<p>Su, A., Wang, H., Ren, W., Lin, F., and Chen, W。Pixel rea-
+soner: Incentivizing pixel-space reasoning with curiosity-
+driven reinforcement learning, 2025a。URL https:
+//arxiv.org/abs/2505.15966。</p>
+<p>Su, Y., Li, T., Liu, J., Ma, C., Ning, J., Tang, C., Ju, S.,
+Ye, J., Chen, P., Hu, M., 等。Gmai-vl-r1: Harnessing
+reinforcement learning for multimodal medical reasoning。
+arXiv preprint arXiv:2504.01886, 2025b。</p>
+<p>Surís, D., Menon, S., and Vondrick, C。Vipergpt: Visual
+inference via python execution for reasoning。In <em>ICCV</em>,
+2023。</p>
+<p>Wang, H., Qu, C., Huang, Z., Chu, W., Lin, F., and Chen,
+W。Vl-rethinker: Incentivizing self-reflection of vision-
+language models with reinforcement learning。arXiv
+preprint arXiv:2504.08837, 2025a。</p>
+<p>Wang, K., Pan, J., Shi, W., Lu, Z., Ren, H., Zhou, A., Zhan,
+M., and Li, H。Measuring multimodal mathematical
+reasoning with math-vision dataset。<em>NeurIPS</em>, 2024a。</p>
+<p>Wang, W., Chen, Z., Wang, W., Cao, Y., Liu, Y., Gao, Z.,
+Zhu, J., Zhu, X., Lu, L., Qiao, Y., 等。Enhancing
+the reasoning ability of multimodal large language mod-
+els via mixed preference optimization。<em>arXiv preprint</em>
+<em>arXiv:2411.10442, 2024b。</em></p>
+<hr />
+<p>Wang, W., Ding, L., Zeng, M., Zhou, X., Shen, L., Luo, Y., Yu, W., and Tao, D。Divide, conquer and combine: A training-free framework for high-resolution image perception in multimodal large language models。In Proceedings of the AAAI Conference on Artificial Intelligence, volume 39, pp. 7907–7915, 2025b。</p>
+<p>Wang, X., Chen, Y., Yuan, L., Zhang, Y., Li, Y., Peng, H., and Ji, H。Executable code actions elicit better llm agents。In Forty-first International Conference on Machine Learning, 2024c。</p>
+<p>Wu, P. and Xie, S。V*: Guided visual search as a core mechanism in multimodal llms。In CVPR, 2024。</p>
+<p>Xiao, B., Xia, B., Yang, B., Gao, B., Shen, B., Zhang, C., He, C., Lou, C., Luo, F., Wang, G., 等。Mimo-v2-flash technical report。arXiv preprint arXiv:2601.02780, 2026。</p>
+<p>Xie, Y., Ma, Y., Lan, S., Yuille, A., Xiao, J., and Wei, C。Play to generalize: Learning to reason through game play。arXiv preprint arXiv:2506.08011, 2025。</p>
+<p>Xue, Z., Zheng, L., Liu, Q., Li, Y., Zheng, X., Ma, Z., and An, B。Simpletir: End-to-end reinforcement learning for multi-turn tool-integrated reasoning。arXiv preprint arXiv:2509.02479, 2025。</p>
+<p>Yang, J., Yang, S., Gupta, A., Han, R., Fei-Fei, L., and Xie, S。Thinking in Space: How Multimodal Large Language Models See, Remember and Recall Spaces。arXiv:2412.14171, 2024。</p>
+<p>Yang, Z., Li, L., Wang, J., Lin, K., Azarnasab, E., Ahmed, F., Liu, Z., Liu, C., Zeng, M., and Wang, L。Mm-react: Prompting chatgpt for multimodal reasoning and action。</p>
+<p>arXiv:2303.11381, 2023。</p>
+<p>Yang, Z., Wang, S., Zhang, K., Wu, K., Leng, S., Zhang, Y., Li, B., Qin, C., Lu, S., Li, X., 等。Longvt: Incentivizing" thinking with long videos" via native tool calling。arXiv preprint arXiv:2511.20785, 2025。</p>
+<p>Yao, F., Liu, L., Zhang, D., Dong, C., Shang, J., and Gao, J。Your efficient rl framework secretly brings you off-policy rl training, august 2025。URL https://fengyao.notion.site/off-policy-rl。</p>
+<p>Yu, Q., Zhang, Z., Zhu, R., Yuan, Y., Zuo, X., Yue, Y., Dai, W., Fan, T., Liu, G., Liu, L., 等。Dapo: An open-source llm reinforcement learning system at scale。arXiv preprint arXiv:2503.14476, 2025。</p>
+<p>Zhang, H., Gu, X., Li, J., Ma, C., Bai, S., Zhang, C., Zhang, B., Zhou, Z., He, D., and Tang, Y。Thinking with videos: Multimodal tool-augmented reinforcement learning for long video reasoning。arXiv preprint arXiv:2508.04416, 2025a。</p>
+<p>Zhang, R., Jiang, D., Zhang, Y., Lin, H., Guo, Z., Qiu, P., Zhou, A., Lu, P., Chang, K.-W., Qiao, Y., 等。Math-verse: Does your multi-modal llm truly see the diagrams in visual math problems?。In European Conference on Computer Vision, pp. 169–186。Springer, 2024。</p>
+<p>Zhang, Y.-F., Lu, X., Yin, S., Fu, C., Chen, W., Hu, X., Wen, B., Jiang, K., Liu, C., Zhang, T., 等。Thyme: Think beyond images。arXiv preprint arXiv:2508.11630, 2025b。</p>
+<p>Zhao, S., Zhang, H., Lin, S., Li, M., Wu, Q., Zhang, K., and Wei, C。Pyvision: Agentic vision with dynamic tooling。arXiv preprint arXiv:2507.07998, 2025a。</p>
+<p>Zhao, Y., Liu, Y., Liu, J., Chen, J., Wu, X., Hao, Y., Lv, T., Huang, S., Cui, L., Ye, Q., 等。Geometric-mean policy optimization。arXiv preprint arXiv:2507.20673, 2025b。</p>
+<p>Zheng, C., Dang, K., Yu, B., Li, M., Jiang, H., Lin, J., Liu, Y., Lin, H., Wu, C., Hu, F., 等。Stabilizing reinforcement learning with llms: Formulation and practices。preprint arXiv</p>
+<p>Zheng, C., Liu, S., Li, M., Chen, X.-H., Yu, B., Gao, C., Dang, K., Liu, Y., Men, R., Yang, A., 等。Group sequence policy optimization。preprint arXiv</p>
+<p>Zheng, Y., Zhang, R., Zhang, J., Ye, Y., Luo, Z., Feng, Z., and Ma, Y。Llamafkatery: Unified efficient fine-tuning of 100+ language models。In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 3: System Demonstrations), Bangkok, Thailand, 2024。Association for Computational Linguistics。URL http://arxiv.org/abs/2403.13372。</p>
+<p>Zheng, Z., Yang, M., Hong, J., Zhao, C., Xu, G., Yang, L., Shen, C., and Yu, X。Deepeyes: Incentivizing "thinking with images" via reinforcement learning, 2025c。URL https://arxiv.org/abs/2505.14362。</p>
+<p>Zhu, Z., Xie, C., Lv, X., and slime Contributors。slime: An llm post-training framework for rl scaling。https://github.com/THUDM/slime, 2025。GitHub repository。Corresponding author: Xin Lv。</p>
+<p>Zou, C., Guo, X., Yang, R., Zhang, J., Hu, B., and Zhang, H。Dynamath: A dynamic visual benchmark for evaluating mathematical reasoning robustness of vision language models。arXiv preprint arXiv:2411.00836, 2024。</p>
+<hr />
+<table>
+<thead>
+<tr>
+<th>附錄 A. 系統提示詞</th>
+<th>14</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A.1. PyVision-Image 的系統提示詞</td>
+<td>14</td>
+</tr>
+<tr>
+<td>A.2. PyVision-Video 的系統提示詞</td>
+<td>14</td>
+</tr>
+<tr>
+<td>附錄 B. 訓練管線和訓練資料的更多細節</td>
+<td>14</td>
+</tr>
+<tr>
+<td>B.1. 用於生成展開過程的過度採樣-過濾-排序框架的圖示</td>
+<td>14</td>
+</tr>
+<tr>
+<td>B.2. 訓練資料分佈</td>
+<td>14</td>
+</tr>
+<tr>
+<td>附錄 C. 更多評估結果</td>
+<td>14</td>
+</tr>
+<tr>
+<td>C.1. 不同基準上的消融結果圖</td>
+<td>14</td>
+</tr>
+<tr>
+<td>C.2. 消融結果詳情</td>
+<td>15</td>
+</tr>
+<tr>
+<td>附錄 D. 更多分析</td>
+<td>15</td>
+</tr>
+<tr>
+<td>D.1. PyVision-Video 的訓練動態</td>
+<td>15</td>
+</tr>
+<tr>
+<td>D.2. 為什麼在強化學習期間工具調用數量增加？</td>
+<td>15</td>
+</tr>
+<tr>
+<td>D.3. 工具類別分佈</td>
+<td>15</td>
+</tr>
+<tr>
+<td>D.4. 工具調用數量分佈</td>
+<td>15</td>
+</tr>
+<tr>
+<td>D.5. 案例研究</td>
+<td>15</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>附錄 A. 系統提示詞</strong></p>
+<p><strong>A.1. PyVision-Image 的系統提示詞</strong></p>
+<p>我們在圖 8 中說明 PyVision-Image 的系統提示詞。</p>
+<p><strong>A.2. PyVision-Video 的系統提示詞</strong></p>
+<p>我們在圖 9 中說明 PyVision-Video 的系統提示詞。</p>
+<h2 id="b">B. 訓練管道和訓練資料的更多細節</h2>
+<h3 id="b1-">B.1. 推出生成的過度採樣-篩選-排名框架說明</h3>
+<p>過度採樣-篩選-排名推出生成和訓練管道的詳細內容如圖 10 和演算法 1 所示。</p>
+<p><strong>演算法 1 推出生成的過度採樣-篩選-排名框架</strong></p>
+<p><strong>輸入：</strong> 提示語池 $\mathcal{P}$、批次大小 $B$、組大小 $G$、過度採樣比率 $\alpha &gt; 1$、策略 $\pi_\theta$、獎勵模型 $\mathcal{R}$<br />
+<strong>輸出：</strong> 用於策略更新的選定推出批次 $D_{train}$<br />
+從 $\mathcal{P}$ 採樣 $\alpha B$ 個提示語 ${x_j}<em>{j=1}^{\alpha B}$ {過度採樣階段}<br />
+<strong>for</strong> $j = 1$ <strong>to</strong> $\alpha B$ <strong>do</strong><br />
+透過推出工作者生成 $G$ 個推出 ${o</em>{j,i}}<em>{i=1}^G \sim \pi</em>\theta(\cdot|x_j)$<br />
+在環境中執行程式碼區塊並接收觀察結果<br />
+<strong>if</strong> 任何推出遇到逾時、執行時期死亡或執行錯誤 <strong>then</strong><br />
+標記為破損軌跡<br />
+<strong>end if</strong><br />
+計算每個推出的獎勵 $r_{j,i} = R(x_j, o_{j,i})$<br />
+<strong>end for</strong><br />
+初始化篩選集 $\mathcal{F} = \emptyset$<br />
+<strong>for</strong> $j = 1$ <strong>to</strong> $\alpha B$ <strong>do</strong><br />
+<strong>for</strong> $i = 1$ <strong>to</strong> $G$ <strong>do</strong><br />
+<strong>if</strong> 所有推出 $o_{j,i}$ 都已破損 <strong>then</strong><br />
+<strong>continue</strong> ${$篩選 $o_{j,i}}$<br />
+<strong>end if</strong><br />
+<strong>if</strong> $\sigma_{j,i} = 0$ <strong>then</strong><br />
+<strong>continue</strong> ${$篩選 $o_{j,i}}$<br />
+<strong>end if</strong><br />
+將推出 $o_{j,i}$ 加入 $\mathcal{F}$<br />
+<strong>end for</strong><br />
+<strong>end for</strong><br />
+按群組級標準差 $\sigma_{j,i}$ 遞減順序排序 $\mathcal{F}$ ${$透過難度排名$}$<br />
+從已排序的 $\mathcal{F}$ 中選擇前 $B*G$ 個樣本作為 $D_{train}$ ${$選擇適度困難的樣本$}$</p>
+<p><strong>B.2. 訓練資料分佈</strong></p>
+<p>我們在圖 11 和圖 12 中說明了 PyVision-Image 和 PyVision-Video 的 SFT 和 RL 資料。</p>
+<h2 id="c">C. 更多評估結果</h2>
+<h3 id="c1">C.1. 不同基準上的消融結果圖</h3>
+<p>我們在圖 13 中繪製了不同訓練設置下跨不同基準的結果</p>
+<hr />
+<p><strong>表 3.</strong> <strong>訓練組件消融的詳細資訊。</strong> 我們消融了訓練流程中使用的四個組件，即累積工具獎勵（ATR）、標準差排序（SRK）、在優勢估計中移除標準差正規化（RSN）、最大轉向預算（MTB）。首先，對於最大轉向預算，較大的預算在訓練的後期階段會產生更好的效能，即最大轉向預算為 4 相比為 2 在訓練步驟 600 時在 V<em> 上優於 +1.77%，在 MathVerse 上優於 +4.65%。對於累積工具獎勵，將其添加到 RL 目標會在訓練步驟 500 時在 V</em> 上獲得 +1.91% 的效能提升，在 HRBench-4K 上提升 +1.63%，在 HRBench-8K 上提升 +1.00%。對於標準差排序，它在訓練步驟 300 時在 HRBench-4K 上的效能提升了 +2.26%，在 WeMath 上提升了 +1.90%。對於標準差正規化項，移除它們在訓練步驟 500 時在 V* 上的效能提升了 +4.94%，在 HRBench-4K 上提升了 +2.75%，在 WeMath 上提升了 +3.62%。</p>
+<h1 id="c2"><strong>C.2. 消融實驗結果詳情</strong></h1>
+<p>除了圖表外，我們在表 3 中列出確切的消融實驗結果數字。</p>
+<table>
+<thead>
+<tr>
+<th>Steps</th>
+<th></th>
+<th>ATR</th>
+<th>SRK</th>
+<th>RSN</th>
+<th>MTB</th>
+<th>V*</th>
+<th>HRBench-4K</th>
+<th>HRBench-8K</th>
+<th>MathVision</th>
+<th>MathVerse</th>
+<th>WeMath</th>
+<th>DynaMath</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>300</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>4</td>
+<td>82.07</td>
+<td>75.62</td>
+<td>69.87</td>
+<td>27.96</td>
+<td>49.44</td>
+<td>40.67</td>
+<td>60.05</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✓</td>
+<td>✗</td>
+<td>✓</td>
+<td>4</td>
+<td>81.61</td>
+<td>73.62</td>
+<td>67.75</td>
+<td>26.91</td>
+<td>49.57</td>
+<td>37.43</td>
+<td>60.50</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✗</td>
+<td>✓</td>
+<td>✓</td>
+<td>4</td>
+<td>80.51</td>
+<td>74.75</td>
+<td>71.25</td>
+<td>27.86</td>
+<td>51.78</td>
+<td>41.90</td>
+<td>59.82</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>2</td>
+<td>81.50</td>
+<td>73.12</td>
+<td>71.25</td>
+<td>25.03</td>
+<td>50.48</td>
+<td>41.14</td>
+<td>59.64</td>
+<td></td>
+</tr>
+<tr>
+<td>400</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>4</td>
+<td>81.95</td>
+<td>75.88</td>
+<td>68.50</td>
+<td>27.20</td>
+<td>51.50</td>
+<td>39.33</td>
+<td>59.58</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✗</td>
+<td>✓</td>
+<td>✓</td>
+<td>4</td>
+<td>80.96</td>
+<td>73.88</td>
+<td>68.50</td>
+<td>25.86</td>
+<td>50.38</td>
+<td>43.24</td>
+<td>60.28</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>2</td>
+<td>81.81</td>
+<td>76.00</td>
+<td>69.25</td>
+<td>28.22</td>
+<td>52.82</td>
+<td>42.76</td>
+<td>59.92</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>4</td>
+<td>83.12</td>
+<td>74.12</td>
+<td>70.13</td>
+<td>27.07</td>
+<td>50.89</td>
+<td>40.67</td>
+<td>59.00</td>
+<td></td>
+</tr>
+<tr>
+<td>500</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>4</td>
+<td>82.05</td>
+<td>74.50</td>
+<td>68.75</td>
+<td>27.02</td>
+<td>50.13</td>
+<td>40.57</td>
+<td>60.50</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✗</td>
+<td>✓</td>
+<td>✓</td>
+<td>4</td>
+<td>81.41</td>
+<td>74.50</td>
+<td>69.87</td>
+<td>27.47</td>
+<td>52.20</td>
+<td>38.48</td>
+<td>59.92</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>2</td>
+<td>84.44</td>
+<td>75.62</td>
+<td>70.63</td>
+<td>28.22</td>
+<td>52.87</td>
+<td>41.62</td>
+<td>61.00</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>4</td>
+<td>83.92</td>
+<td>73.38</td>
+<td>70.13</td>
+<td>26.97</td>
+<td>51.80</td>
+<td>43.33</td>
+<td>63.81</td>
+<td></td>
+</tr>
+<tr>
+<td>600</td>
+<td></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>2</td>
+<td>84.47</td>
+<td>76.38</td>
+<td>71.37</td>
+<td>28.67</td>
+<td>52.66</td>
+<td>44.38</td>
+<td>60.02</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>4</td>
+<td>86.24</td>
+<td>77.72</td>
+<td>72.22</td>
+<td>28.66</td>
+<td>57.31</td>
+<td>47.71</td>
+<td>61.58</td>
+</tr>
+</tbody>
+</table>
+<h2 id="d"><strong>D. 更多分析</strong></h2>
+<h3 id="d1-pyvision-video"><strong>D.1. PyVision-Video 的訓練動態</strong></h3>
+<p>我們在圖 14 中視覺化 PyVision-Video 的訓練動態。</p>
+<h3 id="d2"><strong>D.2. 為什麼工具呼叫次數在強化學習期間增加？</strong></h3>
+<p>我已收到您的翻譯請求。我將逐段翻譯這份學術論文段落，保留所有 Markdown 格式和專有名詞。</p>
+<p>以下是翻譯結果：</p>
+<hr />
+<p>在圖 15 中，我們視覺化了工具使用的平均數量以及 RL 過程中具有負優勢的正樣本比例。我們發現這兩個指標之間存在負相關。因此，基於此觀察，我們認為工具調用平均值的增加來自於具有相對較少工具調用的正確樣本的負信號。</p>
+<p><strong>D.3. 工具類別分佈</strong></p>
+<p>基於 PyVision（Zhao et al., 2025a）中提出的工具分類法，我們在圖 21 中說明了 PyVision-Image 在不同基準測試上的工具類別分佈。¹ 同時，我們在圖 23 中呈現了工具類別分佈。</p>
+<p><strong>D.4. 工具調用次數分佈</strong></p>
+<p>我們在圖 22 中呈現了 <em>PyVision-Image</em> 的工具調用次數，在圖 24 中呈現了 <em>PyVision-Video</em> 的工具調用次數。</p>
+<p><sup>1</sup>由於存在許多僅是繪製原始影像的操作，我們在圖 21 中移除了這些部分。如需完整的工具分佈，請參見圖 25。</p>
+<hr />
+<p><strong>D.5. 案例研究</strong></p>
+<p><strong>D.5.1. PyVision-Image 的案例研究</strong></p>
+<p>我們在圖 17 和圖 18 中視覺化了 PyVision-Image 在 TIR-Bench 上的推理過程的兩個範例。</p>
+<p><strong>D.5.2. PyVision-Video 的案例研究</strong></p>
+<p>我們在圖 19 和圖 20 中視覺化了 PyVision-Video 在 VSI-Bench 上的推理過程的兩個範例。</p>
+<hr />
+<p>翻譯已完成。所有 Markdown 格式、專有名詞（PyVision、PyVision-Image、PyVision-Video、TIR-Bench、VSI-Bench、RL 等）均已保留，並翻譯成繁體中文（台灣用語）。</p>
+<h1 id="_3">翻譯內容</h1>
+<p>輸出（包含在 " output_str"O" 中）可以被返回以幫助您的推理並幫助您得出最終答案。Python 代碼應為完整腳本，包括必要的導入。</p>
+<p>每個代碼片段用以下方式包裝：</p>
+<p><code></p>
+<p>python code snippet</p>
+<p></code></p>
+<p>您回應的最後部分應採用以下格式：</p>
+<p><answer></p>
+<p>\boxed{"最終答案放在這裡}</p>
+<p></answer></p>
+<p><em>影像解析度：</em>
+影像寬度：{ width }；影像高度：{ height }</p>
+<p><em>使用者問題：</em>
+使用提供的影像回答以下問題，並將答案放在 \boxed{answer} 的格式中
+{"query"}</p>
+<p>請記得使用以下格式將最終答案放在最後部分：</p>
+<p><answer></p>
+<p>\boxed{"最終答案放在這裡}</p>
+<p></answer></p>
+<p>構造的不可或缺的部分</p>
+<p>圖 8</p>
+<hr />
+<p>圖 9</p>
+<hr />
+<p><strong>圖 10.</strong> 推出生成的過採樣-過濾-排名框架概述。首先，我們從提示池中過採樣 $\alpha * B$ 個提示，其中 $B$ 是批次大小，$\alpha$ 是過採樣參數。然後，每個提示被發送到推出工作者以生成 $G$ 個推出，其中 $G$ 是 GRPO 類似 RL 演算法中的組大小。在生成的推出中，其中一些是損壞的。對於這些 $\alpha * B * G$ 個推出，我們使用獎勵模型給它們分配獎勵，並計算每個推出的組級標準差。基於它是否損壞及其組級標準差，我們過濾並排序這些推出，並保留前 $B * G$ 個推出作為訓練樣本。</p>
+<p><strong>圖 11.</strong> 左圖：我們展示了 PyVision-Image 的 SFT 資料分佈，包含圖表理解資料（來自 ChartQA）、信息圖理解資料（來自 InfoVQA）、醫學理解資料（來自 GMAI-Reasoning）、數學資料（來自 MMK-12）和通用 VQA 資料（來自 LLaVA-CoT 和 MMPR）。右圖：我們展示了 PyVision-Image 的 RL 資料分佈，包含視覺搜尋資料（來自 DeepEyes 和 Mini-o3）和多模態推理資料（來自 V-Thinker 和 WeMath-v2）。</p>
+<hr />
+<p>圖 12. <strong>左圖：</strong> 我們展示了 PyVision-Video 的 SFT 資料分佈，包含視覺空間推理資料（來自 SpaceR）和長視頻理解資料（來自 LongVILA）。<strong>右圖：</strong> PyVision-Video 訓練中使用的 RL 資料全部是視覺空間推理資料，來自 SpaceR。</p>
+<p>圖 13. 不同 RL 訓練設置的性能比較。</p>
+<hr />
+<p><strong>圖 14.</strong> PyVision-Video 的 RL 過程的訓練動態。我們的演算法實現了穩定的訓練和持續的性能提升。熵損失保持在適度水平，梯度範數穩步下降，表明 RL 優化穩定。VSI-Bench-subset 的驗證分數、準確度獎勵、回應長度和平均工具調用次數在 RL 過程中穩步增加，表明模型學習到了持續的、長地平線的工具使用行為。為了在訓練期間使驗證高效，我們從 VSI-Bench 中隨機抽樣 400 個樣本作為驗證資料集，命名為 VSI-Bench-subset。</p>
+<p><strong>圖 15。</strong> 工具調用的平均次數以及負優勢正樣本的比例。我們視覺化呈現 PyVision-Image 的工具調用平均曲線和負優勢正樣本比例曲線。這兩個指標呈現負相關。受此觀察啟發，我們假設工具調用平均值增加的主要原因來自於正確樣本的負信號，但使用相對較少的工具。</p>
+<p><strong>圖 16。</strong> 在優勢估計中有/無標準差歸一化項的優勢分佈。在我們的實驗中，沒有標準差歸一化項的估計優勢能使性能改進更加穩定。我們比較了使用和不使用此項計算的優勢分佈——不使用該項的優勢呈現較低的方差，使強化學習訓練更加穩定。</p>
+<hr />
+<p>圖 17。 TIR-Bench 上顏色 VQA 的案例研究。此任務要求 PyVision-Image 分析影像中的像素。此案例說明 PyVision-Image 如何處理顏色 VQA 任務，該任務需要像素級影像處理。PyVision-Image 首先放大並顯示影像，然後繪製像素強度的直方圖以檢查是否存在任何顯著差異。所得直方圖顯示相似的分佈，基於此像素級分析，PyVision-Image 得出正確答案。</p>
+<hr />
+<p>此影像不包含任何表格。</p>
+<p>| A. 300° |
+| B. 325° |
+| C. 320° |
+| D. 310° |
+| E. 315° |
+| F. 305° |</p>
+<p>| 315° 是唯一符合視覺證據的選項。 |</p>
+<hr />
+<p>圖 19。 VSI-Bench 上絕對距離的案例研究。此任務要求 <em>PyVision-Video</em> 首先定位目標物體，然後估計其距離或物理尺寸。在此案例中，<em>PyVision-Video</em> 從室內影片估計一張桌子的最長尺寸。該模型首先執行均勻幀採樣以識別桌子和附近椅子清晰可見的視圖。使用標準餐椅作為參考物體，<em>PyVision-Video</em> 估計像素對釐米的比例並將桌子的像素跨度轉換為物理測量值。發現桌子的水平長度明顯大於其寬度，而高度無法直接觀察，根據典型傢俱比例已知其較小。最後，<em>PyVision-Video</em> 估計桌子的最長尺寸為 270cm。</p>
+<blockquote>
+<p><strong>圖 20.</strong> VSI-Bench 上物件計數的案例研究。此任務要求 <em>PyVision-Video</em> 在給定的 <em>影片</em> 中計數特定物件。在此案例中，首先，<em>PyVision-Video</em> 從影片中均勻採樣 15 幀。然後，它在第 700 幀和第 1100 幀中識別了 2 個不同的桌子。為了查看是否有其他桌子或相同的桌子是否從不同角度展示，模型對第 600 到第 1200 幀之間的影片片段進行更多幀採樣。最後，基於構建的上下文，<em>PyVision-Video</em> 識別出兩個不同的桌子，一個木製桌子配有花瓶和椅子，另一個配有紅色架子和其上的電視。</p>
+</blockquote>
+<hr />
+<p><strong>圖 21.</strong> <em>PyVision-Image</em> 在多功能基準上的工具分類分佈。在視覺搜尋任務上，<em>PyVision-Image</em> 幾乎只使用 <em>crop</em> 工具。在多模態推理任務上，<em>PyVision-Image</em> 顯著使用更多的 <em>numerical_analysis</em> 工具。在代理推理任務上（即 TIR-Bench），<em>PyVision-Image</em> 使用更多樣化的工具，包括 <em>segmentation</em>、<em>renderverified</em>、<em>もいい</em> 和一些長尾操作，展現動態工具的適應性和靈活性。</p>
+<hr />
+<p><strong>圖 22.</strong> PyVision-Image 工具使用數量的分佈。我們繪製了不同基準和模型之間的工具呼叫數量分佈。具有較大最大轉折預算的模型在所有基準上明顯表現出更多的工具呼叫。在所有基準上，使用最大轉折預算為 4 進行 700 步訓練的 PyVision-Image 在大多數樣本上使用超過 3 個轉折，展現長期視野的工具使用能力。</p>
+<p><strong>圖 23.</strong> <em>PyVision-Video</em> 在 VSI-Bench 上的工具分類。我們繪製了 PyVision-Video 在 VSI-Bench 上的工具使用類別分佈。由於按需上下文構建機制，87.4% 的工具呼叫是 fetch{"bbox": [112, 1007, 585, 1249], "category": "Picture"}, {"bbox": [618, 1016, 1091, 1298], "category": "Picture"}, {"bbox": [110, 1270, 582, 1410], "category": "Caption", "text": "<strong>圖 24.</strong> PyVision-Video 工具使用數量的分佈。PyVision-Video 在 VSI-Bench 上展現長期視野的多轉折工具使用能力，即大多數樣本通過 3 個轉折解決，某些樣本通過 9 個轉折解決。"}, {"bbox": [617, 1313, 1090, 1390], "category": "Caption", "text": ""}]</p>
+<hr />
+<p><em>圖 25. 不含操作的完整工具分佈。</em> 在此圖中，我們展示了完整的工具分佈，包括 <em>no operation</em> 作為一個類別，其表示生成的 Python 程式碼只繪製原始影像而無進一步操作。我們發現 <em>no operation</em> 佔據了很大部分，表明 <em>PyVision-Image</em> 重複繪製原始影像以重新審視視覺提示。</p>
   
 </div>
+
 
   </main>
 
