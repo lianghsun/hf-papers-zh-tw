@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ site_title }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ base_path }}assets/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="{{ base_path }}index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="{{ base_path }}index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

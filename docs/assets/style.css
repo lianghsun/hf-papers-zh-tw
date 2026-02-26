@@ -1,0 +1,218 @@
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --accent: #2563eb;
+  --accent-light: #eff6ff;
+  --tag-bg: #f3f4f6;
+  --tag-text: #374151;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #60a5fa;
+    --accent-light: #1e3a5f;
+    --tag-bg: #1e293b;
+    --tag-text: #cbd5e1;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+.container { max-width: 900px; margin: 0 auto; padding: 0 1.25rem; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ===== Header ===== */
+.site-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.875rem 0;
+  position: sticky; top: 0; z-index: 100;
+}
+.site-header .container { display: flex; align-items: center; justify-content: space-between; }
+.site-logo { font-weight: 700; font-size: 1.1rem; color: var(--text); }
+.site-header nav { display: flex; gap: 1.5rem; }
+.site-header nav a { color: var(--text-muted); font-size: 0.9rem; }
+.site-header nav a:hover { color: var(--accent); text-decoration: none; }
+
+/* ===== Footer ===== */
+.site-footer {
+  border-top: 1px solid var(--border);
+  margin-top: 4rem;
+  padding: 2rem 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ===== Tags ===== */
+.tags { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.tag {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border: 1px solid var(--border);
+}
+.tag.domain { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.tag.method { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.tag.task   { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.tag.open   { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+@media (prefers-color-scheme: dark) {
+  .tag.domain { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+  .tag.method { background: #14532d; color: #86efac; border-color: #16a34a; }
+  .tag.task   { background: #451a03; color: #fcd34d; border-color: #d97706; }
+  .tag.open   { background: #052e16; color: #4ade80; border-color: #15803d; }
+}
+
+/* ===== Index page ===== */
+.page-title {
+  font-size: 1.75rem; font-weight: 700;
+  margin: 2rem 0 0.25rem;
+}
+.page-subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+
+.date-nav {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+.date-nav a {
+  padding: 0.4rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.date-nav a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.date-nav .current {
+  font-weight: 600; color: var(--text);
+  background: var(--accent-light); border-color: var(--accent);
+}
+
+/* ===== Paper Card ===== */
+.paper-list { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.paper-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s;
+}
+.paper-card:hover { border-color: var(--accent); }
+
+.paper-card-meta {
+  display: flex; align-items: center; gap: 0.75rem;
+  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;
+}
+.paper-card-title {
+  font-size: 1.05rem; font-weight: 600; margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+.paper-card-title-en {
+  font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;
+}
+.paper-card-abstract {
+  font-size: 0.875rem; color: var(--text-muted);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  margin-bottom: 0.875rem;
+}
+.paper-card-footer {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+}
+.paper-card-links { display: flex; gap: 0.75rem; font-size: 0.8rem; }
+.paper-card-links a {
+  padding: 0.25rem 0.6rem; border-radius: 4px;
+  background: var(--accent-light); color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.paper-card-links a:hover { text-decoration: none; opacity: 0.85; }
+
+/* ===== Home index ===== */
+.date-list { display: flex; flex-direction: column; gap: 0.625rem; margin-top: 1.5rem; }
+.date-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.date-item:hover { border-color: var(--accent); }
+.date-item-date { font-weight: 600; }
+.date-item-count { font-size: 0.8rem; color: var(--text-muted); }
+
+/* ===== Paper page ===== */
+.paper-page-header { margin: 2rem 0 1.5rem; }
+.paper-page-header h1 { font-size: 1.6rem; font-weight: 700; line-height: 1.35; margin-bottom: 0.375rem; }
+.paper-page-header .en-title { font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; }
+.paper-meta { display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; }
+.paper-meta a { color: var(--accent); }
+.paper-links { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.4rem 0.875rem; border-radius: var(--radius);
+  font-size: 0.85rem; font-weight: 500; border: 1px solid;
+}
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-outline { background: transparent; color: var(--accent); border-color: var(--accent); }
+.btn:hover { opacity: 0.85; text-decoration: none; }
+
+/* ===== Abstract box ===== */
+.abstract-box {
+  background: var(--accent-light); border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius); padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+}
+.abstract-box h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.75rem; }
+.abstract-box p { line-height: 1.8; font-size: 0.95rem; }
+.abstract-en { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+
+/* ===== Paper body content ===== */
+.paper-body { margin-top: 2rem; }
+.paper-body h2 { font-size: 1.2rem; font-weight: 700; margin: 2rem 0 0.75rem; padding-bottom: 0.375rem; border-bottom: 1px solid var(--border); }
+.paper-body h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--text-muted); }
+.paper-body p  { margin-bottom: 0.875rem; line-height: 1.8; }
+.paper-body .formula { font-family: "SFMono-Regular", Consolas, monospace; background: var(--tag-bg); padding: 0.625rem 1rem; border-radius: 4px; overflow-x: auto; margin: 0.875rem 0; font-size: 0.875rem; border: 1px solid var(--border); }
+.paper-body .footnote { font-size: 0.8rem; color: var(--text-muted); border-left: 3px solid var(--border); padding-left: 0.75rem; margin: 0.5rem 0; }
+
+/* Figure */
+.paper-figure { margin: 1.5rem 0; text-align: center; }
+.paper-figure img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.paper-figure figcaption { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; font-style: italic; }
+
+/* Table */
+.paper-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; overflow-x: auto; display: block; }
+.paper-body th, .paper-body td { border: 1px solid var(--border); padding: 0.5rem 0.75rem; text-align: left; }
+.paper-body th { background: var(--tag-bg); font-weight: 600; }
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .page-title { font-size: 1.4rem; }
+  .paper-page-header h1 { font-size: 1.3rem; }
+  .paper-card { padding: 1rem; }
+}

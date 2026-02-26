@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ site_title }} — 首頁{% endblock %}
+{% block content %}
+<h1 class="page-title">HF Papers 繁中</h1>
+<p class="page-subtitle">每日自動翻譯 HuggingFace 精選論文，繁體中文版本</p>
+
+<div class="date-list">
+  {% for entry in dates %}
+  <a href="{{ entry.path }}" class="date-item" style="text-decoration:none; color:inherit;">
+    <span class="date-item-date">{{ entry.date }}</span>
+    <span class="date-item-count">{{ entry.count }} 篇論文</span>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

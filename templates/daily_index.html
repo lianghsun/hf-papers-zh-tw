@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ date }} — {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="date-nav">
+  {% if prev_date %}
+  <a href="{{ base_path }}{{ prev_date }}/index.html">← {{ prev_date }}</a>
+  {% endif %}
+  <span class="current">{{ date }}</span>
+  {% if next_date %}
+  <a href="{{ base_path }}{{ next_date }}/index.html">{{ next_date }} →</a>
+  {% endif %}
+</div>
+
+<h1 class="page-title">{{ date }}</h1>
+<p class="page-subtitle">{{ papers|length }} 篇論文</p>
+
+<div class="paper-list">
+  {% for paper in papers %}
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>{{ paper.arxiv_id }}</span>
+      {% if paper.upvotes %}<span>▲ {{ paper.upvotes }}</span>{% endif %}
+    </div>
+    <div class="paper-card-title">
+      <a href="{{ base_path }}paper/{{ paper.arxiv_id }}/index.html" style="color:inherit;">
+        {{ paper.title_zh or paper.title }}
+      </a>
+    </div>
+    {% if paper.title_zh %}
+    <div class="paper-card-title-en">{{ paper.title }}</div>
+    {% endif %}
+    <div class="paper-card-abstract">{{ paper.abstract_zh or paper.abstract }}</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        {% for d in paper.tags.domain %}<span class="tag domain">{{ d }}</span>{% endfor %}
+        {% for m in paper.tags.method %}<span class="tag method">{{ m }}</span>{% endfor %}
+        {% for t in paper.tags.task %}<span class="tag task">{{ t }}</span>{% endfor %}
+        {% if paper.tags.open_source %}<span class="tag open">Open Source</span>{% endif %}
+      </div>
+      <div class="paper-card-links">
+        <a href="{{ base_path }}paper/{{ paper.arxiv_id }}/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

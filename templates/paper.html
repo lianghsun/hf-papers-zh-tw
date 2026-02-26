@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ paper.title_zh or paper.title }} — {{ site_title }}{% endblock %}
+{% block content %}
+
+<div class="paper-page-header">
+  <a href="{{ base_path }}{{ date }}/index.html" style="font-size:0.85rem; color:var(--text-muted);">
+    ← {{ date }} 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">{{ paper.title_zh or paper.title }}</h1>
+  {% if paper.title_zh %}
+  <div class="en-title">{{ paper.title }}</div>
+  {% endif %}
+
+  <div class="paper-meta">
+    {% if paper.authors %}
+    <span>{{ paper.authors | join(", ") }}</span>
+    {% endif %}
+    <span>arXiv: <a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" target="_blank">{{ paper.arxiv_id }}</a></span>
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/{{ paper.arxiv_id }}" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" target="_blank" rel="noopener" class="btn btn-outline">arXiv 頁面</a>
+    <a href="https://huggingface.co/papers/{{ paper.arxiv_id }}" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    {% for d in paper.tags.domain %}<span class="tag domain">{{ d }}</span>{% endfor %}
+    {% for m in paper.tags.method %}<span class="tag method">{{ m }}</span>{% endfor %}
+    {% for t in paper.tags.task %}<span class="tag task">{{ t }}</span>{% endfor %}
+    {% if paper.tags.open_source %}<span class="tag open">Open Source</span>{% endif %}
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p>{{ paper.abstract_zh or paper.abstract }}</p>
+  {% if paper.abstract_zh %}
+  <div class="abstract-en">{{ paper.abstract }}</div>
+  {% endif %}
+</div>
+
+<!-- Full paper content -->
+<div class="paper-body">
+  {% for elem in paper.content %}
+    {% if elem.type == "title" %}
+      {# Skip — already shown in header #}
+    {% elif elem.type == "section" %}
+      <h2>{{ elem.text_zh or elem.text }}</h2>
+    {% elif elem.type == "text" %}
+      <p>{{ elem.text_zh or elem.text }}</p>
+    {% elif elem.type == "caption" %}
+      <p><em>{{ elem.text_zh or elem.text }}</em></p>
+    {% elif elem.type == "footnote" %}
+      <div class="footnote">{{ elem.text_zh or elem.text }}</div>
+    {% elif elem.type == "formula" %}
+      <div class="formula">{{ elem.text }}</div>
+    {% elif elem.type == "table" %}
+      <div style="overflow-x:auto;">{{ (elem.text_zh or elem.text) | safe }}</div>
+    {% elif elem.type == "image" %}
+      <figure class="paper-figure">
+        <img src="{{ base_path }}figures/{{ date }}/{{ paper.arxiv_id }}/{{ elem.fig_name }}"
+             alt="Figure {{ loop.index }}" loading="lazy">
+      </figure>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}
