@@ -216,3 +216,13 @@ a:hover { text-decoration: underline; }
   .paper-page-header h1 { font-size: 1.3rem; }
   .paper-card { padding: 1rem; }
 }
+
+/* ===== Figures Gallery (PDF papers) ===== */
+.figures-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+.figures-gallery .paper-figure { margin: 0; }
+

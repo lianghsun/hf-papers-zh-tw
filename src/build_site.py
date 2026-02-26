@@ -47,15 +47,35 @@ def build_paper_page(paper: dict, date_str: str) -> None:
 
     # Convert Markdown to HTML
     content_html = ""
+    figures_base = f"../../figures/{date_str}/{arxiv_id}/"
     if paper.get("content_md_zh"):
-        content_html = _render_markdown(paper["content_md_zh"])
-        # Replace figure placeholders with actual <img> tags
-        figures_base = f"../../figures/{date_str}/{arxiv_id}/"
+        md_text = paper["content_md_zh"]
+        # Remove any fake [FIGURE:N] markers Claude may have introduced (PDF path artifact)
+        md_text = re.sub(r"\[FIGURE:\d+\]\s*", "", md_text)
+        # Clean up [FIGURE_CAPTION] markers → just the caption text
+        md_text = re.sub(r"\[FIGURE_CAPTION\]\s*", "", md_text)
+
+        content_html = _render_markdown(md_text)
+
+        # Replace proper [FIGURE:filename] placeholders (HTML path only)
         content_html = re.sub(
-            r"\[FIGURE:([^\]]+)\]",
+            r"\[FIGURE:([^\]]+\.(png|jpg|jpeg|svg|gif))\]",
             lambda m: f'<figure class="paper-figure"><img src="{figures_base}{m.group(1)}" loading="lazy"></figure>',
             content_html
         )
+
+    # For PDF-parsed papers: append figures gallery at the end
+    if paper.get("parse_source") == "pdf" and paper.get("figures"):
+        figs_html = '<hr><h2>圖表</h2><div class="figures-gallery">'
+        for i, fig in enumerate(paper["figures"], 1):
+            figs_html += (
+                f'<figure class="paper-figure">'
+                f'<img src="{figures_base}{fig["name"]}" loading="lazy" alt="圖 {i}">'
+                f'{"<figcaption>" + fig["caption"] + "</figcaption>" if fig.get("caption") else ""}'
+                f'</figure>'
+            )
+        figs_html += "</div>"
+        content_html += figs_html
 
     tmpl = jinja_env.get_template("paper.html")
     html = tmpl.render(
