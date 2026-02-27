@@ -1,0 +1,3 @@
+# Fully Sharded Data Parallel (FSDP) 論文摘要翻譯
+
+完全分片數據並行（Fully Sharded Data Parallel，FSDP），也稱為 ZeRO，廣泛用於大規模模型訓練，具有靈活性強且對模型代碼入侵最小的特點。然而，現有的 FSDP 系統在結構感知訓練方法（例如分塊量化訓練）和非逐元素優化器（例如 Shampoo 和 Muon，用於 Gemini、Kimi K2 等尖端模型）方面存在困難。FSDP 固定的逐元素或逐列分片格式與分塊結構計算相衝突。此外，當前的實現在通訊和記憶體效率方面表現不足，限制了擴展至數萬個 GPU 的能力。我們推出 veScale-FSDP，一個重新設計的 FSDP 系統，將靈活的分片格式 RaggedShard 與結構感知規劃演算法相結合，在大規模下提供靈活性和性能。veScale-FSDP 原生支持 FSDP 所需的高效數據放置，賦能分塊量化和非逐元素優化器。因此，veScale-FSDP 相比現有 FSDP 系統實現了 5~66% 的吞吐量提升和 16~30% 的記憶體使用降低，同時能夠高效地擴展至數萬個 GPU。

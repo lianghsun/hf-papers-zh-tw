@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>因果運動擴散模型用於自迴歸運動生成 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-27/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-02-27 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">因果運動擴散模型用於自迴歸運動生成</h1>
+  
+  <div class="en-title">Causal Motion Diffusion Models for Autoregressive Motion Generation</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Qing Yu, Akihisa Watanabe, Kent Fujiwara</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.22594" target="_blank">2602.22594</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.22594" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.22594" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.22594" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Diffusion Models</span><span class="tag method">Transformer</span><span class="tag method">VAE</span><span class="tag method">Autoregressive Models</span>
+    <span class="tag task">Motion Generation</span><span class="tag task">Text-to-Motion Generation</span><span class="tag task">Motion Synthesis</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p>Recent advances in motion diffusion models have substantially improved the realism of human motion synthesis. However, existing approaches either rely on full-sequence diffusion models with bidirectional generation, which limits temporal causality and real-time applicability, or autoregressive models that suffer from instability and cumulative errors. In this work, we present Causal Motion Diffusion Models (CMDM), a unified framework for autoregressive motion generation based on a causal diffusion transformer that operates in a semantically aligned latent space. CMDM builds upon a Motion-Language-Aligned Causal VAE (MAC-VAE), which encodes motion sequences into temporally causal latent representations. On top of this latent representation, an autoregressive diffusion transformer is trained using causal diffusion forcing to perform temporally ordered denoising across motion frames. To achieve fast inference, we introduce a frame-wise sampling schedule with causal uncertainty, where each subsequent frame is predicted from partially denoised previous frames. The resulting framework supports high-quality text-to-motion generation, streaming synthesis, and long-horizon motion generation at interactive rates. Experiments on HumanML3D and SnapMoGen demonstrate that CMDM outperforms existing diffusion and autoregressive models in both semantic fidelity and temporal smoothness, while substantially reducing inference latency.</p>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="_1">因果運動擴散模型用於自迴歸運動生成</h1>
+<p>近期運動擴散模型的進展大幅提升了人類運動合成的逼真度。然而，現有方法要麼依賴於具有雙向生成的全序列擴散模型（限制了時間因果性和即時可應用性），要麼採用自迴歸模型（容易出現不穩定性和累積誤差）。本研究提出因果運動擴散模型（CMDM），一個基於因果擴散 Transformer 的統一框架，在語義對齊的潛在空間中進行自迴歸運動生成。CMDM 建立在動作-語言-對齊因果 VAE（MAC-VAE）之上，該 VAE 將運動序列編碼為時間上因果的潛在表示。在此潛在表示的基礎上，訓練一個自迴歸擴散 Transformer，使用因果擴散強制對運動幀進行時間有序的去噪。為了實現快速推理，我們引入了具有因果不確定性的幀級採樣計畫，其中每個後續幀都從部分去噪的先前幀預測得出。該框架支援高品質的文本到運動生成、流式合成和以互動速率進行的長序列運動生成。在 HumanML3D 和 SnapMoGen 上的實驗表明，CMDM 在語義保真度和時間平滑性方面都優於現有的擴散和自迴歸模型，同時大幅降低了推理延遲。</p>
+<h2 id="1">1 引言</h2>
+<p>在自然語言條件下合成逼真的人類動作仍然是電腦視覺和圖形學中的基本問題。成功的文本到動作生成模型不僅應該合成空間精確的身體運動，還應該在長序列中保持時間相干性。動作擴散模型的近期進展 [ mdm2022human , zhang2022motiondiffuse , chen2023executing , dai2024motionlcm ] 得益於擴散框架的強大生成能力 [ ho2020denoising , dhariwal2021diffusion ]，在動作品質和多樣性方面取得了顯著改進。然而，大多數現有的擴散模型都依賴於整個序列上的雙向去噪，這本質上破壞了時間因果性，並妨礙了在線生成。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22594/x1.png" loading="lazy"></figure> 圖 1：現有方法和所提方法的概述。現有的基於擴散的方法（左）使用相同的噪聲等級對全序列進行去噪。相比之下，我們提出的 CMDM（右）引入了一個在語義因果潛在特徵上運行、具有逐幀噪聲等級的因果擴散強制機制。</p>
+<p>自回歸模型 [ zhang2023t2m , meng2024rethinking , zhao2024dartcontrol , xiao2025motionstreamer ] 提供了另一種方式，通過從過去的幀預測未來的幀，確保因果一致性並支援在線動作生成。然而，它們的序列依賴性通常導致誤差累積，使長期合成變得不穩定和低效。關鍵挑戰在於實現時間有序、高品質的動作生成，同時兼具擴散模型的保真度和自回歸 Transformer 的因果結構。</p>
+<p>為了應對這些挑戰，我們提出了因果動作擴散模型（CMDM），這是一個統一框架，在語義對齐的潛在空間中整合因果擴散和自回歸建模，如圖 1 所示。CMDM 建立在我們的動作-語言-模型對齐因果變分自編碼器（MAC-VAE）之上，該編碼器在動作-語言預訓練指導下將人類動作編碼為時間因果潛在表示 [ radford2021learning , petrovich2023tmr , yu2024exploring ]。這個基礎使 CMDM 能在緊湊且語義有意義的潛在空間中運作，保持語言語義和動作動態之間的對齐。在 MAC-VAE 的基礎上，我們設計了因果擴散 Transformer（Causal-DiT），以自回歸方式執行擴散去噪。與聯合處理所有幀的傳統擴散模型不同，Causal-DiT 應用因果自注意機制，以確保每一幀只依賴於前面的幀。這種設計強制了嚴格的時間順序，允許流式動作生成。</p>
+<p>為了加速推理，我們引入了帶有因果不確定性的逐幀採樣時間表，這允許每一幀從部分去噪的前置幀逐漸精化，而不需要完全自回歸的去噪步驟。受 Diffusion Forcing [ chen2024diffusion ] 啟發，該方法最初為下一個令牌預測而設計，在訓練期間，我們用獨立的噪聲等級擾動每一幀，同時保持時間上的因果依賴，使模型能夠學習時間相干的去噪轉變。在採樣期間，模型基於具有不同噪聲等級的先前去噪幀迭代地預測後續幀，以因果順序逐漸降低不確定性。這個分層去噪過程大幅減少了推理步驟，實現了高效且時間相干的動作生成。</p>
+<p>CMDM 統一了擴散模型的穩定性和逼真度與自回歸架構的因果性和效率。該框架在統一的因果框架內支援高保真文本到動作生成、快速推理和長期合成。對 HumanML3D 和 SnapMoGen 的廣泛評估表明，CMDM 在語義保真度和時間平滑性方面都持續超越最先進的擴散和自回歸模型，同時將推理延遲降低了一個數量級。</p>
+<p>我們的主要貢獻總結如下：</p>
+<ul>
+<li>• 因果動作擴散框架。我們提出 CMDM，這是第一個在動作-語言-對齐的潛在空間中統一因果自回歸和擴散去噪的動作擴散框架。</li>
+<li>• 語義對齐的因果潛在建模。我們引入 MAC-VAE，一個動作-語言-對齐的因果變分自編碼器，為文本到動作生成學習時間因果且語義有意義的潛在表示。</li>
+<li>• 帶有因果不確定性的逐幀採樣。我們設計了一個新穎的逐幀採樣時間表，用於建模因果不確定性，允許每一幀從部分去噪的前置幀進行預測，以實現高效、低延遲且時間相干的動作合成。</li>
+<li>• 全面的經驗驗證。CMDM 在 HumanML3D 和 SnapMoGen 上取得最先進的性能，在文本到動作生成和長期動作生成方面超越了現有的擴散和自回歸方法。</li>
+</ul>
+<p>因果動作擴散框架。我們提出 CMDM，這是第一個在動作-語言-對齐的潛在空間中統一因果自回歸和擴散去噪的動作擴散框架。</p>
+<p>語義對齐的因果潛在建模。我們引入 MAC-VAE，一個動作-語言-對齐的因果變分自編碼器，為文本到動作生成學習時間因果且語義有意義的潛在表示。</p>
+<p>帶有因果不確定性的逐幀採樣。我們設計了一個新穎的逐幀採樣時間表，用於建模因果不確定性，允許每一幀從部分去噪的前置幀進行預測，以實現高效、低延遲且時間相干的動作合成。</p>
+<p>全面的經驗驗證。CMDM 在 HumanML3D 和 SnapMoGen 上取得最先進的性能，在文本到動作生成和長期動作生成方面超越了現有的擴散和自回歸方法。</p>
+<h2 id="2-related-works">2 Related Works</h2>
+<h3 id="21-motion-language-alignment">2.1 Motion-Language Alignment</h3>
+<p>Recent advances in vision–language models [ radford2021learning , oquab2023dinov2 ] have shown that large-scale training can robustly align text and visual semantics. This has led to a surge of interest in exploring motion–language alignment to enable practical control of motion using natural language. MotionCLIP [ tevet2022motionclip ] maps a single frame to CLIP space but fails to capture temporal dynamics. Subsequent methods, including TMR [ petrovich2023tmr ] and MotionPatches [ yu2024exploring ] , learn joint motion–text embeddings via contrastive or generative objectives, while PartTMR [ yu2025remogpt ] introduces body-part-level features for finer alignment. However, most motion–language models focus on retrieval tasks. Methods such as ReMoGPT [ yu2025remogpt ] and ReMoMask [ li2025remomask ] extend to text-to-motion generation but rely on retrieval-augmented generation rather than integrating motion–language alignment directly into the generation.</p>
+<h3 id="22-diffusion-based-motion-generation">2.2 Diffusion-based Motion Generation</h3>
+<p>Text-conditioned motion generation has been explored through both non-diffusion and diffusion [ ho2020denoising , ho2022classifier , dhariwal2021diffusion ] paradigms. Early works used CNN- or RNN-based architectures [ yan2019convolutional , zhao2020bayesian ] and action-conditioned frameworks [ guo2020action2motion , petrovich2021action ] to synthesize motion from predefined semantics. More recently, diffusion-based methods [ dhariwal2021diffusion , rombach2022high ] have set new benchmarks for motion realism and diversity [ zhang2022motiondiffuse , chen2023executing , mdm2022human ] . MDM [ mdm2022human ] and MotionDiffuse [ zhang2022motiondiffuse ] operate directly in motion space, while MLD [ chen2023executing ] , MotionLCM [ dai2024motionlcm ] , EnergyMoGen [ zhang2025energymogen ] and SALAD [ hong2025salad ] perform diffusion in a latent space for greater stability and efficiency. However, these diffusion models rely on bidirectional attention over entire sequences, breaking temporal causality and limiting real-time or streaming generation.</p>
+<h3 id="23">2.3 自迴歸動作生成</h3>
+<p>自迴歸（AR）建模通過從過去脈絡預測未來幀來強制執行時間因果性。離散標記方法（如 T2M-GPT [ zhang2023t2m ] 和 MotionGPT [ jiang2023motiongpt ]）將動作視為「語言」，能夠進行強大的序列建模，但容易受到暴露偏差和累積誤差的困擾。基於 VQ-VAE 的方法，包括 MoMask [ guo2024momask ]、MMM [ pinyoanuntapong2024mmm ] 和 ParCo [ zou2024parco ]，將動作量化為離散標記並自迴歸地預測它們。最近的研究探索了因果範式用於流式生成：Dart [ zhao2024dartcontrol ] 從有限的兩個歷史幀預測短未來段，而 MARDM [ meng2024rethinking ] 和 MotionStreamer [ xiao2025motionstreamer ] 採用帶有擴散頭的遮罩自迴歸 Transformers [ li2024autoregressive ]。然而，它們對教師強制（Teacher Forcing）[ williams1989learning ] 和大型擴散頭的依賴導致長期預測中的不穩定性和高計算成本，限制了實時部署。</p>
+<p>我們的工作在兩個關鍵方面與現有方法不同：(1) 我們在動作–語言–對齊的潛在空間內引入因果擴散過程，保持語義一致性同時強制執行時間因果性；(2) 我們設計了逐幀採樣計劃，能夠實現高品質的流式動作生成。</p>
+<h2 id="3">3 方法</h2>
+<p>我們提出的框架 Causal Motion Diffusion Models (CMDM) 通過整合因果潛在編碼、因果擴散強制和高效的逐幀採樣，實現了時間序列有序、文本條件的動作生成。
+如圖 2 所示，CMDM 由三個核心元件組成：
+(1) Motion-Language-Aligned Causal VAE (MAC-VAE)，將動作序列編碼到語義對齊和時間因果的潛在空間中，
+(2) Causal Diffusion Transformer (Causal-DiT)，使用因果自注意力執行逐幀擴散，以確保自迴歸時間依賴性，以及
+(3) Frame-Wise Sampling Scheduler (FSS)，通過為未來幀分配更高的雜訊，為過去幀分配較低的雜訊來模型化因果不確定性，允許從部分去雜訊的前面幀預測每個新幀。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22594/x2.png" loading="lazy"></figure> 圖 2：提議 CMDM 框架的概述。CMDM 由三個關鍵元件組成：(a) MAC-VAE，使用因果編碼器-解碼器結構將動作序列編碼到動作-語言-對齐和時間因果潛在特徵中，由動作-語言模型對齊進行監督；(b) Causal-DiT，執行具有因果自注意力和對文本嵌入的交叉注意力的擴散去雜訊，確保時間有序和語義一致的幀優化；以及 (c) 因果擴散強制，在訓練期間應用獨立的幀級雜訊，在推理期間應用因果不確定性調度，其中紅色強度表示雜訊水準。此設計使 CMDM 能夠實現時間一致、語義對齐和高效的文本到動作生成，適合於串流和長期地平線合成。</p>
+<h3 id="31-vae">3.1 動作-語言對齐因果 VAE</h3>
+<p>為了獲得時間上結構化且語義一致的潛在表示，CMDM 採用與動作-語言基礎模型對齐的因果變分自編碼器。
+給定動作序列 $\mathbf{x}<em>{1:T}\in\mathbb{R}^{T\times D}$，其中 $T$ 是幀數，$D$ 是關節表示的維度，提出的 MAC-VAE 編碼器 $E</em>{\phi}$ 和解碼器 $D_{\psi}$ 以因果方式運作，使得每一幀僅依賴於其過去：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{z}<em>{t}=E</em>{\phi}(\mathbf{x}<em>{\leq t}),\quad\hat{\mathbf{x}}</em>{t}=D_{\psi}(\mathbf{z}_{\leq t}),$</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbf{z}<em>{t}\in\mathbb{R}^{d</em>{z}}$ 表示時間步 $t$ 處的潛在表示。
+對於具有 $T$ 幀的動作序列，我們將其編碼為潛在空間中的 $T/4$ 個時間步，有效地實現 $4\times$ 時間下採樣比。
+此壓縮平衡了表示的緊湊性和時間解析度，減少冗餘同時保留基礎動作動力學。</p>
+<p>編碼器和解碼器改編自 [xiao2025motionstreamer]，由 1D 因果卷積和 1D 因果 ResNet 塊組成，確保編碼和重構過程中的時間因果性。
+在此設計中，每一幀僅依賴於前面的幀，而未來幀被排除在計算之外，在潛在空間中明確建模時間因果性。
+在推論期間，重構的動作可以實時逐序列解碼，實現流式生成，無需訪問未來幀。</p>
+<p>為了增強語義對齐，動作特徵通過預訓練的動作-語言編碼器（Part-TMR [yu2025remogpt]）進行投影，其提供部分級別的語義監督。
+MAC-VAE 目標函數結合三項：標準 VAE 重構損失、Kullback-Leibler 散度和新引入的動作-語言對齐損失：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{MAC-VAE}}=\mathcal{L}</em>{\text{rec}}+\beta D_{\text{KL}}\big(q_{\phi}(\mathbf{z}|\mathbf{x})\,|\,p(\mathbf{z})\big)+\lambda\mathcal{L}_{\text{align}}.$</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="_2">動作對齐損失</h4>
+<p>為了在動作和文本之間強制執行細粒度語義對齐，我們引入動作對齐損失 $\mathcal{L}_{\text{align}}$，其測量動作嵌入 $\mathbf{z}$ 和從預訓練 Part-TMR 模型的動作編碼器提取的動作-語言特徵 $\mathbf{f}$ 之間的點到點特徵相似性和相對結構一致性 [yu2025remogpt]。
+具體地，我們採用兩個互補目標，遵循 VAVAE 中的設計 [yao2025reconstruction]：(1) 邊際餘弦相似性損失，其最小化局部特徵差距，以及 (2) 邊際距離矩陣相似性損失，其保留特徵空間的相對幾何，定義如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{align}}=\mathcal{L}</em>{\text{mcos}}+\mathcal{L}_{\text{mdms}}.$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>給定來自潛在空間和動作-語言編碼器的對齐特徵圖 $\mathbf{Z}$ 和 $\mathbf{F}$，我們通過線性變換將 $\mathbf{Z}$ 投影以匹配 $\mathbf{F}$ 的特徵維度：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{Z}^{\prime}=W\mathbf{Z},$</th>
+<th></th>
+<th>(4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $W\in\mathbb{R}^{d_{f}\times d_{z}}$ 是可學習的投影矩陣。
+邊際餘弦相似性損失 $\mathcal{L}<em>{\text{mcos}}$ 最小化對應特徵 $\mathbf{z}^{\prime}</em>{ij}$ 和 $\mathbf{f}_{ij}$ 之間的相似性差距：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{mcos}}=\frac{1}{N}\sum</em>{i,j}\text{ReLU}!\left(1-m_{1}-\frac{\mathbf{z}^{\prime}<em>{ij}\cdot\mathbf{f}</em>{ij}}{|\mathbf{z}^{\prime}<em>{ij}|\,|\mathbf{f}</em>{ij}|}\right),$</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $N$ 是時間特徵元素的總數，$m_{1}$ 是相似性邊界，鼓勵對相似度較低的對進行更強的對齐。
+此損失專注於語義錯誤對齐區域的學習，改善特徵級別的一致性。</p>
+<p>作為 $\mathcal{L}<em>{\text{mcos}}$ 的補充，邊際距離矩陣相似性損失 $\mathcal{L}</em>{\text{mdms}}$ 通過匹配其成對距離矩陣來強制執行動作和文本嵌入之間內部結構關係的對齐。
+正式地，我們計算：</p>
+<p>|  | $\mathcal{L}<em>{\text{mdms}}=\frac{1}{N^{2}}\sum</em>{i,j}\text{ReLU}!\left(\left|\frac{\mathbf{z}<em>{i}\cdot\mathbf{z}</em>{j}}{|\mathbf{z}<em>{i}||\mathbf{z}</em>{j}|}-\frac{\mathbf{f}<em>{i}\cdot\mathbf{f}</em>{j}}{|\mathbf{f}<em>{i}||\mathbf{f}</em>{j}|}\right|-m_{2}\right),$ |  | (6) |
+| --- | --- | --- | --- |</p>
+<p>其中 $m_{2}$ 是距離邊界，對相似對的對齐約束進行放鬆。
+此目標促進潛在空間和文本空間之間的結構一致性，確保動作嵌入的相對幾何匹配對齐基礎特徵的相對幾何。</p>
+<h3 id="32-causal-diffusion-forcing">3.2 因果擴散強制（Causal Diffusion Forcing）</h3>
+<p>我們將 Diffusion Forcing [chen2024diffusion]（原本為下一個token預測而提出）擴展到動作領域，以在潛在空間中對自迴歸時間動態進行建模。
+不同於聯合去噪所有幀的傳統擴散模型，我們的 CMDM 引入了幀級噪聲，為潛在序列中的每個動作幀分配獨立的擴散時步，強制執行過去和未來幀之間的因果依賴關係。</p>
+<p>在標準全序列擴散中，相同的噪聲水準 $k\in[0,K]$（其中 $K$ 為擴散步驟的總數）應用於整個序列，如下所示：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\tilde{\mathbf{z}}^{k}=\sqrt{\bar{\alpha}<em>{k}}\,\mathbf{z}^{k}+\sqrt{1-\bar{\alpha}</em>{k}}\,\boldsymbol{\epsilon}^{k},\quad\boldsymbol{\epsilon}^{k}\sim\mathcal{N}(0,I),$</th>
+<th></th>
+<th>(7)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>而去噪模型 $\epsilon_{\theta}$ 被訓練以同時恢復原始序列：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}=\mathbb{E}<em>{k,\boldsymbol{\epsilon}^{k}}\Big[|\boldsymbol{\epsilon}^{k}-\epsilon</em>{\theta}(\tilde{\mathbf{z}}^{k},k,\mathbf{c})|_{2}^{2}\Big],$</th>
+<th></th>
+<th>(8)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbf{c}$ 表示文本嵌入。</p>
+<p>在因果擴散強制中，每一幀 $t$ 被分配一個獨立的噪聲水準 $k_{t}\in[0,K]$，而帶噪聲的潛在表示定義為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\tilde{\mathbf{z}}<em>{t}^{k</em>{t}}=\sqrt{\bar{\alpha}<em>{k</em>{t}}}\,\mathbf{z}<em>{t}^{k</em>{t}}+\sqrt{1-\bar{\alpha}<em>{k</em>{t}}}\,\boldsymbol{\epsilon}<em>{t}^{k</em>{t}},\quad\boldsymbol{\epsilon}<em>{t}^{k</em>{t}}\sim\mathcal{N}(0,I).$</th>
+<th></th>
+<th>(9)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>擴散 Transformer $\epsilon_{\theta}$ 使用因果自注意力預測噪聲殘差，這限制了每一幀只能參與其過去的表示：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{DF}}=\mathbb{E}</em>{k_{t},\boldsymbol{\epsilon}<em>{t}^{k</em>{t}}}\Big[|\boldsymbol{\epsilon}<em>{t}^{k</em>{t}}-\epsilon_{\theta}(\tilde{\mathbf{z}}<em>{\leq t},k</em>{t},\mathbf{c})|_{2}^{2}\Big].$</th>
+<th></th>
+<th>(10)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>這個因果訓練設置確保去噪過程在時間上向前演進，每個預測僅依賴於可用的歷史記錄，有效地橋接了擴散與自迴歸。</p>
+<p>通過將全局同步的噪聲排程替換為幀特定的擾動，CMDM 實現了多項優勢。
+首先，該模型學會在每一幀的多樣化噪聲條件下運作，這提高了時間魯棒性和對可變長度序列的泛化能力。
+其次，因果注意力遮罩明確地強制執行 Transformer 骨幹內的時間順序，防止未來幀的資訊洩漏，並能夠進行實時或流式生成。
+最後，擴散強制的逐幀隨機性充當自然正則化項，促進平順的時間轉換，同時保留動作多樣性。</p>
+<h3 id="33-transformer">3.3 因果擴散 Transformer</h3>
+<p>為了對擴散強制的時間依賴性進行建模，CMDM 採用因果擴散 Transformer（Causal-DiT），在嚴格的因果約束下執行基於擴散的去噪。與具有雙向注意力的傳統 Transformer 不同，Causal-DiT 使用因果遮罩，使得每一幀只能訪問其過去和當前的上下文，確保與自迴歸推理一致的順序生成，同時保持擴散的真實性。</p>
+<p>每個 Transformer 區塊整合三個關鍵機制：(1) 因果自注意力，採用下三角注意力遮罩來防止每一幀注意到未來的幀。此約束保留了自迴歸建模所需的因果順序，並確保模型僅基於先前觀察到的資訊來預測未來的運動動態。(2) 交叉注意力，透過將幀級運動潛在向量條件化於從 DistilBERT [ sanh2019distilbert ] 提取的詞級文本嵌入，建立運動與語言之間的連結。透過此機制，來自自然語言的語義線索引導運動特徵的時間演化，使模型能够合成跨序列與文本描述保持一致的動作。(3) 自適應層正規化（AdaLN）[ peebles2023scalable ] 結合旋轉位置編碼（ROPE）[ su2024roformer ]，其中 AdaLN 嵌入逐幀擴散時間步資訊，確保時間噪聲級別 $k_t$ 無縫整合到去噪過程中，而 ROPE 則通過相對位置編碼穩定長期地平線去噪。</p>
+<p>在訓練期間，每一幀 $t$ 使用獨立的噪聲級別 $k_t$ 進行擴散，模型學習按以下方式對其進行去噪：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\epsilon_{\theta}(\tilde{\mathbf{z}}<em>{\leq t},k</em>{t},\mathbf{c})=\text{CausalDiT}(\tilde{\mathbf{z}}<em>{\leq t},k</em>{t},\mathbf{c})$</th>
+<th></th>
+<th>(11)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\tilde{\mathbf{z}}_{\leq t}$ 表示部分加噪的因果潛在序列，$\mathbf{c}$ 是文本嵌入。</p>
+<h3 id="34">3.4 推理和流式生成</h3>
+<p>在推理過程中，CMDM 通過以因果方式逐步去噪每一幀來自回歸地生成動作。
+給定文本條件 $\mathbf{c}$ 和初始噪聲序列 ${\tilde{\mathbf{z}}<em>{t}^{K}}</em>{t=1}^{T}\sim\mathcal{N}(0,I)$，該模型基於先前去噪的潛在向量預測每一幀：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\tilde{\mathbf{z}}<em>{t}^{k</em>{t}-1}=G_{\theta}({\tilde{\mathbf{z}}^{0}<em>{&lt;t},\tilde{\mathbf{z}}</em>{t}^{k_{t}}},k_{t},\mathbf{c}),\quad\hat{\mathbf{x}}<em>{t}=D</em>{\psi}(\tilde{\mathbf{z}}^{0}_{\leq t})$</th>
+<th></th>
+<th>(12)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $G_{\theta}$ 表示因果擴散生成器。
+此公式確保嚴格的因果合成，並通過對自回歸展開進行鍵值快取，實現實時生成。然而，此方案容易累積單步錯誤，因為它將預測的 $\tilde{\mathbf{z}}_{t}^{0}$ 視為真實觀察，這種做法更廣泛地稱為曝露偏差 [schmidt2019generalization, ning2023elucidating]。</p>
+<h4 id="fss">逐幀採樣排程 (FSS)</h4>
+<p>為了加速推理並緩解曝露偏差，CMDM 採用具有因果不確定性的逐幀採樣排程，為過去的幀分配較低的噪聲，為未來的幀分配較高的噪聲。
+在每一步，該模型使用部分去噪的歷史記錄來細化下一幀。例如，具有不確定性尺度 $L$ 的因果不確定性排程可定義為：</p>
+<p>|  | $K_{m,t}=\begin{bmatrix}K&amp;K&amp;K\
+K{-}L&amp;K&amp;K\
+K{-}2L&amp;K{-}L&amp;K\
+\vdots&amp;\ddots&amp;K{-}L\
+0&amp;\cdots&amp;\vdots\
+0&amp;0&amp;0\end{bmatrix}$ |  | (13) |
+| --- | --- | --- | --- |</p>
+<p>其中 $K_{m,t}$ 表示在迭代 $m$ 中應用於幀 $t$ 的噪聲，不確定性尺度 $L$ 表示下一幀的去噪從當前幀的步驟 $K{-}L$ 開始。為清楚起見，省略了 $K$、$K{-}L$、$K{-}2L$ 等之間的中間步驟。每個部分去噪的幀 $\tilde{\mathbf{z}}_{t}$ 被重新用作後續預測的上下文，實現連續、低延遲的生成，具有高度的時間相關性和平滑的過渡，同時與完整的自回歸擴散相比大大降低了推理成本。</p>
+<h2 id="4">4 實驗</h2>
+<p>表 1：HumanML3D 上文本到動作生成的結果。平均值根據 10 次運行報告，具有 95% 信賴區間。標有 † 的方法最初採用不同的動作表示法實現，已使用我們的程式碼庫重新訓練以確保公平比較。粗體表示最佳結果，下劃線表示第二好的結果。</p>
+<h3 id="41-experimental-setup">4.1 Experimental Setup</h3>
+<h4 id="datasets">Datasets.</h4>
+<p>To evaluate CMDM, we conduct experiments on two benchmarks: HumanML3D [ Guo_2022_CVPR_humanml3d ] and SnapMoGen [ guo2025snapmogen ] .
+HumanML3D contains 14,616 motion clips from AMASS [ AMASS_ICCV2019 ] paired with 44,970 short textual descriptions of common actions ( e.g . , walking, jumping, sitting).
+SnapMoGen includes 20,450 motion capture clips with 122K expressive captions (average 48 words) covering about 43.7 hours of data.
+Unlike HumanML3D, SnapMoGen features temporally continuous, long-horizon activities ( e.g . , sports and performances), allowing evaluation of smooth, consistent motion generation.
+For fair comparison, we follow the standard 3D motion representation of each dataset: 263 dimensions for HumanML3D and 296 for SnapMoGen, including joint velocities, positions, and rotations.</p>
+<h4 id="evaluation-metrics">Evaluation Metrics.</h4>
+<p>Following prior work [ Guo_2022_CVPR_humanml3d , jiang2023motiongpt , guo2025snapmogen ] , we evaluate CMDM using several standard metrics.
+(1) Motion quality is measured by Fréchet Inception Distance (FID), which assesses the realism of generated motions relative to ground truth.
+(2) Multi-modality quantifies the diversity of motions generated from identical text prompts.
+(3) Text–motion alignment is evaluated by R-Precision (R@1, R@2, R@3) and Multi-Modal Distance (MM Dist) using a pretrained text–motion retrieval model.
+We also report the CLIP-Score [ meng2024rethinking ] , which measures the cosine similarity between generated motion features and their corresponding captions in the CLIP embedding space.</p>
+<h4 id="implementation-details">Implementation Details.</h4>
+<p>MAC-VAE comprises seven causal convolution layers and two causal ResNet blocks with left padding in both the encoder and decoder. The latent feature dimension is set to 64. We modify and retrain Part-TMR [ yu2025remogpt ] to extract frame-level semantic motion–language features for supervising MAC-VAE. The loss weight λ \lambda for semantic alignments is automatically adjusted according to the gradient norm at the final layer of the encoder to maintain balance with other losses. The Causal-DiT is implemented as a lightweight Transformer [ vaswani2017attention ] with eight layers, four attention heads, and a hidden dimension of 512. Flow Matching [ lipman2022flow , ma2024sit , albergo2023stochastic , albergo2022building ] is adopted as the ODE sampler for causal diffusion forcing. For FSS, we set 50 denoising step with K = 50 K=50 for each frame and start to denoise the next frame at K − 2 K-2 ( i.e . , L = 2 L=2 ) during inference.</p>
+<p>Table 2 : Results of text-to-motion generation on SnapMoGen. The average is reported over 10 runs with 95% confidence intervals.</p>
+<p>Table 3 : Results of long-horizon motion generation on HumanML3D and SnapMoGen. The motion quality of each subsequence and the smoothness of each transition are evaluated.</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22594/x3.png" loading="lazy"></figure> Figure 3 : Qualitative results of long-horizon motion generation. Comparison between our CMDM and previous methods. The generated motion is continuous and seamless; for visualization purposes, we split each long sequence into shorter segments corresponding to their captions. Please refer to the videos in the supplementary materials for the complete motion sequences.</p>
+<h3 id="42-quantitative-results">4.2 Quantitative Results</h3>
+<h4 id="results-on-humanml3d">Results on HumanML3D.</h4>
+<p>We compare CMDM with state-of-the-art models across three paradigms: (1) VQ-based [ zhang2023t2m , pinyoanuntapong2024mmm , guo2024momask ] ; (2) Diffusion-based [ mdm2022human , chen2023executing , dai2024motionlcm , huang2024stablemofusion , zhang2025energymogen , hong2025salad ] ; and (3) Autoregressive-based [ meng2024rethinking , xiao2025motionstreamer ] .
+As shown in Table 1 , CMDM consistently achieves superior or comparable results across all metrics. CMDM with frame-wise sampling (CMDM w/ FSS) attains the best overall performance, achieving an R-Precision of 0.588/0.778/0.860 (Top-1/2/3), the second lowest FID (0.068), and the highest CLIP-Score (0.685). These results indicate high motion fidelity and strong text–motion alignment.
+Compared to standard autoregressive sampling (CMDM w/ AR), FSS further improves temporal stability and smoothness while reducing inference latency. This improvement arises from the causal uncertainty mechanism, where each subsequent frame is generated from partially denoised preceding frames. This design allows the model to reduce the accumulated error of autoregressive and adaptively refine local temporal transitions while maintaining global coherence, leading to smoother motion dynamics and improved semantic alignment for stable generation.</p>
+<h4 id="results-on-snapmogen">Results on SnapMoGen.</h4>
+<p>We further evaluate the proposed CMDM on the motion clips of SnapMoGen, which contains expressive motion sequences paired with rich textual descriptions. As shown in Table 2 , CMDM achieves state-of-the-art performance across all evaluation metrics, demonstrating its strong generalization to complex motions. CMDM with the frame-wise sampling schedule (CMDM w/ FSS) achieves the best overall results, surpassing all previous VQ-, diffusion-, and autoregressive-based methods. It also achieves the lowest FID score and a high CLIP-Score, indicating superior motion realism and semantic alignment.</p>
+<h4 id="long-horizon-motion-generation">Long-Horizon Motion Generation</h4>
+<p>To evaluate CMDM on long-horizon motion generation, we compare it with the motion composition method FlowMDM [ barquero2024seamless ] and the autoregressive model MARDM [ meng2024rethinking ] .
+Following the protocol of FlowMDM, we synthesize 64 long-horizon sequences on HumanML3D by composing 32 caption–duration pairs per sequence, evaluating 32 subsequences and 31 transitions for local quality and temporal continuity. The ground-truth metrics are computed using randomly sampled motion clips from HumanML3D.
+For SnapMoGen, which provides ground-truth long sequences, we select 128 samples with over five continuous motions and use the same captions for generation. We further employ Peak Jerk (PJ) and Area Under the Jerk (AUJ) [ barquero2024seamless ] to measure transition smoothness.
+Owing to differences in skeleton scale, the magnitude of the metrics differs from those reported on HumanML3D.
+The results are shown in Table 3 . Although FlowMDM reports lower PJ and AUJ values on SnapMoGen, this is primarily because its generated motions often remain static or frozen as can be seen from the ensuing qualitative analysis in Fig. 3 . In contrast, CMDM produces temporally consistent, smoothly transitioning, and realistic long-horizon motions at real-time speed, demonstrating its effectiveness for streaming and continuous text-to-motion generation.</p>
+<h3 id="43">4.3 定性結果</h3>
+<p>圖 3 展示了 CMDM 與 FlowMDM [ barquero2024seamless ] 和 MARDM [ meng2024rethinking ] 在長視角動作生成上的定性比較。在給定一系列標題的情況下，CMDM 生成連續且無縫的動作，具有準確的語義和片段間的平滑過渡。相比之下，FlowMDM 和 MARDM 經常產生不正確的動作，例如「沒有跳躍」或不自然的過渡，例如骨骼翻轉。這些改進源自 CMDM 的因果隱編碼（causal latent encoding）和幀級採樣排程，其條件化每一幀以基於部分去噪的前驅幀，以確保穩定性和時間一致性。請參考補充視頻以獲得完整的動作序列和更多可視化結果。</p>
+<h3 id="44">4.4 分析</h3>
+<h4 id="_3">計算效率</h4>
+<p>相比於其他現有的自迴歸方法，CMDM 通過其先進的架構和逐幀採樣排程實現了推理效率的重大改進，在保持卓越動作真實感的同時顯著減少了生成時間。我們通過在 NVIDIA A100 GPU 上生成 6 秒動作序列 100 次來評估框架的計算效率。因此，MARDM 以 310M 個參數在 20 fps 的速度運行，MotionStreamer 則以 318M 個參數在 11 fps 的速度運行。相比之下，我們提出的 CMDM 僅包含 114M 個參數（包括 MAC-VAE 和 Causal-DiT），使用標準自迴歸過程可達 28 fps，採用提出的逐幀採樣排程則可達 125 fps。這些結果突顯了我們因果擴散框架的卓越效率以及所提採樣策略在實時動作生成中的有效性。</p>
+<h4 id="_4">消融研究</h4>
+<p>為了探究 CMDM 中各個組件的影響，我們在 HumanML3D 上針對因果潛在建模、因果擴散強制和逐幀採樣排程（FSS）進行消融研究。</p>
+<p>如表 4 所示，用標準 VAE 替換 MAC-VAE 會顯著降低動作品質、文本保真度和過渡平滑性，確認了因果潛在建模和語意監督的重要性。移除動作-語言對齊（C-VAE w/o MA）產生的動作品質與 MAC-VAE 相當，但引入了語意不一致，強調了語意特徵對於保持保真度和連貫性的重要性。將因果擴散替換為全序列擴散（w/ Full-Seq. Diff.）會增加過渡 FID 和 AUJ，驗證了逐幀因果擴散強制了更強的時間穩定性。移除 AdaLN（w/o AdaLN）或 ROPE（w/o ROPE）會導致更高的 FID 和較弱的長期連貫性，同時移除兩者會進一步放大這些性能下降。最後，FSS 變體表明較小的不確定性尺度（$L{=}5$）能實現更平滑的過渡和更低的 AUJ，而過度大的 $L$ 或較小的 $K$ 會降低穩定性。這些結果表明所有組件共同促進了 CMDM 的高性能。</p>
+<p>表 4：CMDM 的消融研究。</p>
+<h2 id="5">5 限制</h2>
+<p>雖然 CMDM 在文本條件化和長期視角動作生成中達到了最先進的效能，但仍存在幾項限制。首先，因果潛在編碼依賴於預訓練動作-語言模型（如 Part-TMR）的動作-語言對齐品質，在處理高度抽象或模糊的文本描述時可能會限制效能。其次，儘管逐幀取樣排程大幅改善了推論效率，但在生成極長序列時（例如超過數分鐘）仍可能累積輕微的時間神器。納入動作感知反饋或自適應重錨定機制可進一步改善長期視角穩定性。最後，CMDM 主要專注於單人動作，尚未擴展到互動或多角色場景 [tanaka2023interaction, liang2024intergen, fan2024freemotion, ota2025pino]，這將是未來工作的一個有趣方向。</p>
+<h2 id="6">6 結論</h2>
+<p>在本論文中，我們提出了 CMDM，一個統一的框架，結合了擴散模型的真實性和穩定性，以及自迴歸生成的時間因果性和效率。CMDM 引入了 MAC-VAE 用於語義基礎的因果潛在編碼、用於時間有序擴散去噪的 Causal-DiT，以及使能實時流式生成的 FSS。在 HumanML3D 和 SnapMoGen 上的廣泛實驗表明，與現有的擴散和自迴歸模型相比，CMDM 在動作真實性、語義對齐和效率方面都達到了優越的效能。我們相信 CMDM 為可擴展、實時和語義相干的動作生成提供了一個有前景的步驟。</p>
+<h2 id="references">References</h2>
+<p>補充材料</p>
+<h2 id="appendix-a">Appendix A 實現細節</h2>
+<h3 id="a1-mac-vae">A.1 MAC-VAE</h3>
+<p>The proposed MAC-VAE consists of seven causal convolutional layers and two causal ResNet blocks with left padding in both the encoder and decoder to ensure strict temporal causality. Each convolutional layer uses a kernel size of 3 and a stride of 1, followed by ReLU activation. The latent feature dimension is set to 64, and motion sequences are downsampled/upsampled by a factor of 4 along the temporal axis using stride-2 convolutional layers within the ResNet blocks.</p>
+<p>To achieve semantic alignment between motion and text, we modify Part-TMR [ yu2025remogpt ] to extract frame-level motion–language embeddings. Part-TMR uses a [class] token to aggregate frames into a global feature, whereas we directly extract features from each frame and align them with the corresponding text features via contrastive learning, which serves as the supervision signal for MAC-VAE. The loss weighting coefficient is set to β = 1.0 \beta{=}1.0 , and the margin parameters are set to m 1 = 0.5 m_{1}{=}0.5 and m 2 = 0.25 m_{2}{=}0.25 .</p>
+<p>We train MAC-VAE using the AdamW optimizer with a learning rate of 1 × 10 − 4 1{\times}10^{-4} and a batch size of 128 for 50 epochs on a single NVIDIA A100 GPU. The learning rate follows a cosine decay schedule, and gradient clipping with a maximum norm of 1.0 is applied for training stability.</p>
+<h3 id="a2-causal-dit">A.2 Causal-DiT</h3>
+<p>The Causal-DiT is implemented as a lightweight transformer-based denoiser with 8 layers, 4 attention heads, and a hidden dimension of 512. Causal self-attention is applied using a lower-triangular mask to enforce temporal order, while cross-attention conditions motion latents on text embeddings extracted from DistilBERT [ sanh2019distilbert ] . We incorporate Adaptive Layer Normalization (AdaLN) [ peebles2023scalable ] and Rotary Positional Encoding (ROPE) [ su2024roformer ] to embed timestep information and stabilize long-horizon attention. During training, the text condition is randomly dropped with a probability of 0.1 to enable classifier-free guidance. The model is optimized using AdamW with the same hyperparameter settings as MAC-VAE. The scale of classifier-free guidance is set to 3.0 during inference.</p>
+<h3 id="a3">A.3 因果擴散強制</h3>
+<p>在 CMDM 中，採用因果擴散強制來實現時間有序的去噪，同時保持幀級隨機性。在訓練期間，每一幀 $t$ 受到獨立噪音等級 $k_{t}\in[0,K]$ 的擾動，其中 $K{=}1000$ 表示擴散步數的總數。Causal-DiT 作為去噪器，學習預測噪音殘差 $\boldsymbol{\epsilon}<em>{\theta}(\tilde{\mathbf{z}}</em>{\leq t},k_{t},\mathbf{c})，該殘差以所有前序潛在幀和文本嵌入 $\mathbf{c}$ 為條件。這個公式化確保每一幀僅基於其因果歷史進行去噪，從而強制執行嚴格的時間依賴關係。整體訓練過程在演算法 1 中總結。</p>
+<p>在推論過程中，我們採用幀級採樣排程（FSS），其中擴散步數 $K{=}50$ 和不確定性尺度 $L{=}2$。在此設定中，第 $t{+}1$ 幀的去噪在第 $t$ 幀的第 $K{-}L$ 步開始，允許部分去噪的幀引導後續生成。這個因果排程機制通過減少冗餘的擴散步驟，同時保持跨幀的時間一致性，顯著加快推論速度。使用 FSS 的整體推論過程在演算法 2 中總結。</p>
+<p>演算法 1：具有因果擴散強制的 CMDM 訓練</p>
+<p>演算法 2：具有幀級採樣排程（FSS）的 CMDM 流式生成</p>
+<h2 id="b">附錄 B 額外的定量結果</h2>
+<h3 id="b1-babel">B.1 BABEL 上的實驗</h3>
+<p>我們進一步在 BABEL 資料集 [punnakkal2021babel] 上評估 CMDM，以評估其對多樣化動作組成的泛化能力。
+BABEL 包含具有多個動作和轉換的密集標註序列，適合用於長期動作合成和評估。
+我們通過從 BABEL 中相鄰的子序列構造訓練樣本來訓練 CMDM，其中每對連續的片段用於學習跨長序列的動作延續。
+如表 5 所示，我們的方法在子序列和轉換指標中都實現了最佳的整體效能，證明了 CMDM 在保持動作邊界一致性和生成平滑、連續動作方面的優勢。</p>
+<p>表 5：BABEL 上的長期動作生成比較。
+子序列指標評估片段內的動作質量和多樣性，而轉換指標評估片段間的時間連續性和平滑性。</p>
+<h3 id="b2-evaluation-on-other-motion-features">B.2 Evaluation on Other Motion Features</h3>
+<p>To further examine the generalization ability of CMDM, we conduct experiments using motion features with redundant dimensions removed, following the analysis in [ meng2024rethinking ] .
+As discussed in prior work, the standard HumanML3D motion representation contains redundant components such as local joint rotations and contact features that do not directly influence the final human pose.
+Removing these redundant features yields a more compact and physically meaningful representation better suited for continuous diffusion modeling.</p>
+<p>Table 6 reports the results on HumanML3D using only essential motion features.
+Compared to the baseline methods, CMDM consistently improves generation quality and semantic alignment under both autoregressive (AR) and diffusion (FSS) configurations.
+Specifically, CMDM w/ FSS achieves the best overall performance, reaching an R-Precision of 0.563/0.759/0.849 for Top-1/Top-2/Top-3 accuracy and the lowest FID of 0.078, confirming that our causal diffusion formulation effectively models temporally coherent motion even in compact feature spaces.
+These results demonstrate that CMDM remains robust across different motion representations, further validating its adaptability to feature compression and reparameterized motion distributions.</p>
+<p>Table 6 : Results of text-to-motion generation on HumanML3D without redundant features.
+The average is reported over 10 runs with 95% confidence intervals. Bold indicates the best result, and underline denotes the second-best result.</p>
+<h3 id="b3-compositional-motion-generation">B.3 Compositional Motion Generation</h3>
+<p>We evaluate CMDM on the compositional motion generation task following the protocol of Multi-Track Timeline (MTT) [ petrovich2024multi ] , which requires generating coherent motions conditioned on multiple temporally structured text descriptions. This task evaluates both semantic composition, i.e . , correctly realizing multiple concepts within a single sequence, and temporal composition, i.e . , ensuring smooth and consistent transitions across segments.</p>
+<p>Specifically, following prior work [ petrovich2024multi , zhang2025energymogen ] , we report per-crop semantic correctness metrics (R@1, R@3, and TMR-Score for M2T and M2M), as well as realism metrics including FID and transition distance. As shown in Table 7 , CMDM, under the single-track multi-crop setting, consistently outperforms EnergyMoGen and other compositional baselines across all metrics. Notably, CMDM achieves substantial improvements in semantic alignment while simultaneously reducing FID and transition distance, demonstrating stronger long-horizon consistency and smoother transitions between composed motion segments.</p>
+<p>Table 7 : Comparison with prior compositional motion generation methods on the Multi-track timeline (MTT) dataset [ petrovich2024multi ] .</p>
+<h3 id="b4">B.4 潛延遲分析</h3>
+<p>為了評估不同因果動作生成方法的實際效率，我們在單個 NVIDIA A100 GPU 上測量生成每個 token（4 幀）的潛延遲。
+MARDM [ meng2024rethinking ]、MotionStreamer [ xiao2025motionstreamer ] 和 CMDM w/ AR 分別需要約 210 ms、360 ms 和 150 ms 來生成第一個 token，隨後每個 token 的潛延遲類似。
+這是因為這些自迴歸擴散方法對每個 token 獨立執行完整的擴散去噪，每幀需要多個去噪步驟，無論其時間位置如何。
+相比之下，CMDM w/ FSS 的第一個 token 需要約 220 ms，但後續每個 token 僅需 30 ms，在串流生成中實現了 5 × 5\times – 12 × 12\times 的加速。
+每個 token 潛延遲的顯著下降源於我們的幀級採樣排程，它允許從部分去噪的前序幀預測每一幀，而無需進行完整的迭代細化。</p>
+<h3 id="b5">B.5 消融研究</h3>
+<h4 id="mac-vae">MAC-VAE 的架構</h4>
+<p>我們評估了 MAC-VAE 的多種配置，以分析潛在維度和時間下採樣率對重建和生成性能的影響。
+符號 $(d, r)$ 表示潛在維度 $d$ 和時間下採樣率 $r$。
+如表 8 所示，增加潛在維度改善了重建準確度，但也引入了冗餘，這會略微影響生成品質（以 FID 衡量）。
+相反地，較大的時間下採樣率（例如 $r=1/8$）會降低時間解析度，並導致 R-Precision 和 MM-Dist 因資訊遺失而略微下降。
+在所有配置中，MAC-VAE 配置 $(64, 1/4)$ 在重建保真度（FID = 0.000、MPJPE = 0.012）和生成品質（R-Top1 = 0.588、FID = 0.068、MM-Dist = 2.620）之間達到最佳平衡，我們在所有後續實驗中採用此為預設設定。
+這些結果證實了具有適度時間壓縮的緊湊潛在空間能夠有效地捕捉語義和時間依賴關係以供下游動作生成使用。</p>
+<p>表 8：HumanML3D 上重建和生成性能的比較。MPJPE 以毫米為單位測量。符號 $(d, r)$ 表示潛在維度 $d$ 和時間下採樣率 $r$。</p>
+<h4 id="-">動作-語言模型</h4>
+<p>為了評估不同動作-語言對齊策略的有效性，我們比較了整合到 MAC-VAE 框架中的多個預訓練動作-語言模型，包括 TMR [ petrovich2023tmr ]、MotionPatches [ yu2024exploring ] 和 Part-TMR [ yu2025remogpt ]。
+如表 9 所示，與基線 VAE 和 C-VAE 相比，所有動作-語言模型都改善了生成品質同時保持重建性能，這證明了動作和文字之間語義對齊的有效性。
+其中，Part-TMR 以最低的重建誤差（FID = 0.000、MPJPE = 0.012）和最高的 R-Precision（0.588）達到了最佳的整體性能，確認了其捕捉文字和動作之間細粒度部分級對應的強大能力。
+這些結果驗證了選擇 Part-TMR 作為 MAC-VAE 中對齊骨幹的正確性，從而能夠實現更具語義連貫性和時間一致性的動作生成。</p>
+<p>表 9：HumanML3D 上 MAC-VAE 中動作-語言模型的比較。MPJPE 以毫米為單位測量。</p>
+<h4 id="causal-dit">Causal-DiT 的模型大小</h4>
+<p>我們通過改變 Causal-DiT 中的注意力頭數（$H$）、層數（$L$）和隱藏維度（$D$）來調查模型大小對生成品質的影響。
+如表 10 所示，由於表示容量增加，較大的模型通常能達到更好的性能。
+中等規模的模型（38M 參數）已經提供了強大的結果，R-Precision 為 0.588、FID 為 0.068，在品質和效率之間達到平衡。
+進一步擴展到 304M 參數獲得了邊際改進（R-Precision = 0.590、FID = 0.042），証明了 Causal-DiT 能有效擴展同時保持計算實用性。
+除非另有說明，否則我們在所有主要實驗中使用中等規模（38M）配置。</p>
+<p>表 10：HumanML3D 上模型大小的比較。符號 $(H, L, D)$ 表示注意力頭數 $H$、層數 $L$ 和隱藏維度 $D$。</p>
+<h4 id="_5">文本編碼器</h4>
+<p>表 11：HumanML3D 上文本編碼器的比較。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22594/x4.png" loading="lazy"></figure> 圖 4：HumanML3D 上長序列動作生成的定性結果。我們的 CMDM 與先前方法的比較。生成的動作是連續無縫的；為了可視化目的，我們將每個長序列分割成與其對應標題相對應的較短段。請參考補充材料中的視頻以獲取完整的動作序列。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22594/x5.png" loading="lazy"></figure> 圖 5：SnapMoGen 上長序列動作生成的定性結果。我們的 CMDM 與先前方法的比較。生成的動作是連續無縫的；為了可視化目的，我們將每個長序列分割成與其對應標題相對應的較短段。請參考補充材料中的視頻以獲取完整的動作序列。</p>
+<p>我們比較了多個預訓練語言模型作為文本編碼器，以評估它們對語義對齐和動作品質的影響。如表 11 所示，文本編碼器的選擇影響了文字-動作對應（R-Precision）和視覺真實性（FID）。DistilBERT [ sanh2019distilbert ]，提供詞級嵌入，以最高的 R-Precision（0.588）和最低的 FID（0.068）達到了最佳的整體性能，證明了其捕捉與動作特徵對齐良好的細粒度語義線索的能力。使用基於 CLIP 的編碼器，詞級變體（與 StableMoFusion [ huang2024stablemofusion ] 中採用的編碼器相同）也優於 StableMoFusion，進一步確認了詞級表示的優勢。這些標記級嵌入對於維持語言標記和動作幀之間的因果依賴至關重要，這對於 CMDM 中的穩定自迴歸生成是必要的。相比之下，來自 CLIP [ radford2021learning ] 的句級嵌入由於時間粒度損失而表現出降低的精度和更高的 FID。同時，Sentence-T5 [ ni2022sentence ] 優於基於 CLIP 的模型，也優於 MotionLCM V2 [ huang2024stablemofusion ]，儘管 MotionLCM V2 也使用 Sentence-T5。這些發現驗證了我們選擇 DistilBERT 作為 CMDM 文本編碼器的正確性，因為它有效地保留了局部語義並實現了因果一致的動作-語言建模。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22594/x6.png" loading="lazy"></figure> 圖 6：HumanML3D 上文本到動作生成的定性結果。CMDM 生成的動作相比先前方法能更好地捕捉細粒度的文本語義並保持自然的身體構成。請參考補充視頻以獲取更清晰的可視化。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22594/x7.png" loading="lazy"></figure> 圖 7：SnapMoGen 上文本到動作生成的定性結果。我們的 CMDM 與先前方法的比較。我們直接使用原始文本提示而無需任何基於 LLM 的擴充，CMDM 仍然達到強大的生成品質。請參考補充視頻以獲取更清晰的可視化。</p>
+<h2 id="c">附錄 C 額外的定性結果</h2>
+<p>為進一步展示 CMDM 的有效性，我們提供了長序列和文本到動作生成方面的額外定性比較。
+圖 4 和圖 5 分別在 HumanML3D 和 SnapMoGen 上比較了 CMDM 與 FlowMDM [ barquero2024seamless ] 和 MARDM [ meng2024rethinking ] 在長序列動作生成上的表現。
+CMDM 產生在時間上連貫且語義上準確的動作，沒有內容漂移或骨骼翻轉現象，而先前的方法經常遭受靜止姿態、不正確的轉換或跨片段的不一致動作問題。
+這些例子突出了 CMDM 在保持平順的時間動態和因果一致性方面貫穿整個長序列的能力。</p>
+<p>圖 6 展示了 HumanML3D 上的定性結果。
+與 MoMask [ guo2024momask ]、MotionLCM [ dai2024motionlcm ] 和 StableMoFusion [ huang2024stablemofusion ] 相比，CMDM 生成的動作更忠實地反映細粒度的文本語義（例如，手臂旋轉、腿部運動或行走方向），同時保持自然的身體關節運動。
+圖 7 展示了 SnapMoGen 上的額外結果，其中 CMDM 直接使用原始文本提示而無需基於 LLM 的增強，仍然產生比先前方法更逼真的動作。</p>
+<p>請參考演示頁面上的補充影片以獲得完整長度的視覺化。</p>
+<h2 id="d">附錄 D 範例程式碼</h2>
+<p>程式碼將在 https://github.com/YU1ut/CMDM 發佈。我們提供了使用 HumanML3D 資料集構建和評估所提議 CMDM 的訓練程式碼。請參考程式碼目錄中的 README 檔案以獲取詳細資訊。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

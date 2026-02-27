@@ -1,0 +1,18 @@
+{
+  "domain": [
+    "NLP",
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Causal Mediation Analysis",
+    "Multimodal Large Language Models",
+    "Probing Analysis"
+  ],
+  "task": [
+    "Visual Reasoning",
+    "Visual Question Answering"
+  ],
+  "dataset": [],
+  "open_source": false
+}

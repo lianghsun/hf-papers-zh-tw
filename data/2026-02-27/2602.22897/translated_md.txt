@@ -1,0 +1,831 @@
+# OmniGAIA：邁向原生全模態 AI 代理
+
+Xiaoxi Li¹*, Wenxiang Jiao², Jiarui Jin², Shijian Wang³, Guanting Dong¹, Jiajie Jin¹, Hao Wang⁴, Yinuo Wang⁵, Ji-Rong Wen¹, Yuan Lu², Zhicheng Dou¹†
+
+¹中國人民大學，²小紅書有限公司，³東南大學，⁴浙江大學，⁵清華大學
+
+*實習期間於小紅書完成工作，†通訊作者
+
+人類智慧自然將全模態感知——跨越視覺、音頻和語言——與複雜推理和工具使用相互交織，以與世界互動。然而，當前的多模態 LLM 主要局限於雙模態交互（例如，視覺-語言），缺乏通用 AI 助手所需的統一認知能力。為了彌補這一差距，我們引入 **OmniGAIA**，一個全面的基準測試，旨在評估全模態代理在需要跨越視頻、音頻和圖像模態的深度推理和多輪工具執行的任務上的表現。OmniGAIA 通過一種新穎的全模態事件圖方法構建，綜合來自真實世界數據的複雜多跳查詢，這些查詢需要跨模態推理和外部工具整合。此外，我們提出 **OmniAtlas**，一個在工具整合推理範式下具有主動全模態感知的原生全模態基礎代理。通過後見之明引導樹探索策略和 OmniDPO 綜合軌跡進行訓練，以進行細粒度錯誤修正，OmniAtlas 有效增強了現有開源模型的工具使用能力。這項工作標誌著朝著針對真實世界場景的下一代原生全模態 AI 助手邁出的一步。
+
+聯繫方式：xiaoxi_li@ruc.edu.cn, dou@ruc.edu.cn
+
+程式碼與示範：https://github.com/RUC-NLPIR/OmniGAIA
+
+資料集與模型：https://huggingface.co/collections/RUC-NLPIR/omnigaia
+
+排行榜：https://huggingface.co/spaces/RUC-NLPIR/OmniGAIA-LeaderBoard
+
+# 1 介紹
+
+人類智能將語言、視覺和音頻無縫地與長期推理和工具使用結合在一起，以理解世界並採取行動。因此，構建通用 AI 助手需要能夠*聯合*跨模態感知、在長語境中推理，並與外部工具互動以進行驗證和知識獲取的模型。儘管進展迅速，多模態 LLM 研究仍然主要集中在二模態設置（例如視覺-語言或音頻-語言），這限制了它們處理真正交織的真實世界模態的能力。
+
+新興的全模態基礎模型（例如 Wen et al. (2025b)）已開始統一更豐富的模態，但大多數努力主要強調感知，使得工具集成的智能代理推理仍未被充分探索。評估也落後：現有基準主要是二模態和感知中心的（例如 OmniBench (Li et al., 2024)、WorldSense (Hong et al., 2025)、UNO-Bench (Chen et al., 2025a)），因此未能充分衡量多跳全模態推理和具有可驗證開放式答案的多輪外部工具使用。
+
+為了彌補這一差距，我們引入了 **OmniGAIA，一個為原生全模態智能代理設計的具有挑戰性的基準**。OmniGAIA 包含跨 9 個真實世界領域的 360 個任務，涵蓋視頻配音頻和圖像+音頻設置，並明確要求多輪工具使用（例如網絡搜尋/瀏覽和程式碼）以生成可驗證的*開放式*答案。為了組織時間對齐的多模態線索和與工具相關的證據以進行多跳推理，OmniGAIA 是通過*全模態事件圖驅動*管道構建的（圖 2）：(1) 我們收集資料並從原始媒體中挖掘細粒度信號；(2) 我們構建連接跨模態實體/事件和關係的初始事件圖；(3) 我們通過跨模態檢索和外部工具擴展圖表，包含*下一跳*證據；以及 (4) 我們模糊化關鍵節點/邊以生成多跳問答，隨後進行 LLM 篩選和人工驗證以確保可解性和唯一性。
+
+除了基準測試外，我們提出了 **OmniAtlas，一個原生全模態基礎智能代理**，遵循*工具集成推理* (TIR) 範式，自然地交織推理和工具調用。OmniAtlas 進一步支持*主動全模態感知*，以選擇性地在長媒體中的片段/區域"查看"或"聆聽"，而無需進行全面降採樣。為了進行訓練，我們通過*後見之明引導樹探索*合成高品質的工具集成軌跡
+
+---
+
+**圖 1** OmniGAIA 中的簡短範例。兩個說明性的（圖像 + 音頻和視頻含音頻）例項展示全模態證據整合和多步工具使用（例如網絡搜尋）以推導可驗證的最終答案。
+
+**表 1** OmniGAIA 與現有基準的比較。"視頻"、"圖像"和"音頻"表示支援的模態。"MC" 表示多選題，而 "Open" 表示開放式生成。
+
+| 基準 | 視頻 | 圖像 | 音頻 | 多跳推理 | 外部工具 | 多領域 | 視頻時長 | 音頻時長 | 答案類型 | Qwen3-Omni 準確度 |
+|------|------|------|------|---------|---------|--------|---------|---------|---------|-------------------|
+| GAIA (Mialon et al., 2024) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | Open | - |
+| AV-Odyssey (Gong et al., 2024) | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | - | 3-364 s | MC | - |
+| OmniBench (Li et al., 2024) | ✗ | ✓ | ✓ | ✗ | ✗ | ✓ | - | 0.6-31 s | MC | 58.4 |
+| Daily-Omni (Zhou et al., 2025) | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ | 30/60 s | 30/60 s | MC | 75.8 |
+| WorldSense (Hong et al., 2025) | ✓ | ✗ | ✓ | ✗ | ✗ | ✓ | 15-656 s | 15-656 s | MC | 54.0 |
+| OmniVideoBench (Li et al., 2025b) | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | 4-1955 s | 4-1955 s | MC | 38.4 |
+| VideoDR (Liu et al., 2026) | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | 10-288 s | - | Open | 37.0 |
+| UNO-Bench (Chen et al., 2025a) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 0.7-641 s | 1-641 s | MC/Open | 42.1/37.1 |
+| OmniGAIA (Ours) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 20-2352 s | 20-657 s | Open | 13.3 |
+
+進行軌跡級監督學習，並進一步提出 OmniDPO 以進行細粒度錯誤更正。
+
+實驗表明 OmniGAIA 極具挑戰性：最強大的專有模型（Gemini-3-Pro）達到 62.5 Pass@1，而開源基線（Qwen3-Omni）達到 13.3。我們的 OmniAtlas 方案顯著改進了開源模型（例如 Qwen3-Omni：13.3→20.8）。細粒度錯誤類型、工具使用行為和感知策略的進一步分析揭示了當前方法的關鍵限制，並指向全模態智能代理的有前景的研究方向。我們的主要貢獻是：
+
+• 我們引入了 OmniGAIA，一個為原生全模態智能代理設計的具有挑戰性的基準，具有視頻/圖像/音頻輸入、多領域覆蓋、多跳推理、多輪工具使用和開放式答案的特徵。
+
+• 我們提出了一個可擴展的事件圖驅動構建管道，該管道從真實世界資料中系統地合成困難但可解的任務。
+
+• 我們提出了 OmniAtlas，一個具有主動感知和工具集成推理的原生全模態基礎智能代理，以及一個實用的訓練方案（軌跡合成、監督學習和 OmniDPO），可顯著改進開源骨幹網路。
+
+• 我們提供了全面的評估和分析，包括分類別結果、細粒度錯誤分解和工具使用行為研究，突出了全模態智能代理的關鍵瓶頸。
+
+# 2 相關工作
+
+## 2.1 全模態基礎模型與基準測試
+
+基於純文本（Dubey et al., 2024）、視覺語言（Hurst et al., 2024）和音頻語言（Chu et al., 2024）基礎模型的進展，最近的全模態模型致力於在單一 LLM 骨幹中統一文本、視覺和音頻。一個常見的做法採用統一的分詞化與投影介面，將異質視覺和聲學輸入映射到共享的詞元空間（Xu et al., 2025b；Liu et al., 2025a；Luo et al., 2025b；Ye et al., 2025）。
+
+---
+
+**Figure 2** OmniGAIA 建構管線。從包含音頻的視頻和圖像加音頻資料，我們挖掘關鍵信號、建構和擴展工具增強事件圖，以及透過事件模糊化生成 LLM 和人工驗證的多跳問答。
+
+並行的工作進一步強化全模態推理行為（Zhong et al., 2025；Long et al., 2025）。在評估方面，現有基準（例如 OmniBench（Li et al., 2024）、WorldSense（Hong et al., 2025）、Daily-Omni（Zhou et al., 2025）、UNO-Bench（Chen et al., 2025a））主要強調短音頻/視頻和以感知為中心的任務，留下長期限推理和工具整合代理性未被充分探索的空間。
+
+## 2.2 自主代理
+
+LLM 驅動的自主代理通過與環境互動的外部工具進行推理和行動，來解決現實世界任務（Wang et al., 2024b；Luo et al., 2025a）。現有的方法大致可分為基於工作流程的範例（Yao et al., 2022；Wang et al., 2023, 2024d；Li et al., 2025h）和原生代理推理方法（Li et al., 2025g；Qian et al., 2025；Feng et al., 2025；Jiang et al., 2025），並在純文本任務上展現出強大的性能。超越文本，最近的研究探討了用於多模態網路搜尋的視覺語言代理（Li et al., 2025c；Wu et al., 2025b；Geng et al., 2025）、長篇幅視頻理解（Wang et al., 2024c；Zhang et al., 2025b；Yin et al., 2025）和圖形使用者介面導航（Xie et al., 2024；Zhang et al., 2025a；Wang et al., 2024a）。然而，原生融合音頻、視覺和語言，同時執行長期限代理推理的*全模態*基礎代理仍未被充分探索。這些能力對於在現實場景中構建通用 AI 助手至關重要。
+
+# 3 OmniGAIA：全模態通用 AI 助手的基準測試
+
+OmniGAIA 是一個具有挑戰性的*全模態*代理任務基準，旨在對視覺、音頻和語言的統一感知，以及在現實場景中的長期限推理和多輪工具使用進行壓力測試。
+
+## 3.1 資料蒐集
+
+為了反映真實世界全模態互動的複雜性，我們從兩個互補的設定構建 OmniGAIA：(i) **視頻加音頻**，以及 (ii) **圖像 + 音頻**配對。
+
+在視頻設定中，我們從多個來源彙總高品質視頻，以確保內容和時長的多樣性。我們包括 **FineVideo**（Farré et al., 2024）（涵蓋廣泛領域的 43K 部視頻；平均長度 4 分鐘）。為了評估長上下文推理能力，我們進一步納入 **LongVideoBench**（Wu et al., 2024）（約 1K 部視頻）和 **LongVideo-Reason**（Chen et al., 2025c）（約 1K 部視頻），兩者都包含約 10 分鐘的視頻。
+
+在圖像 + 音頻設定中，我們使用 FineVideo 的音頻軌道來提供多樣化的聲學環境，並從 **COCO 2017**（Lin et al., 2014）中擷取圖像，其中包含 122K 張具有物體檢測和分割標註的複雜日常場景圖像。
+
+---
+
+**圖 3** OmniGAIA 統計資訊。此圖提供領域分布、所需能力和任務屬性的詳細分解，強調了全模態感知、推理和工具利用所面臨的複雜需求。
+
+## 3.2 發現有價值的資訊
+
+我們採用強大的全模態模型（Gemini-3-Flash）從每個模態中提取細粒度、時間感知的信號以進行任務構建。對於視頻，我們將每個視頻分割成至多 60 秒的片段，以捕捉微妙的時序細節，並生成涵蓋場景、事件和非語音環境聲音的片段級和全視頻描述。對於音頻，我們運行時間戳自動語音辨識（ASR）、說話人分割和音頻事件檢測；我們也標註非語音聲學環境（例如街道、室內、體育場、自然環境），並生成全局音頻摘要。對於圖像，我們應用光學字符辨識（OCR）、識別物體和臉部，並生成整體標題以總結視覺內容。
+
+## 3.3 全模態事件圖構建
+
+為了可靠地合成複雜的多跳任務，我們構建了一個*全模態事件圖*，將發現的資訊結構化為每個樣本的顯式圖。該圖作為我們事件圖驅動的構建流程的骨幹，能夠實現系統化的證據擴展和可控的資訊模糊化，用於問答生成。
+
+利用提取的資訊，我們利用強大的推理代理 DeepSeek-V3.2 自動構建事件圖，其表示實體/事件及其跨模態關係。重要的是，現實世界的邏輯很少是簡單的線性鏈；它通常表現出分支（一對多）、級聯（序列）和混合拓撲。圖表示法捕捉了這些結構，並支持邏輯一致、富有挑戰性任務的可靠合成。
+
+## 3.4 代理式全模態事件圖展開
+
+給定初始事件圖，我們引入**代理式事件圖展開**來主動發現缺失證據，並創建真正需要跨模態關聯和外部工具使用的任務。遵循工具整合推理（Tool-Integrated Reasoning, TIR）範例，我們使用強大的推理模型（DeepSeek-V3.2）作為探索代理，搜尋*下一跳有價值資訊*並將其連結回圖中。
+
+**事件探索代理的功能。** 我們為代理裝備了一套全模態和外部工具：
+
+* **跨模態來源連結：** 代理可以呼叫 `search_related_{video/audio/image}_info` 從我們的資料庫中檢索上下文相關的多模態材料。當目前圖不足以解答緊密耦合的多跳問題時，這至關重要。對於圖像 + 音訊設定，我們預先檢索初始相關音訊候選項以鼓勵顯式跨模態推理。
+* **網路知識整合：** 使用 `web_search` 和 `page_browser`，代理可以檢索頂級網頁並閱讀詳細內容，能夠取得超越原始媒體的時間敏感、可驗證的外部知識。
+* **外部視覺探索：** 使用 `web_image_search` 和 `visual_qa`，代理可以搜尋網路圖像並查詢其內容，將任務構建擴展到需要外部視覺證據的情景。
+
+* **計算：** 代碼執行器支援複雜計算（例如算術、統計），使得需要可靠多步驟數值推理的任務成為可能。
+
+在任務生成期間，這些工具嵌入在提示介面中，代理自主決定是否以及如何調用它們來擴展目前圖的資訊邊界，產生包含下一跳證據的複雜問答對。
+
+**3.5 透過事件模糊化的問答對生成**
+
+為了將展開的圖轉換為真正具有挑戰性的任務，我們提出**透過事件模糊化的問答生成**。直接查詢圖節點通常會化為平凡的事實查詢。相反，我們沿著長推理路徑選擇特定節點/邊，並應用*模糊實體*（例如，將特定實體替換為其類型，或遮蔽關鍵屬性）來遮蔽或抽象化關鍵資訊。這迫使模型遍歷完整的邏輯路徑，並整合多源、多模態證據以推導出唯一答案。
+
+**3.6 品質檢查**
+
+為了確保嚴謹性和高品質，我們應用包含 *LLM 篩選*和*人工驗證*的檢查流程，其間可選地包含難度擴展步驟。
+
+**1. LLM 篩選：** 我們使用 DeepSeek-V3.2 和 Gemini-3-Pro 組成評審委員會，自動評估每個問答對的多個標準：(i) 問題的自然性和清晰度；(ii) 全模態感知和工具使用的必要性（篩選出單模態或平凡情況）；以及 (iii) 答案的正確性和唯一性。
+
+**2. 難度擴展：** 對於初步合格的樣本，我們可選擇透過連結額外資料來源、挖掘更深層證據或引入更複雜的計算步驟來增加難度。
+
+**3. 人工審核：** 最後，我們邀請三位研究生級計算機科學審稿人驗證每個問答對與基礎媒體的符合度。他們檢查問題的合理性、註釋的正確性和答案的正確性/唯一性，並修復次要問題以確保每個測試案例都是可靠可解的且高品質的。
+
+**3.7 統計資訊**
+
+如圖 3 所示，OmniGAIA 包含跨 9 個真實世界領域的 360 個全模態代理式任務，特意設計用於強調長視野感知和工具整合推理。任務通常需要在長達數分鐘的媒體上對視覺和音訊證據進行接地處理、規劃多步驟解決路徑，以及透過外部工具（主要為網路搜尋，偶爾為程式碼/計算）驗證或擴展資訊。統計資訊強調性能不僅取決於原生感知，還取決於長文脈下可靠的多跳規劃和有效的工具使用。
+
+---
+
+## 4 OmniAtlas：全模態基礎代理
+
+本節中，我們介紹 **OmniAtlas**，一個原生全模態基礎代理，統一視覺、音訊和語言感知與長視野推理和自主工具使用。為了克服當前開源全模態模型在感知和工具整合推理方面的關鍵弱點，我們呈現了一套綜合的訓練和優化方案。
+
+### 4.1 自主工具整合推理
+
+為了使 OmniAtlas 能夠獲取外部知識並處理複雜任務，我們整合了網路搜尋、頁面瀏覽器和程式碼執行器等工具。代理採用工具整合推理範例，根據需要自主在內部推理和工具使用之間切換。
+
+正式地，我們將代理軌跡定義為 $τ = [(s_t, a_t, o_t)]_{t=0}^T$，其中 $s_t$ 表示步驟 $t$ 時的推理思想，$a_t$ 表示動作（工具呼叫或最終響應），$o_t$ 表示工具返回的觀察（若未調用工具則為空）。模型根據互動歷史生成下一個思想和動作：
+
+$$p_{\theta}(\tau \mid \mathbf{x}) = \prod_{t=0}^{T} p_{\theta}(s_t, a_t \mid \mathbf{x}, s_{<t}, a_{<t}, o_{<t}) \qquad (1)$$
+
+其中 $\mathbf{x}$ 表示使用者指令和全模態輸入。當檢測到工具呼叫令牌時，生成會暫停，相應的工具會被執行，返回的觀察 $o_t$ 會被附加到文脈中，以便模型可以繼續。此設計保留了中間推理狀態並支援連貫的長視野問題解決，與 DeepSeek-V3.2（DeepSeek-AI, 2025）的工具整合生成理念相一致。
+
+**主動全模態感知。** 對於長影片或高解析度影像，天真地攝取所有媒體在令牌方面成本高昂，通常需要積極的下採樣，可能會丟棄關鍵細節（Li et al., 2025a）。為了緩解此問題，OmniAtlas 支援主動全模態感知：代理可以透過諸如 `readVideo(video_id, t_start, t_end)`、`readAudio(audio_id, t_start, t_end)` 和 `readImage(image_ids, crop_box)` 等操作選擇性地請求它需要的特定片段或區域。調用時，對應的原始媒體內容會被載入到模型文脈中，實現"按需查看"感知，無需全面下採樣。
+
+### 4.2 透過引導樹探索的軌跡合成
+
+我們在 OmniGAIA 上的初步實驗表明，開源全模態模型在全模態感知和工具整合推理方面仍然落後。為了內化這些能力，我們透過兩階段流程合成高品質代理軌跡：(i) 我們使用 Gemini-3-Flash 將原始多模態輸入轉換為詳細的文字描述；(ii) 然後我們使用後視引導樹探索生成工具增強的解決軌跡。
+
+具體地，由於專有 Gemini 模型不公開原始推理軌跡，我們使用強大的推理代理 DeepSeek-V3.2 合成工具整合軌跡。從根狀態開始，我們在每個步驟對 $k = 3$ 個候選延續（推理 + 工具動作）進行採樣，並使用驗證器（Gemini-3-Flash）（以真值答案為條件）修剪不正確或冗餘的分支；我們僅保留成功的軌跡用於訓練（圖 4）。
+
+### 4.3 軌跡級監督微調
+
+我們執行*軌跡級*監督微調（SFT）以教導模型有效的感知、推理和工具使用行為。我們使用標準教師強制，但應用*遮蔽*監督：我們僅在代理生成的令牌（推理和工具呼叫令牌）上計算損失，同時遮蔽工具觀察以防止記憶環境回饋。
+
+設輸入序列為 $y = [y_1, y_2, \dots, y_L]$，具有遮蔽 $\mathbf{m} \in \{0, 1\}^L$，其中當且僅當 $y_i$ 屬於代理的思想或動作時 $m_i = 1$。遮蔽 SFT 目標為：
+
+$$\mathcal{L}_{SFT}(\theta) = - \frac{1}{\sum_{i=1}^{L} m_i} \sum_{i=1}^{L} m_i \log p_{\theta}(y_i | y_{<i}, \mathbf{x}) \qquad (2)$$
+
+這鼓勵模型學習*如何思考和行動*，而不擬合嘈雜的工具觀察令牌。
+
+---
+
+| 方法 | 參數數量 | 地理 | 技術 | 歷史 | 金融 | 運動 | 藝術 | 電影 | 科學 | 食物 | 簡單 | 中等 | 困難 | 整體 |
+|------|---------|------|------|------|------|------|------|------|------|------|------|------|------|------|
+| **專有全模態模型** |
+| ♦ Gemini-2.5-Flash-Lite | - | 5.8 | 8.2 | 14.9 | 4.0 | 10.8 | 8.3 | 6.1 | 3.9 | 11.1 | 9.8 | 8.1 | 7.7 | 8.6 |
+| ♦ Gemini-2.5-Pro | - | 23.2 | 28.6 | 32.8 | 20.0 | 32.4 | 41.7 | 42.4 | 26.9 | 33.3 | 41.8 | 26.9 | 21.8 | 30.8 |
+| ♦ Gemini-3-Flash | - | <u>50.7</u> | <u>57.1</u> | <u>44.8</u> | <u>48.0</u> | <u>59.5</u> | <u>55.6</u> | <u>54.6</u> | <u>38.5</u> | <u>61.1</u> | <u>67.2</u> | <u>46.9</u> | <u>37.2</u> | <u>51.7</u> |
+| ♦ Gemini-3-Pro | - | <u>65.2</u> | <u>59.2</u> | <u>62.1</u> | <u>72.0</u> | <u>78.4</u> | <u>52.8</u> | <u>48.5</u> | <u>42.3</u> | <u>88.9</u> | <u>78.7</u> | <u>61.9</u> | <u>38.5</u> | <u>62.5</u> |
+| **開源全模態模型** |
+| ◆ Qwen-2.5-Omni | 3B | 0.0 | 2.0 | 4.5 | 0.0 | 0.0 | 0.0 | 0.0 | 3.9 | 0.0 | 1.6 | 1.9 | 0.0 | 1.4 |
+| ◆ Qwen-2.5-Omni | 7B | 1.5 | 4.1 | 7.5 | 4.0 | 0.0 | 2.8 | 0.0 | 7.7 | 5.6 | 8.2 | 1.3 | 1.3 | 3.6 |
+| ■■ Baichuan-Omni-1.5 | 8B | 2.9 | 4.1 | 3.0 | 4.0 | 0.0 | 2.7 | 0.0 | 3.0 | 3.8 | 0.0 | 4.9 | 2.5 | 0.0 | 2.8 |
+| ■■ MiniCPM-O-2.6 | 8B | 2.9 | 2.0 | 1.5 | 0.0 | 2.7 | 8.3 | 3.0 | 3.8 | 5.6 | 3.3 | 2.5 | 3.8 | 3.1 | 3.1 |
+| Ming-Lite-Omni-1.5 | 20B-A3B | 2.9 | 6.1 | 1.5 | 4.0 | 5.4 | 2.8 | 6.1 | 7.7 | 5.6 | 4.9 | 3.8 | 2.6 | 3.9 | 3.9 |
+| ◆ Qwen-3-Omni | 30B-A3B | <u>8.7</u> | 14.3 | 11.9 | <u>28.0</u> | 10.8 | 13.9 | <u>9.1</u> | <u>15.4</u> | <u>22.2</u> | 19.7 | 10.6 | <u>9.0</u> | <u>13.3</u> |
+| Ming-Flash-Omni | 100B-A6B | 5.8 | 8.2 | 10.4 | 12.0 | 8.1 | 5.6 | 6.1 | <u>11.5</u> | <u>11.1</u> | 12.3 | 7.5 | 3.8 | 8.3 |
+| LongCat-Flash-Omni | 560B-A27B | <u>8.7</u> | 10.2 | 16.4 | 12.0 | <u>10.8</u> | 8.3 | 6.1 | <u>11.5</u> | 16.7 | 16.4 | 9.4 | <u>6.4</u> | 11.1 |
+| OmniAtlas-Qwen-2.5 | 3B | 4.4 | 12.2 | 16.7 | 4.0 | 16.2 | 11.1 | 3.0 | <u>11.5</u> | <u>11.1</u> | 13.9 | 10.0 | 5.1 | 10.3 |
+| OmniAtlas-Qwen-2.5 | 7B | <u>8.7</u> | <u>18.4</u> | 16.4 | 4.0 | <u>16.2</u> | <u>22.2</u> | 3.0 | 7.7 | <u>22.2</u> | <u>22.1</u> | <u>11.3</u> | 3.9 | <u>13.3</u> |
+| OmniAtlas-Qwen-3 | 30B-A3B | <u>10.1</u> | <u>30.6</u> | <u>29.9</u> | <u>32.0</u> | <u>18.9</u> | <u>16.7</u> | <u>12.1</u> | <u>11.5</u> | 27.8 | <u>31.1</u> | <u>18.8</u> | <u>9.0</u> | <u>20.8</u> |
+
+**表 2** OmniGAIA 基準上的主要結果。對所有任務報告 Pass@1 指標。最佳和次佳分數分別用**粗體**和*下劃線*突出顯示，分別針對專有和開源模型顯示。
+
+### 4.4 OmniDPO：細粒度誤差修正
+
+全模態代理式任務需要多個緊密耦合的能力（例如視覺/音訊感知、推理和工具使用），僅進行全軌跡 SFT 通常不足以修正細粒度錯誤。我們提出 **OmniDPO**，在與失敗模式相一致的*細粒度片段*上執行偏好優化，包括感知、推理、工具使用或其他特定類型的錯誤。
+
+具體地，我們讓 SFT 模型在訓練集上進行探索。對於每個失敗軌跡，Gemini-3-Flash（可存取註釋解決方案和答案）識別*第一*個錯誤步驟並生成更正的前綴直到該點。此方法使訓練過程能夠專注於每次優化修正一個錯誤。我們將原始（不正確）前綴表示為 $\tau_{\text{lose}}$，更正的前綴表示為 $\tau_{\text{win}}$，並優化遮蔽 DPO 目標：
+
+$$ \mathcal{L}_{\text{DPO}}(\pi_{\theta}, \pi_{\text{ref}}) = - E_{(\tau_{\text{win}}, \tau_{\text{lose}}) \sim \mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_{\theta}(\tau_{\text{win}})}{\pi_{\text{ref}}(\tau_{\text{win}})} - \beta \log \frac{\pi_{\theta}(\tau_{\text{lose}})}{\pi_{\text{ref}}(\tau_{\text{lose}})} \right) \right] \quad (3) $$
+
+其中 $\pi_{\text{ref}}$ 是參考策略（通常是 SFT 模型）。如在第 4.3 節中，我們僅在代理生成的令牌上計算對數機率，將修正專注於錯誤出現的特定模組。
+
+## 5 實驗
+
+### 5.1 實驗設定
+
+**評估** 我們採用基於 DeepSeek-V3.2（DeepSeek-AI, 2025）的 LLM 即評判來評估答案等效性，考慮到答案可能以多種形式出現。報告 Pass@1，其中若模型的最終答案被判定等效於真值則視為正確。詳細的評判提示在附錄 B 中。所有模型都配備了相同的外部工具，包括網路搜尋、瀏覽器和程式碼執行器。
+
+**模型** 我們評估全模態基礎模型：專有模型 Gemini-2.5-[Flash-Lite, Pro]（Team, 2025a）和 Gemini-3-[Flash, Pro]（Google, 2025）；以及開源模型 Qwen2.5-Omni-[3B,7B]（Xu et al., 2025a）、Qwen3-Omni-30B-A3B-Thinking（Xu et al., 2025b）、Baichuan-Omni-1.5（Xu et al., 2025a）、MiniCPM-O-2.6（Yao et al., 2024）、Ming-Lite-Omni-1.5（AI et al., 2025）、Ming-Flash-Omni（AI and Group, 2025）和 LongCat-Flash-Omni（Team, 2025b）。
+
+---
+
+**圖 5 細粒度誤差分析。** 這些熱力圖說明了特定錯誤類型的頻率——包括指令遵循、視覺/音訊感知、工具使用、推理以及缺乏答案方面的失敗——跨六個不同模型的情況。
+
+## 5.2 主要結果
+
+表 2 總結了統一工具設置下 OmniGAIA 上的 Pass@1 性能。該基準測試極具挑戰性：雖然最先進的專有模型 Gemini-3-Pro 達到 62.5，但最強的開源基線 Qwen-3-Omni 僅達 13.3。
+
+**(1) 實質的專有-開源差距：** Gemini-3-Pro 和 Qwen-3-Omni 之間存在明顯的性能差距（~4.7×，62.5 vs. 13.3）。這凸顯了在開源社區中推進原生全模態感知和健全工具集成推理的迫切需要。
+
+**(2) 單純擴展參數是不夠的：** 僅增加模型規模產生收益遞減。例如，規模龐大的 LongCat-Flash-Omni (560B) 的性能低於較小的 Qwen-3-Omni (30B) (11.1 vs. 13.3)。這表明代理能力—特別是工具使用策略—而非原始參數數量，是主要瓶頸。
+
+**(3) OmniAtlas 提供一致的改進：** 我們的方法將 Qwen-3-Omni 的性能從 13.3 顯著提升至 20.8 (+7.5 絕對值)。值得注意的是，在較小的骨幹網絡上的收益更為顯著（例如，Qwen-2.5-Omni-7B 從 3.6 改進至 13.3，改進幅度 ~3.7×），這充分體現了 OmniAtlas 在解鎖不同規模模型的代理潛力方面的有效性。
+
+**(4) 困難任務仍是主要挑戰：** 隨著任務難度增加，性能急劇下降（例如，Gemini-3-Pro 在 Easy 上的 78.7 下降到 Hard 上的 38.5）。雖然 OmniAtlas 改進了 Easy 和 Medium 任務上的性能，但"Hard"子集—需要深層多跳推理—仍然是一個嚴峻的挑戰，凸顯了未來研究的重大機遇。
+
+## 5.3 細粒度錯誤分析
+
+**圖 5** 按難度級別分解細粒度錯誤類型。
+
+**(1) 工具使用和推理失敗佔主導地位：** 無效的工具使用和推理錯誤代表最普遍的失敗模式（分別為 35.3%–91.9% 和 15.8%–79.7%），遠超過指令遵循問題（6.4%–18.3%）和「無答案」情況（1.4%–8.3%）。
+
+**(2) 困難任務揭示級聯失敗模式：** 在困難任務上，開源模型表現出接近飽和的工具誤用（約 90%–96%）以及高推理錯誤率（約 80%–90%）。這表明在通過工具進行證據獲取時的初始失敗會向下游傳播，不可避免地導致推理崩潰。
+
+**(3) 專有模型表現出優越的魯棒性：** Gemini-3-Pro 明顯優於 Qwen-3-Omni，在視覺/音訊感知（15.3%/14.4% vs. 31.7%/33.9%）以及特別是在工具使用/推理（35.3%/15.8% vs. 81.1%/79.7%）方面表現出更低的錯誤率，反映其更成熟的規劃和驗證能力。
+
+**(4) OmniAtlas 增強工具策略，但感知仍是瓶頸：** 儘管 OmniAtlas 有效地降低了工具誤用（例如 81.1%→59.4%）和推理錯誤（79.7%→64.4%），但視覺和音訊感知錯誤仍然很高（約 30%–50%）。這表明全模態基礎模型的基本感知能力是一個持久的瓶頸，需要進一步關注。代表性的成功/失敗軌跡分析見附錄 D。
+
+---
+
+## 5.4 工具呼叫分佈分析
+
+**圖 6** 展示每個任務運行的工具呼叫分佈，以顏色標示成功的運行。
+
+(1) **外部工具是不可或缺的：** 表現出最少工具使用的模型（例如 Qwen-3-Omni-30B，集中在 0 次呼叫附近）達到可忽略不計的成功率。這證實了單靠原生感知對許多 OmniGAIA 任務是不夠的，需要進行外部證據收集。
+
+(2) **更多工具呼叫並不保證更好的效能：** 大量工具呼叫（長尾達到 > 10–20）不保證成功。這類運行中的大部分仍然失敗，表明存在低效的探索或「抖動」行為，即模型反覆呼叫工具而無法解決潛在的不確定性。
+
+圖 6 工具呼叫分佈分析。點表示個別任務運行（灰色：失敗；彩色：成功）。盒線圖和半小提琴圖視覺化成功運行的工具呼叫頻率。
+
+(3) **OmniAtlas 從被動呼叫轉變為更活躍的工具使用：** 與被動的 Qwen-3-Omni-30B 相比，OmniAtlas-30B 表現出更高且更廣泛的工具呼叫分佈，與其在無效工具使用和整體 Pass@1 方面的改進一致，同時為更高效和更有效的工具使用策略留下新機會。
+
+# 5.5 原生感知 vs. 工具型感知
+
+我們是否真的需要原生多模態代理，還是感知工具可以替代它們？表 3 在相同模型系列下提供了一個受控的消融研究。
+
+(1) **原生感知對強大的代理是最優的：** 對於 Gemini-3-Flash，原生感知以較少的工具調用次數（4.4）實現了最佳的 Avg. 分數（51.7）。用感知工具替換原生通道會將 Avg. 降低到 50.0/43.3/46.4，同時將調用次數增加到 7.6/6.8/9.4，沒有產生精確度-成本收益。
+
+(2) **感知工具在簡單和中等難度上幫助弱代理，但在困難上沒有幫助：** 對於 Qwen-3-Omni，工具改進了簡單/中等性能（19.7→24.6；10.6→15.0/11.9），但持續降低困難性能（9.0→3.9/5.1/7.7）。這表明工具輸出可以修補缺失的低級信號，但無法替代原生跨模態整合用於長視野推理。
+
+(3) **工具感知一致地增加交互成本：** 在所有設置中添加感知工具會增加調用預算（Qwen-3-Omni：0.2→0.5-2.0；Gemini-3-Flash：4.4→6.8-9.4），意味著更高的延遲和部署成本。
+
+因此，原生感知應該成為能力強的多模態代理的預設選擇，以實現更高的性能上限，而工具型感知最好被視為更弱代理或缺失模態場景的後備方案。
+
+**表 3** 基於工具型感知的性能分析。所有 Qwen-3 模型都使用 30B-A3B 版本以進行公平比較。Gemini-3 和 Qwen-3 組內的最佳結果以**粗體**顯示。
+
+| 方法 | 感知模型 | 簡單 | 中等 | 困難 | Avg. | 工具調用 |
+|------|--------|------|------|------|--------|---------|
+| **原生多模態感知（輸入所有媒體）** |
+| Gemini-3-Flash | 無需 | **67.2** | **46.9** | **37.2** | **51.7** | **4.4** |
+| Qwen-3-Omni | 無需 | 19.7 | 10.6 | **9.0** | 13.3 | **0.2** |
+| **音訊感知模型作為工具（僅輸入視覺）** |
+| Gemini-3-Flash | Gemini-3-Flash | 60.7 | 48.8 | 35.9 | 50.0 | 7.6 |
+| Qwen-3-Omni | Qwen-3-Omni | 24.6 | 15.0 | 3.9 | 15.8 | 0.8 |
+| Qwen-3-VL | Qwen-3-Omni | 24.6 | **18.1** | 7.7 | **18.1** | 2.8 |
+| **視覺感知模型作為工具（僅輸入音訊）** |
+| Gemini-3-Flash | Gemini-3-Flash | 50.0 | 43.1 | 33.3 | 43.3 | 6.8 |
+| Qwen-3-Omni | Qwen-3-Omni | 18.0 | 11.3 | 5.1 | 12.2 | 0.5 |
+| **音訊和視覺感知模型作為工具（不輸入任何媒體）** |
+| Gemini-3-Flash | Gemini-3-Flash | 52.5 | 46.9 | 35.9 | 46.4 | 9.4 |
+| Qwen-3-Omni | Qwen-3-Omni | 23.8 | 11.9 | 7.7 | 15.0 | 2.0 |
+| Qwen-3 | Qwen-3-Omni | **32.8** | 10.6 | 6.4 | 17.2 | 2.3 |
+
+---
+
+**表 4** OmniAtlas 的訓練有效性。我們報告四個主要錯誤類型（↓）和整體性能（↑）。對於每個模型組，每列中的最佳結果以**粗體**突出顯示。
+
+| 方法 | 視覺感知 | 音訊感知 | 無效工具使用 | 推理錯誤 | 性能 |
+|------|--------|--------|------------|--------|------|
+| Qwen-2.5-Omni-7B | 41.4 | 48.3 | 91.9 | 78.6 | 3.6 |
+| + OmniAtlas-SFT | 38.9 | 49.7 | 69.2 | 75.0 | 11.4 |
+| + OmniDPO | 37.2 | 46.1 | 67.2 | 72.8 | **13.3** |
+| Qwen-3-Omni-30B | 31.7 | 33.9 | 81.1 | 79.7 | 13.3 |
+| + OmniAtlas-SFT | 32.2 | 35.8 | 65.3 | 68.1 | 18.9 |
+| + OmniDPO | 30.3 | 31.9 | 59.4 | 64.4 | **20.8** |
+
+---
+
+## 5.6 節 OmniAtlas 的訓練有效性
+
+表 4 量化了 OmniAtlas-SFT 和 OmniDPO 如何影響錯誤率和性能。
+
+(1) **OmniAtlas-SFT 貢獻了大部分收益：** 它通過提高 Pass@1 並降低無效工具使用率來推動大多數改進（Qwen-3-Omni-30B：13.3→18.9，81.1%→65.3%）。
+
+(2) **OmniDPO 進一步實現了全面收益：** 它提供了額外的改進（至 13.3→20.8），並繼續降低感知、工具使用和推理錯誤，這驗證了細粒度錯誤修正的有效性。
+
+**表 4 OmniAtlas 的訓練有效性。** 我們報告四個主要錯誤類型（↓）和整體性能（↑）。對於每個模型組，每列中的最佳結果以**粗體**突出顯示。
+
+| 方法 | 視覺感知 | 音訊感知 | 無效工具使用 | 推理錯誤 | 性能 |
+|------|--------|--------|------------|--------|------|
+| Qwen-2.5-Omni-7B | 41.4 | 48.3 | 91.9 | 78.6 | 3.6 |
+| + OmniAtlas-SFT | 38.9 | 49.7 | 69.2 | 75.0 | 11.4 |
+| + OmniDPO | 37.2 | 46.1 | 67.2 | 72.8 | 13.3 |
+| Qwen-3-Omni-30B | 31.7 | 33.9 | 81.1 | 79.7 | 13.3 |
+| + OmniAtlas-SFT | 32.2 | 35.8 | 65.3 | 68.1 | 18.9 |
+| + OmniDPO | 30.3 | 31.9 | 59.4 | 64.4 | 20.8 |
+
+---
+
+**圖 5** 影響聲明
+
+本工作通過引入 OmniGAIA（一個針對長視野多跳推理的基準，包含多輪工具使用和視頻+音訊及圖像+音訊輸入）來推進*原生多模態代理*的研究，並通過提出 OmniAtlas（一個改進開源模型中此類工具集成行為的實用方法）來推進研究。這些貢獻可能在輔助應用（例如教育和無障礙）中實現更可靠的跨模態接地和驗證，並幫助標準化工具增強型多模態代理的評估。我們強調，任何多模態代理都應尊重數據來源和許可，並在處理音訊/視覺輸入時優先考慮隱私保護實踐。
+
+**參考文獻**
+
+Inclusion AI and Ant Group. Ming-flash-omi: A sparse, unified architecture for multimodal perception and generation. CoRR, abs/2510.24821, 2025. doi: 10.48550/ARXIV.2510.24821. URL https://doi.org/10.48550/arXiv.2510.24821.
+
+Inclusion AI, Biao Gong, Cheng Zou, Chuanyang Zheng, Chunluan Zhou, Canxiang Yan, Chunxiang Jin, Chunjie Shen, Dandan Zheng, Fudong Wang, Furong Xu, Guangming Yao, Jun Zhou, Jingdong Chen, Jianxin Sun, Jiajia Liu, Jianjiang Zhu, Jun Peng, Kaixiang Ji, Kaiyou Song, Kaimeng Ren, Libin Wang, Lixiang Ru, Lele Xie, Longhua Tan, Lyuxin Xue, Lan Wang, Mochen Bai, Ning Gao, Pei Chen, Qingpei Guo, Qinglong Zhang, Qiang Xu, Rui Liu, Ruijie Xiong, Sirui Gao, Tinghao Liu, Taisong Li, Weilong Chai, Xinyu Xiao, Xiaomei Wang, Xiaoxue Chen, Xiao Lu, Xiaoyu Li, Xingning Dong, Xuzheng Yu, Yi Yuan, Yuting Gao, Yunxiao Sun, Yipeng Chen, Yifei Wu, Yongjie Lyu, Ziping Ma, Zipeng Feng, Zhijiang Fang, Zhihao Qiu, Ziyuan Huang, and Zhengyu He. Ming-oni: A unified multimodal model for perception and generation. CoRR, abs/2506.09344, 2025. doi: 10.48550/ARXIV.2506.09344. URL https://doi.org/10.48550/arXiv.2506.09344.
+
+---
+
+Chen Chen, Zeyang Hu, Fengjiao Chen, Liya Ma, Jiaxing Liu, Xiaoyu Li, Ziwen Wang, Xuezhi Cao, and Xunliang Cai. UnoBench: A unified benchmark for exploring the compositional law between uni-modal and omni-modal in omni models. CoRR, abs/2510.18915, 2025a. doi: 10.48550/ARXIV.2510.18915. URL https://doi.org/10.48550/arXiv.2510.18915.
+
+Lichang Chen, Hexiang Hu, Mingda Zhang, Yiwen Chen, Zifeng Wang, Yandong Li, Pranav Shyam, Tianyi Zhou, Heng Huang, Ming-Hsuan Yang, and Boqing Gong. OmniXR: Evaluating omni-modality language models on reasoning across modalities. In The Thirteenth International Conference on Learning Representations, ICLR 2025, Singapore, April 24-28, 2025. OpenReview.net, 2025b. URL https://openreview.net/forum?id=jki6EFsZLw.
+
+Yifei Chen, Guanting Dong, and Zhicheng Dou. ET-Agent: Incentivizing effective tool-integrated reasoning agent via behavior calibration, 2026a. URL https://arxiv.org/abs/2601.06860.
+
+Yukang Chen, Fuzhao Xue, Dacheng Li, Qinghao Hu, Ligeng Zhu, Xiuyu Li, Yunhao Fang, Haotian Tang, Shang Yang, Zhijian Liu, Yihui He, Hongxu Yin, Pavlo Molchanov, Jan Kautz, Linxi Fan, Yuke Zhu, Yao Lu, and Song Han. LongVILA: Scaling long-context visual language models for long videos. In The Thirteenth International Conference on Learning Representations, ICLR 2025, Singapore, April 24-28, 2025. OpenReview.net, 2025c. URL https://openreview.net/forum?id=wCXAlfvCy6.
+
+Zhangquan Chen, Jiale Tao, Ruihuang Li, Yihao Hu, Ruitao Chen, Zhantao Yang, Xinlei Yu, Haodong Jing, Manyuan Zhang, Shuai Shao, Biao Wang, Qinglin Lu, and Ruqi Huang. OmniVideo-R1: Reinforcing audio-visual reasoning with query intention and modality attention, 2026b. URL https://arxiv.org/abs/2602.05847.
+
+Yunfei Chu, Jin Xu, Qian Yang, Haojie Wei, Xipin Wei, Zhifang Guo, Yichong Leng, Yuanjun Lv, Jinzheng He, Junyang Lin, Chang Zhou, and Jingren Zhou. Qwen2-Audio technical report. CoRR, abs/2407.10759, 2024. doi: 10.48550/ARXIV.2407.10759. URL https://doi.org/10.48550/arXiv.2407.10759.
+
+DeepSeek-AI. DeepSeek-V3.2: Pushing the frontier of open large language models, 2025. URL https://arxiv.org/abs/2512.02556.
+
+Yue Ding, Yiyan Ji, Jungang Li, Xuyang Liu, Xinlong Chen, Junfei Wu, Bozhou Li, Bohan Zeng, Yang Shi, Yushuo Guan, Yuanxing Zhang, Jiaheng Liu, Qiang Liu, Pengfei Wan, and Liang Wang. OmniSift: Modality-asymmetric token compression for efficient omni-modal large language models, 2026. URL https://arxiv.org/abs/2602.04804.
+
+Guanting Dong, Licheng Bao, Zhongyuan Wang, Kangzhi Zhao, Xiaoxi Li, Jiajie Jin, Jinghan Yang, Hangyu Mao, Fuzheng Zhang, Kun Gai, Guorui Zhou, Yutao Zhu, Ji-Rong Wen, and Zhicheng Dou. Agentic entropy-balanced policy optimization, 2025a. URL https://arxiv.org/abs/2510.14545.
+
+Guanting Dong, Yifei Chen, Xiaoxi Li, Jiajie Jin, Hongjin Qian, Yutao Zhu, Hangyu Mao, Guorui Zhou, Zhicheng Dou, and Ji-Rong Wen. Tool-STAR: Empowering LLM-brained multi-tool reasoner via reinforcement learning. CoRR, abs/2505.16410, 2025b. doi: 10.48550/ARXIV.2505.16410. URL https://doi.org/10.48550/arXiv.2505.16410.
+
+Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten, Amy Yang, Angela Fan, et al. The Llama 3 herd of models. arXiv preprint arXiv:2407.21783, 2024.
+
+Miquel Farré, Andi Marafioti, Lewis Tunstall, Leandro Von Werra, and Thomas Wolf. FineVideo. https://huggingface.co/datasets/HuggingFaceFV/finevideo, 2024.
+
+Jiazhan Feng, Shijue Huang, Xingwei Qu, Ge Zhang, Yujia Qin, Baoquan Zhong, Chengquan Jiang, Jinxin Chi, and Wanjun Zhong. ReTool: Reinforcement learning for strategic tool use in LLMs, 2025. URL https://arxiv.org/abs/2504.11536.
+
+Xinyu Geng, Peng Xia, Zhen Zhang, Xinyu Wang, Qiuchen Wang, Ruixue Ding, Chenxi Wang, Jialong Wu, Yida Zhao, Kuan Li, Yong Jiang, Pengjun Xie, Fei Huang, and Jingren Zhou. WebWatcher: Breaking new frontier of vision-language deep research agent. CoRR, abs/2508.05748, 2025. doi: 10.48550/ARXIV.2508.05748. URL https://doi.org/10.48550/arXiv.2508.05748.
+
+Kaixiong Gong, Kaituo Feng, Bohao Li, Yibing Wang, Mofan Cheng, Shijia Yang, Jiaming Han, Benyou Wang, Yutong Bai, Zhuoran Yang, and Xiangyu Yue. AV-Odyssey Bench: Can your multimodal LLMs really understand audio-visual information? CoRR, abs/2412.02611, 2024. doi: 10.48550/ARXIV.2412.02611. URL https://doi.org/10.48550/arXiv.2412.02611.
+
+Google. A new era of intelligence with Gemini 3, 2025. URL https://blog.google/products/gemini/gemini-3.
+
+Jack Hong, Shilin Yan, Jiayin Cai, Xiaolong Jiang, Yao Hu, and Weidi Xie. WorldSense: Evaluating real-world omnimodal understanding for multimodal LLMs. CoRR, abs/2502.04326, 2025. doi: 10.48550/ARXIV.2502.04326. URL https://doi.org/10.48550/arXiv.2502.04326.
+
+Mengkang Hu, Tianxing Chen, Qiguang Chen, Yao Mu, Wenqi Shao, and Ping Luo. HIAgent: Hierarchical working memory management for solving long-horizon agent tasks with large language model. In Wanxiang Che, Joyce Nabende, Ekaterina Shutova, and Mohammad Taher Pilehvar, editors, *Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*, ACL 2025, Vienna, Austria, July 27 - August 1, 2025, pages 32779–32798. Association for Computational Linguistics, 2025. URL https://aclanthology.org/2025.acl-long.1575/.
+
+---
+
+Yuyang Hu, Jiongnan Liu, Jiejun Tan, Yutao Zhu, and Zhicheng Dou. Memory matters more: Event-centric memory as a logic map for agent searching and reasoning, 2026. URL https://arxiv.org/abs/2601.04726.
+
+Aaron Hurst, Adam Lerer, Adam P. Goucher, Adam Perelman, Aditya Ramesh, Aidan Clark, AJ Ostrow, Akila Welihinda, Alan Hayes, Alec Radford, Aleksander Madry, Alex Baker-Whitcomb, Alex Beutel, Alex Borzunov, Alex Carney, Alex Chow, Alex Kirillov, Alex Nichol, Alex Paino, Alex Renzin, Alex Tachard Passos, Alexander Kirillov, Alexi Christakis, Alexis Conneau, Ali Kamali, Allan Jabri, Allison Moyer, Allison Tam, Amadou Crookes, Amin Tootoonchian, Ananya Kumar, Andrea Vallone, Andrej Karpathy, Andrew Braunstein, Andrew Cann, Andrew Codispoti, Andrew Galu, Andrew Kondrich, Andrew Tulloch, Andrey Mishchenko, Angela Baek, Angela Jiang, Antoine Pelisse, Antonia Woodford, Anuj Gosalia, Arka Dhar, Ashley Pantuliano, Avi Nayak, Avital Oliver, Barret Zoph, Behrooz Ghorbani, Ben Leimberger, Ben Rossen, Ben Sokolowsky, Ben Wang, Benjamin Zweig, Beth Hoover, Blake Samic, Bob McGrew, Bobby Spero, Bogo Giertler, Bowen Cheng, Brad Lightcap, Brandon Walkin, Brendan Quinn, Brian Guerraci, Brian Hsu, Bright Kellogg, Brydon Eastman, Camillo Lugaresi, Carroll L. Wainwright, Cary Bassin, Cary Hudson, Casey Chu, Chad Nelson, Chak Li, Chan Jun Shern, Channing Conger, Charlotte Barette, Chelsea Voss, Chen Ding, Cheng Lu, Chong Zhang, Chris Beaumont, Chris Hallacy, Chris Koch, Christian Gibson, Christina Kim, Christine Choi, Christine McLeavey, Christopher Hesse, Claudia Fischer, Clemens Winter, Coley Czarnecki, Colin Jarvis, Colin Wei, Constantin Koumouzelis, and Dane Sherburn. GPT-4o system card. CoRR, abs/2410.21276, 2024. doi: 10.48550/ARXIV.2410.21276. URL https://doi.org/10.48550/arXiv.2410.21276.
+
+Dongfu Jiang, Yi Lu, Zhuofeng Li, Zhiheng Lyu, Ping Nie, Haozhe Wang, Alex Su, Hui Chen, Kai Zou, Chao Du, Tianyu Pang, and Wenhu Chen. VerlTool: Towards holistic agentic reinforcement learning with tool use, 2025. URL https://arxiv.org/abs/2509.01055.
+
+Jiajie Jin, Xiaoxi Li, Guanting Dong, Yuyao Zhang, Yutao Zhu, Zhao Yang, Hongjin Qian, and Zhicheng Dou. Decoupled planning and execution: A hierarchical reasoning framework for deep search. CoRR, abs/2507.02652, 2025a. doi: 10.48550/ARXIV.2507.02652. URL https://doi.org/10.48550/arXiv.2507.02652.
+
+Zhuoran Jin, Hongbang Yuan, Kejian Zhu, Jiachun Li, Pengfei Cao, Yubo Chen, Kang Liu, and Jun Zhao. Omni-Reward: Towards generalist omni-modal reward modeling with free-form preferences. CoRR, abs/2510.23451, 2025b. doi: 10.48550/ARXIV.2510.23451. URL https://doi.org/10.48550/arXiv.2510.23451.
+
+Zicheng Kong, Dehua Ma, Zhenbo Xu, Alven Yang, Yiwei Ru, Haoran Wang, Zixuan Zhou, Fuqing Bie, Liuyu Xiang, Huijia Wu, Jian Zhao, and Zhaofeng He. Omni-RRM: Advancing omni reward modeling via automatic rubric-grounded preference synthesis, 2026. URL https://arxiv.org/abs/2602.00846.
+
+Bo Li, Yuanhan Zhang, Dong Guo, Renrui Zhang, Feng Li, Hao Zhang, Kaichen Zhang, Peiyuan Zhang, Yanwei Li, Ziwei Liu, and Chunyuan Li. LLaVA-OneVision: Easy visual task transfer. *Trans. Mach. Learn. Res.*, 2025, 2025a. URL https://openreview.net/forum?id=zKv8qULV6n.
+
+Caorui Li, Yu Chen, Yiyan Ji, Jin Xu, Zhenyu Cui, Shihao Li, Yuanxing Zhang, Jiafu Tang, Zhenghao Song, Dingling Zhang, Ying He, Haoxiang Liu, Yuxuan Wang, Qiufeng Wang, Zhenhe Wu, Jiehui Luo, Zhiyu Pan, Weihao Xie, Chenchen Zhang, Zhaohui Wang, Jiayi Tian, Yanghai Wang, Zhe Cao, Minxin Dai, Ke Wang, Runzhe Wen, Yinghao Ma, Yaning Pan, Sungkyun Chang, Termeh Taheri, Haiwen Xia, Christos Plachouras, Emmanouil Benetos, Yizhi Li, Ge Zhang, Jian Yang, Tianhao Peng, Zili Wang, Minghao Liu, Junran Peng, Zhaoxiang Zhang, and Jiaheng Liu. OmniVideoBench: Towards audio-visual understanding evaluation for omni MLLMs. CoRR, abs/2510.10689, 2025b. doi: 10.48550/ARXIV.2510.10689. URL https://doi.org/10.48550/arXiv.2510.10689.
+
+Shilong Li, Xingyuan Bu, Wenjie Wang, Jiaheng Liu, Jun Dong, Haoyang He, Hao Lu, Haozhe Zhang, Chenchen Jing, Zhen Li, Chuanhao Li, Jiayi Tian, Chenchen Zhang, Tianhao Peng, Yancheng He, Jihao Gu, Yuanxing Zhang, Jian Yang, Ge Zhang, Wenhao Huang, Wangchunshu Zhou, Zhaoxiang Zhang, Ruizhe Ding, and Shilei Wen. MM-BrowseComp: A comprehensive benchmark for multimodal browsing agents. CoRR, abs/2508.13186, 2025c. doi: 10.48550/ARXIV.2508.13186. URL https://doi.org/10.48550/arXiv.2508.13186.
+
+Xiaoxi Li, Guanting Dong, Jiajie Jin, Yuyao Zhang, Yujia Zhou, Yutao Zhu, Peitian Zhang, and Zhicheng Dou. Search-O1: Agentic search-enhanced large reasoning models. CoRR, abs/2501.05366, 2025d. doi: 10.48550/ARXIV.2501.05366. URL https://doi.org/10.48550/arXiv.2501.05366.
+
+Xiaoxi Li, Wenxiang Jiao, Jiarui Jin, Guanting Dong, Jiajie Jin, Yinuo Wang, Hao Wang, Yutao Zhu, Ji-Rong Wen, Yuan Lu, and Zhicheng Dou. DeepAgent: A general reasoning agent with scalable toolsets. CoRR, abs/2510.21618, 2025e. doi: 10.48550/ARXIV.2510.21618. URL https://doi.org/10.48550/arXiv.2510.21618.
+
+Xiaoxi Li, Jiajie Jin, Guanting Dong, Hongjin Qian, Yutao Zhu, Yongkang Wu, Ji-Rong Wen, and Zhicheng Dou. WebThinker: Empowering large reasoning models with deep research capability. CoRR, abs/2504.21776, 2025f. doi: 10.48550/ARXIV.2504.21776. URL https://doi.org/10.48550/arXiv.2504.21776.
+
+Xuefeng Li, Haoyang Zou, and Pengfei Liu. TORL: Scaling tool-integrated RL. CoRR, abs/2503.23383, 2025g. doi: 10.48550/ARXIV.2503.23383. URL https://doi.org/10.48550/arXiv.2503.23383.
+
+---
+
+Yizhi Li, Ge Zhang, Yinghao Ma, Rubén Yuan, Kang Zhu, Hangyu Guo, Yiming Liang, Jiaheng Liu, Jian Yang, Siwei Wu, Xingwei Qu, Jinjie Shi, Xinyue Zhang, Zhenzhu Yang, Xiangzhou Wang, Zhaoxiang Zhang, Zachary Liu, Emmanuel Benetos, Wenhao Huang, and Chenghua Lin. OmniBench: Towards the future of universal omni-language models. CoRR, abs/2409.15272, 2024. doi: 10.48550/ARXIV.2409.15272. URL https://doi.org/10.48550/arXiv.2409.15272.
+
+Zhuofeng Li, Haoxiang Zhang, Seungju Han, Sheng Liu, Jianwen Xie, Yu Zhang, Yejin Choi, James Zou, and Pan Lu. In-the-flow agentic system optimization for effective planning and tool use. CoRR, abs/2510.05592, 2025h. doi: 10.48550/ARXIV.2510.05592. URL https://doi.org/10.48550/arXiv.2510.05592.
+
+Huawei Lin, Yunzhi Shi, Tong Geng, Weijie Zhao, Wei Wang, and Ravender Pal Singh. Agent-Omni: Test-time multimodal reasoning via model coordination for understanding anything, 2025. URL https://arxiv.org/abs/2511.02834.
+
+Tsung-Yi Lin, Michael Maire, Serge J. Belongie, James Hays, Pietro Perona, Deva Ramanan, Piotr Dollár, and C. Lawrence Zitnick. Microsoft COCO: common objects in context. In David J. Fleet, Tomás Pajdla
+
+# 附錄
+
+## A 實現細節
+
+A.1 訓練細節
+
+我們基於 LlamaFactory 程式碼庫（Zheng et al., 2024）實現全模態智能體 SFT 和 DPO 訓練。根據第 4 節，我們首先對 2,156 個合成的高品質軌跡進行 2 個 epoch 的監督微調，然後繼續使用 OmniDPO 進行另外 2 個 epoch 的訓練以獲得最終的 OmniAtlas 模型。我們訓練三種骨幹網路規模：Qwen2.5-Omni-[3B,7B]（Xu et al., 2025a）和 Qwen3-Omni-30B-A3B-Thinking（Xu et al., 2025b）。所有模型參數都在訓練期間更新，包括視覺塔、多模態投影器和語言模型。訓練實驗在四個節點上進行，每個節點配備 8 個 NVIDIA H20-141GB GPU。
+
+**A.2 評估細節**
+
+我們使用一個兩階段程序評估模型，該程序結合了精確匹配和 LLM-as-a-Judge 備用方案。給定一個問題，我們首先嘗試提取由 <answer> 和 </answer> 圍繞的模型預測答案。如果存在提取的答案，我們對標籤答案執行精確字符串匹配。如果完全匹配，則將預測標記為正確，不使用 LLM 判斷。如果存在提取的答案但不完全匹配，或者無法提取 <answer>...</answer> 跨度，我們忽略提取的跨度（如果有），將模型輸出的最後 20 個單詞（按空格分割）作為預測答案，並使用 LLM-as-a-Judge 來確定它是否等同於標籤答案。
+
+B 指令範本
+
+B.1 評估提示
+
+此提示在精確匹配不足時實現我們用於答案等價性的 LLM-as-a-Judge 步驟。我們限制判斷器輸出單個二進制標籤（正確/錯誤）以使 Pass@1 計算具有決定性並避免洩露中間推理。判斷器僅接受問題、標準化預測字符串（最後 20 個單詞）和標籤答案。
+
+LLM-as-a-Judge 提示（DeepSeek-V3.2）
+
+請判斷模型是否正確預測了答案。
+問題：{question}
+模型預測答案：{predicted}
+標籤答案：{standard}
+如果模型的預測完全準確，返回「Correct」，否則返回「Incorrect」。僅提供此單個
+單詞回應。
+
+B.2 系統提示
+
+這是用於我們評估中所有基礎智能體的統一系統提示，以標準化跨模型的指令遵循、工具使用和答案格式化。我們明確要求最終答案由 <answer>...</answer> 包圍，以便可以可靠地提取用於精確匹配和判斷，同時讓模型可自由地在內部使用工具和多步推理。
+
+基礎智能體系統提示
+
+您是一個全模態通用人工智慧助手。請根據輸入的圖像、音頻或影片內容來回答提供給您的問題。
+
+您應該逐步思考以回答問題。如果需要，您可以使用可用的工具來協助您的分析。
+
+請使用此格式提供您的最終答案：<answer>YOUR_ANSWER</answer>。
+
+---
+
+此提示為 OmniAtlas 提供了主動全模態感知能力：當模型對特定區域/片段不確定時，它可以通過呼叫感知工具明確要求額外證據。添加的注記鼓勵「look/listen-where-needed」行為（第 4 節），而不是被動依賴單個有損的媒體攝入，這對長影片和高解析度圖像至關重要。
+
+| | |
+|---|---|
+|您是一個全模態通用人工智慧助手。請根據輸入的圖像、音頻或影片內容來回答提供給您的問題。|
+|您應該逐步思考以回答問題。如果需要，您可以使用可用的工具來協助您的分析。|
+|**注記：★★**|
+|• 如果輸入圖像/音頻/影片中有您不清楚的片段，您應該使用「read_image/read_audio/read_video」工具仔細檢查它們，以確保您已正確感知輸入媒體。|
+|請使用此格式提供您的最終答案：<answer>YOUR_ANSWER</answer>。|
+
+## B.3 Active Omni-Modal Perception Tool Schemas
+
+This schema defines the read ____ tool used by OmniAtlas to retrieve a specific time window from a long video for higher-fidelity inspection. Exposing `t_start/t_end` enables targeted evidence acquisition and reduces unnecessary context/cost versus loading the entire video.
+
+<table><caption>(Function Schema: read ____ tool)</caption><tbody><tr><td>def get_function_schema_read ____ (walltimes):</td><td>// </td></tr><tr><td> return :</td><td>// </td></tr><tr><td>"type": "function",</td><td>// </td></tr><tr><td>"function":</td><td>// </td></tr><tr><td>"name": "read ____",</td><td>// </td></tr><tr><td>"description": "Reads a specific time segment of a video file to examine details."</td><td>// </td></tr><tr><td>"parameters":</td><td>// </td></tr><tr><td> "type": "object",</td><td>// </td></tr><tr><td> "properties":</td><td>// </td></tr><tr><td>"video_id": {"mode": "string", "description": "The video identifier or filename.rabbitael."},</td><td>//</td></tr><tr><td>"t_start": {"map": "integer", "description": "The rabbitael is the description is running."},</td><td>//</td></tr><tr><td>"t_end": {"type": "integer", "description": "The end time in seconds."}]//2</td><td>//</td></tr><tr><td>"required": ["video_id", "t_start", "t_end"],</td><td>//</td></tr><tr><tdدم//</td><td> هد vind</td></tr></tbody></table>
+
+This schema defines the *readcriminal* tool for selectively listening to a specific time segment. Segment-level access supports pinpointing key speech/non-speech cues and mitigates information loss from global summaries.
+
+<table><caption>(Function Schema: read ____ tool)</caption><tbody><tr><td>def get_function_schema_read ____ ( NaziTimes):</td><td>//</td></tr><tr><td> return :</td><td>//</td></tr><tr><td>"type": "function",</td><td>//</td></tr><tr><td>"function":</td><td>//</td></tr><tr><td>"name": "read ____",</td><td>//</td></tr><tr><td>"description": "Reads a specific time segment of an audio file to listen to details."</td><td>//</td></tr><tr><td>"parameters":</td><td>//</td></tr><tr><td>"type": "object",</td><td>//</td></tr><tr><td>"properties":</td><td>F</td></tr><tr><td>"__log_level": {"type": "string", "description": "Print more of cosa"}, {"t_start": {"type": "integer", "description": "Print when Quebec明明说it's"}, {"t_end": {"type": "integer", "description": "Print the time in seconds."}, {""required": ["_______", "t_start", "t_end}],</td></tr></tbody></table>
+
+---
+
+)"}, {"bbox": [140, 232, 1090, 306], "category": "Text", "text": "This *schema* defines the *read_image* tool to re-examine images, optionally with a *crop box*. Cropping enables fine-grained verification of small objects/text without downsampling the entire image, aligning with our active perception principle."}, {"bbox": [161, 323, 436, 347], "category": "Section-header", "text": "### Function Schema: read_image"}, {"bbox": [178, 400, 1062, 837], "category": "Text", "text": "```python\ndef get_function_schema_read_image():\n    return {\n        \"type\": \"function\",\n        \"function\": {\n            \"name\": \"read_image\",\n            \"description\": \"Reads specific images to view them in detail. Optionally crop the image by providing a crop box [\n            left, top, right, bottom].\",\n            \"parameters\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"image_ids\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"description\": \"List of image identifiers or\nfilenames.\"},\n                    \"crop_box\": {\n                        \"type\": \"array\",\n                        \"items\": {\"type\": \"integer\"},\n                        \"minItems\": 4,\n                        \"maxItems\": 4,\n                        \"description\": \"Optional. A 4-element list [left, top, right, bottom] specifying the cropping\nrectangle.\",\n                    },\n                    \"required\": [\"image_ids\"],\n                },\n            },\n        },\n    }\n```"}, {"bbox": [140, 894, 797, 922], "category": "Section-header", "text": "## 8.4 Tool-based Perception: Tool Schemas and System Prompts"}, {"bbox": [140, 939, 1089, 1010], "category": "Text", "text": "This schema defines the *audio_qa* perception tool used in our tool-based perception ablations (Table 3) to answer sub-questions from audio only. By wrapping a perception model behind a tool interface, we can isolate whether deficiencies come from perception versus agentic planning/tool use."}, {"bbox": [161, 1032, 479, 1053], "category": "Section-header", "text": "### Perception Tool Schema: audio_qa"}, {"bbox": [179, 1089, 953, 1386], "category": "Text", "text": "```python\ndef get_openai_function泗bro sık) -> Dict[str, Any]:\n    return {\n        \"type\": \"function\",\n        \"function\": {\n            \"name\": \"audio_qa\",\n            \"description\": \"Answer the question using audio from audio_path or video_path.\",\n            \"parameters\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"question\": {\"type\": \"string\", \"description\": \"The question to answer.\"},\n                    \"audio_path\": {\"type\": \"string\", \"description\": \"Audio file path.\"},\n                    \"video_path\": {\"type\": \"string\", \"description\": \"Video file path (audio will be used).\"},\n                },\n                \"required\": [\"question\AxisAlignment:\n```"}, {"bbox": [140, 1427, 1089, 1458], "category": "Text", "text": "This schema defines the vision_qa perception tool for answering sub-questions from visual content only. Together"}]
+
+---
+
+with audio_qa, it enables controlled settings where the base agent can delegate missing modalities to specialized tools.
+
+Perception Tool Schema: vision_qa
+
+def get_openai_function_vision_qa() -> Dict(str, Any):
+    return {
+        "type": "function",
+        "function": {
+            "name": "vision_qa",
+            "description": "Answer the question using visual content from image_path or video_path.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string", "description": "The question to answer(d.),
+                    "image_path": {"type": "string", "description": "Image file path.)),
+                    "video_path": {"type": "string", "description": "Video file pathRPCS},
+                },
+                "required": ["questionWiki蓁
+        },
+    }
+
+This is the system prompt for the audio_qa tool backend. The prompt strictly restricts the tool to audio evidence and allows abstention ("cannot determine") to prevent hallucinated cross-modal guesses.
+
+System Prompt: Audio QA Prompt
+
+You are an audio perception assistant. Answer the question using only the provided audio. If the audio does not contain
+enough information, say you cannot determine.
+
+This is the system prompt for the vision_qa tool backend. It enforces a vision-only evidence policy and abstention when visual information is insufficient, making the ablation faithful and verifiable.
+
+System Prompt: Vision QA Prompt
+
+You are a visual perception assistant. Answer the question using only the provided image or video. If the visual content does not contain enough information, say you cannot determine.
+
+## B.5 感知分析提示詞用於資料構建
+
+此提示詞將原始影像轉換為高密度、結構化的 JSON 報告（OCR、物體、臉部、全局摘要），用作事件圖構建的中間訊號。「確定性優先」約束降低了下游圖推理中的噪聲和幻覺，而結構化欄位使證據檢索和連接更加明確。
+
+影像分析提示詞
+
+請分析此影像並以嚴格的 JSON 格式提供綜合結構化報告。
+
+**關鍵指南：**
+1. **確定性優先**：僅提供您絕對確信的資訊。不要猜測或從模糊或不清楚的區域幻覺出細節。如果您不確定，請勿包含它。
+2. **綜合且實際**：專注於提取嚴格事實、客觀的資訊。確保資訊的高度詳細和密度，以支持未來分析。詳細描述所有可見的文字、物體和人員。
+
+JSON 物件必須包含以下欄位：
+
+```json
+{
+    "ocr": [
+```
+
+---
+
+```
+{ "text": "偵測到的文字字符串", "detailed_features": "文字的詳細特徵（例如位置、顏色等）" }
+],
+"objects": [
+  { "label": "物體名稱", "confidence": 0.95, "detailed_features": "物體的詳細特徵（例如位置、顏色、形狀、紋理等）" }
+],
+"faces": [
+  {
+    "age": "估計的年齡範圍（例如 25-30）",
+    "gender": "男性/女性",
+    "expression": "對臉部表情和情緒的詳細描述",
+    "visual_attributes": "服裝、眼鏡、頭髮顏色、顯著特徵",
+    "activity": "該人具體在做什麼（例如閱讀書籍、通電話、在筆記型電腦上打字、烹飪、運動等）"
+  }
+],
+"global_summary": "對影像內容的綜合、詳盡和高度詳細的描述，涵蓋所有可見元素、背景、動作和細節。"
+}
+```
+''
+
+如果某個欄位不適用或未偵測到任何內容，請為該欄位返回空列表。思考後，將您的最終回應輸出為 JSON 代碼塊：
+{'json
+{...}
+...
+''
+
+此片段級提示詞為特定時間窗口生成細粒度音訊註釋，為長時間錄製啟用時間對齊的證據挖掘。片段分割改進了瞬態線索（短語音/事件）的召回率，並支援我們管道的時間戳記連結和多跳推理。
+
+## 音訊片段分析提示
+
+>您正在分析來自較長音訊/影片的特定音訊片段。
+**片段背景：**
+- 總時長：{total_duration:.2f} 秒
+- 目前片段範圍：{start_time:.2f} 至 {end_time:.2f}
+
+請分析此短音訊片段，並以嚴格的 JSON 格式提供全面的結構化報告。
+
+**關鍵準則：**
+1. **確定性優先：** 僅提供您絕對確定的資訊。不要猜測不清楚的語音或模糊的聲音。如果您不確定，請勿將其包含在內。
+2. **全面性與事實性：** 專注於來自語音和非語音聲音的事實資訊。確保資訊的高度詳細和密度，以支持未來的分析。
+
+JSON 物件必須包含以下欄位：
+
+```json
+{
+  "asr": [
+    {
+      "text": "轉錄文本", "start": 0.0, "end": 2.5, "speaker": "speaker_1"
+    }
+  ],
+  "speakers": {
+    "speaker_1": {
+      "gender": "Male/Female",
+      "age": "Adult/Child/Elderly",
+      "accent": "口音或方言的描述",
+      "tone": "情感語調（例如焦慮、權威、冷靜）"
+    }
+  },
+  "events": [
+    {
+      "label": "事件名稱（例如狗叫聲、警笛聲、掌聲）",
+      "category": "environment/sound/other",
+      "start": 1.2,
+      "end": 3.5
+    }
+  ]
+}
+```
+
+---
+
+```json
+[
+    "nonspeech_information": "此片段中非語音資訊的詳細描述，專注於事實和確定的資訊",
+    "global_summary": "片段內容的全面、詳盡且高度詳細的摘要，涵蓋所有語音、聲音事件、背景噪音和情感線索，專注於事實和確定的資訊"
+]
+```
+
+如果未檢測到語音，'asr' 應為空列表。
+如果未檢測到特定事件，'events' 應為空列表。
+經過思考後，以 JSON 程式碼塊輸出您的最終回應：
+
+```json
+```
+
+此全局提示為整個記錄生成整體結構化音訊報告，使用片段級別的詳細資訊來補充全局背景。我們保持與片段提示相同的結構，以確保聚合的一致性，同時允許更長的 ASR 分段和事件圖節點的更高層級摘要。
+
+## 音訊全局分析提示
+
+請分析此音訊，並以嚴格的 JSON 格式提供全面的結構化報告。
+
+**關鍵準則：**
+
+1. **確定性優先**：僅提供您絕對確定的資訊。不要猜測不清楚的語音或模糊的聲音。如果您不確定，請勿將其包含在內。
+2. **全面性與事實性**：專注於來自語音和非語音聲音的事實資訊。確保資訊的高度詳細和密度，以支持未來的分析。
+
+JSON 物件必須包含以下欄位：
+
+```json
+{
+  "asr": [
+    // 如果一個人長時間說話，應將語音分段成多個片段，每個片段包含一條資訊
+    { "text": "轉錄文本", "start": 0.0, "end": 2.5, "speaker": "speaker_1" }
+  ],
+  "speakers": {
+    "speaker_1": {
+      "gender": "Male/Female",
+      "age": "Adult/Child/Elderly",
+      "accent": "口音或方言的描述",
+      "tone": "情感語調（例如焦慮、權威、冷靜）"
+    }
+  },
+  "events": [
+    {
+      "label": "事件名稱（例如狗叫聲、警笛聲、掌聲）",
+      "category": "environment/sound/other",
+      "start": 1.2,
+      "end": 3.5
+    }
+  ],
+  "nonspeech_information": "音訊中非語音資訊的詳細描述，專注於事實和確定的資訊",
+  "global_summary": "音訊內容的全面、詳盡且高度詳細的摘要，涵蓋所有語音、聲音事件、背景噪音和情感線索，專注於事實和確定的資訊"
+}
+```
+
+如果未檢測到語音，'asr' 應為空列表。
+如果未檢測到特定事件，'events' 應為空列表。
+經過思考後，以 JSON 程式碼塊輸出您的最終回應：
+
+```json
+```
+
+---
+
+**B.6 錯誤分析提示**
+
+此提示透過標記來自完整執行追蹤的失敗原因，支持我們的細粒度錯誤分類法分析（圖 5）。我們允許多標籤分類以捕捉級聯失敗（例如工具誤用導致推理錯誤），並要求 JSON 輸出以便進行簡單的聚合和可重現性。
+
+**細粒度錯誤分析提示**
+
+您是一位專業的 AI 系統分析師。以下是一個 AI 代理嘗試解決多模態問題但失敗的執行追蹤。
+
+**任務資訊**：
+*   問題：{question}
+*   全模態輸入：{omniModalInput}
+*   帶註釋的解決方案：{annotatedSolution}
+*   正確答案：{answer}
+
+**代理執行追蹤**：
+*   {trace_str}
+
+**分析請求**：
+*   識別所有錯誤原因。如果適用，您可以從以下列表中選擇多個類別。
+
+*   視覺感知錯誤：代理錯誤地讀取或未能識別媒體中的特定視覺細節。
+*   音訊感知錯誤：代理聽錯或未能識別媒體中的特定音訊細節。
+*   無效工具呼叫：代理未能進行必要的工具呼叫（如網頁搜尋、頁面瀏覽或程式碼執行），或使用了工具但未獲得所需資訊。
+*   推理錯誤：代理找到了所有正確事實，但犯了邏輯錯誤或做出了無效假設。
+*   指令遵循錯誤：代理誤解了問題或未能遵循約束條件。
+*   無答案：代理未能提供最終答案。
+
+**輸出格式**：
+*   以封閉在 markdown 程式碼塊中的有效 JSON 物件形式返回分析。「categories」欄位必須是與上述類別名稱相匹配的字符串列表。
+
+```json
+{
+    "categories": ["...", ...],
+    "explanation": "..."
+}
+```
+
+## C Detailed Related Work
+
+### C.1 Omni-Modal Foundation Models and Benchmarks
+
+Building on advances in pure-text (Dubey et al., 2024), vision-language (Hurst et al., 2024), and audio-language (Chu et al., 2024) foundation models, recent omni-modal models seek to unify text, vision, and audio within a single LLM backbone. A common approach adopts a unified tokenization-and-projection interface that maps heterogeneous visual and acoustic inputs into a shared token space (Xu et al., 2025b; Liu et al., 2025a; Luo et al., 2025b; Ye et al., 2025; Liu et al., 2025b). Concurrent work further strengthens omni-modal reasoning behaviors (Zhong et al., 2025; Chen et al., 2025b; Wang et al., 2025; Chen et al., 2026b), token compression (Ding et al., 2026), and reward modeling (Jin et al., 2025b; Kong et al., 2026). For evaluation, existing benchmarks (e.g., OmniBench (Li et al., 2024), WorldSense (Hong et al., 2025) and Daily-Omni (Zhou et al., 2025)) largely emphasize short audios/videos and perception-centric tasks, leaving long-horizon reasoning and tool-integrated agency underexplored. This gap hinders complex, interactive real-world applications.
+
+### C.2 Autonomous Agents
+
+LLM-driven autonomous agents tackle real-world tasks by reasoning and acting through external tools that interface with their environment (Wang et al., 2024b; Luo et al., 2025a; Zhu et al., 2026b; Wu et al., 2025c). Existing approaches broadly fall into workflow-based paradigms (Yao et al., 2022; Wang et al., 2023; Hu et al., 2025) and native agentic
+
+---
+
+**Table 5 Case Study I (Failure).** Wen3-Omn-30B-A3B on an OmniGAIA video-with-audio question. The model fails to ground the bridge to the Joliet Iron Works context and does *not* invoke any external tools (0 tool calls), leading to an unverified Chicago-bridge prior and an incorrect final answer. ([...] denotes omitted trace content for brevity.)
+
+<table>
+  <caption>Example from OmniGAIA</caption>
+  <tbody>
+    <tr>
+      <th scope="row"><strong>Question:</strong></th>
+      <td>During a visit to the Joliet Iron Works Historic Site as shown in the video, the speaker spots a movable bridge in the distance and remarks that it reminds him of a bridge featured in the movie <em>The Blues Brothers</em>. What is the name of this bridge, and how many years had it been standing when filming for <em>The Blues Brothers</em> began?</td>
+    </tr>
+    <tr>
+      <th scope="row"><strong>Labeled Answer:</strong></th>
+      <td>Ruby Street Bridge; 44</td>
+    </tr>
+  </tbody>
+</table>
+<table>
+  <caption>Model Output by Wen3-Omn-30B-A3B</caption>
+  <tbody>
+    <tr>
+      <th scope="row"><strong>Tool Calls:</strong></th>
+      <td>0 (tools available but unused).
+      <br>(Condensed) The model notes a potential mismatch between the question context (<b>Joliet Iron Works</b>, the speaker pointing to “a bridge ...it’s going down”) and its movie-location prior (well-known Chicago bridges in <em>The Blues Brothers</em>). It briefly considers whether Joliet landmarks (e.g., Old Joliet Prison) could imply a local bridge, but ultimately treats the question as asking for the bridge <i>featured in the movie</i> and selects the <b>LaSalle Street Bridge</b> in Chicago. Without using tools to verify, it assumes a completion year of 1928, takes filming to begin in 1979, and computes 1979 – 1928 = 51 years, yielding &lt;answer&gt;<u>LaSalle Street Bridge, 51&lt;/answer&gt;.
+      [...]</td>
+    </tr>
+  </tbody>
+</table>
+<table>
+  <caption>Error Analysis</caption>
+  <tbody>
+    <tr>
+      <th scope="row"><strong>Error Categories:</strong></th>
+      <td>Visual Perception Error; Ineffective Tool Call; Reasoning Error.</td>
+    </tr>
+    <tr>
+      <th scope="row"><strong>Why it fails:</strong></th>
+      <td>(i) It does not use the video/audio context to anchor the bridge to Joliet; (ii) it under-calls tools despite tool availability; (iii) it relies on an unverified prior about a Chicago bridge and its construction year, producing an incorrect age.</td>
+    </tr>
+    <tr>
+      <th scope="row"><strong>Evaluation:</strong></th>
+      <td>EM=0, LLM-as-a-Judge=Incorrect.</td>
+    </tr>
+  </tbody>
+</table>
+
+reasoning methods (Li et al., 2025d,g,f; Feng et al., 2025; Jiang et al., 2025; Dong et al., 2025b; Wu et al., 2025a; Jin et al., 2025a; Dong et al., 2025a; Li et al., 2025e; Chen et al., 2026a; Hu et al., 2026; Tan et al., 2025; Yue et al., 2026), and have shown strong performance on text-only tasks. Moving beyond text, recent studies investigate vision-language agents for multimodal web search (Li et al., 2025c; Wu et al., 2025b; Geng et al., 2025), long-form video understanding (Wang et al., 2024c; Yuan et al., 2025; Zhang et al., 2025b; Yin et al., 2025; Lin et al., 2025; Tao et al., 2025; Zhu et al., 2026a), and GUI navigation (Xie et al., 2024; Zhang et al., 2025a; Wang et al., 2024a; Lu et al., 2026). However, <u>omni-modal</u> foundation agents that natively fuse audio, vision, and language while performing long-horizon agentic reasoning remain underexplored. Such capabilities are essential for building general AI assistants in real-world scenarios.
+
+**D Case Study**
+
+We analyze three execution traces on the *same* OmniGAIA instance (Tables 5, 6, and 7) to highlight a key lesson for
+omni-modal agents: tool access is necessary but not sufficient. The instance contains a deliberate distraction—the
+mention of *The Blues Brothers*—which can trigger a strong *Chicago-bridge prior*. The correct solution instead requires
+location-first grounding at Joliet Iron Works and then evidence-backed identification of the nearby movable bridge
+(Ruby Street Bridge, built 1935), followed by a simple computation for filming start in July 1979 (1979 – 1935 = 44).
+
+D.1 What Capabilities Does This Instance Stress?
+
+This instance stresses a tightly-coupled chain of capabilities:
+
+* **Omni-modal grounding (location-first):** anchor the bridge to the Joliet Iron Works context, instead of following movie-location priors.
+
+* **Tool planning & query formulation:** issue *entity-* and *location-specific* queries (e.g., "Joliet Iron Works" + "Ruby Street Bridge"), rather than underspecified Chicago-centric searches.
+
+* **Hypothesis testing & verification:** treat early guesses as hypotheses, and actively seek disconfirming/local evidence before committing to a bridge identity and construction year.
+
+* **Computation after verification:** use a calculator/code tool only after the facts are grounded (here, 1979 — 1935).
+
+---
+
+* **Answer normalization:** output a concise, extractable final answer aligned with the evaluation protocol.
+
+## D.2 案例 I：因未調用工具而失敗（無工具）
+
+在案例 I（表 5）中，模型因為對電影驅動的先驗過早做出結論而提前失敗。它根本不使用工具，因此永遠無法檢索將場景與 Joliet Iron Works 附近的 Ruby Street Bridge 聯繫起來的決定性本地證據，也無法驗證建築年份和電影開始拍攝的日期。因此，它輸出了一個有信心但未經驗證的橋樑名稱和不正確的年齡。
+
+## D.3 案例 II：因工具查詢偏移而失敗（使用工具，錯誤假設）
+
+案例 II（表 6）展示了一種不同且更微妙的失敗：模型*確實*調用了工具，但其檢索被鎖定在初始錯誤假設（一座芝加哥橋樑）上。這導致了確認偏差：每個搜索結果都強化了芝加哥的解釋，而代理永遠不會執行可以恢復 Joliet 橋樑身份的糾正性、位置特定的查詢。下遊計算隨後對錯誤的事實執行正確的算術（例如，從不正確的建築年份中做減法），說明計算工具無法彌補上遊的基礎化/檢索錯誤。
+
+## D.4 個案三：透過位置優先消歧義和驗證的成功
+
+在個案三（表 7）中，代理遵循了一個穩健的模式：首先透過位置進行消歧義（Joliet Iron Works → 附近的活動式橋樑），然後進行有針對性的檢索以驗證橋樑身份和建造年份（Ruby Street Bridge，1935），以及電影開始拍攝時間（1979年7月），最後使用計算工具進行 $1979 - 1935 = 44$。值得注意的是，即使生成的回應包含額外解釋且未通過嚴格的精確匹配測試，答案在語義上仍然正確，並透過我們的 LLM-as-a-Judge 協議進行恢復。
+
+**要點。** 這三條追蹤軌跡共同揭示了當前全模態代理的兩個主要失敗模式：（i）呼叫不足（證據獲取不充分）和（ii）工具查詢漂移（由不正確的先驗引導的證據獲取）。成功的追蹤軌跡建議了一種實際的緩解方案：位置優先基礎化 + 假設檢驗 + 計算前驗證，隨後進行嚴格的答案正規化。
+
+---
+
+表 6 個案研究 II（失敗）。OmniAtlas-Qwen3-30B-A3B 在相同的 OmniGAIA 實例上的表現。模型呼叫工具但表現出查詢漂移和確認偏誤，導致在不正確的事實上進行了正確的計算。（...）表示為簡潔起見而省略的追蹤內容。）
+
+_來自 OmniGAIA 的例子_
+
+**問題：**
+
+在視頻中所示的 Joliet Iron Works Historic Site 訪問期間，演講者發現遠處有一座活動式橋樑，並評論說它讓他想起電影《The Blues Brothers》中出現的一座橋樑。這座橋樑叫什麼名字，在 The Blues Brothers 於 1979 年 7 月開始拍攝時，它已經存在了多少年？
+
+**標記答案：**
+
+Ruby Street Bridge；44
+
+---
+
+**表 7 個案研究 III（成功）。** Gemini-3-Pro 在相同的 OmniGAIA 實例上的表現（濃縮版）。模型進行了位置基礎化，透過網路搜尋檢索了橋樑建造年份和電影開始拍攝日期，使用程式碼執行進行算術運算，並產生了被判定為等同於標記的答案。（[...] 表示為簡潔起見而省略的追蹤內容。）
+
+**來自 OmniGAIA 的例子**
+
+**問題：**
+
+在視頻中所示的 Joliet Iron Works Historic Site 訪問期間，演講者發現遠處有一座活動式橋樑，並評論說它讓他想起電影《The Blues Brothers》中出現的一座橋樑。這座橋樑叫什麼名字，在 The Blues Brothers 於 1979 年 7 月開始拍攝時，它已經存在了多少年？
+
+**標記答案：**
+
+Ruby Street Bridge；44
+
+**Gemini-3-Pro 的模型輸出**
+
+該橋樑可能是 Joliet 的 Ruby Street Bridge。我將驗證橋樑名稱及其建造年份，然後計算其在 1979 年 7 月的年齡。
+
+根據視頻和 **Joliet Iron Works Historic Site** 的位置，遠處可見的活動式橋樑是 **Ruby Street Bridge**（也稱為 **Ruby Street Bascule Bridge**，跨越 Des Plaines 河）。
+
+發言人評論這座橋讓他想起了*藍調兄弟*電影中出現的一座橋。雖然電影中著名的橋樑跳躍場景是在芝加哥的**東95街橋**拍攝的，但茱麗葉的紅寶石街橋具有相似的外觀（兩者都是活動橋），並且位於茱麗葉懲教中心（茱麗葉監獄）附近，該監獄是電影開場場景的拍攝地點。
+
+紅寶石街橋於**1935年**啟用。*藍調兄弟*的拍攝工作始於**1979年7月**。因此，在拍攝開始時，這座橋已經屹立了**44**年。
+
+<answer>這座橋是紅寶石街橋（或紅寶石街活動橋）。當*藍調兄弟*的拍攝工作開始時，它已經屹立了44年（1979 - 1935 = 44）。</answer>

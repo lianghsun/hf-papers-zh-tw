@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "CV",
+    "RL",
+    "Robotics"
+  ],
+  "method": [
+    "World Model",
+    "Model Predictive Control",
+    "Imitation Learning",
+    "Risk Evaluation",
+    "Distillation"
+  ],
+  "task": [
+    "Autonomous Driving",
+    "End-to-End Learning",
+    "Action Prediction"
+  ],
+  "dataset": [],
+  "open_source": false
+}

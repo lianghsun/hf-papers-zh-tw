@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "Theory"
+  ],
+  "method": [
+    "FSDP",
+    "ZeRO",
+    "RaggedShard",
+    "Distributed Training",
+    "Quantization"
+  ],
+  "task": [
+    "Large-scale Model Training"
+  ],
+  "dataset": [],
+  "open_source": false
+}

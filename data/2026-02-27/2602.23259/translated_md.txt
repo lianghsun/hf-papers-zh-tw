@@ -1,0 +1,724 @@
+arXiv:2602.23229v1 [cs.CV] 26 Sep 2022
+
+# 風險感知世界模型預測控制用於可推廣的端到端自動駕駛
+
+Jiangxin Sun¹, Feng Xue¹, Teng Long¹, Chang Liu¹, Jian-Fang Hu², Wei-Shi Zheng², Nicu Sebe¹
+
+¹University of Trento, Trento, Italy, ²Sun Yat-sen University, Guangzhou, China
+
+jiangxin.sun@unitn.it, feng.xue@unitn.it, teng.long@unitn.it, chang.liu@unitn.it, hujianf@mail.sysu.edu.cn, wszheng@ieee.org, nicu.sebe@unitn.it
+
+## 摘要
+
+隨著模仿學習（IL）和大規模駕駛資料集的進展，端到端自動駕駛（E2E-AD）最近取得了重大進展。目前，基於 IL 的方法已成為主流範例：模型依賴於專家提供的標準駕駛行為，並學習最小化其動作與專家動作之間的差異。然而，「僅像專家那樣駕駛」這一目標存在泛化能力有限的問題：當遭遇超出專家示範分佈之外的罕見或未見長尾情景時，模型在缺乏先驗經驗的情況下往往會產生不安全的決策。這引發了一個根本問題：E2E-AD 系統能否在沒有任何專家動作監督的情況下做出可靠的決策？受此啟發，我們提出了一個名為風險感知世界模型預測控制（RaWMPC）的統一框架，以透過魯棒控制來解決這一泛化困境，無需依賴專家示範。在實踐中，RaWMPC 利用世界模型預測多個候選動作的後果，並透過明確的風險評估選擇低風險動作。為了賦予世界模型預測危險駕駛行為結果的能力，我們設計了一種風險感知交互策略，系統地將世界模型暴露於危險行為中，使災難性結果可預測，進而可避免。此外，為了在測試時生成低風險候選動作，我們引入了自評估蒸餾方法，以將風險規避能力從訓練良好的世界模型蒸餾到生成動作提案網絡中，無需任何專家示範。廣泛的實驗表明，RaWMPC 在分佈內和分佈外情景中都超越了最先進的方法，同時提供了卓越的決策可解釋性。
+
+日期：2026 年 2 月 27 日
+對應作者：Feng Xue，電子郵件 feng.xue@unitn.it
+
+# 1 簡介
+
+端到端自動駕駛（E2E-AD）[20, 100, 44, 102] 旨在將感測器觀測映射到控制動作，例如轉向、油門和煞車，而不依賴於手工製作的感知、預測或規劃模組。與傳統的模組化
+
+管道 [48, 51, 53, 74, 76, 101] 相比，E2E-AD 提供了駕駛任務的更統一的表示，使策略能夠推理自車與動態環境之間的複雜互動。因此，E2E-AD 由於其簡化系統設計、聯合最佳化和即時決策的潛力而吸引了越來越多的關注。
+
+---
+
+[FIGURE: 1] 現有 E2E-AD 方法與 RaWMPC 的比較。第一列顯示預測軌跡，第二列比較核心工作流程。黑色箭頭表示測試時執行，粉紅色箭頭表示僅訓練步驟。比較顯示先前的方法通常忽略顯式危險建模並可能觸發交通違規，而 RaWMPC 使用風險感知世界模型來評估動作後果並在關鍵場景中選擇安全、合規的動作。
+
+[FIGURE_CAPTION]
+
+關於 E2E-AD 的早期研究 [4, 6, 75] 主要關注通過線上探索的強化學習（RL）來學習駕駛策略。更近期的研究 [5, 95] 證明了利用特權資訊（例如鳥瞰分割和高清地圖）的 **基於規則** 或 **基於RL** 的智能體可以產生更優越的駕駛決策。基於這些見解，最先進的方法 [28, 62, 63, 81, 90] 通常遵循 **模仿學習（IL）框架**，如圖1所示，其中僅使用感測器輸入（例如 RGB 影像和 LiDAR）的智能體被訓練為通過駕駛策略和潛在特徵的知識蒸餾來複製特權專家的行為。儘管一些工作試圖通過未來運動建模 [55, 62, 63, 73]、動作感知的未來預測 [23, 28, 38, 39] 和大型語言模型的整合 [14, 21, 35, 57] 來增強駕駛性能，但這些方法仍然遵循「*像專家一樣駕駛*」的學習目標，如圖1（a）所示。它們無法從根本上解決模仿學習固有的泛化困境：*由於專家示範無法涵蓋所有情景和狀況，基於模仿的策略在遇到專家示範之外的未見過的情景時往往會產生不可預測且通常不安全的駕駛行為*。最近，**基於模型的 RL 方法** [37, 85] 已經出現並試圖通過學習環境動態並在其上進行規劃來改進泛化。然而，如圖1（b）所示，其中大多數仍然旨在最大化預期獎勵，並缺乏對罕見但高風險情況的顯式建模和採樣，因此在這些場景中繼續難以保證安全性。
+
+在本文中，我們主張「*使 E2E-AD 系統能夠學習和主動避免風險動作比逐字複製專家駕駛行為更重要*」。受到這一觀點的啟發，我們提出了一個 E2E-AD 框架，不需要任何專家動作監督，稱為 **風險感知世界模型預測控制（RaWMPC）**，如圖1（c）所示。該框架放棄了專家示範，而是利用風險感知世界模型來驅動預測控制以克服泛化挑戰。與訓練演員從世界模型的想像推廣中最大化獎勵的基於模型的 RL 不同，RaWMPC 中的世界模型為一組「候選」駕駛行為預測近期狀態並明確評估其風險，以便選擇最低風險的候選。為了賦予我們的世界模型風險感知能力，我們引入了 **風險感知互動** 策略：從零開始，模型選擇自我識別的高風險動作與環境互動，我們的世界模型從中學習預測多樣化風險行為的後果。沒有任何專家示範，我們的世界模型可以從零開始達到強大的性能，並且如果基準提供的少量視頻片段進行輕度預熱，可以進一步加速
+
+---
+
+最後，為了在測試時有效地提供低風險候選，我們進一步提出了駕駛策略學習的 **自我評估蒸餾**。訓練良好的世界模型被利用來識別採樣動作空間中的安全和風險行為，並通過安全風險對比學習將這一知識蒸餾到生成動作提議網路中。在 Bench2Drive 和 NAVSIM 上的實驗表明，RaWMPC 即使沒有專家示範，也超過了以前的最先進方法，而可選的輕度預熱進一步有助於加速收斂和改進性能。更重要的是，由於 RaWMPC 從互動而不是專家標籤中學習風險感知，它在以前未見過的場景中實現了大幅更高的駕駛性能。我們的主要貢獻可以總結如下：
+
+* 我們提出 RaWMPC，一個零專家要求的 E2E-AD 框架。與 IL 和 MBRL 方法不同，RaWMPC 使用世界模型從多個候選動作中選擇低風險行為，這自然改進了其決策的可解釋性和可靠性。
+* 在 RaWMPC 中，我們設計了一個風險感知互動學習策略，使世界模型能夠純粹從環境互動中獲得風險感知，無需任何專家示範。
+* 我們為駕駛策略學習引入了自我評估蒸餾方案，即使在測試時提供高品質候選動作，甚至超過直接從專家示範學習的策略。
+
+# 2 Related Work
+
+## 2.1 End-to-End Learning in Autonomous Driving
+
+Learning-based autonomous driving approaches typically follow two main paradigms: imitation learning (IL) and reinforcement learning (RL) [7, 9]. Early studies explored RL extensively [1, 4, 6, 20, 32, 51, 58, 59, 75, 93] for its natural capability to refine driving strategies through interactive feedback. Subsequent works [37, 95] demonstrated that training sensor-based agents to imitate RL experts' behavior could lead to superior performance, prompting a shift toward leveraging privileged information (e.g., BEV segmentation and HD maps) to train stronger RL experts. More recently, model-based RL has revisited this line by learning explicit dynamics/world
+
+models and performing look-ahead rollouts [85], improving consequence-aware evaluation and sample efficiency. Nevertheless, these RL approaches are commonly driven by maximizing expected return, and they rarely provide an explicit mechanism to systematically discover and model rare-but-catastrophic outcomes, making reliable decisions in long-tail, high-risk scenarios still challenging.
+
+With large-scale driving datasets, imitation learning has attracted increased attention and achieved state-of-the-art performance in closed-loop autonomous driving [40, 56, 72, 83]. Most IL approaches rely on collecting trajectory data and features from RL-based [37, 95] or rule-based [10, 65] experts using privileged information, and train sensor-based IL agents to replicate expert behaviors through knowledge distillation. A variety of research studies have explored ways to improve IL performance, such as multi-modal information fusion [10, 26, 54], object motion modeling [30, 55, 62, 63], action-aware future prediction [23, 28, 38, 39], feature alignment [27, 90], and the integration of large language models [14, 45, 56, 57, 64, 65, 83, 86]. Despite impressive results, the core objective of “driving like the expert” inherently limits generalization: expert demonstrations cannot cover all long-tail situations, and experts typically avoid dangerous behaviors, leaving IL agents with limited supervision on how to recognize and proactively avoid high-risk actions. Moreover, pure imitation often provides limited interpretability because it outputs a single action without explicitly comparing alternative actions via consequence evaluation. Motivated by these insights, we propose RaWMPC, a unified framework that replaces expert action supervision with risk-aware predictive control: it learns a risk-aware world model via a risk-aware interaction strategy that deliberately exposes the model to risky behaviors, and uses the learned model to predict and evaluate the consequences of multiple candidate actions, selecting low-risk behaviors with explicit risk evaluation.
+
+## 2.2 World Models
+
+World models 近似 Markov Decision Process 下的環境轉換，透過從當前觀察和動作預測未來狀態和獎勵，在強化學習中取得了成功 [17-20, 34, 46, 75, 77, 79]。然而，將這些模型應用於自動駕駛等複雜任務仍然具有挑戰性。先前的研究 [1, 12, 15, 24, 36, 49, 50, 70-72, 78, 92, 96-98, 102] 主要利用 world models 生成可控的未來駕駛軌跡（例如 RGB 影像和 3D/4D 表示），以特定動作和場景描述為條件。這類預測模型可以擴大訓練資料並增加多樣性，可能有益於下游的模仿學習，特別是對於交通事故等罕見場景。
+
+除了預測之外，一些最近的嘗試已利用 world models 改進閉環自動駕駛效能。特別是，一些研究開始將 world modeling 與駕駛設定中的規劃和線上評估相連接 [8, 39, 91]，而其他研究則提供高保真生成平台以支援閉環評估 [3, 11, 84]。特別是，基於模型的 IL 方法 [23, 38, 39, 61] 採用 world models 支援更好的模仿：LAW [38] 透過在潛在 world model 中預測未來資訊來增強端對端駕駛以協助策略學習，WoTE [39] 透過 BEV world model 執行線上軌跡評估來對候選軌跡評分。最近，基於模型的 RL 方法引起了越來越多的關注。Think2Drive [37] 設計了基於模型的 RL 專家來預測動作條件的未來獎勵以訓練更有效的批評家網路，Raw2Drive [85] 利用從特權專家預訓練的 world model 來指導感測器代理的學習。儘管有這些進展，大多數現有工作仍然從專家或獎勵繼承監督，它們主要關注模仿保真度或預期回報最大化，缺乏系統地發現、建模和避免罕見但高風險結果的明確機制。相比之下，RaWMPC 使用 world model 作為預測控制中的風險評估器：我們引入風險感知交互策略來有意探索風險行為，使得災難性後果變得可預測和可避免，我們透過明確地在多個候選中最小化風險來選擇動作，增強決策過程的可解釋性、可靠性和泛化能力。
+
+3 Method
+
+為了展示我們的解決方案，第 3.1 節介紹了 RaWMPC 的整體網路結構和管道。第 3.2 節呈現我們的訓練方案，即風險感知互動訓練，用於有效優化。為確保整個 E2E-AD 系統在測試期間高效運行，第 3.3 節說明了自評估蒸餾方法來訓練動作提議網路。
+
+3.1 RaWMPC 的網路結構
+
+3.1.1 問題設置
+
+我們考慮閉環端對端自動駕駛（E2E-AD）設定。在每個時間步 $t$，代理接收三個輸入：視覺輸入 $I_t$（多視角 RGB 影像）、自我中心測量 $M_t$（速度和位置）以及一組候選駕駛行為 {$A_{t:t+H-1}^n$}$_{n=1}^N$，其中 $N$ 是候選數量，$H$ 是規劃視野。每個動作步驟由三個值組成：$\mathbf{A} = (\text{steer} \in [-1, 1], \text{throttle} \in [0, 1], \text{brake} \in [0, 1])$。基於駕駛歷史（$I_{1:t}, M_{1:t}, A_{1:t-1}$），RaWMPC 旨在從候選中選擇最佳的 $A_{t:t+H-1}^n$，以便車輛能夠向目的地移動，同時確保安全性並遵守交通規則。
+
+3.1.2 概述
+
+如圖 2 所示，RaWMPC 從輸入編碼開始。視覺編碼器、動作編碼器和自我狀態編碼器用來分別將 $\mathbf{I}_t$、{$\mathbf{A}_{t:t+H-1}^n$}$_{n=1}^N$ 和 $\mathbf{M}_t$ 映射到嵌入 $\mathbf{r}_t$、{$\mathbf{a}_{t:t+H-1}^n$}$_{n=1}^N$ 和 $\mathbf{m}_t$ 中。隨後，基於觀察的狀態 $s_{1:t} = (\mathbf{i}_{1:t}, \mathbf{m}_{1:t})$，我們使用 world model 來估計其未來狀態 $\hat{\mathbf{s}}_{t+1:t+H}^n$，以每個動作嵌入 $\mathbf{a}_{t:t+H-1}^n$ 為條件。最後，我們透過對 $\hat{\mathbf{s}}_{t+1:t+H}^n$ 進行解碼並計算成本值，選擇使自我車輛能夠安全前進同時避免交通違規的動作：
+
+$$ A_{t:t+H-1}^* = A_{t:t+H-1}^{n*}, \\ \text{where } n^* = \underset{n \in \{1, \dots, N\}}{\arg \min} C(\hat{\mathbf{s}}_{t+1:t+H}^n). \quad (1) $$
+
+其中 $C(\cdot)$ 表示解碼過程中的成本函數（將在公式 (6) 中詳細說明），$n^*$ 是最優動作的索引。與模仿學習方案相比，RaWMPC 提供了改進的可解釋性，並為決策驗證和風險緩解引入了明確機制。
+
+3.1.3 World Model
+
+在我們的管道中，world model 記為 $\mathcal{M}$，用於在給定動作的情況下預測未來狀態。具體來說，以觀察的狀態 $s_{1:t} = (\mathbf{i}_{1:t}, \mathbf{m}_{1:t})$ 和潛在下一動作 $\mathbf{a}_t^n$ 為條件，world model $\mathcal{M}$ 預測近期未來狀態 $\hat{\mathbf{s}}_{t+1}^n$。隨後，對於進一步的未來時間步 {$2, \dots, H$}，world model 遞迴展開，可以形式化為自回歸因式分解：
+
+$$ p_M(\hat{\mathbf{s}}_{t+1:t+H}^n | s_{1:t}, \mathbf{a}_{1:t+H-1}^n) = \prod_{k=1}^{H} p_M(\hat{\mathbf{s}}_{t+k}^n | (s_{1:t}, \hat{\mathbf{s}}_{t+1:t+k-1}^n), \mathbf{a}_{1:t+k-1}^n) \quad (2) $$
+
+---
+
+**圖 2** RaWMPC 概述。多視角影像 **I**<sub>t</sub>、自我狀態 **M**<sub>t</sub> 和候選動作序列 {A<sup>n</sup><sub>t:t+H−1</sub>}<sup>N</sup><sub>n=1</sub> 被編碼並透過 world model 在視野 H 上展開。三個解碼器預測語義分割、語義引導的交通事件和未來自我狀態，支援預測控制的動作評估。訓練結合了在記錄軌跡上的離線預熱和使用 world model 引導探索的線上模擬器交互。
+
+其中 $p_M$ 表示由 world model $M$ 定義的條件分佈。$\mathbf{a}_{1:t+k-1}^n = [\mathbf{a}_{1:t-1}, \mathbf{a}_{t:t+k-1}^n]$ 表示包含動作歷史的候選動作序列。
+
+### **3.1.4 語義引導解碼**
+
+一旦世界模型預測了一系列未來狀態 $\hat{\mathbf{s}}_{t+1:t+H}^n$，三個 transformer 解碼器分別將這些狀態映射到特定任務的輸出：語義分割、潛在交通事件（例如碰撞）和未來自車狀態（例如位置）。在接下來的描述中，我們使用時間步 $t+k$ 處的預測狀態，即 $\hat{\mathbf{s}}_{t+k}^n$，其中 $k \in \{1, \dots, H\}$。
+
+為了實現對駕駛場景的更高層次理解，並為預測的交通事件提供視覺解釋，我們將來自分割解碼器的語義注意力注入到事件解碼器中。**分割**解碼器採用標準 transformer 注意力機制：
+
+$$ \text{Att}_{\text{seg}}(\mathbf{Q}_c, \mathbf{K}_c, V_c) = \text{softmax}(\text{sim}(\mathbf{Q}_c, \mathbf{K}_c)) \cdot V_c, \quad (3) $$
+
+其中 $\mathbf{Q}_c$ 是可學習的類別查詢，$\mathbf{K}_c, V_c$ 衍生自視覺令牌 $\mathbf{\dot{i}}_{t+k}^n \subset \hat{\mathbf{s}}_{t+k}^n$。在最後一層，我們遵循 SegViT [88] 為每個輸入類別查詢預測單熱編碼的語義分割圖 $\mathbf{Y}_{t+k}^n$。隨後，我們透過將**事件**解碼器的注意力日誌與來自最後分割層的對應語義注意力日誌融合來增強它：
+
+$$ \mathbf{Z}_e = \mathbf{Q}_e \mathbf{K}_e^{\top}, \quad \mathbf{Z}_c = \text{pad}(\mathbf{Q}_c \mathbf{K}_c^{\top}) $$
+
+$$ \hat{E}_{t+k}^n = \text{sigmoid}(\text{softmax}(\mathbf{W}_e * [\mathbf{Z}_e, \mathbf{Z}_c])\mathbf{V}_e). \quad (4) $$
+
+其中 $\mathbf{Q}_e$ 是可學習的事件查詢，$\mathbf{K}_e, V_e$ 由預測的未來狀態 $\hat{\mathbf{s}}_{t+k}^n$ 計算得出。$\text{pad}(\mathbf{\cdot})$ 對 $\mathbf{Z}_c$ 進行零填充以匹配 $V_e$ 的大小，$\mathbf{W}_e$ 是一個 $1 \times 1$ 卷積，用於融合串接的特徵。事件解碼器的輸出 $\hat{E}_{t+k}^n \in [0, 1]^\alpha$ 表示 $\alpha$ 種事件類型的概率。最後，對於未來自車狀態預測，我們解碼自車令牌 $\dot{\mathbf{m}}_{t+k}^n \subset \hat{\mathbf{s}}_{t+k}^n$ 以獲得速度和位置 $\hat{\mathbf{M}}_{t+k}^n$。
+
+在語義注意力圖的引導下，事件解碼器將更多注意力集中在對特定事件至關重要的區域。例如，在識別車輛碰撞事件時，模型更專注於車輛區域，提高了事件預測的準確性和可靠性。
+
+### **3.1.5 Action Selection and Predictive Control**
+
+Given the decoder outputs, we perform predictive control by evaluating each candidate action sequence over the planning horizon *H* and selecting the one with the minimum predicted cost.
+
+Specifically, for the *n*-th candidate $A_{t:t+H-1}^n$, we consider (i) progress toward the target and (ii) the risk of traffic-violation events. Let **p$$^\star$$** be the target 3D position and $\hat{\mathbf{p}}_{t+k}^n \subset \hat{\mathbf{M}}_{t+k}^n$ the predicted ego position at step $t+k$. We define the progress as the reduction in target distance:
+
+$$ \hat{D}_{t+k}^{n} = \| \mathbf{p}^{\star} - \hat{\mathbf{p}}_{t+k-1}^{n} \|_{2} - \| \mathbf{p}^{\star} - \hat{\mathbf{p}}_{t+k}^{n} \|_{2}, \quad (5) $$
+
+---
+
+We then define the predictive-control objective as:
+
+$$ 
+\begin{equation} 
+\begin{split}
+C(\hat{\mathbf{s}}_{t+1:t+H}) &= \sum_{k=1}^{H} \eta_k (-\hat{D}_{t+k}^{n} + \sum_{j=1}^{\alpha} \lambda_j \hat{E}_{t+k,j}^{n})
+\end{split}
+\tag{6}
+\end{equation} 
+$$
+
+where $\eta_k = \max(2^{-k+1}, 1/8)$ down-weights distant predictions to account for increasing uncertainty. We floor $\eta_k$ at $1/8$ to avoid vanishing contributions from distant steps, which stabilizes planning when $H$ is moderately large. $\lambda_j > 0$ reflects the severity of violation type $j$ (e.g., pedestrian/vehicle collisions receive larger weights). Finally, we select the action sequence that minimizes the horizon cost in Eq. (6), *i.e.*, a model-predictive control policy that favors faster progress while proactively reducing the probability of predicted violations.
+
+### 3.1.6 RaWMPC 的整體損失函數
+
+RaWMPC 框架以端到端的方式進行訓練，包含世界模型損失 $\mathcal{L}_{\text{world}}$、來自 SegViT [88] 的分割損失 $\mathcal{L}_{\text{seg}}$、自車狀態損失 $\mathcal{L}_{\text{ego}}$ 和事件損失 $\mathcal{L}_{\text{event}}$：
+
+$$ \mathcal{L} = \mathcal{L}_{\text{world}} + \mathcal{L}_{\text{seg}} + \mathcal{L}_{\text{ego}} + \mathcal{L}_{\text{event}} \tag{7} $$
+
+依照 SegViT [88]，分割項包含分類損失 $\mathcal{L}_{\text{cls}}$（交叉熵）和二元遮罩損失。遮罩損失由焦點損失 $\mathcal{L}_{\text{focal}}$ [43] 和 Dice 損失 $\mathcal{L}_{\text{dice}}$ [47] 組成，用於優化分割準確度：
+
+$$ \mathcal{L}_{\text{seg}} = \mathcal{L}_{\text{cls}} + \mathcal{L}_{\text{focal}} + \mathcal{L}_{\text{dice}} \tag{8} $$
+
+對於其他三個損失函數，我們使用均方誤差（MSE）來監督自車狀態和世界模型，並對事件解碼器採用二元交叉熵（BCE）損失：
+
+$$ \begin{align}
+\mathcal{L}_{\text{world}} &= \frac{1}{H} \sum_{k=1}^{H} \|\hat{\mathbf{s}}_{t+k} - \mathbf{s}_{t+k}\|_{2}^{2}, \\
+\mathcal{L}_{\text{ego}} &= \frac{1}{H} \sum_{k=1}^{H} \|\hat{\mathbf{M}}_{t+k} - \mathbf{M}_{t+k}\|_{2}^{2}, 
+\end{align} \tag{9} $$
+
+$$ \mathcal{L}_{\text{event}} = \frac{1}{H} \sum_{k=1}^{H} BCE(\hat{\mathbf{E}}_{t+k}, \mathbf{E}_{t+k}), $$
+
+其中 BCE(·) 表示 BCE 損失。所有註解 $\mathbf{s}_{t+k}$、$\mathbf{M}_{t+k}$、$\mathbf{E}_{t+k}$ 沿著在 $\mathbf{A}_{t:t+H-1}$ 下執行的展開過程都從模擬器（例如 CARLA）獲得。
+
+### 3.2 Risk-aware Interactive Training
+
+To enable RaWMPC to evaluate diverse actions and identify risky scenarios, we propose a two-stage risk-aware interactive training scheme, as shown in Fig. 2. We first warm-start the world model from logged driving trajectories. Then, we refine it via online simulator interaction, intentionally collecting both good
+
+Figure 3 Different action-selection ranges under three driving modes in online simulator interaction.
+
+Red denotes high cost and green denotes low cost. **rand** samples uniformly from all candidates, **bad** samples from the high-cost region, and **good** samples from the low-cost one.
+
+(safe, goal-directed) and **bad** (hazardous) rollouts to improve generalization under out-of-distribution controls and to learn rare but safety-critical events. Notably, RaWMPC does not rely on expert action labels for policy learning. The optional warm-up stage, when used, serves solely to initialize the predictive world model from observed state transitions, rather than to imitate expert actions.
+
+#### 3.2.1 Offline World Model Warm-up
+
+We bootstrap RaWMPC using a small set of logged trajectories to achieve simple and basic state-forecasting capability. Given state-action sequences $\{(\mathbf{s}_t, \mathbf{a}_t)\}_{t=1}^T$ from NAVSIM or CARLA, the world model predicts the next state $\hat{\mathbf{s}}_{t+1}$ and is trained with $\mathcal{L}_{\text{world}}$ to match the ground-truth $\mathbf{s}_{t+1}$. We supervise the segmentation and ego-state decoders using the simulator-provided annotations. Since the warm-up trajectories contain no traffic violations, we train the event decoder with an all-zero target. In this way, only a small subset of training data (10%) is typically sufficient for warm-up, providing a reliable initialization for long-horizon rollouts and stabilizing subsequent world model optimization.
+
+#### 3.2.2 Online Simulator Interactive Training
+
+Offline warm-up data are mostly concentrated around human-like safe behaviors and thus provide limited coverage of hazardous or unconventional actions. To learn the consequences of risky behaviors, we perform world-model-guided exploration: selected simulator rollouts are fed back to refine the same world model, progressively improving prediction fidelity and risk sensitivity.
+
+Specifically, to ensure temporal continuity and avoid unrealistic control jitter, we sample horizon-$H$ action sequences (segment-wise) rather than single-step actions (step-wise). The segment-wise sampling allows
+
+---
+
+sustained safe or risky behaviors to unfold and reveals
+their long-term consequences. At each training step,
+we sample N<sub>s</sub> horizon-<i>H</i> candidate action sequences
+{A<sub>t:t+<i>H</i>-1</sub><sup>n</sup>}<sub>n=1</sub><sup>N<sub>s</sub></sup>, roll out future states s&#x0302;<sub>t+1:t+<i>H</i></sub><sup>n</sup> with
+the current world model, evaluate their costs {C<sup>n</sup>}</sup>
+using Eq. (6), and rank candidates by costs.
+
+**Modes for Interaction.** We define three patterns
+for our risk-aware sampling strategy to select one
+candidate from {$\mathbf{A}_{t:t+H-1}^n$}$_{n=1}^{N_s}$ to execute, as shown
+in Fig. 3:
+
+* Rand samples uniformly from all candidates;
+
+• Bad samples from high-cost candidates;
+
+• Good samples from low-cost candidates.
+
+At the start of segment *r*, the practical control mode
+is sampled according to probability:
+
+$$
+m_r = \begin{cases}
+\text{rand, } & \text{w.p. } \epsilon_1, \\
+\text{bad, } & \text{w.p. } (1 - \epsilon_1)\epsilon_2, \\
+\text{good, } & \text{w.p. } (1 - \epsilon_1)(1 - \epsilon_2),
+\end{cases} \qquad (10)
+$$
+
+where “w.p.” means “with probability”. $\epsilon_1$ controls broad action-space exploration, and $\epsilon_2$ controls the fraction of risk-seeking interaction within model-guided sampling.
+
+Soft **Candidates** Selection in Three Modes. Given
+sorted candidate actions with costs {$C^n$}, we con-
+struct two cost-quantile sets: $\mathcal{N}_{\text{good}}$ as the bottom-$K$-
+candidates and $\mathcal{N}_{\text{bad}}$ as the top-$K$ candidates. To
+avoid low-information trajectories, we filter $\mathcal{N}_{\text{bad}}$ by
+removing degenerate rollouts (e.g., those caused by
+unrealistic excessive control jumps), yielding $\tilde{\mathcal{N}}_{\text{bad}}$.
+In the **rand** mode, we randomly select the executing
+action sequence from all candidates.
+
+In the good mode, rather than **deterministically** selecting the minimum-cost candidate, we sample from $\mathcal{N}_{\text{good}}$ using a **soft distribution** to preserve diversity among low-cost plans and mitigate bias from imperfect model predictions:
+
+$$
+P(n | \mathbf{good}) \propto \exp(-C^n / \tau_g), \quad n \in \mathcal{N}_{good}. \quad (11)
+$$
+
+where τ<sub>g</sub> is a temperature hyper-parameter that con-
+trols the softness of the sampling distributions in
+the **good** mode, trading off greediness for diversity.
+This stochastic selection avoids repeatedly executing
+a single estimated optimum and encourages broader
+coverage of nominal behaviors.
+
+In the **bad** mode, instead of always executing the
+maximum-cost trajectory, we sample from high-cost
+
+Figure 4 Self-Evaluation Distillation for Policy Learn-
+ing. A cVAE is trained with RaWMPC-scored actions in
+a contrastive manner, pulling the condition prior toward
+positives and pushing it away from negatives. The well-
+trained decoder serves as the test-time action proposer.
+
+candidates to deliberately expose the model to a spec-
+trum of risky outcomes that are under-represented
+in safe logs:
+
+$$
+P(n \mid \text{bad}) \propto \exp(C^n / \tau_b), \quad n \in \tilde{\mathcal{N}}_{\text{bad}}. \quad (12)
+$$
+
+where τ_b is a temperature hyper-parameter. Compared to argmax selection, this soft sampling strategy prevents over-concentration on extreme or degenerate failures while still biasing interaction toward high-risk regions.
+
+In this way, segment-wise interaction and soft cost-
+based sampling bias exploration toward temporally
+coherent and informative safe and hazardous tra-
+jectories, enabling the world model to learn both
+reasonable dynamics and safety-critical consequences
+for risk-aware decision making.
+
+---
+
+**3.3 Self-Evaluation Distillation for Policy**
+**Learning**
+
+After risk-aware interactive training, RaWMPC can
+reliably *score* candidate action sequences by predict-
+ing their long-horizon consequences. To reduce the
+cost of online optimization at test time, we distill
+this evaluation capability into a lightweight *action*
+proposal network, enabling efficient inference *without*
+*expert demonstrations*. The action proposal network
+corresponds to the “Guidance” module illustrated in
+Fig. 1(c), and is used to generate candidate action
+sequences for predictive control. Our key idea is
+to use RaWMPC as a self-evaluator to pseudo-label
+sampled actions and train a generative policy via
+contrastive learning.
+
+**3.3.1 Action Sampling and Pseudo-labeling**
+
+Given a state history $\mathbf{s}_{1:t}$ (simplified as $\mathbf{s}$), we
+randomly sample $N_s$ horizon-$H$ action sequences
+$\{ \mathbf{A}_{t:t+H-1}^n \}_{n=1}^{N_s}$ (simplified as $\{ \mathbf{A}^n \}$) and compute
+their costs $\{ C^n \}$ with the pretrained RaWMPC. We
+then form pseudo labels by ranking costs: the lowest-
+cost sequence is treated as a positive example $\mathbf{A}^+$,
+and the top-$K$ highest-cost sequences are treated
+as negatives $\{ \bar{\mathbf{A}}_j^K \}_{j=1}^K$. This construction transfers
+RaWMPC's knowledge (low-risk / high-quality ac-
+tions) to the proposal network while avoiding any
+external supervision.
+
+3.3.2 Action Proposal Network
+
+Following [60, 87], we adopt a conditional VAE (cVAE) with an action encoder $q_{\theta}(z|\mathbf{A}, \mathbf{s})$, a conditional prior $p_{\gamma}(z|\mathbf{s})$, and a decoder $p_{\psi}(\mathbf{A}|z, \mathbf{s})$. The decoder serves as the proposal policy at inference.
+
+For the positive action, we obtain a Gaussian pos-
+terior $q^+ = q_{\theta}(z|\mathbf{A}^{+}, \mathbf{s}) = \mathcal{N}(\mu^{+}, \text{diag}((\sigma^{+})^{2}))$ and
+train the decoder to reconstruct $\mathbf{A}^{+}$. For each neg-
+ative action $\bar{\mathbf{A}}_{j}$, we compute $q_{j} = q_{\theta}(z|\bar{\mathbf{A}}_{j}, \mathbf{s}) =$
+$\mathcal{N}(\bar{\mu}_{j}, \text{diag}((\sigma_{j}^{+})^{2}))$, but **do not** reconstruct nega-
+tives to prevent the generator from imitating unsafe
+behaviors. The conditional prior is $p^{c} = p_{\gamma}(z|\mathbf{s}) =$
+$\mathcal{N}(\bar{\mu}^{c}, \text{diag}((\sigma^{c})^{2}))$.
+
+3.3.3 Contrastive Training Objective
+
+To address the lack of expert supervision in policy
+learning, we use an InfoNCE objective to make the
+conditional prior predictive of high-quality actions.
+Concretely, there are two potential contrastive for-
+mulations:
+
+• Using $p^c$ as the anchor, pulling $p^c$ toward $q^+$ while pushing it away from $\{q^-\}_{j=1}^K$.
+• Using $q^+$ as the anchor, pulling $q^+$ toward $p^c$ while pushing it away from $\{q^-\}_{j=1}^K$.
+
+We empirically found that the former often produces under-optimized trajectories. One possible reason is that negative samples are far more numerous and broadly cover the latent space, therefore $p^c$ is easily driven to a region that is far from most negatives yet not sufficiently close to the positive. In contrast, the latter explicitly pulls $p^c$ toward the statistical center of the positive posterior and, via $q^+$, indirectly separates it from the negatives, leading to more stable learning and higher-quality trajectories. Therefore, we adopt the latter design choice to define our InfoNCE objective as:
+
+$$
+\begin{align*}
+\mathcal{L}_c &= -\log \frac{\exp(\ell^+)}{\exp(\ell^+) + \sum_{j=1}^K \exp(\ell_j^-)}, \\
+\ell^+ &= -\mathcal{D}(q^+, p^c)/\tau, \\
+\ell_j^- &= -\mathcal{D}(q^+, q_j^-)/\tau,
+\end{align*}
+\tag{13}
+$$
+
+where $D(\cdot, \cdot)$ is the Wasserstein-$2$ distance between Gaussians and $\tau$ is a temperature.
+
+3.3.4 Overall Loss of Action Proposal Network
+
+The total loss of our cVAE combines reconstruction,
+KL regularization, and contrastive loss:
+
+$$
+\mathcal{L}_{\text{total}} = E_{z \sim q^{+}} [-\log p_{\psi}(\mathbf{A}^{+} | z, \mathbf{s})] + \beta D_{\text{KL}}(q^{+} \| p^{c}) + \lambda \mathcal{L}_{c}. \quad (14)
+$$
+
+This self-evaluation distillation trains a fast proposal
+policy that generates candidate action sequences con-
+sistent with RaWMPC’s evaluations, eliminating the
+need for expert demonstrations during policy learn-
+ing.
+
+4 Experiments
+
+In this section, we present a comprehensive perfor-
+mance comparison between the proposed framework
+and state-of-the-art methods. We also conduct ex-
+tensive ablation studies to assess the effectiveness of
+our predictive control approach.
+
+4.1 Benchmarks
+
+Following prior works [26, 40, 41], we evalu-
+ate RaWMPC on two widely used benchmarks:
+Bench2Drive [29] and Navsim [11]. They are com-
+plementary: Bench2Drive provides fully interactive
+
+---
+
+**Table 1** Comparison with SOTA approaches on the closed-loop Bench2Drive benchmark on CARLA simulator. ↑ means the higher the better. DS is taken as the primary metric in comparison and we rank all the methods accordingly, with bold indicating best performance.
+
+<table><thead><tr><th>Method</th><th>Venue</th><th>Scheme</th><th>DS↑</th><th>SR(%)↑</th><th>Efficiency↑</th><th>Comfortness↑</th></tr></thead><tbody><tr><td>VAD [31]</td><td>ICCV 2023</td><td>IL</td><td>42.35</td><td>15.00</td><td>157.94</td><td>46.01</td></tr><tr><td>SparseDrive [69]</td><td>ICRA 2025</td><td>IL</td><td>44.54</td><td>16.71</td><td>170.21</td><td>48.63</td></tr><tr><td>GenAD [99]</td><td>ECCV 2024</td><td>IL</td><td>44.81</td><td>15.90</td><td>-</td><td>-</td></tr><tr><td>UniAD [25]</td><td>CVPR 2023</td><td>IL</td><td>45.81</td><td>16.36</td><td>129.21</td><td>43.58</td></tr><tr><td>MomAD [68]</td><td>CVPR 2025</td><td>IL</td><td>47.91</td><td>18.11</td><td>174.91</td><td><u>51.20</u></td></tr><tr><td>UAD [16]</td><td>T-PAMI 2025</td><td>IL</td><td>49.22</td><td>20.45</td><td>189.53</td><td><b>52.71</b></td></tr><tr><td>BridgeAD [89]</td><td>CVPR 2025</td><td>IL</td><td>50.06</td><td>22.73</td><td>-</td><td>-</td></tr><tr><td>TCP [81]</td><td>NeurIPS 2022</td><td>IL</td><td>59.90</td><td>30.00</td><td>76.54</td><td>18.08</td></tr><tr><td>WoTE [39]</td><td>ICCV 2025</td><td>IL</td><td>61.71</td><td>31.36</td><td>-</td><td>-</td></tr><tr><td>DriveDPO [61]</td><td>NeurIPS 2025</td><td>IL &amp; RL</td><td>62.02</td><td>30.62</td><td>166.80</td><td>26.79</td></tr><tr><td>ThinkTwice [28]</td><td>CVPR 2023</td><td>IL</td><td>62.44</td><td>31.23</td><td>69.33</td><td>16.22</td></tr><tr><td>DriveTransformer [30]</td><td>ICLR 2025</td><td>IL</td><td>63.46</td><td>35.01</td><td>100.64</td><td>20.78</td></tr><tr><td>DriveAdapter [27]</td><td>ICCV 2023</td><td>IL</td><td>64.22</td><td>33.08</td><td>70.22</td><td>16.01</td></tr><tr><td>Raw2Drive [85]</td><td>NeurIPS 2025</td><td>RL</td><td>71.36</td><td>50.24</td><td><u>214.17</u></td><td>22.42</td></tr><tr><td>Hydra-NeXt [40]</td><td>ICCV 2025</td><td>IL</td><td>73.86</td><td>50.00</td><td>197.76</td><td>20.68</td></tr><tr><td>HiP-AD [73]</td><td>ICCV 2025</td><td>IL</td><td>86.77</td><td>69.09</td><td>203.12</td><td>19.36</td></tr><tr><td><b>RaWMPC w/o Warm-up</b></td><td></td><td>PC</td><td><u>87.34</u></td><td><u>69.62</u></td><td>203.25</td><td>30.95</td></tr><tr><td><b>RaWMPC</b></td><td></td><td>PC</td><td><b>88.31</b></td><td><b>70.48</b></td><td>206.85</td><td>32.65</td></tr><tr><td colspan="7"><b>Pretrained VLM-based Approach</b></td></tr><tr><td>ReAL-AD [44]</td><td>ICCV 2025</td><td>IL</td><td>41.17</td><td>11.36</td><td>-</td><td>-</td></tr><tr><td>Dual-AEB [94]</td><td>ICRA 2025</td><td>IL</td><td>45.23</td><td>10.00</td><td>-</td><td>-</td></tr><tr><td>ETA [21]</td><td>ICCV 2025</td><td>IL</td><td>74.33</td><td>48.33</td><td>186.04</td><td>25.77</td></tr><tr><td>VLR-Drive [35]</td><td>ICCV 2025</td><td>IL</td><td>75.01</td><td>50.00</td><td>122.52</td><td>0.59</td></tr><tr><td>ORION [14]</td><td>ICCV 2025</td><td>IL</td><td>77.74</td><td>54.62</td><td>151.48</td><td>17.38</td></tr><tr><td>SimLingo [57]</td><td>CVPR 2025</td><td>IL</td><td>85.94</td><td>66.82</td><td><b>244.18</b></td><td>30.76</td></tr></tbody></table>
+
+closed-loop evaluation in CARLA [12] with dense annotations, while NAVSIM evaluates large-scale real-world planning via a data-driven, non-reactive simulation-based short-horizon rollout with safety- and progress-aware metrics.
+
+**Bench2Drive.** Bench2Drive is a CARLA Leadboard v2 closed-loop benchmark for multi-ability stress testing under complex interactions (e.g., cut-ins, overtakes, detours, emergency braking, and give-way). Its official dataset contains ~2M fully annotated frames from short clips spanning 44 scenarios, 23 weather conditions, and 12 towns; the commonly used *Base* training set contains 1K clips. Closed-loop evaluation is performed on 220 short routes (each focused on a single scenario), enabling stable and fine-grained comparison. We report four official metrics: *Driving Score* (*DS*), *Success Rate* (*SR*), *Efficiency*, and *Comfortness*. *DS* is the primary aggregate score with penalties for safety and rule violations; *SR* measures successful completion; *Efficiency* reflects progress; and *Comfortness* captures motion smoothness.
+
+**NAVSIM.** NAVSIM benchmarks sensor-based planning on large-scale real-world data built on Open-Scene (a planning-oriented reprocessing of nuPlan logs). The task predicts a 4-second future ego trajectory (typically 8 waypoints) given a short history (e.g., 1.5 seconds) of observations. Following prior works [39, 61], we use the official splits: NAvtrain (~103K samples) and Navtest (~12K samples). We report NAVSIM metrics including *NC*, *DAC*, *EP*, *TTC*, *C*, and the primary score *PDMS*, where $\text{PDMS} = \text{NC} \cdot \text{DAC} \cdot \frac{(5\text{EP} + 5\text{TTC} + 2\text{C})}{12}$. These metrics jointly capture safety, compliance, progress, and motion quality. All results are computed with the official toolkits and recommended splits.
+
+Our experiments combine offline warm-up with online simulator interaction, leveraging RaWMPC to learn predictive dynamics and risk-aware decision making. We adopt Bench2Drive for interactive closed-loop evaluation and NAVSIM for large-scale real-world generalization. We further conduct ablations to analyze key training components and strategies.
+
+---
+
+**Table 2** Comparison with the SOTA approaches on NAVSIM test set. ↑ means the higher the better. PDMS is taken as the primary metric in comparison and we rank all the methods accordingly, with bold indicating best performance.
+
+<table><thead><tr><th>Method</th><th>Venue</th><th>Scheme</th><th>NC↑</th><th>DAC↑</th><th>EP↑</th><th>TTC↑</th><th>C↑</th><th>PDMS↑</th></tr></thead><tbody><tr><td>Human</td><td>-</td><td>-</td><td>100</td><td>100</td><td>87.5</td><td>100</td><td>99.9</td><td>94.8</td></tr><tr><td>DrivingGPT [8]</td><td>ICCV 2025</td><td>IL</td><td>98.9</td><td>90.7</td><td>79.7</td><td>94.9</td><td>100.0</td><td>82.4</td></tr><tr><td>UniAD [25]</td><td>CVPR 2023</td><td>IL</td><td>97.8</td><td>91.9</td><td>78.8</td><td>92.9</td><td>100.0</td><td>83.4</td></tr><tr><td>Latent TransFuser [10]</td><td>T-PAMI 2023</td><td>IL</td><td>97.4</td><td>92.8</td><td>79.0</td><td>92.4</td><td>100.0</td><td>83.8</td></tr><tr><td>PARA-Drive [80]</td><td>CVPR 2024</td><td>IL</td><td>97.9</td><td>92.4</td><td>79.3</td><td>93.0</td><td>99.8</td><td>84.0</td></tr><tr><td>TransFuser [10]</td><td>T-PAMI 2023</td><td>IL</td><td>97.7</td><td>92.7</td><td>79.8</td><td>92.7</td><td>100.0</td><td>84.5</td></tr><tr><td>LAW [38]</td><td>ICLR 2025</td><td>IL</td><td>96.4</td><td>95.4</td><td>81.7</td><td>88.7</td><td>99.9</td><td>84.6</td></tr><tr><td>World4Drive [100]</td><td>ICCV 2025</td><td>IL</td><td>97.4</td><td>94.3</td><td>79.9</td><td>92.8</td><td>100.0</td><td>85.1</td></tr><tr><td>DiffusionDrive [42]</td><td>CVPR 2025</td><td>IL</td><td>98.2</td><td>96.2</td><td><b>88.2</b></td><td>94.7</td><td>100.0</td><td>88.1</td></tr><tr><td>WoTE [39]</td><td>ICCV 2025</td><td>IL</td><td>98.5</td><td>96.8</td><td>81.9</td><td>94.9</td><td>99.9</td><td>88.3</td></tr><tr><td>Hydra-NeXt [40]</td><td>ICCV 2025</td><td>IL</td><td>98.1</td><td>97.7</td><td>81.8</td><td>94.6</td><td>100.0</td><td>88.6</td></tr><tr><td>UAD [16]</td><td>T-PAMI 2025</td><td>IL</td><td><b>99.5</b></td><td>96.9</td><td>78.8</td><td><b>97.5</b></td><td>100.0</td><td>89.3</td></tr><tr><td>DriveDPO [61]</td><td>NeurIPS 2025</td><td>IL & RL</td><td>98.5</td><td>98.1</td><td>84.3</td><td>94.8</td><td>99.9</td><td>90.0</td></tr><tr><td>GoalFlow [82]</td><td>CVPR 2025</td><td>IL</td><td>98.4</td><td><b>98.3</b></td><td>85.0</td><td>94.6</td><td>100.0</td><td>90.3</td></tr><tr><td><b>RaWMPC w/o Warm-up</b></td><td></td><td>PC</td><td>98.3</td><td><u>98.2</u></td><td>85.3</td><td>94.5</td><td>99.9</td><td>90.5</td></tr><tr><td><b>RaWMPC</b></td><td></td><td>PC</td><td><u>98.9</u></td><td><b><u>98.3</u></b></td><td><u>86.1</u></td><td><u>95.6</u></td><td>99.9</td><td><b><u>91.3</u></b></td></tr></tbody></table>
+
+## 4.2 實現細節
+
+**網路架構。** 我們採用預訓練的 ViT [66] 作為視覺編碼器，並使用 SegViT 分割頭 [88] 作為分割解碼器。BEV 特徵通過查詢式視圖轉換器 [41] 從多視圖影像中提取。遵循先前的工作 [10, 39]，輸入影像解析度為 $1024 \times 256$，BEV 特徵圖解析度為 $256 \times 256$。我們使用下採樣係數 32（前視圖）和 16（BEV），產生 512 個視覺 token $i_t$（每分支 256 個）。測量輸入通過基於 MLP 的編碼器編碼為 4 個測量 token $m_t$，駕駛動作表示為三個標量值（轉向、油門、制動），通過線性層轉換為 3 個動作 token $a_t$。我們將世界模型實現為具有 4 層和 8 個注意力頭的 transformer。RaWMPC 在過去 5 個觀測步驟的條件下預測 $H=10$ 個未來步驟，並在推論期間使用式 (6) 中的成本評估由蒸餾動作提案網路（在第 3.3 節中描述）提出的 $N=10$ 個候選動作序列。在動作選擇期間，我們使用 $\eta_k = \max(2^{-k+1}, 1/8)$ 來降低遠處預測的權重，並將事件嚴重性權重設定為 $\lambda_j = 10, 15, 30$，分別用於駛出車道、交通標誌違規和碰撞。
+
+**訓練。** RaWMPC 使用第 3.2 節中描述的兩階段風險感知交互訓練策略進行訓練。我們首先使用訓練資料的 10%（Bench2Drive 的 100 個片段和 NAVSIM 的 10K 個樣本）進行離線預熱，然後通過使用提出的風險感知訓練方案進行線上交互來改進模型。隨機抽樣機率 $\epsilon_1$ 從 1 線性退火至 0，而風險抽樣機率 $\epsilon_2$ 從 0 線性增加至 0.3。我們維護一個大小為 10K 幀的重播緩衝區，以儲存最近的交互資料（例如，RGB 影像、語義分割、自車測量和交通事件標註）。我們使用地平線 $H=10$ 動作序列的逐段抽樣以確保時間連續性。在良好/不良模式中，我們按成本排序 $N_s=50$ 個候選項，並使用溫度 $\tau_g = 0.5$ 和 $\tau_b = 1.0$ 從底部/頂部 $K=5$ 集合進行抽樣。當滿足以下任何條件時，一個回合終止：(1) 自車遭受 3 次碰撞，(2) 自車駛出道路或保持卡住超過 100 個連續步驟，或 (3) 自車成功完成路線。在離線預熱和線上交互期間，我們在四個 NVIDIA A100 GPU 上使用總共 1K 個 Bench2Drive 片段和 100K 個 NAVSIM 樣本進行 RaWMPC 訓練（規模與官方訓練集相當，以進行公平比較）。我們使用 Adam [33]，初始學習率為 $10^{-4}$ 衰減至 $10^{-5}$，批次大小為 16。
+
+**自評估蒸餾。** 對於自評估蒸餾（第 3.3 節），動作提案網路實現為具有 32 維隱空間的 cVAE [67]。在對比訓練期間，我們抽樣 $N_s=50$ 個動作序列，將最小成本序列視為正例 $\boldsymbol{A}^{+}$，並使用前 $K=5$ 個最高成本序列作為負例。我們使用第 3.3 節中的目標優化提案網路，使用溫度 $\tau=0.3$、KL 權重排程 $\beta: 0 \to 0.1$ 和對比權重 $\lambda=0.1$。在推論時，我們從 cVAE 解碼器中抽樣 $N=10$ 個候選項，並通過在世界模型推導下最小化預測成本（式 (6)）來選擇最終動作。
+
+## 4.3 與最先進方法的比較
+
+在本節中，我們在 CARLA 的閉環 Bench2Drive 基準測試和 NAVSIM 測試集上比較 RaWMPC 與最先進的端到端駕駛方法。為了反映我們的主要主張，我們報告兩種訓練設置：(i) **不進行暖啟動**，其中 RaWMPC 在不使用任何離線記錄影片的情況下進行訓練，以及 (ii) **完整**設置，其中一小組記錄的駕駛軌跡被用作可選的暖啟動。暖啟動在經驗上可以加速收斂並進一步改善最終性能，而 RaWMPC 即使在沒有暖啟動的情況下也已經超越了之前的最先進方法。
+
+### 4.3.1 在 Bench2Drive 上的評估
+
+表 1 說明了 Bench2Drive 上的閉環結果。RaWMPC 在所有比較方法中達到了最佳的整體性能，在完整設置中達到 88.31 DS 和 70.48% SR。更重要的是，即使**沒有暖啟動**（即沒有記錄軌跡），RaWMPC 仍然達到 87.34 DS 和 69.62% SR，超越了強大的近期基線如 HiP-AD [73]（86.77 DS / 69.09% SR）和預訓練 VLM 方法 SimLingo [57]（85.94 DS / 66.82% SR）。此外，RaWMPC 保持了具有競爭力的效率，並比大多數高性能閉環智能體達到了更高的舒適度，這表明所獲得的改進並非來自於激進的操作，而是來自於更可靠的決策制定。
+
+### 4.3.2 在 NAVSIM 上的評估
+
+表 2 總結了 NAVSIM 上的結果。RaWMPC 在所有基於學習的方法中達到了最高的 **91.3 PDMS**。在沒有暖啟動的情況下，RaWMPC 仍然達到 90.5 PDMS，已經超越了之前的最佳方法（例如 GoalFlow [82]：90.3）。暖啟動進一步改善了 PDMS（90.5→91.3），這與觀察結果一致，即少量記錄軌跡可以加速收斂並改善性能，但不是達到最先進結果所必需的。
+
+### 4.3.3 天氣引起的域轉移下的泛化性能
+
+為了評估超出訓練分布的穩健性，我們進行了天氣轉移研究，其中所有方法僅在 *Rainy* 場景上進行評估，同時在 *Sunny only* 或 *Sunny & Rainy* 資料上進行訓練（表 3）。一個關鍵觀察是，模仿學習方法對訓練域覆蓋範圍很敏感：當訓練中不存在雨天條件（Sunny-only）時，其性能會顯著下降，反映了對先前未見過的環境的轉移能力有限。相比之下，RaWMPC 在兩種訓練方案下都達到最佳的 DS 和 SR，並且值得注意的是，即使在 *Sunny only* 上訓練時（即面對未見過的雨天目標域），仍顯著優於強大的 IL 基線方法（LAW、WoTE）和 SimLingo。此外，與 SimLingo 相比，RaWMPC 在從訓練中移除雨天資料時表現出明顯更小的性能下降，表明對先前未見過的條件有更強的穩健性。
+
+圖 5 顯示了這種 *Sunny-only* → *Rainy* 轉移的定性示例。LAW 在改變的視覺條件下未能識別前方車輛，導致高嚴重程度的正面碰撞。WoTE 和 SimLingo 嘗試規避動作來減少相對於直接正面碰撞的撞擊，但場景仍以側滑/追尾碰撞結束。一個合理的解釋是，雨天轉移降低了感知-決策棧的可靠性，而下游策略並未明確優化不確定性下的最小風險間隔，導致在近距離規避期間安全邊際不足（例如，不準確的動作預測或濕滑路面上自車反應不匹配）。相比之下，RaWMPC 使用風險感知的世界模型明確評估候選動作序列的預測結果，並選擇最小風險的預測控制行為，在不確定性下保持安全間隔。
+
+我們將這一優勢歸因於 RaWMPC 的風險感知預測控制公式：RaWMPC 並非重現專家動作，而是學習*從交互中的風險感知*，並通過學習的世界模型最小化預測風險來選擇動作。這樣的目標鼓勵可轉移的決策原則（例如，在不確定性下保持安全邊際和保守行動），這些原則在外觀和動力學跨域變化時仍然有效。因此，RaWMPC 對邊界情況的詳盡專家動作覆蓋的依賴程度較低，這更好地符合真實世界部署的長尾特性，其中未見過的場景是不可避免的。
+
+---
+
+[FIGURE:5] 天氣引起的域轉移下的定性比較（Sunny-only → Rainy）。所有方法均在 *Sunny-only* 資料上訓練，在 *Rainy* 條件下評估。LAW [38] 錯過了前方車輛，導致嚴重的正面碰撞。WoTE [39] 和 SimLingo [57] 通過規避動作降低了嚴重性，但由於感知-決策可靠性下降和安全邊際實施不力而仍然發生碰撞。RaWMPC 通過在不確定性下選擇最小風險的預測控制動作來避免碰撞。
+
+**表 3** 域轉移下的性能比較。所有方法均在 *Sunny only* 或 *Sunny & Rainy* 資料上訓練，並專門在 *Rainy* 場景上評估。↑ 表示越高越好。
+
+| 方法 | 場地 | 方案 | 訓練資料 | 在 Rainy 上測試 |  |
+|---|---|---|---|---|---|
+|  |  |  |  | DS↑ | SR(%)↑ |
+| LAW | ICLR 2025 | IL | Sunny & Rainy | 34.54 | 7.09 |
+|  |  |  | Sunny only | 23.58 | 3.56 |
+| WoTE | ICCV 2025 | IL | Sunny & Rainy | 36.54 | 7.85 |
+|  |  |  | Sunny only | 28.65 | 5.21 |
+| SimLingo (Pretrained-VLM) | CVPR 2025 | IL | Sunny & Rainy | 51.69 | 13.68 |
+|  |  |  | Sunny only | 33.49 | 8.97 |
+| RaWMPC | – | PC | Sunny & Rainy | **53.67** | **14.96** |
+|  |  |  | Sunny only | **41.36** | **10.83** |
+
+### 4.3.4 Qualitative visualization of predictive control
+
+We provide some visualization results of the predictive control procedure of RaWMPC in Fig. 6. Given RGB observations and high-level navigation commands (e.g., keep going straight or merge left), our generative policy proposes a small set of candidate action sequences (e.g., keep going straight, detour, brake, and lane change). For each candidate, the risk-aware world model predicts the near-future semantic traffic state and the decoding module evaluates its consequence from both task progress and safety perspectives, including collision risk, off-lane/sidewalk intrusion risk, and progress-related penalties such as getting stuck in traffic. The final action is selected by comparing these predicted consequences and choosing the minimum-cost one under the navigation goal.
+
+In the first case, going straight collides with a crossing
+
+pedestrian, while detours either collide with an oncoming vehicle or drive onto the sidewalk; RaWMPC chooses *slow down, straight briefly, then stop* to safely stop in front of the pedestrian (instead of an overly conservative early brake). In the second case, going straight or merging left immediately causes a collision, steering right hits a parked vehicle, and stopping leads to a deadlock; thus RaWMPC selects *pause briefly, then merge left* for a collision-free merge. These cases demonstrate that RaWMPC can proactively avoid risky behaviors by explicitly forecasting and comparing action consequences, rather than merely following a single command or relying on a fixed fallback maneuver.
+
+## 4.4 消融研究
+
+本章節我們使用 Bench2Drive 資料集，對所提出的方法進行全面的消融研究。
+
+---
+
+**圖 6** 預測控制程序的視覺化。在時刻 t，我們展示前視視角和 BEV 影像（含語意分割）。虛線曲線表示候選動作，突出顯示的智能體表示主要風險。從 t + 1 到 t + 5 的推演說明預測的後果，下方面板報告各個動作的結果和成本（例如碰撞、人行道入侵、停止距離）。**情景 1：** RaWMPC 減速、短暫前進，然後為行人停止。**情景 2：** RaWMPC 短暫等待，然後左轉以避開前左方的車輛和停放的車輛。
+
+4.4.1 框架分析
+
+表 4 分析了與我們模型設計（第 3.1.1 節）相符的核心組件。*不含語意引導* 移除語意引導事件解碼，即來自語意分割解碼器的注意力融合到事件解碼器中。這導致明顯的效能下降（DS 88.31→82.36，SR 70.48%→62.69%），表明準確的安全事件預測對風險感知成本評估至關重要。*不含分割解碼器*
+
+**表 4** 所提框架的消融研究。
+
+| 方法 | 評量指標 |  |
+| --- | --- | --- |
+|  | DS↑ | SR(%)↑ |
+| 完整的 RaWMPC（我們的方法） | 88.31 | 70.48 |
+| w/o 語意引導 | 82.36 -5.95 | 62.69 -7.79 |
+| w/o 分割解碼器 | 70.85 -17.46 | 48.95 -21.53 |
+| w/o 動作選擇 | 61.35 -26.96 | 30.98 -39.50 |
+
+進一步移除分割解碼分支及其監督，導致大幅效能下降
+
+---
+
+**表 5** 風險感知訓練的消融研究。
+
+| 方法 | 評量指標 |  |
+| --- | --- | --- |
+|  | DS↑ | SR(%)↑ |
+| 風險感知採樣（**我們的方法**） | **88.31** | **70.48** |
+| ε-貪心採樣 | 83.86 -4.45 | 61.74 -8.74 |
+| 隨機採樣 | 70.41 -17.90 | 46.82 -23.66 |
+
+**表 6** 政策學習中使用不同動作監督所獲得的結果。
+
+| 政策學習資料 | 評量指標 |  |
+| --- | --- | --- |
+|  | DS↑ | SR(%)↑ |
+| 正向與負向動作（**我們的方法**） | **88.31** | **70.48** |
+| 專家動作 | 86.75 -1.56 | 68.25 -2.23 |
+| 僅限正向動作 | 83.65 -4.66 | 66.52 -3.96 |
+
+（DS 70.85 / SR 48.95%），這表明預測高階語意對可靠的長視野推演至關重要。*w/o 動作選擇* 停用方程式 (1) 中的預測控制（繞過方程式 (6) 中基於成本的排名），直接執行提案/引導輸出，導致最嚴重的效能崩潰（DS 61.35 / SR 30.98%）。這證實了通過明確評估預測的長視野後果來選擇動作是 RaWMPC 的關鍵。
+
+### **4.4.2 Analysis of Risk-Aware Training**
+
+Table 5 evaluates the risk-aware interaction training strategy used to refine the world model. Our risk-aware sampling follows the design in Sec. 3.2: besides random exploration, it uses the current RaWMPC to score candidate action sequences and deliberately collects both good (low-cost) and bad (high-cost) rollouts, improving coverage of rare safety-critical outcomes. Replacing it with ϵ-greedy sampling (random with probability ϵ₁, otherwise only selecting low-cost rollouts) reduces performance (DS 83.86 / SR 61.74%), showing that excluding high-cost failures weakens learning of risky consequences. Pure random sampling further degrades results (DS 70.41 / SR 46.82%), indicating that unguided data collection is substantially less efficient for learning long-horizon consequences.
+
+### **4.4.3 自評估蒸餾分析**
+
+表 6 研究了第 3.3 節中動作提議網路的訓練方式。我們的預設設置使用 RaWMPC 作為自評估器來偽標籤動作：最低成本序列被視為正樣本，而高成本序列作為負樣本，這產生了最佳
+
+**表 7** 使用不同預測視野量所獲得的結果。
+
+| 預測視野 | 指標 | |
+|---------|------|------|
+|  | DS↑ | SR(%)↑ |
+| H=1 | 57.85 <span style="color:red;">-30.46</span> | 28.64 <span style="color:red;">-41.84</span> |
+| H=5 | 74.98 <span style="color:red;">-13.33</span> | 49.52 <span style="color:red;">-20.96</span> |
+| H=10 (**我們的**) | **88.31** | **70.48** |
+| H=15 | 82.34 <span style="color:red;">-5.97</span> | 62.38 <span style="color:red;">-8.10</span> |
+
+**表 8** 使用不同預熱離線學習資料量所獲得的結果。
+
+| 預熱資料 | 指標 | |
+|---------|------|------|
+|  | DS↑ | SR(%)↑ |
+| 0% | 87.34 <span style="color:red;">-0.97</span> | 69.62 <span style="color:red;">-0.86</span> |
+| 10% | **88.31** | **70.48** |
+| 20% | 88.09 <span style="color:red;">-0.22</span> | 70.32 <span style="color:red;">-0.16</span> |
+| 30% | 86.95 <span style="color:red;">-1.36</span> | 68.52 <span style="color:red;">-1.96</span> |
+
+性能（DS 88.31 / SR 70.48%）。僅使用專家動作訓練提議網路會略微降低性能（DS 86.75 / SR 68.25%），這表明自評估的目標比直接模仿目標更符合預測控制目標。僅使用正動作進一步下降性能（DS 83.65 / SR 66.52%），這表明明確對比高風險負樣本對於防止不安全候選項和改進下游選擇至關重要。
+
+### **4.4.4 預測視野討論**
+
+表 7 對世界模型迴溯和成本評估中使用的規劃視野 *H* 進行了消融實驗（方程式 (6)）。短視野無法捕捉延遲後果，導致性能不佳（H=1：DS 57.85 / SR 28.64%；H=5：DS 74.98 / SR 49.52%）。增加到 H=10 產生最佳結果（DS 88.31 / SR 70.48%），因為它提供了足夠的前瞻性以進行風險評估，同時保持預測不確定性可控。進一步增加到 H=15 會降低性能（DS 82.34 / SR 62.38%），可能是由於累積的迴溯誤差影響了基於成本的排序。
+
+### **4.4.5 Warm-up 的討論**
+
+表 8 進行消融研究，比較互動式訓練前用於 warm-up 的離線記錄軌跡比例。在此研究中，我們保持訓練樣本總數固定，只改變分配給離線 warm-up 資料的比例。在沒有 warm-up 的情況下（0%），
+
+---
+
+**表 9** 使用學習世界模型的控制模式消融研究。
+
+<table><thead><tr><th rowspan="2">方法</th><th colspan="2">指標</th></tr><tr><th>DS↑</th><th>SR(%)↑</th></tr></thead><tbody><tr><td>預測控制（我們的方法）</td><td>88.31</td><td>70.48</td></tr><tr><td>強化學習</td><td>73.58 <sup>-14.73</sup></td><td>51.85 <sup>-18.63</sup></td></tr></tbody></table>
+
+<table><tfoot><tr><th colspan="5" style="text-align: center;"> 不需要</th></tr></tfoot></table>
+
+性能下降（DS 87.34 / SR 69.62%），表明從頭開始訓練會導致推移品質不夠可靠和早期最佳化階段不夠穩定。使用少量記錄軌跡（10%）產生最佳結果（DS 88.31 / SR 70.48%），表明輕量化的 warm-up 提供了有用的預測先驗（例如基本動力學建模和感知解碼），改善了長視野推移品質和下游控制。然而，進一步增加 warm-up 比例開始降低性能（20%：DS 88.09 / SR 70.32%；30%：DS 86.95 / SR 68.52%）。我們將這一趨勢歸因於離線記錄軌跡強烈偏向於安全、類人的行為，包含很少危險事件。因此，將過多資料分配給離線 warm-up 會減少後續線上互動探索非常規動作和收集安全關鍵失敗的機會—特別是在危險場景中—這些對於學習穩健的風險意識至關重要。
+
+**4.4.6 控制模式的討論**
+
+表 9 比較預測控制與直接使用基於模型的強化學習（RL）最佳化策略。預測控制達到了明顯更高的性能（DS 88.31 / SR 70.48%），相比基於模型的 RL（DS 73.58 / SR 51.85%）。這驗證了透過解碼的未來結果（分割、事件、自車狀態）評估候選動作序列並選擇最小成本序列的優勢，而不是僅依賴端到端策略最佳化。
+
+**4.4.7 世界模型預測準確率**
+
+表 10 報告了式（6）成本函數使用的事件預測品質。預測器在各種事件類型上達到高準確率（0.91–0.96）和在碰撞相關事件上的強召回率（例如，行人碰撞召回率 0.99），為風險意識評估提供可靠信號。我們觀察到某些稀有事件的精確率較低（例如，行人碰撞精確率 0.52），反映出較為保守的傾向，產生更多假陽性；在安全關鍵的駕駛中，優先
+
+**表 10** 使用學習世界模型預測未來交通事件的準確率。
+
+| | 碰撞 | | | 執行中交通號誌 |
+|---|---|---|---|---|---|
+| | 行人 | 車輛 | 靜態 | | |
+| 準確度 | 0.96 | 0.91 | 0.93 | 0.91 | |
+| 召回率 | 0.99 | 0.84 | 0.89 | 0.84 | |
+| 精準度 | 0.52 | 0.62 | 0.63 | 0.68 | |
+
+優先考慮召回率可優於遺漏危害。
+
+**5 結論**
+
+在本研究中，我們提出了 RaWMPC，一個針對端到端自動駕駛的風險感知世界模型預測控制框架，不需要專家動作監督。RaWMPC 學習動作條件化的世界模型以推行多個候選行為，預測未來語意和安全關鍵事件，並通過明確最小化風險感知成本來選擇動作。為了使罕見但災難性的結果可預測且可避免，我們引入了風險感知互動策略，故意蒐集安全和危險的推行結果，並進一步提出自我評估蒸餾，以使用 RaWMPC 作為自我評估器訓練有效的動作提案策略。在 Bench2Drive 和 NAVSIM 上的廣泛實驗表明，RaWMPC 在沒有離線預熱的情況下仍達到最先進的性能和更強大的領域轉移穩健性，展示了顯著減少對昂貴的真實世界專家示範依賴的潛力。未來工作中，我們將探索領域適應和更高效的規劃，以更好地支援實際部署和模擬轉實驗轉移。
+
+**聲明和宣言**
+
+* 利益衝突。作者宣布他們沒有已知的競爭性財務利益或個人關係，可能對本論文報告的工作產生影響。
+* 資料可用性。本工作不提出任何新資料集。支援本研究結論的資料集（Bench2Drive [29] 和 NAVSIM [11]）可在以下網址開放取得：Bench2Drive 和 NAVSIM。
+
+---
+
+**參考文獻**
+
+[1] Jake Bruce, Michael D Dennis, Ashley Edwards, Jack Parker-Holder, Yuge Shi, Edward Hughes, Matthew Lai, Aditi Mavalankar, Richie Steigerwald, Chris Apps, 等人。Genie: Generative interactive environments。在 *Forty-first International Conference on Machine Learning*，2024。
+
+[2] Jinkun Cao, Xin Wang, Trevor Darrell, 和 Fisher Yu。Instance-aware predictive navigation in multi-agent environments。在 *IEEE International Conference on Robotics and Automation*，頁碼 5096-5102，2021。
+
+[3] Wei Cao, Marcel Hallgarten, Tianyu Li, Daniel Dauner, Xunjiang Gu, Caojun Wang, Yakov Miron, Marco Aiello, Hongyang Li, Igor Gilitschenski, 等人。Pseudo-simulation for autonomous driving。*arXiv preprint arXiv:2506.04218*，2025。
+
+[4] Raphael Chekroun, Marin Toromanoff, Sascha Hornauer, 和 Fabien Moutarde。Gri: General reinforced imitation and its application to vision-based autonomous driving。在 *NeurIPS 2021, Machine Learning for Autonomous Driving Workshop*，2021。
+
+[5] Dian Chen 和 Philipp Krähenbühl。Learning from all vehicles。在 *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*，頁碼 17222-17231，2022。
+
+[6] Dian Chen, Vladlen Koltun, 和 Philipp Krähenbühl。Learning to drive from a world on rails。在 *Proceedings of the IEEE/CVF International Conference on Computer Vision*，頁碼 15590-15599，2021。
+
+[7] Li Chen, Penghao Wu, Kashyap Chitta, Bernhard Jaeger, Andreas Geiger, 和 Hongyang Li。End-to-end autonomous driving: Challenges and frontiers。*IEEE Transactions on Pattern Analysis and Machine Intelligence*，2024。
+
+[8] Yuntao Chen, Yuqi Wang, 和 Zhaoxiang Zhang。Drivinggpt: Unifying driving world modeling and planning with multi-modal autoregressive transformers。在 *Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)*，頁碼 26890-26900，2025 年 10 月。
+
+[9] Pranav Singh Chib 和 Pravendra Singh。Recent advancements in end-to-end autonomous driving using deep learning: A survey。*IEEE Transactions on Intelligent Vehicles*，9(1):103-118，2023。
+
+[10] Kashyap Chitta, Aditya Prakash, Bernhard Jaeger, Zehao Yu, Katrin Renz, 和 Andreas Geiger。Transfuser: Imitation with transformer-based sensor fusion for autonomous driving。*IEEE Transactions on Pattern Analysis and Machine Intelligence*，2022。
+
+[11] Daniel Dauner, Marcel Hallgarten, Tianyu Li, Xinshuo Weng, Zhiyu Huang, Zetong Yang, Hongyang Li, Igor Gilitschenski, Boris Ivanovic, Marco Pavone, et al. Navsim: 資料驅動的非反應式自動駕駛車輛模擬與基準測試。*Advances in Neural Information Processing Systems*，37:28706–28719，2025。
+
+[12] Alexey Dosovitskiy, German Ros, Felipe Codevilla, Antonio Lopez, 和 Vladlen Koltun。Carla: 開放城市駕駛模擬器。見於 *Conference on Robot Learning*，第 1–16 頁，2017。
+
+[13] Lan Feng, Quanyi Li, Zhenghao Peng, Shuhan Tan, 和 Bolei Zhou。Trafficgen: 學習生成多樣化與逼真的交通情景。見於 *2023 IEEE 國際機器人與自動化會議（ICRA）*，第 3567–3575 頁。IEEE，2023。
+
+[14] Haoyu Fu, Diankun Zhang, Zongchuang Zhao, Jianfeng Cui, Dingkang Liang, Chong Zhang, Dingyuan Zhang, Hongwei Xie, Bing Wang, 和 Xiang Bai。Orion: 通過視覺語言指導動作生成的整體端到端自動駕駛框架。*arXiv preprint arXiv:2503.19755*，2025。
+
+[15] Shenyuan Gao, Jiazhi Yang, Li Chen, Kashyap Chitta, Yihang Qiu, Andreas Geiger, Jun Zhang, 和 Hongyang Li。Vista: 具有高保真度與多樣化可控性的通用駕駛世界模型。見於 *第三十八屆神經資訊處理系統年度會議*，2024。
+
+[16] Mingzhe Guo, Zhipeng Zhang, Yuan He, Ke Wang, Liping Jing, 和 Haibin Ling。無需昂貴模組化與 3D 人工標註的端到端自動駕駛。*IEEE Transactions on Pattern Analysis and Machine Intelligence*，2025。
+
+[17] David Ha 和 Jürgen Schmidhuber。遞迴世界模型促進策略進化。*Advances in neural information processing systems*，31，2018。
+
+[18] Danijar Hafner, Timothy Lillicrap, Jimmy Ba, 和 Mohammad Norouzi。夢想驅動控制: 通過潛在想像學習行為。見於 *國際學習表徵會議*，2019。
+
+[19] Danijar Hafner, Timothy Lillicrap, Ian Fischer, Ruben Villegas, David Ha, Honglak Lee, 和 James Davidson。從像素學習潛在動力學以進行規劃。見於 *國際機器學習會議*，第 2555–2565 頁。PMLR，2019。
+
+[20] Danijar Hafner, Timothy P Lillicrap, Mohammad Norouzi, 和 Jimmy Ba。用離散世界模型掌握 Atari。見於 *國際學習表徵會議*，2021。
+
+[21] Shadi Hamdan, Chonghao Sima, Zetong Yang, Hongyang Li, 和 Fatma Güney。Eta: 通過提前思考的效率，自動駕駛的雙重方法與大型模型。見於 *IEEE/CVF 國際電腦視覺會議論文集*，2025。
+
+[22] Mikael Henaff, Alfredo Canziani, 和 Yann LeCun。具有不確定性正則化的模型預測策略學習用於密集交通駕駛。見於國際學習表徵會議，2018。
+
+[23] Anthony Hu, Gianluca Corrado, Nicolas Griffiths, Zachary Mrez, Corina Gurau, Hudson Yeo, Alex Kendall, Roberto Cipolla, and Jamie Shotton. Model-based imitation learning for urban driving. Advances in Neural Information Processing Systems, 35:20703–20716, 2022.
+
+[24] Anthony Hu, Lloyd Russell, Hudson Yeo, Zak Mrez, George Fedoseev, Alex Kendall, Jamie Shotton, and Gianluca Corrado. Gaia-1: A generative world model for autonomous driving. arXiv preprint arXiv:2309.17080, 2023.
+
+[25] Yihan Hu, Jiazhi Yang, Li Chen, Keyu Li, Chonghao Sima, Xizhou Zhu, Siqi Chai, Senyao Du, Tianwei Lin, Wenhai Wang, Lewei Lu, Xiaosong Jia, Qiang Liu, Jifeng Dai, Yu Qiao, and Hongyang Li. Planning-oriented autonomous driving. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2023.
+
+[26] Bernhard Jaeger, Kashyap Chitta, and Andreas Geiger. Hidden biases of end-to-end driving models. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 8240–8249, 2023.
+
+[27] Xiaosong Jia, Yulu Gao, Li Chen, Junchi Yan, Patrick Langechuan Liu, and Hongyang Li. Driveadapter: Breaking the coupling barrier of perception and planning in end-to-end autonomous driving. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 7953–7963, 2023.
+
+[28] Xiaosong Jia, Penghao Wu, Li Chen, Jiangwei Xie, Conghui He, Junchi Yan, and Hongyang Li. Think twice before driving: Towards scalable decoders for end-to-end autonomous driving. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 21983–21994, 2023.
+
+[29] Xiaosong Jia, Zhenjie Yang, Qifeng Li, Zhiyuan Zhang, and Junchi Yan. Bench2drive: Towards multi-ability benchmarking of closed-loop end-to-end autonomous driving. arXiv preprint arXiv:2406.03877, 2024.
+
+[30] Xiaosong Jia, Junqi You, Zhiyuan Zhang, and Junchi Yan. Drivetransformer: Unified transformer for scalable end-to-end autonomous driving. In International Conference on Learning Representations (ICLR), 2025.
+
+[31] Bo Jiang, Shaoyu Chen, Qing Xu, Bencheng Liao, Jiajie Chen, Helong Zhou, Qian Zhang, Wenyu Liu, Chang Huang, and Xinggang Wang. Vad: Vectorized scene representation for efficient autonomous driving. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 8340–8350, 2023.
+
+[32] Alex Kendall, Jeffrey Hawke, David Janz, Przemyslaw Mazur, Daniele Reda, John-Mark Allen, Vinh-Dieu Lam, Alex Bewley, and Amar Shah. Learning to drive in a day. In 2019 international conference on robotics and automation (ICRA), pages 8248–8254. IEEE, 2019.
+
+[33] Diederik P Kingma. Adam: A method for stochastic optimization. arXiv preprint arXiv:1412.6980, 2014.
+
+[34] Jing Yu Koh, Honglak Lee, Yinfei Yang, Jason Baldridge, and Peter Anderson. Pathdreamer: A world model for indoor navigation. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 14738–14748, 2021.
+
+[35] Fanjie Kong, Yitong Li, Weihuang Chen, Chen Min, Yizhe Li, Zhiqiang Gao, Haoyang Li, Zhongyu Guo, and Hongbin Sun. VLR-Driver：大型視覺語言推理模型用於具身自主駕駛。在 IEEE/CVF 國際電腦視覺會議論文集中，第 26966–26976 頁，2025。
+
+[36] Hanyang Kong, Dongze Lian, Michael Bi Mi, and Xinchao Wang. DreamDrone：文字轉圖像擴散模型作為零樣本永續視角生成器。在歐洲電腦視覺會議中，第 324–341 頁。Springer，2024。
+
+[37] Qifeng Li, Xiaosong Jia, Shaobo Wang, and Junchi Yan. Think2Drive：透過潛在世界模型思考進行高效強化學習用於自主駕駛（CARLA-V2 中）。在歐洲電腦視覺會議中，第 142–158 頁。Springer，2024。
+
+[38] Yingyan Li, Lue Fan, Jiawei He, Yuqi Wang, Yun-tao Chen, Zhaoxiang Zhang, and Tieniu Tan. 透過潛在世界模型增強端到端自主駕駛。在第十三屆國際學習表示會議中，2025。
+
+[39] Yingyan Li, Yuqi Wang, Yang Liu, Jiawei He, Lue Fan, and Zhaoxiang Zhang. 透過 BEV 世界模型進行端到端駕駛與線上軌跡評估。在 IEEE/CVF 國際電腦視覺會議（ICCV）論文集中，第 27137–27146 頁，2025 年 10 月。
+
+[40] Zhenxin Li, Shihao Wang, Shiyi Lan, Zhiding Yu, Zuxuan Wu, and Jose M. Alvarez. Hydra-Next：透過開環訓練進行魯棒閉環駕駛。在 IEEE/CVF 國際電腦視覺會議（ICCV）論文集中，第 27305-27314 頁，2025 年 10 月。
+
+[41] Zhiqi Li, Wenhai Wang, Hongyang Li, Enze Xie, Chonghao Sima, Tong Lu, Qiao Yu, and Jifeng Dai. BEVFormer：透過時空 Transformer 從 LiDAR-Camera 學習鳥眼視圖表示。IEEE 模式分析與機器智慧交易，2024。
+
+[42] Bencheng Liao, Shaoyu Chen, Haoran Yin, Bo Jiang, Cheng Wang, Sixu Yan, Xinbang Zhang, Xiangyu Li, Ying Zhang, Qian Zhang, and Xinggang Wang. DiffusionDrive：用於端到端自主駕駛的截斷擴散模型。在 IEEE/CVF 電腦視覺與模式識別會議（CVPR）論文集中，第 12037-12047 頁，2025 年 6 月。
+
+[43] Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He, and Piotr Dollár. 用於密集物體偵測的 Focal Loss。在 IEEE 國際電腦視覺會議論文集中，第 2980-2988 頁，2017。
+
+[44] Yuhang Lu, Jiadong Tu, Yuexin Ma, and Xinge Zhu. Real-AD：朝向端到端自主駕駛中類人推理發展。在 IEEE/CVF 國際電腦視覺會議論文集中，第 27783-27793 頁，2025。
+
+[45] Ana-Maria Marcu, Long Chen, Jan Hünermann, Alice Karnsund, Benoit Hanotte, Prajwal Chidananda, Saurabh Nair, Vijay Badrinarayanan, Alex Kendall, Jamie Shotton, et al. LingoQA：自主駕駛的視覺問答。在歐洲電腦視覺會議中，第 252-269 頁。Springer，2024。
+
+[46] Russell Mendonca, Shikhar Bahl, and Deepak Pathak. Structured world models from human videos. In RSS, 2023.
+
+[47] Fausto Milletari, Nassir Navab, and Seyed-Ahmad Ahmadi. V-net: Fully convolutional neural networks for volumetric medical image segmentation. In 2016 fourth international conference on 3D vision (3DV), pages 565-571. IEEE, 2016.
+
+[48] Michael Montemerlo, Jan Becker, Suhid Bhat, Hen-drik Dahlkamp, Dmitri Dolgov, Scott Ettinger, Dirk Haehnel, Tim Hilden, Gabe Hoffmann, Burkhard Huhnke, et al. Junior: The stanford entry in the urban challenge. Journal of field Robotics, 25(9): 569-597, 2008.
+
+[49] Chaojun Ni, Guosheng Zhao, Xiaofeng Wang, Zheng Zhu, Wenkang Qin, Guan Huang, Chen Liu, Yuyin Chen, Yida Wang, Xueyang Zhang, Yifei Zhan, Kun Zhan, Peng Jia, Xianpeng Lang, Xingang Wang, and Wenjun Mei. Recondreamer: Crafting world models for driving scene recon-struction via online restoration. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pages 1559-1569, June 2025.
+
+[50] Jingcheng Ni, Yuxin Guo, Yichen Liu, Rui Chen, Lewei Lu, and Zehuan Wu. Maskgwm: A generalizable driving world model with video mask reconstruction. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pages 22381-22391, June 2025.
+
+[51] Brian Paden, Michal Čáp, Sze Zheng Yong, Dmitry Yershov, and Emilio Frazzoli. A survey of motion planning and control techniques for self-driving urban vehicles. IEEE Transactions on Intelligent vehicles, 1(1):33-55, 2016.
+
+[52] Xinlei Pan, Xiangyu Chen, Qizhi Cai, John Canny, and Fisher Yu. Semantic predictive control for explainable and efficient policy learning. In International Conference on Robotics and Automation, pages 3203-3209, 2019.
+
+[53] Scott Drew Pendleton, Hans Andersen, Xinxin Du, Xiaotong Shen, Malika Meghjani, You Hong Eng, Daniela Rus, and Marcelo H Ang. Perception, planning, control, and coordination for autonomous vehicles. Machines, 5(1):6, 2017.
+
+[54] Aditya Prakash, Kashyap Chitta, and Andreas Geiger. Multi-modal fusion transformer for end-to-end autonomous driving. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages 7077-7087, 2021.
+
+[55] Katrin Renz, Kashyap Chitta, Otniel-Bogdan Mercea, A Sophia Koepke, Zeynep Akata, and Andreas Geiger. Plant: Explainable planning transformers via object-level representations. In Conference on Robot Learning, pages 459-470, 2023.
+
+[56] Katrin Renz, Long Chen, Ana-Maria Marcu, Jan Hünermann, Benoit Hanotte, Alice Karnsund, Jamie Shotton, Elahe Arani, and Oleg Sinavski. Carllava: Vision language models for camera-only closed-loop driving. arXiv preprint arXiv:2406.10165, 2024.
+
+[57] Katrin Renz, Long Chen, Elahe Arani, and Oleg Sinavski. Simlingo: Vision-only closed-loop autonomous driving with language-action alignment. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pages 11993-12003, June 2025.
+
+[58] Nicholas Rhinehart, Rowan McAllister, and Sergey Levine. Deep imitative models for flexible inference, planning, and control. In International Conference on Learning Representations, 2020.
+
+[59] Ahmad El Sallab, Mohammed Abdou, Etienne Perot, and Senthil Yogamani. End-to-end deep re-
+
+---
+
+[{"bbox": [139, 151, 606, 1466], "category": "Text", "text": "inforcement learning for lane keeping assist. *arXiv preprint arXiv:1612.04340*, 2016.\n\n[60] Tim Salzmann, Boris Ivanovic, Punarjay Chakravarty, and Marco Pavone. Trajectron++: Dynamically-feasible trajectory forecasting with heterogeneous data. In *European Conference on Computer Vision*, pages 683–700. Springer, 2020.\n\n[61] ShuYao Shang, Yuntao Chen, Yuqi Wang, Yingyan Li, and Zhaoxiang Zhang. Drivedpo: Policy learning via safety dpo for end-to-end autonomous driving. In *The Thirty-ninth Annual Conference on Neural Information Processing Systems*, 2025.\n\n[62] Hao Shao, Letian Wang, Ruobing Chen, Hongsheng Li, and Yu Liu. Safety-enhanced autonomous driving using interpretable sensor fusion transformer. In *Conference on Robot Learning*, pages 726–737, 2023.\n\n[63] Hao Shao, Letian Wang, Ruobing Chen, Steven L Waslander, Hongsheng Li, and Yu Liu. Reason-net: End-to-end driving with temporal and global reasoning. In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*, pages 13723–13733, 2023.\n\n[64] Hao Shao, Yuxuan Hu, Letian Wang, Guanglu Song, Steven L Waslander, Yu Liu, and Hongsheng Li. Lmdrive: Closed-loop end-to-end driving with large language models. In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*, pages 15120–15130, 2024.\n\n[65] Chonghao Sima, Katrin Renz, Kashyap Chitta, Li Chen, Hanxue Zhang, Chengen Xie, Jens Beißwenger, Ping Luo, Andreas Geiger, and Hongyang Li. Drivelm: Driving with graph visual question answering. In *European Conference on Computer Vision*, pages 256–274. Springer, 2024.\n\n[66] Oriane Siméoni, Huy V Vo, Maximilian Seitzer, Federico Baldassarre, Maxime Oquab, Cijo Jose, Vasil Khalidov, Marc Szafraniec, Seungeun Yi, Michaël Ramamonjisoa, et al. Dinov3. *arXiv preprint arXiv:2508.10104*, 2025.\n\n[67] Kihyuk Sohn, Honglak Lee, and Xinchen Yan. Learning structured output representation using deep conditional generative models. *Advances in neural information processing systems*, 28, 2015.\n\n[68] Ziying Song, Caiyan Jia, Lin Liu, Hongyu Pan, Yongchang Zhang, Junming Wang, Xingyu Zhang, Shaoqing Xu, Lei Yang, and Yadan Luo. Don’t shake the wheel: Momentum-aware planning in end-to-end autonomous driving. In *Proceedings of the Computer Vision and Pattern Recognition Conference*, pages 22432–22441, 2025.\n\n[69] Wenchao Sun, Xuewu Lin, Yining Shi, Chuang Zhang, Haoran Wu, and Sifa Zheng. Sparsedrive: End-to-end autonomous driving via sparse scene representation. In *2025 IEEE International Conference on Robotics and Automation (ICRA)*, pages 8795–8801. IEEE, 2025."}, {"bbox": [632, 154, 1111, 1425], "category": "Text", "text": "[70] Shuhan Tan, Kelvin Wong, Shenlong Wang, Siv-abalan Manivasagam, Mengye Ren, and Raquel Urtasun. Scenegen: Learning to generate realistic traffic scenes. In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*, pages 892–901, 2021.\n[71] Shuhan Tan, Boris Ivanovic, Xinshuo Weng, Marco Pavone, and Philipp Kraehenbuehl. Language con-ditioned traffic generation. In *Conference on Robot Learning*, pages 2714–2752. PMLR, 2023.\n[72] Shuhan Tan, Boris Ivanovic, Yuxiao Chen, Boyi Li, Xinshuo Weng, Yulong Cao, Philipp Kraehen-buehl, and Marco Pavone. Promptable closed-loop traffic simulation. In *Annual Conference on Robot Learning*, 2024.\n[73] Yingqi Tang, Zhuoran Xu, Zhaotie Meng, and Erkang Cheng. Hip-ad: Hierarchical and multi-granularity planning with deformable attention for autonomous driving in a single decoder. *arXiv preprint arXiv:2503.08612*, 2025.\n[74] Sebastian Thrun, Mike Montemerlo, Hendrik Dahlkamp, David Stavens, Andrei Aron, James Diebel, Philip Fong, John Gale, Morgan Halpenny, Gabriel Hoffmann, et al. Stanley: The robot that won the darpa grand challenge. *Journal of field Robotics*, 23(9):661–692, 2006.\n[75] Marin Toromanoff, Emilie Wirbel, and Fabien Moutarde. End-to-end model-free reinforcement learning for urban driving using implicit affordances. In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition*, pages 7153–7162, 2020.\n[76] Chris Urmson, Joshua Anhalt, Drew Bagnell, Christopher Baker, Robert Bittner, MN Clark, John Dolan, Dave Duggins, Tugrul Galatali, Chris Geyer, et al. Autonomous driving in urban envi-ronments: Boss and the urban challenge. *Journal of field Robotics*, 25(8):425–466, 2008.\n[77] Hanqing Wang, Wei Liang, Luc Van Gool, and Wenguan Wang. Dream Walker: Mental planning for continuous vision-language navigation. In *Proceedings of the IEEE/CVF international conference on computer vision*, pages 10873–10883, 2023.\n[78] Yuqi Wang, Jiawei He, Lue Fan, Hongxin Li, Yun-tao Chen, and Zhaoxiang Zhang. Driving into the future: Multiview visual forecasting and planning with world model for autonomous driving. In *Proceedings of the IEEE/CVF Conference on Computer"}]
+
+願景與模式識別，頁碼 14749–14759，2024。
+
+[79] Kehan Wen、Yutong Hu、Yao Mu 和 Lei Ke。M^3PC：使用預訓練遮罩軌跡模型的測試時模型預測控制。在《第十三屆學習表徵國際會議》，2025。
+
+[80] Xinshuo Weng、Boris Ivanovic、Yan Wang、Yue Wang 和 Marco Pavone。Para-drive：用於實時自動駕駛的並行化架構。在《IEEE/CVF 電腦視覺與模式識別會議論文集 (CVPR)》，2024。
+
+[81] Penghao Wu、Xiaosong Jia、Li Chen、Junchi Yan、Hongyang Li 和 Yu Qiao。軌跡引導控制預測用於端到端自動駕駛：一個簡單而有效的基準方法。《神經信息處理系統進展》，35:6119–6132，2022。
+
+[82] Zebin Xing、Xingyu Zhang、Yang Hu、Bo Jiang、Tong He、Qian Zhang、Xiaoxiao Long 和 Wei Yin。GoalFlow：用於端到端自動駕駛中多模態軌跡生成的目標驅動流匹配。在《電腦視覺與模式識別會議論文集》，頁碼 1602–1611，2025。
+
+[83] Zhenhua Xu、Yujia Zhang、Enze Xie、Zhen Zhao、Yong Guo、Kwan-Yee K Wong、Zhenguo Li 和 Hengshuang Zhao。DriveGPT4：通過大型語言模型實現可解釋的端到端自動駕駛。《IEEE 機器人與自動化信函》，2024。
+
+[84] Xuemeng Yang、Licheng Wen、Tiantian Wei、Yukai Ma、Jianbiao Mei、Xin Li、Wenjie Lei、Daoyong Fu、Pinlong Cai、Min Dou、Liang He、Yong Liu、Botian Shi 和 Yu Qiao。DriveArena：用於自動駕駛的閉迴路生成模擬平台。在《IEEE/CVF 國際電腦視覺會議 (ICCV) 論文集》，頁碼 26933–26943，2025 年 10 月。
+
+[85] Zhenjie Yang、Xiaosong Jia、Qifeng Li、Xue Yang、Maoqing Yao 和 Junchi Yan。Raw2Drive：使用對齊世界模型的強化學習用於端到端自動駕駛 (in CARLA v2)，2025。已被 NeurIPS 2025 接受。
+
+[86] Jianhua Yuan、Shuyang Sun、Daniel Omeiza、Bo Zhao、Paul Newman、Lars Kunze 和 Matthew Gadd。RAG-Driver：在多模態大型語言模型中使用檢索增強上文學習的可泛化駕駛解釋。arXiv 預印本 arXiv:2402.10828，2024。
+
+[87] Ye Yuan、Xinshuo Weng、Yanglan Ou 和 Kris M Kitani。AgentFormer：用於社會時間多代理預測的代理感知 Transformer。在《IEEE/CVF 國際電腦視覺會議論文集》，頁碼 9813–9823，2021。
+
+[88] Bowen Zhang、Zhi Tian、Quan Tang、Xiangxiang Chu、Xiaolin Wei、Chunhua Shen 等人。SegViT：使用純 Vision Transformer 進行語義分割。在《神經信息處理系統進展》，2022。
+
+[89] Bozhou Zhang、Nan Song、Xin Jin 和 Li Zhang。連接過去與未來：使用歷史預測與規劃的端到端自動駕駛。在《電腦視覺與模式識別會議論文集》，頁碼 6854–6863，2025。
+
+[90] Jimuyang Zhang, Zanming Huang, and Eshed Ohn-Bar. Coaching a teachable student. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 7805–7815, 2023.
+
+[91] Kaiwen Zhang, Zhenyu Tang, Xiaotao Hu, Xingang Pan, Xiaoyang Guo, Yuan Liu, Jingwei Huang, Li Yuan, Qian Zhang, Xiao-Xiao Long, Xun Cao, and Wei Yin. Epona: Autoregressive diffusion world model for autonomous driving. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV), pages 27220-27230, October 2025.
+
+[92] Lunjun Zhang, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, and Raquel Urtasun. Copilot4d: Learning unsupervised world models for autonomous driving via discrete diffusion. In ICLR, 2024.
+
+[93] Peizhi Zhang, Lu Xiong, Zhuoping Yu, Peiyuan Fang, Senwei Yan, Jie Yao, and Yi Zhou. Reinforcement learning-based end-to-end parking for automatic parking system. Sensors, 19(18):3996, 2019.
+
+[94] Wei Zhang, Pengfei Li, Junli Wang, Bingchuan Sun, Qihao Jin, Guangjun Bao, Shibo Rui, Yang Yu, Wenchao Ding, Peng Li, et al. Dual-aeb: Synergizing rule-based and multimodal large language models for effective emergency braking. In 2025 IEEE International Conference on Robotics and Automation (ICRA), pages 14888–14895. IEEE, 2025.
+
+[95] Zhejun Zhang, Alexander Liniger, Dengxin Dai, Fisher Yu, and Luc Van Gool. End-to-end urban driving by imitating a reinforcement learning coach. In Proceedings of the IEEE/CVF international conference on computer vision, pages 15222-15232, 2021.
+
+[96] Zhejun Zhang, Alexander Liniger, Dengxin Dai, Fisher Yu, and Luc Van Gool. Trafficbots: Towards world models for autonomous driving simulation and motion prediction. In 2023 IEEE International Conference on Robotics and Automation (ICRA), pages 1522-1529. IEEE, 2023.
+
+---
+
+[97] Guosheng Zhao, Chaojun Ni, Xiaofeng Wang, Zheng Zhu, Xueyang Zhang, Yida Wang, Guan Huang, Xinze Chen, Boyuan Wang, Youyi Zhang, Wenjun Mei, and Xingang Wang. Drivedreamer4d: World models are effective data machines for 4d driving scene representation. In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, pages 12015–12026, June 2025.
+
+[98] Wenzhao Zheng, Weiliang Chen, Yuanhui Huang, Borui Zhang, Yueqi Duan, and Jiwen Lu. Occ-world: Learning a 3d occupancy world model for autonomous driving. In *European conference on computer vision*, pages 55–72. Springer, 2024.
+
+[99] Wenzhao Zheng, Ruiqi Song, Xianda Guo, Chen-ming Zhang, and Long Chen. Genad: Generative end-to-end autonomous driving. In *European Conference on Computer Vision*, pages 87–104. Springer, 2024.
+
+[100] Yupeng Zheng, Pengxuan Yang, Zebin Xing, Qichao Zhang, Yuhang Zheng, Yinfeng Gao, Pengfei Li, Teng Zhang, Zhongpu Xia, Peng Jia, XianPeng Lang, and Dongbin Zhao. World4drive: End-to-end autonomous driving via intention-aware physical latent world model. In *Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)*, pages 28632–28642, October 2025.
+
+[101] Julius Ziegler, Philipp Bender, Markus Schreiber, Henning Lategahn, Tobias Strauss, Christoph Stiller, Thao Dang, Uwe Franke, Nils Appenrodt, Christoph G Keller, et al. Making bertha drive—an autonomous journey on a historic route. *IEEE Intelligent transportation systems magazine*, 6(2): 8–20, 2014.
+
+[102] Sicheng Zuo, Wenzhao Zheng, Yuanhui Huang, Jie Zhou, and Jiwen Lu. Gaussianworld: Gaussian world model for streaming 3d occupancy prediction. In *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, pages 6772–6781, June 2025.

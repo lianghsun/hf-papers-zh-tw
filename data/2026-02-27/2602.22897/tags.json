@@ -1,0 +1,26 @@
+{
+  "domain": [
+    "NLP",
+    "CV",
+    "Audio",
+    "Multimodal",
+    "RL"
+  ],
+  "method": [
+    "Transformer",
+    "Tool Integration",
+    "Tree Search",
+    "DPO",
+    "Agent Architecture"
+  ],
+  "task": [
+    "Multi-modal Reasoning",
+    "Tool Use",
+    "Question Answering",
+    "Agent Planning"
+  ],
+  "dataset": [
+    "OmniGAIA"
+  ],
+  "open_source": true
+}

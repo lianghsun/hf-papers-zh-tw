@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "CV",
+    "RL"
+  ],
+  "method": [
+    "Energy-based Models",
+    "Hyperbolic JEPA",
+    "World Models",
+    "Geometric Learning"
+  ],
+  "task": [
+    "Visual Planning",
+    "Multi-step Prediction"
+  ],
+  "dataset": [
+    "CrossTask",
+    "COIN"
+  ],
+  "open_source": true
+}

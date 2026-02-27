@@ -1,0 +1,22 @@
+{
+  "domain": [
+    "NLP",
+    "RL"
+  ],
+  "method": [
+    "Memory-Augmented LLM",
+    "On-Policy Optimization",
+    "Off-Policy Optimization",
+    "Hybrid RL"
+  ],
+  "task": [
+    "Agent",
+    "Exploration",
+    "Decision Making"
+  ],
+  "dataset": [
+    "ScienceWorld",
+    "WebShop"
+  ],
+  "open_source": false
+}

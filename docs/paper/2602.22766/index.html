@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>想象有助於視覺推理，但在潛在空間中尚未實現 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-27/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-02-27 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">想象有助於視覺推理，但在潛在空間中尚未實現</h1>
+  
+  <div class="en-title">Imagination Helps Visual Reasoning, But Not Yet in Latent Space</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>You Li, Chi Chen, Yanghao Li, Fanhu Zeng, Kaiyu Huang, Jinan Xu, Maosong Sun</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.22766" target="_blank">2602.22766</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.22766" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.22766" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.22766" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Causal Mediation Analysis</span><span class="tag method">Multimodal Large Language Models</span><span class="tag method">Probing Analysis</span>
+    <span class="tag task">Visual Reasoning</span><span class="tag task">Visual Question Answering</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+潛在視覺推理旨在透過 Multimodal Large Language Models 的隱藏狀態進行沉思，以模擬人類的想像過程。儘管被認為是視覺推理的有前景範式，但推動其有效性的潛在機制仍不清楚。受到揭示其真正有效性根源的動機驅使，我們使用因果中介分析來調查潛在推理的有效性。我們將此過程建模為因果鏈：輸入作為處理、潛在令牌作為中介、最終答案作為結果。我們的研究結果揭示了兩個關鍵的斷裂：（a）輸入-潛在斷裂：對輸入的劇烈擾動導致潛在令牌的變化可忽略不計，表明潛在令牌無法有效地關注輸入序列。（b）潛在-答案斷裂：對潛在令牌的擾動對最終答案的影響最小，表明潛在令牌對結果的因果效應有限。此外，廣泛的探測分析表明潛在令牌編碼的視覺信息有限，且表現出高度相似性。因此，我們質疑潛在推理的必要性，並提出一個名為 CapImagine 的直接替代方案，該方案教導模型使用文本明確地進行想像。在以視覺為中心的基準上的實驗表明，CapImagine 明顯優於複雜的潛在空間基線，突顯了透過明確想像進行視覺推理的更優越潛力。</p>
+  
+  <div class="abstract-en">Latent visual reasoning aims to mimic human&#39;s imagination process by meditating through hidden states of Multimodal Large Language Models. While recognized as a promising paradigm for visual reasoning, the underlying mechanisms driving its effectiveness remain unclear. Motivated to demystify the true source of its efficacy, we investigate the validity of latent reasoning using Causal Mediation Analysis. We model the process as a causal chain: the input as the treatment, the latent tokens as the mediator, and the final answer as the outcome. Our findings uncover two critical disconnections: (a) Input-Latent Disconnect: dramatic perturbations on the input result in negligible changes to the latent tokens, suggesting that latent tokens do not effectively attend to the input sequence. (b) Latent-Answer Disconnect: perturbations on the latent tokens yield minimal impact on the final answer, indicating the limited causal effect latent tokens imposing on the outcome. Furthermore, extensive probing analysis reveals that latent tokens encode limited visual information and exhibit high similarity. Consequently, we challenge the necessity of latent reasoning and propose a straightforward alternative named CapImagine, which teaches the model to explicitly imagine using text. Experiments on vision-centric benchmarks show that CapImagine significantly outperforms complex latent-space baselines, highlighting the superior potential of visual reasoning through explicit imagination.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="_1">想像力有助於視覺推理，但在潛在空間中尚未實現</h1>
+<p>潛在視覺推理旨在透過 Multimodal Large Language Models 的隱藏狀態進行冥想，來模擬人類的想像過程。
+雖然被認為是視覺推理的一個有前景的範式，但驅動其有效性的基礎機制仍然不清楚。
+受到揭示其功效真正來源的動機驅使，我們使用因果中介分析來調查潛在推理的有效性。
+我們將該過程建模為因果鏈：輸入作為處理，潛在令牌作為中介，最終答案作為結果。
+我們的發現揭示了兩個關鍵的斷裂：
+(a) 輸入-潛在斷裂：對輸入的劇烈擾動導致對潛在令牌的微不足道的變化，表明潛在令牌沒有有效地關注輸入序列。
+(b) 潛在-答案斷裂：對潛在令牌的擾動對最終答案的影響微乎其微，表明潛在令牌對結果的因果影響有限。
+此外，廣泛的探測分析表明潛在令牌編碼的視覺信息有限，且表現出高度相似性。
+因此，我們質疑潛在推理的必要性，並提出了一個名為 CapImagine 的直接替代方案，教導模型使用文本進行顯式想像。
+在以視覺為中心的基準上進行的實驗表明，CapImagine 顯著優於複雜的潛在空間基線，突出了透過顯式想像進行視覺推理的更優潛力。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22766/x1.png" loading="lazy"></figure> 圖 1：使用工具進行視覺推理與透過想像進行視覺推理的比較。
+(a) 使用工具進行推理透過函數調用（例如放大或繪圖）來感知視覺內容。
+(b) 潛在空間想像利用 MLLMs 的隱藏狀態來進行視覺推理。
+(c) 我們展示想像力在文本空間中可以更有效。</p>
+<h2 id="1">1 介紹</h2>
+<p>多模態大型語言模型 (MLLMs) 中的視覺推理領域已見證到興趣的激增，這是由複雜數學推理、空間理解、長地平線規劃和細粒度視覺感知的穩定進展所驅動的 (Yang et al. , 2025b ; Bai et al. , 2025c ; Li et al. , 2025d ; Hong et al. , 2025 ; Yang et al. , 2025a ; Luo et al. , 2026 ; Lou et al. , 2025 ; Ma et al. , 2025)。視覺推理任務的複雜性不斷增加，要求 MLLM 對視覺內容進行更加主動的感知。為了滿足這一需求，帶有工具的視覺推理 (Zhang et al. , 2025b ; Hong et al. , 2025 ; Zhao et al. , 2025) 產生交錯的多模態推理軌跡，有效地在推理過程中融合視覺語義。然而，推理過程中獲得的輔助影像大多來自有限的剛性工具集合，與類人的原生想像存在巨大差距。</p>
+<p>為了解決這一差距，隱空間視覺推理 (Latent Visual Reasoning, LVR) (Yang et al. , 2025c) 作為一種新型範式應運而生，該範式透過 MLLMs 中的隱藏狀態進行推理，我們將其稱為隱空間符號 (latent token)。由於來自不同模態的輸入嵌入已在模型內對齐，LVR 訓練 MLLMs 輸出與視覺嵌入相容且編碼豐富視覺語義的隱空間符號。透過在這個高維隱空間中進行推敲，LVR 啟用了更寬廣且受限更少的視覺想像形式 (Atwood, 1971 ; Pylyshyn, 2002)。基於這些特性，已提出了一系列隱空間視覺推理方法 (Li et al. , 2025b ; Wang et al. , 2025b ; Tong et al. , 2025 ; Li et al. , 2025b ; Liu et al. , 2025 ; Wang et al. , 2026 ; Zhang et al. , 2025a , c)。這些方法通常使用視覺特徵或教師模型的隱藏表示來監督隱空間符號。從實驗上講，它們在各種以視覺為中心的任務中表現出強大的性能。</p>
+<p>儘管取得了這些令人鼓舞的結果，隱空間視覺推理的內部機制和隱空間符號的行為仍然鮮為人知。特別是，不清楚 MLLM 是否以及如何在隱空間中實際進行推敲推理。為了解決這一差距，我們採用因果中介分析 (Causal Mediation Analysis) 框架，並將隱空間推理概念化為從輸入 $X$ 到中間隱空間符號 $Z$，最後到輸出 $Y$ 的因果過程，即 $X\rightarrow Z\rightarrow Y$。我們的分析重點是對 $X$ 和 $Z$ 進行系統性擾動，以檢查完整的因果關係。</p>
+<p>我們首先對輸入 $X$ 進行實例級擾動，其中整個輸入序列被改變。令人驚訝的是，產生的隱空間符號 $Z$ 表現出高度的同質性，由餘弦相似度測量，即使在不同的輸入和任務中也是如此。這種相似性表示 $X\rightarrow Z$ 因果關係的斷裂。進一步地，我們對 $Z$ 實施了系統性干預分析和探測分析。在多個隱空間推理方法和不同基準測試中，我們發現對 $Z$ 的劇烈擾動導致最終答案的變化可忽略不計。此外，探測分析揭示隱空間符號僅編碼最少的任務相關視覺語義，不足以獨自支持下游推理。干預和探測分析證明了 $Z\rightarrow Y$ 因果關係的斷裂。總體而言，這些結果表明隱空間符號既不根據輸入有意義地變化，也不實際影響最終答案。</p>
+<p>這些觀察自然引出了第二個問題：MLLMs 如何能夠執行視覺推理？為了探索這一點，我們在嚴格控制的設定下提出了一個簡單但有效的方法。具體而言，我們將原始 Monet-SFT-125K (Wang et al. , 2025b) 訓練資料轉換為文字空間想像格式。對於每個交錯推理影像，我們生成視覺操作的文字描述，例如突出或放大感興趣的區域，並訓練 MLLM 透過文字純粹內化這些操作。使用與 Monet 相同的資料來源，這個簡單的資料重新表述策略比隱空間方法產生了實質上更強的結果。在 V* (Wu and Xie, 2024)、HR-Bench (Wang et al. , 2025c)、MME-RealWorld-Lite (Zhang et al. , 2024) 和其他以視覺為中心的基準測試上進行的廣泛評估表明了一致的改進，在 HR-Bench-8K 上超越 Monet 4.0%，在 MME-RealWorld-Lite 上超越 4.9%。我們相信我們的工作揭示了如何構建更忠實、可解釋且因果有效的視覺推理方法。</p>
+<p>總之，我們的貢獻可以總結如下：</p>
+<ul>
+<li>• 我們透過因果中介分析對視覺推理中的隱空間符號進行了系統性研究，揭示隱空間符號對因果推理過程的貢獻甚微。</li>
+<li>• 我們提出了一個簡單但有效的文字空間想像方法 CapImagine，展示了比隱空間方法更好的因果性。</li>
+<li>• 我們的方法在多個以視覺為中心的基準測試上大幅超越隱空間方法，展示了強大的有效性和通用性。</li>
+</ul>
+<p>我們透過因果中介分析對視覺推理中的隱空間符號進行了系統性研究，揭示隱空間符號對因果推理過程的貢獻甚微。</p>
+<p>我們提出了一個簡單但有效的文字空間想像方法 CapImagine，展示了比隱空間方法更好的因果性。</p>
+<p>我們的方法在多個以視覺為中心的基準測試上大幅超越隱空間方法，展示了強大的有效性和通用性。</p>
+<h2 id="2">2 相關工作</h2>
+<h3 id="21">2.1 具有工具的視覺推理</h3>
+<p>工具增強視覺推理方法主動與視覺模態互動，透過明確的操作自適應地感知視覺內容以達成最終答案。
+這些方法可根據中間視覺觀測的產生方式進一步區分。一些工作依賴於固定的工具集，例如縮放或影像繪製操作（Zheng et al. , 2025 ; Qi et al. , 2024 ; Lai et al. , 2025 ; Jiang et al. , 2025 ; Cao et al. , 2025 ; Fu et al. , 2025 ; Chen et al. , 2025）來主動感知視覺元素，相比靜態感知大幅擴展感知頻寬。從認知與知識的角度來看，另一類工作（Wu et al. , 2025a ; Yu et al. , 2026 ; Narayan et al. , 2025）尋求利用檢索或網路搜尋工具進行事實驗證與外部多模態知識注入。擴展預定義工具集的範圍，其他方法則利用自渲染程式碼來實現更靈活且自由形式的視覺操作（Zhao et al. , 2025 ; Geng et al. , 2025 ; Hong et al. , 2025），促進視覺推理中的智能體 MLLM。</p>
+<h3 id="22">2.2 透過想像的視覺推理</h3>
+<p>視覺想像可透過自生成或潛在空間推理來實現。統一多模態模型試圖透過其內部生成能力進行視覺想像，明確實例化內部推理狀態（Deng et al. , 2025 ; Li et al. , 2025c ; Shi et al. , 2025）。潛在視覺推理提議透過 MLLM 中的隱藏狀態進行想像，無需將其解碼成具體的文本 token。潛在視覺推理首次由 Mirage（Yang et al. , 2025c）引入，其透過壓縮從中間推理影像提取的視覺特徵來解決潛在監督設計的挑戰。後續工作（Li et al. , 2025b ; Tong et al. , 2025 ; Dong et al. , 2025 ; Zhang et al. , 2025a）主要沿襲採用視覺編碼器特徵作為監督信號，並進一步將潛在推理擴展至更廣泛的感知情景、更靈活的潛在格式以及改進的監督視覺特徵選擇策略。</p>
+<p>然而，視覺特徵本質上是連續且語義稀疏的。Mirage 中的壓縮策略傾向於稀釋判別語義，而直接以整個視覺 token 序列監督潛在特徵（Li et al. , 2025b）可能導致推理過程中的潛在模式崩潰。Monet（Wang et al. , 2025b）引入了蒸餾型框架（Shen et al. , 2025），其將梯度傳播限制在潛在 token，從而保留來自中間影像與關鍵文本線索的信息語義。儘管有這些進展，LVR 領域仍缺乏對許多核心設計選擇與機制的嚴格調查，這是本論文旨在解決的問題。</p>
+<h2 id="3-token">3 分析：潛在 Token 幾乎沒有幫助</h2>
+<h3 id="31-formulation">3.1 Formulation</h3>
+<p>潛在視覺推理是指一種推理範式，其中最後 transformer 層的最後隱藏狀態被視為潛在符號用於解決視覺問答任務。給定一組輸入影像 ${I_{i}}<em>{i=0}^{N}$ 和問題 $q$，模型被要求根據聯合輸入 $X=({I</em>{i}}_{i=0}^{N},q)$ 產生答案。在推理過程中，模型 $\mathcal{M}$ 可以自適應地在解碼普通文本符號和潛在符號之間切換。推理過程正式定義為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$h_{i}=\mathcal{M}\left(E(x);y_{&lt;i}\right),\quad y_{0}=\emptyset$</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$y_{i}=\mathbb{I}(i\in\mathcal{I}<em>{L})\cdot\phi(h</em>{i})+\mathbb{I}(i\notin\mathcal{I}<em>{L})\cdot E\left(\text{Decode}(h</em>{i})\right)$</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathcal{I}<em>{L}$ 表示潛在符號的索引集合，$\phi(h</em>{i})$ 是應用於隱藏狀態的可選投影層，$E(\cdot)$ 表示嵌入過程。指示函數 $\mathbb{I}(\cdot)$ 決定目前解碼步驟是在潛在模式還是普通文本模式下運作。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22766/x2.png" loading="lazy"></figure> 圖 2：我們用於調查潛在符號的內部機制和行為模式的系統化潛在分析框架。(a) 模型推理說明了潛在推理過程。(b) 和 (c) 分別說明了兩種因果分析方法。在圖「$Z$ 上的干預」中，$\tau$ 表示固定張量，$\epsilon$ 表示隨機高斯雜訊，其中 $\epsilon\sim\mathcal{N}(0,\sigma^{2})$，$\mu$ 是接近零的小值。</p>
+<p>在實踐中，潛在符號的數量通常是預先定義的。當模型輸出 &lt;|latent_start|&gt; 時立即開始潛在模式。在潛在模式期間，模型將最後隱藏狀態作為下一步的輸入。當目前隱藏狀態被解碼為 &lt;|latent_end|&gt; 時，模型退出潛在模式，之後恢復普通文本解碼。</p>
+<p>當文本和潛在符號交錯在一起時，我們的主要研究焦點是潛在符號，記為 $Z$。考慮到原始輸入 $X$ 和整個推理過程，模型最終產生最終答案 $Y$。為了明確追蹤潛在符號在視覺推理中的作用，我們將整體推理過程抽象為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$X\rightarrow Z\rightarrow Y$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在下面的內容中，我們將進行針對性的干預 $P(Z\mid do(X))$ 和 $P(Y\mid do(Z))$ 來闡明潛在符號在視覺推理中的作用。</p>
+<h3 id="32-x-y">3.2 X → Y 的因果分析</h3>
+<p>我們從因果中介分析開始（Pearl, 2009），在輸入 X 上執行實例級別的擾動，並測量潛在推理令牌如何隨著整個輸入序列改變而相應變化，即 $P(Z\mid do(x))$。</p>
+<p><strong>實驗設置</strong> 我們評估三個代表性的基線：（1）Monet（Wang et al., 2025b），一個專注於一般場景的基於蒸餾的模型；（2）LVR（Li et al., 2025b），它在一般場景中利用影像特徵作為監督；以及（3）Mirage（Yang et al., 2025c），它也使用影像特徵但針對特定任務設置進行了微調。針對一般 VQA 場景，我們從 V*（Wu and Xie, 2024）、MME（Yin et al., 2024）、OCRBench-v2（Fu et al., 2024a）、MME-Realworld-Lite（Zhang et al., 2024）和 TableVQA（Kim et al., 2024）中均勻採樣實例，共產生 100 個測試實例。這些實例已在結果視覺化中排序和分組。對於特定任務的 Mirage 模型，我們採用其發佈的 Visual Spatial Planning 資料集，該資料集要求模型到達目的地同時規避障礙物，例如凍結的湖泊。</p>
+<p>在推理期間，所有三個模型都被提示執行潛在推理，且只保留具有有效潛在推理過程的實例。如圖 2 所示，我們從兩個角度檢查潛在令牌：<strong>實例間</strong>，透過在不同實例中採樣固定位置的潛在令牌；<strong>實例內</strong>，透過在單個實例中採樣所有潛在令牌。實例內結果隨後在所有實例中進行平均。</p>
+<p>此外，我們也考慮了文字令牌、影像令牌的模式以及輸入序列後 MLLM 的內部表示。對於文字推理的實例內模式，我們分析了生成過程中前 16 個令牌的隱狀態。</p>
+<p><strong>實例間分析</strong> 如圖 2 所示，不同實例中相同位置的潛在令牌表現出一致的高餘弦相似度。這表示這些潛在令牌從輸入影像或問題中編碼了很少的信息。此外，來自不同任務的潛在令牌也保持高度相似，表明它們也未能捕捉粗粒度的任務級別差異。此外，相似度的程度隨著推理的繼續而加強，所有潛在令牌隨著更多潛在令牌的生成而逐漸退化。相比之下，文字/影像令牌和 MLLM 的內部表示都攜帶有信息豐富且獨特的語義，在實例和任務間表現出低相似度。</p>
+<p><strong>實例內分析</strong> 當檢查輸入 X 改變下單個實例內平均潛在令牌行為時，所有三個模型都展現出漸進退化現象：隨著推理的繼續，潛在令牌崩潰成高度相似表示的簇。隨著更多自迴歸步驟的進行，LLM 骨幹對潛在狀態應用越來越小的修改，導致令牌收斂到統一表示。具體來說，LVR 模型退化最快，令牌崩潰早在第二步就發生了。Monet 最初產生語義豐富的潛在令牌，但到第五步時它們逐漸失去獨特性。相比之下，文字推理的隱狀態相似度低得多。這揭示了文本生成中清晰且穩定的狀態轉換和潛在推理中不清楚的推理軌跡。</p>
+<p><strong>跨各種模型的潛在模式</strong> 在不同的方法中，出現了不同的潛在模式。如圖 2（b）中的實例間分析和附錄 B 所示，Monet 在不同潛在索引處表現出較慢的退化速度，但最終收斂到高度統一的潛在空間。對於 LVR，雖然它快速崩潰，但某些潛在令牌即使在冗長的推理後仍保留部分獨特性。相比之下，Mirage 將原始冗長的視覺令牌壓縮為少數潛在令牌，在整個推理過程中表現出最小的獨特性。</p>
+<h3 id="33-z-y">3.3 Z → Y 的因果分析</h3>
+<p>儘管潛在令牌的退化性質，它們仍可能有助於獲得最終答案。
+為了調查，我們首先直接對潛在令牌 Z 進行干預，以明確診斷其對最終答案 Y 的因果效應，然後進行探針分析以測試 Z 是否充分導向 Y。</p>
+<h4 id="331-z">3.3.1 對潛在令牌 Z 的干預</h4>
+<p><strong>實驗設置。</strong> 我們在 Monet 和 Mirage 上進行干預 $do(Z)$，分別代表通用型和任務特定場景。對於 Monet，我們通過強制所有不同位置和實例中的潛在令牌為共享相同張量來應用強干預。對於 Mirage，我們進一步探索更多樣的干預策略。除了對 Monet 的干預策略外，我們還考慮（1）向潛在令牌注入高斯噪聲、（2）完全用高斯噪聲替換潛在令牌，以及（3）將所有潛在令牌設置為接近零的小值。</p>
+<p><strong>結果分析。</strong> 實驗結果總結在圖 2 (c) 對 Z 的干預中，詳細內容見附錄。令人驚訝的是，在 V<em>、HR-Bench 和 MME-Realworld-Lite 上，應用於潛在令牌 Z 的這些劇烈改變只導致了邊際性的答案變化。在 V</em> 上，整體性能甚至略微提升了 0.5%。只在 HR-Bench-4K 和 MME-RealWorld-Lite 上觀察到輕微下降，分別為 1.0% 和 0.7%。總體而言，即使對潛在令牌進行根本性改變也導致可忽略不計的性能波動，這表明這些潛在令牌 Z 對最終輸出的影響有限。</p>
+<p>我們進一步在 VSP 資料集上評估 Mirage（Yang et al., 2025c；Wu et al., 2025b），考慮其第一階段和第二階段的變體。只有在第二階段變體上將潛在令牌設置為小值時才會發生劇烈下降，其中干預非常強烈並導致重複。在其他情況下，即使潛在令牌的根本性改變（如直接將潛在令牌替換為高斯噪聲）也導致可忽略不計的變化。這些發現一致地表明該模型既不有意義地關注潛在令牌，也不在其中編碼關鍵信息。</p>
+<h4 id="332-z">3.3.2 對潛在令牌 Z 的探針分析</h4>
+<p><strong>實驗設置。</strong> 在這裡，我們進一步通過對潛在令牌 Z 進行探針分析來診斷 Z 對答案 Y 施加的因果效應。在此分析中，我們專注於 Monet，其潛在監督是通過在原始交錯多模態推理資料上聯合優化視覺信號和文本語義獲得的。通過多階段訓練，這些潛在令牌被鼓勵編碼信息豐富的視覺語義，以便於解決問題。</p>
+<p>具體而言，我們從 V* 中抽樣問題–圖像對 ${(I_{i},q_{i})}<em>{i=0}^{N}$，並收集推理過程中生成的對應潛在嵌入 ${Z</em>{i}}<em>{i=0}^{N}$。這些嵌入預期編碼支持不僅初始任務而且其他與相同視覺內容相關聯查詢的關鍵視覺證據。為了檢查潛在令牌捕獲的語義，我們進一步構造 30 個多選 VQA 問題 ${(Z</em>{i},\tilde{q}<em>{i})}</em>{i=0}^{N}$，這些問題專注於同一圖像區域但探測被引用物體的不同屬性。如果潛在令牌有效地捕獲了本質視覺語義，它們應該支持解決這些派生問題。示例見附錄 A。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22766/x3.png" loading="lazy"></figure> 圖 3：我們的方法和資料構造管道的說明，通過該管道我們進行嚴格控制的 Monet 訓練設置以進行公平且令人信服的比較。上部分展示原始資料的交錯格式。中間部分釐清兩種方法之間的關鍵方法論差異。下部分展示資料構造流程。</p>
+<p><strong>結果分析。</strong> 實驗結果總結在圖 2 (c) 中。結果表明直接使用潛在令牌作為唯一輸入導致顯著較弱的性能，甚至落後於純文本猜測基線。相對地，當提供原始圖像時，Monet 和 Qwen3-VL-32B（Bai et al., 2025a）都實現了強性能，達到 76.67% 的準確率，這也驗證了我們手動策劃問題的品質和一致性。綜合來看，這些發現對潛在令牌單獨有效捕獲和保留模型推理過程中可行動視覺語義的程度提出了巨大疑問。</p>
+<p>總之，這些高度同質的潛在令牌（發現-1）對最終預測的貢獻邊際化。該模型可能採用隱式快捷方式繞過潛在視覺推理途徑（發現-2）。此外，潛在令牌的編碼語義也最少（發現-3）。到目前為止，當前方法中潛在令牌的全部潛力尚未被充分發現，潛在令牌的行為更類似於軟提示或佔位符，而非視覺想像或推理的主動載體。</p>
+<p>表 1：在感知中心和視覺推理基準上的性能比較，其中我們的方法始終優於競爭基線。最佳結果以粗體突出顯示。標記為「*」的結果來自先前的工作。</p>
+<h2 id="4-capimagine">4 CapImagine</h2>
+<h3 id="41">4.1 方法設計</h3>
+<p>視覺想像的本質主要在於交錯式多模態推理，其中內部視覺思想可以被明確地勾勒出來，並隨著文本推理鏈進化。現有的潛在視覺推理方法試圖將這種視覺思想內化為潛在標記。然而，如前面章節所示，這些潛在表示無法保留有意義的視覺語義，對下游推理貢獻甚微。</p>
+<p>受到這一限制的啟發，我們探索文本空間推理是否能更有效地保留交錯資料中嵌入的基本資訊，並支持視覺想像。與其依賴潛在變數，我們將中間影像引入的語義變化轉換為文本描述。這迫使模型通過明確的文本空間推理鏈來想像原始影像的視覺轉換。</p>
+<p>與先前的文本空間推理方法不同，我們的方法以具體的中間視覺證據為基礎。通過將在隱藏空間中發生的視覺轉換明確表述出來，模型執行想像就如同中間影像存在一樣。</p>
+<h3 id="42">4.2 資料集構建</h3>
+<p><strong>資料重寫。</strong> 具體而言，我們的資料構建基於 Monet-SFT-125K (Wang et al. , 2025b) 資料集，並採用兩種形式的影像重寫。對於主要關注放大關鍵影像區域的 Visual-CoT 和 Zebra-CoT 視覺搜索 (Li et al. , 2025a) 子集，我們將原始問題與突出顯示的影像區域提供給 Qwen3-VL-4B (Bai et al. , 2025a)，提示它生成簡潔準確的標題，重新聚焦突出顯示的視覺語義。對於涉及直接影像操作（如標記或繪製輔助線）的其他子集（如 Refocus (Fu et al. , 2025) 和 CogCoM (Qi et al. , 2024)），我們將原始影像及其操縱後的對應影像都呈現給 Qwen3-VL-4B。模型被指示描述視覺差異，並明確表述操縱所揭示的關鍵資訊，例如標記的數值或突出顯示的文本實體。通過此過程，語言充分承載輔助影像的語義，有效地繞過了潛在表示。</p>
+<p>然而，直接將重寫的文本插入原始推理軌跡中往往會導致生硬的過渡和邏輯連貫性中斷。為了解決此問題，我們進一步使用 MLLM 全局細化推理鏈。此步驟糾正潛在的不一致性並改善流暢性，使新生成的文本描述能夠平順地集成到原始推理過程中。上述資料構建管線見圖 3。</p>
+<p><strong>資料篩選。</strong> 儘管 Monet-SFT-125K 資料集已經經歷嚴格的篩選程序，但佔 Monet-SFT-125K 94.88% 的 Visual-CoT (Shao et al. , 2024) 資料本質上品質低下，嚴重削弱了我們資料重寫策略的有效性。我們識別出兩個主要問題。首先，原始問題的最終答案常與新生成的視覺觀察相衝突，導致推理過程與答案之間不對齐。其次，Visual-CoT 子集中有大量問題過於模糊或根本無法回答，缺乏對目標物體的明確參考。因此，使用原始重寫資料進行的早期實驗在下游任務上僅產生有限的改進。</p>
+<p>為了緩解這些問題，我們通過 MLLM 對每個訓練實例進行綜合品質評估。評估重點關注推理過程的正確性和問題模糊度，具有明顯缺陷的實例被篩選出去。手動檢查確認了此自動篩選程序的有效性。篩選後，我們保留了 17k 個高品質訓練實例。為了消除與 Monet-SFT-125K 的資料量差異影響，我們在第 5.3 節進行了嚴格的消融研究，確保與 Monet 的公平比較。</p>
+<h2 id="5">5 實驗</h2>
+<h3 id="51">5.1 實驗設置</h3>
+<p>基準測試。為了全面評估文字驅動視覺想像的有效性，我們採用一套多樣化的高解析度（HR）視覺感知基準測試，遵循 Monet 的實驗協議：V*、HR-Bench-4K、HR-Bench-8K 和 MME-RealWorld-Lite，這些基準強調在高解析度設定下的細粒度感知能力。除了放大能力外，我們進一步納入 BLINK（Fu et al., 2024b）基準測試中的拼圖和多視角推理任務，以評估組合式和多視角推理能力。最後，我們在 TableVQA 上進行評估，以檢驗我們的方法在圖表和表格影像上的泛化能力。</p>
+<p>基線。我們與三類基線進行比較。（1）開源模型：我們評估 InternVL3-8B（Zhu et al., 2025）和 Qwen2.5-VL-7B（Bai et al., 2025b），後者作為所有後續基線的骨幹模型。（2）帶工具的推理方法，包括 DeepEyes 和 PixelReasoner（Wang et al., 2025a），它們利用強化學習透過放大操作來增強感知能力。（3）透過想像進行推理的方法，即 LVR 和 Monet，它們在一般情景下在潛在空間中進行視覺想像。此外，我們也報告來自專有的 GPT-4o（Hurst et al., 2024）模型的結果。對於 Monet，我們採用 LLM-as-a-judge 協議來萃取最終答案。</p>
+<p>訓練詳情。我們的模型建立在 Qwen2.5-VL-7B 之上，並使用來自 Monet-SFT-125K 的重建資料進行訓練。我們使用 Monet 程式碼庫在 8 個 A800-80G GPU 上執行 CoT-SFT 微調，批次大小為 1，梯度累積為 16。為了減輕訓練不穩定性並激勵資料的全部潛能，我們在訓練期間選擇表現最佳的檢查點（Nishida et al., 2025）。</p>
+<h3 id="52">5.2 主要結果</h3>
+<p>在各種感知為中心的基準測試的評估中，我們的方法始終優於強基線 Monet，在 HR-Bench 上達到平均 3.44% 的改進，在 V* 上達到 2.6% 的改進。在 MME-RealWorld-Lite 上，我們復現的 Monet 相比其基礎模型只展現出邊際收益，而我們的方法能夠有效處理多樣化的真實世界查詢。這些結果突出了基於放大的視覺想象對細粒度視覺感知的有效性。與推理工具方法相比，我們的方法大幅優於 PixelReasoner，同時略落後於 DeepEyes，這表明直接影像重放確實提供了互補優勢。</p>
+<p>超越高解析度感知，我們進一步評估了更抽象的視覺推理任務。Jigsaw 和多視角推理需要重建全域結構並在視角間執行空間推理。我們的方法在這些設定中泛化能力良好，相比 LVR 和 Monet 都超過 10 個百分點。在強調識別和比較關鍵數值的 TableVQA 上，我們的方法相比 Monet 達到了 6.1% 的改進。</p>
+<p>表 2：TableVQA 基準測試的結果。通過文本空間中的想象，我們的方法始終優於基線方法。</p>
+<p>總體而言，這些結果表明文本驅動的視覺想象為細粒度感知和抽象視覺推理提供了一個有效的機制。想象確實有助於視覺推理，但潛在空間中的想象尚未取得成效。</p>
+<h3 id="53">5.3 消融研究</h3>
+<p>我們進行了對照消融研究以分解數據重寫和數據過濾的影響。</p>
+<p>為了評估數據重寫的作用，我們將訓練數據中的文本空間想象描述替換為單個 <think_image> 標記，並在相同設定下微調模型。如表 1 所示，此修改導致在所有基準測試中均有一致的性能下降，包括在 V* 上下降 3.13%，這確認了文本驅動視覺想象的有效性。</p>
+<p>我們進一步通過直接在原始 Monet-SFT-125K 數據集上進行微調來檢查數據過濾的影響。為了消除 Monet 中的訓練推理錯配（訓練期間存在輔助影像但推理時不可用），我們在監督微調期間將中間影像替換為 <think_image> 標記。我們發現在沒有數據過濾的情況下進行訓練導致性能進一步持續下降，這證明了品質控制的必要性。值得注意的是，在移除訓練推理不匹配後，直接對 Monet-SFT-125K 進行監督微調所達到的性能與 Monet 相當，而 Monet 還經過了策略優化階段。這個觀察進一步質疑了潛在空間在視覺想象中的作用。</p>
+<h3 id="54">5.4 依賴關係分析</h3>
+<p>實驗設置。在本小節中，我們對文本形式想象變數 Z Z 進行因果中介分析，採用類似於前一節的擾動協議。對於輸入 X X 的干預，我們對輸入序列執行實例級別的修改，並分析文本想象標記隱狀態的變化，同時考慮實例間和實例內的相似性。對於 Z Z 的干預，我們遵循 (Zhang et al. , 2025c) 的協議，明確操縱推理過程。具體來說，CapImagine 首先被提示回答一個問題。生成的答案隨後被移除，並使用 Qwen3-32B 故意改變想象內容，使其導致錯誤的結論。這個被破壞的推理軌跡最後被回饋給 CapImagine，要求其完成生成並產生最終答案。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22766/x4.png" loading="lazy"></figure> 圖 4：CapImagine 推理過程中內層隱狀態的實例間和實例內分析。</p>
+<p>表 3：CapImagine 中介推理過程干預下的性能變化。</p>
+<p>結果分析。如圖 4 所示，實例間分析產生了一貫的低餘弦相似度，表明 X X 和 Z Z 之間存在強因果依賴關係。實例內分析進一步顯示連續隱狀態之間存在實質性的多樣性，表明每個想象標記編碼了不同的語義內容。對 Z Z 的干預對最終預測 Y Y 產生了明顯的影響。當想象內容中的關鍵資訊被修改時，性能急劇下降至隨機猜測水準以下。總體而言，從因果中介的角度來看，CapImagine 中文本形式的想象過程相比潛在標記展現出實質上更強且更直接的因果影響，並在端到端推理過程中發揮核心作用。</p>
+<h3 id="55">5.5 效率分析</h3>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22766/image5.png" loading="lazy"></figure> 圖 5：Monet、CapImagine 和 DeepEyes 在 V* 上的推理速度比較。（單位：秒）</p>
+<p>儘管 CapImagine 採用相對較長的文本形式想象序列，我們將其推理效率與潛在空間方法 Monet 和工具增強推理方法 DeepEyes 進行了比較。我們僅測量解碼時間，並確保所有模型都生成完整答案。結果總結在圖 5 中。CapImagine 儘管完全在文本空間中運作，但推理速度與 Monet 相當。同時，它的速度幾乎是帶工具推理方法 DeepEyes 的兩倍，同時提供競爭力的性能。這些結果表明 CapImagine 在有效性和效率之間提供了有利的權衡，結合了強大的推理能力和實際的推理成本。</p>
+<h2 id="6">6 結論</h2>
+<p>在這項工作中，我們通過因果中介分析系統地調查了潛在空間視覺推理方法的內部機制。
+我們的結果揭示了潛在令牌具有高度同質性、對輸入的敏感性極低、結果導向性弱且語義受限，未能有效充當視覺想像和真正推理的載體。為了解決這一限制，我們提出了一種文本空間想像方法，表現出更好的因果效應和更高的性能。
+我們相信我們的研究為當前潛在視覺推理方法提供了嚴謹的調查，並為開發更忠實、可解釋且有效的潛在推理方法提供了指導。</p>
+<h2 id="_2">影響聲明</h2>
+<p>本論文呈現的工作旨在推進機器學習領域。我們的工作有許多潛在的社會後果，但我們認為沒有必要在此特別強調任何這些後果。</p>
+<h2 id="_3">參考文獻</h2>
+<ul>
+<li>G. Atwood (1971) An experimental study of visual imagination and memory . Cognitive Psychology 2 ( 3 ), pp. 290–299 . Cited by: §1 .</li>
+<li>S. Bai, Y. Cai, R. Chen, K. Chen, X. Chen, Z. Cheng, L. Deng, W. Ding, C. Gao, C. Ge, W. Ge, Z. Guo, Q. Huang, J. Huang, F. Huang, B. Hui, S. Jiang, Z. Li, M. Li, M. Li, K. Li, Z. Lin, J. Lin, X. Liu, J. Liu, C. Liu, Y. Liu, D. Liu, S. Liu, D. Lu, R. Luo, C. Lv, R. Men, L. Meng, X. Ren, X. Ren, S. Song, Y. Sun, J. Tang, J. Tu, J. Wan, P. Wang, P. Wang, Q. Wang, Y. Wang, T. Xie, Y. Xu, H. Xu, J. Xu, Z. Yang, M. Yang, J. Yang, A. Yang, B. Yu, F. Zhang, H. Zhang, X. Zhang, B. Zheng, H. Zhong, J. Zhou, F. Zhou, J. Zhou, Y. Zhu, and K. Zhu (2025a) Qwen3-VL 技術報告 . arXiv preprint arXiv:2511.21631 . Cited by: §3.3.2 , §4.2 .</li>
+<li>S. Bai, K. Chen, X. Liu, J. Wang, W. Ge, S. Song, K. Dang, P. Wang, S. Wang, J. Tang, H. Zhong, Y. Zhu, M. Yang, Z. Li, J. Wan, P. Wang, W. Ding, Z. Fu, Y. Xu, J. Ye, X. Zhang, T. Xie, Z. Cheng, H. Zhang, Z. Yang, H. Xu, and J. Lin (2025b) Qwen2.5-VL 技術報告 . arXiv preprint arXiv:2502.13923 . Cited by: §5.1 .</li>
+<li>S. Bai, M. Li, Y. Liu, J. Tang, H. Zhang, L. Sun, X. Chu, and Y. Tang (2025c) UniVG-R1：利用強化學習的推理引導通用視覺定位 . arXiv preprint arXiv:2505.14231 . Cited by: §1 .</li>
+<li>M. Cao, H. Zhao, C. Zhang, X. Chang, I. Reid, and X. Liang (2025) Ground-R1：透過強化學習激勵有根據的視覺推理 . arXiv preprint arXiv:2505.20272 . Cited by: §2.1 .</li>
+<li>Y. Chen, Y. Shen, W. Huang, S. Zhou, Q. Lin, X. Cai, Z. Yu, J. Bu, B. Shi, and Y. Qiao (2025) 僅用影像學習：具備推理、渲染和視覺回饋的視覺強化學習 . arXiv preprint arXiv:2507.20766 . Cited by: §2.1 .</li>
+<li>C. Deng, D. Zhu, K. Li, C. Gou, F. Li, Z. Wang, S. Zhong, W. Yu, X. Nie, Z. Song, et al. (2025) 統一多模態預訓練中的新興特性 . arXiv preprint arXiv:2505.14683 . Cited by: §2.2 .</li>
+<li>S. Dong, S. Wang, X. Liu, and Z. Wei (2025) 具有選擇性知覺建模的交錯潛在視覺推理 . arXiv preprint arXiv:2512.05665 . Cited by: §2.2 .</li>
+<li>L. Fu, Z. Kuang, J. Song, M. Huang, B. Yang, Y. Li, L. Zhu, Q. Luo, X. Wang, H. Lu, et al. (2024a) OCRBench V2：評估大型多模態模型在視覺文本定位與推理上的改進基準 . arXiv preprint arXiv:2501.00321 . Cited by: §3.2 .</li>
+<li>X. Fu, Y. Hu, B. Li, Y. Feng, H. Wang, X. Lin, D. Roth, N. A. Smith, W. Ma, and R. Krishna (2024b) Blink：多模態大型語言模型可以看見但無法感知 . In European Conference on Computer Vision , pp. 148–166 . Cited by: §5.1 .</li>
+<li>X. Fu, M. Liu, Z. Yang, J. Corring, Y. Lu, J. Yang, D. Roth, D. Florencio, and C. Zhang (2025) Refocus：作為結構化影像理解思維鏈的視覺編輯 . arXiv preprint arXiv:2501.05452 . Cited by: §2.1 , §4.2 .</li>
+<li>X. Geng, P. Xia, Z. Zhang, X. Wang, Q. Wang, R. Ding, C. Wang, J. Wu, Y. Zhao, K. Li, et al. (2025) WebWatcher：開闢視覺語言深度研究代理的新領域 . arXiv preprint arXiv:2508.05748 . Cited by: §2.1 .</li>
+<li>J. Hong, C. Zhao, C. Zhu, W. Lu, G. Xu, and X. Yu (2025) DeepEyesV2：朝向代理多模態模型發展 . arXiv preprint arXiv:2511.05271 . Cited by: §1 , §2.1 .</li>
+<li>A. Hurst, A. Lerer, A. P. Goucher, A. Perelman, A. Ramesh, A. Clark, A. Ostrow, A. Welihinda, A. Hayes, A. Radford, et al. (2024) GPT-4o 系統卡 . arXiv preprint arXiv:2410.21276 . Cited by: §5.1 .</li>
+<li>C. Jiang, Y. Heng, W. Ye, H. Yang, H. Xu, M. Yan, J. Zhang, F. Huang, and S. Zhang (2025) VLM-R³：區域識別、推理與精化以增強多模態思維鏈 . arXiv preprint arXiv:2505.16192 . Cited by: §2.1 .</li>
+<li>Y. Kim, M. Yim, and K. Y. Song (2024) TableVQA-Bench：多個表格領域上的視覺問題回答基準 . arXiv preprint arXiv:2404.19205 . Cited by: §3.2 .</li>
+<li>X. Lai, J. Li, W. Li, T. Liu, T. Li, and H. Zhao (2025) Mini-O3：為視覺搜尋擴展推理模式與互動轉換 . arXiv preprint arXiv:2509.07969 . Cited by: §2.1 .</li>
+<li>A. Li, C. Wang, D. Fu, K. Yue, Z. Cai, W. B. Zhu, O. Liu, P. Guo, W. Neiswanger, F. Huang, et al. (2025a) Zebra-CoT：交錯視覺語言推理的資料集 . arXiv preprint arXiv:2507.16746 . Cited by: §4.2 .</li>
+<li>B. Li, X. Sun, J. Liu, Z. Wang, J. Wu, X. Yu, H. Chen, E. Barsoum, M. Chen, and Z. Liu (2025b) Latent Visual Reasoning . arXiv preprint arXiv:2509.24251 . Cited by: §1 , §2.2 , §2.2 , §3.2 .</li>
+<li>C. Li, W. Wu, H. Zhang, Y. Xia, S. Mao, L. Dong, I. Vulić, and F. Wei (2025c) 在空間中推理時想像：多模態思維視覺化 . arXiv preprint arXiv:2501.07542 . Cited by: §2.2 .</li>
+<li>Y. Li, H. Huang, C. Chen, K. Huang, C. Huang, Z. Guo, Z. Liu, J. Xu, Y. Li, R. Li, et al. (2025d) Migician：揭示多模態大型語言模型中自由形式多影像定位的奧祕 . arXiv preprint arXiv:2501.05767 . Cited by: §1 .</li>
+<li>C. Liu, Y. Yang, Y. Fan, Q. Wei, S. Liu, and X. E. Wang (2025) 心中的推理：潛在空間中的動態多模態交錯 . arXiv preprint arXiv:2512.12623 . Cited by: §1 .</li>
+<li>X. Lou, Y. Li, J. Xu, X. Shi, C. Chen, and K. Huang (2025) 安全思考：揭示並緩解多模態大型推理模型中的安全對齐崩潰 . arXiv preprint arXiv:2505.06538 . Cited by: §1 .</li>
+<li>H. Luo, Y. Wang, W. Zhang, S. Zheng, Z. Xi, C. Xu, H. Xu, H. Yuan, C. Zhang, Y. Wang, et al. (2026) Being-H0.5：人為中心機器人學習的擴展以實現跨實體化泛化 . arXiv preprint arXiv:2601.12993 . Cited by: §1 .</li>
+<li>X. Ma, Z. Ding, Z. Luo, C. Chen, Z. Guo, D. F. Wong, X. Feng, and M. Sun (2025) DeepPerception：在多模態大型語言模型中推進類 R1 的認知視覺感知以進行知識密集型視覺定位 . arXiv preprint arXiv:2503.12797 . Cited by: §1 .</li>
+<li>K. Narayan, Y. Xu, T. Cao, K. Nerella, V. M. Patel, N. Shiee, P. Grasch, C. Jia, Y. Yang, and Z. Gan (2025) DeepMMSearch-R1：在多模態網路搜尋中賦能多模態大型語言模型 . arXiv preprint arXiv:2510.12801 . Cited by: §2.1 .</li>
+<li>Y. Nishida, M. Isonuma, and Y. Oda (2025) 大型語言模型預訓練期間下游任務效能的不穩定性 . In Findings of the Association for Computational Linguistics: EMNLP 2025 , pp. 22883–22895 . Cited by: §5.1 .</li>
+<li>J. Pearl (2009) 統計中的因果推論：概述 . Cited by: §3.2 .</li>
+<li>Z. W. Pylyshyn (2002) 心理意象：理論的尋求 . Behavioral and brain sciences 25 ( 2 ), pp. 157–182 . Cited by: §1 .</li>
+<li>J. Qi, M. Ding, W. Wang, Y. Bai, Q. Lv, W. Hong, B. Xu, L. Hou, J. Li, Y. Dong, et al. (2024) CogCom：透過操作鏈深入細節訓練大型視覺語言模型 . Cited by: §2.1 , §4.2 .</li>
+<li>H. Shao, S. Qian, H. Xiao, G. Song, Z. Zong, L. Wang, Y. Liu, and H. Li (2024) Visual CoT：使用綜合資料集與思維鏈推理基準推進多模態語言模型 . Advances in Neural Information Processing Systems 37 , pp. 8612–8642 . Cited by: §4.2 .</li>
+<li>Z. Shen, H. Yan, L. Zhang, Z. Hu, Y. Du, and Y. He (2025) CoD-i：透過自我蒸餾將思維鏈壓縮到連續空間 . arXiv preprint arXiv:2502.21074 . Cited by: §2.2 .</li>
+<li>Y. Shi, Y. Dong, Y. Ding, Y. Wang, X. Zhu, S. Zhou, W. Liu, H. Tian, R. Wang, H. Wang, et al. (2025) RealUnify：統一模型真的能從統一受益嗎？一項綜合基準 . arXiv preprint arXiv:2509.24897 . Cited by: §2.2 .</li>
+<li>J. Tong, J. Gu, Y. Lou, L. Fan, Y. Zou, Y. Wu, J. Ye, and R. Li (2025) Sketch-in-Latents：引發多模態大型語言模型中的統一推理 . arXiv preprint arXiv:2512.16584 . Cited by: §1 , §2.2 .</li>
+<li>H. Wang, A. Su, W. Ren, F. Lin, and W. Chen (2025a) Pixel Reasoner：透過好奇心驅動強化學習激勵像素空間推理 . arXiv preprint arXiv:2505.15966 . Cited by: §5.1 .</li>
+<li>Q. Wang, Y. Shi, Y. Wang, Y. Zhang, P. Wan, K. Gai, X. Ying, and Y. Wang (2025b) MoNet：超越影像與語言的潛在視覺空間推理 . arXiv preprint arXiv:2511.21395 . Cited by: §1 , §1 , §2.2 , §3.2 , §4.2 .</li>
+<li>W. Wang, L. Ding, M. Zeng, X. Zhou, L. Shen, Y. Luo, W. Yu, and D. Tao (2025c) 分割、征服與結合：無訓練框架用於多模態大型語言模型中的高解析度影像感知 . In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 39 , pp. 7907–7915 . Cited by: §1 .</li>
+<li>Y. Wang, S. Li, P. Li, X. Yang, Y. Tang, and Z. Wei (2026) Render-of-Thought：將文本思維鏈渲染為影像以進行視覺潛在推理 . arXiv preprint arXiv:2601.14750 . Cited by: §1 .</li>
+<li>J. Wu, Z. Deng, W. Li, Y. Liu, B. You, B. Li, Z. Ma, and Z. Liu (2025a) MMSearch-R1：激勵大型多模態語言模型搜尋 . arXiv preprint arXiv:2506.20670 . Cited by: §2.1 .</li>
+<li>J. Wu, J. Guan, K. Feng, Q. Liu, S. Wu, L. Wang, W. Wu, and T. Tan (2025b) 以交錯思維與視覺繪製強化視覺語言模型中的空間推理 . arXiv preprint arXiv:2506.09965 . Cited by: §3.3.1 .</li>
+<li>P. Wu and S. Xie (2024) V²：作為多模態大型語言模型核心機制的引導視覺搜尋 . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 13084–13094 . Cited by: §1 , §3.2 .</li>
+<li>S. Yang, J. Yang, P. Huang, E. Brown, Z. Yang, Y. Yu, S. Tong, Z. Zheng, Y. Xu, M. Wang, et al. (2025a) Cambrian-S：朝向視頻中的空間超感應發展 . arXiv preprint arXiv:2511.04670 . Cited by: §1 .</li>
+<li>Y. Yang, X. He, H. Pan, X. Jiang, Y. Deng, X. Yang, H. Lu, D. Yin, F. Rao, M. Zhu, et al. (2025b) R1-OneVision：透過跨模態形式化推進廣義多模態推理 . arXiv preprint arXiv:2503.10615 . Cited by: §1 .</li>
+<li>Z. Yang, X. Yu, D. Chen, M. Shen, and C. Gan (2025c) 機器心理意象：用潛在視覺標記賦能多模態推理 . arXiv preprint arXiv:2506.17218 . Cited by: §1 , §2.2 , §3.2 , §3.3.1 .</li>
+<li>S. Yin, C. Fu, S. Zhao, K. Li, X. Sun, T. Xu, and E. Chen (2024) 多模態大型語言模型調查 . National Science Review 11 ( 12 ), pp. nwae403 . Cited by: §3.2 .</li>
+<li>X. Yu, C. Feng, L. Mei, and C. Chen (2026) M³ Searcher：具備檢索導向推理的模組化多模態資訊搜尋代理 . arXiv preprint arXiv:2601.09278 . Cited by: §2.1 .</li>
+<li>C. Zhang, H. Qiu, Q. Zhang, Z. Zeng, L. Ma, and J. Zhang (2025a) DeepSketcher：內化視覺操縱以進行多模態推理 . arXiv preprint arXiv:2509.25866 . Cited by: §1 , §2.2 .</li>
+<li>Y. Zhang, X. Lu, S. Yin, C. Fu, W. Chen, X. Hu, B. Wen, K. Jiang, C. Liu, T. Zhang, et al. (2025b) Thyme：超越影像思考 . arXiv preprint arXiv:2508.11630 . Cited by: §1 .</li>
+<li>Y. Zhang, H. Zhang, H. Tian, C. Fu, S. Zhang, J. Wu, F. Li, K. Wang, Q. Wen, Z. Zhang, et al. (2024) MME-RealWorld：您的多模態大型語言模型能應對對人類困難的高解析度真實世界情景嗎？ . arXiv preprint arXiv:2408.13257 . Cited by: §1 , §3.2 .</li>
+<li>Y. Zhang, B. Tang, T. Ju, S. Duan, and G. Liu (2025c) 潛在標記會思考嗎？連續思維鏈的因果與對抗性分析 . arXiv preprint arXiv:2512.21711 . Cited by: §1 , §5.4 .</li>
+<li>S. Zhao, H. Zhang, S. Lin, M. Li, Q. Wu, K. Zhang, and C. Wei (2025) PyVision：具備動態工具的代理視覺 . arXiv preprint arXiv:2507.07998 . Cited by: §1 , §2.1 .</li>
+<li>Z. Zheng, M. Yang, J. Hong, C. Zhao, G. Xu, L. Yang, C. Shen, and X. Yu (2025) DeepEyes：透過強化學習激勵「用影像思考」 . arXiv preprint arXiv:2505.14362 . Cited by: §2.1 .</li>
+<li>J. Zhu, W. Wang, Z. Chen, Z. Liu, S. Ye, L. Gu, H. Tian, Y. Duan, W. Su, J. Shao, et al. (2025) InternVL3：探索開源多模態模型的高級訓練與測試時期配方 . arXiv preprint arXiv:2504.10479 . Cited by: §5.1 .</li>
+</ul>
+<h2 id="a">附錄 A 探測分析中推導問題的範例</h2>
+<p>我們呈現用於探測分析的推導問題的定性範例。
+這些問題關注與原始查詢相同的視覺區域，同時改變查詢的屬性以檢驗潛在表示的語意一致性。在探測分析期間，所獲得的潛在嵌入和這些推導問題被呈現給模型以進行最終答案生成。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.22766/image6.png" loading="lazy"></figure> 圖 6：推導問題關注與原始問題相同的區域或物體，但在查詢的屬性方面有所不同。</p>
+<h2 id="b-z">附錄 B Z 介入的詳細結果</h2>
+<p>表 4：不同潛在介入下的性能變化。上表報告了 Monet 在所有潛在標記被設定為同一張量（記為 $do(Z)$）時的結果。
+下表關注 Monet 在各種潛在介入策略下的性能。$\tau$ 表示固定張量，$\epsilon$ 表示滿足 $\epsilon\sim\mathcal{N}(0,\sigma^{2})$ 的隨機高斯噪聲，$\mu$ 是接近零的小常數。$Z_{i}$ 表示第 $i$ 位置的潛在標記。</p>
+<h2 id="c">附錄 C 限制和未來工作</h2>
+<p>本工作的限制有三個方面。首先，我們提出的文本形式方法相比於基於潛在的方法引入了更高的推論延遲，這是因為較長序列的自迴歸解碼。其次，CapImagine 主要作為驗證探針來證明當前潛在範式中的因果性差距，而非最優解決方案。我們承認相比於高維潛在空間的理論資訊容量，自然語言在粒度上本質上是有限的。因此，如何在潛在空間中嚴格構建高品質的因果推理鏈仍然是未來探索中一個未解決且具有挑戰性的目標。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

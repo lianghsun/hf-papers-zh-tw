@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal",
+    "Audio"
+  ],
+  "method": [
+    "Diffusion",
+    "Transformer"
+  ],
+  "task": [
+    "Motion Generation",
+    "Gesture Generation"
+  ],
+  "dataset": [
+    "Seamless Interaction Dataset"
+  ],
+  "open_source": true
+}

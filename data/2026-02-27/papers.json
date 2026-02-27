@@ -1,0 +1,166 @@
+[
+  {
+    "arxiv_id": "2602.22897",
+    "title": "OmniGAIA: Towards Native Omni-Modal AI Agents",
+    "abstract": "Human intelligence naturally intertwines omni-modal perception -- spanning vision, audio, and language -- with complex reasoning and tool usage to interact with the world. However, current multi-modal LLMs are primarily confined to bi-modal interactions (e.g., vision-language), lacking the unified cognitive capabilities required for general AI assistants. To bridge this gap, we introduce OmniGAIA, a comprehensive benchmark designed to evaluate omni-modal agents on tasks necessitating deep reasoning and multi-turn tool execution across video, audio, and image modalities. Constructed via a novel omni-modal event graph approach, OmniGAIA synthesizes complex, multi-hop queries derived from real-world data that require cross-modal reasoning and external tool integration. Furthermore, we propose OmniAtlas, a native omni-modal foundation agent under tool-integrated reasoning paradigm with active omni-modal perception. Trained on trajectories synthesized via a hindsight-guided tree exploration strategy and OmniDPO for fine-grained error correction, OmniAtlas effectively enhances the tool-use capabilities of existing open-source models. This work marks a step towards next-generation native omni-modal AI assistants for real-world scenarios.",
+    "authors": [
+      "Xiaoxi Li",
+      "Wenxiang Jiao",
+      "Jiarui Jin",
+      "Shijian Wang",
+      "Guanting Dong",
+      "Jiajie Jin",
+      "Hao Wang",
+      "Yinuo Wang",
+      "Ji-Rong Wen",
+      "Yuan Lu",
+      "Zhicheng Dou"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-02-26T11:35:04.000Z"
+  },
+  {
+    "arxiv_id": "2602.23152",
+    "title": "The Trinity of Consistency as a Defining Principle for General World Models",
+    "abstract": "The construction of World Models capable of learning, simulating, and reasoning about objective physical laws constitutes a foundational challenge in the pursuit of Artificial General Intelligence. Recent advancements represented by video generation models like Sora have demonstrated the potential of data-driven scaling laws to approximate physical dynamics, while the emerging Unified Multimodal Model (UMM) offers a promising architectural paradigm for integrating perception, language, and reasoning. Despite these advances, the field still lacks a principled theoretical framework that defines the essential properties requisite for a General World Model. In this paper, we propose that a World Model must be grounded in the Trinity of Consistency: Modal Consistency as the semantic interface, Spatial Consistency as the geometric basis, and Temporal Consistency as the causal engine. Through this tripartite lens, we systematically review the evolution of multimodal learning, revealing a trajectory from loosely coupled specialized modules toward unified architectures that enable the synergistic emergence of internal world simulators. To complement this conceptual framework, we introduce CoW-Bench, a benchmark centered on multi-frame reasoning and generation scenarios. CoW-Bench evaluates both video generation models and UMMs under a unified evaluation protocol. Our work establishes a principled pathway toward general world models, clarifying both the limitations of current systems and the architectural requirements for future progress.",
+    "authors": [
+      "Jingxuan Wei",
+      "Siyuan Li",
+      "Yuhang Xu",
+      "Zheng Sun",
+      "Junjie Jiang",
+      "Hexuan Jin",
+      "Caijun Jia",
+      "Honghao He",
+      "Xinglong Xu",
+      "Xi bai",
+      "Chang Yu",
+      "Yumou Liu",
+      "Junnan Zhu",
+      "Xuanhe Zhou",
+      "Jintao Chen",
+      "Xiaobin Hu",
+      "Shancheng Pang",
+      "Bihui Yu",
+      "Ran He",
+      "Zhen Lei",
+      "Stan Z. Li",
+      "Conghui He",
+      "Shuicheng Yan",
+      "Cheng Tan"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-02-26T16:15:55.000Z"
+  },
+  {
+    "arxiv_id": "2602.22766",
+    "title": "Imagination Helps Visual Reasoning, But Not Yet in Latent Space",
+    "abstract": "Latent visual reasoning aims to mimic human's imagination process by meditating through hidden states of Multimodal Large Language Models. While recognized as a promising paradigm for visual reasoning, the underlying mechanisms driving its effectiveness remain unclear. Motivated to demystify the true source of its efficacy, we investigate the validity of latent reasoning using Causal Mediation Analysis. We model the process as a causal chain: the input as the treatment, the latent tokens as the mediator, and the final answer as the outcome. Our findings uncover two critical disconnections: (a) Input-Latent Disconnect: dramatic perturbations on the input result in negligible changes to the latent tokens, suggesting that latent tokens do not effectively attend to the input sequence. (b) Latent-Answer Disconnect: perturbations on the latent tokens yield minimal impact on the final answer, indicating the limited causal effect latent tokens imposing on the outcome. Furthermore, extensive probing analysis reveals that latent tokens encode limited visual information and exhibit high similarity. Consequently, we challenge the necessity of latent reasoning and propose a straightforward alternative named CapImagine, which teaches the model to explicitly imagine using text. Experiments on vision-centric benchmarks show that CapImagine significantly outperforms complex latent-space baselines, highlighting the superior potential of visual reasoning through explicit imagination.",
+    "authors": [
+      "You Li",
+      "Chi Chen",
+      "Yanghao Li",
+      "Fanhu Zeng",
+      "Kaiyu Huang",
+      "Jinan Xu",
+      "Maosong Sun"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-02-26T08:56:23.000Z"
+  },
+  {
+    "arxiv_id": "2602.23008",
+    "title": "Exploratory Memory-Augmented LLM Agent via Hybrid On- and Off-Policy Optimization",
+    "abstract": "Exploration remains the key bottleneck for large language model agents trained with reinforcement learning. While prior methods exploit pretrained knowledge, they fail in environments requiring the discovery of novel states. We propose Exploratory Memory-Augmented On- and Off-Policy Optimization (EMPO^2), a hybrid RL framework that leverages memory for exploration and combines on- and off-policy updates to make LLMs perform well with memory while also ensuring robustness without it. On ScienceWorld and WebShop, EMPO^2 achieves 128.6% and 11.3% improvements over GRPO, respectively. Moreover, in out-of-distribution tests, EMPO^2 demonstrates superior adaptability to new tasks, requiring only a few trials with memory and no parameter updates. These results highlight EMPO^2 as a promising framework for building more exploratory and generalizable LLM-based agents.",
+    "authors": [
+      "Zeyuan Liu",
+      "Jeonghye Kim",
+      "Xufang Luo",
+      "Dongsheng Li",
+      "Yuqing Yang"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-02-26T13:50:57.000Z"
+  },
+  {
+    "arxiv_id": "2602.22594",
+    "title": "Causal Motion Diffusion Models for Autoregressive Motion Generation",
+    "abstract": "Recent advances in motion diffusion models have substantially improved the realism of human motion synthesis. However, existing approaches either rely on full-sequence diffusion models with bidirectional generation, which limits temporal causality and real-time applicability, or autoregressive models that suffer from instability and cumulative errors. In this work, we present Causal Motion Diffusion Models (CMDM), a unified framework for autoregressive motion generation based on a causal diffusion transformer that operates in a semantically aligned latent space. CMDM builds upon a Motion-Language-Aligned Causal VAE (MAC-VAE), which encodes motion sequences into temporally causal latent representations. On top of this latent representation, an autoregressive diffusion transformer is trained using causal diffusion forcing to perform temporally ordered denoising across motion frames. To achieve fast inference, we introduce a frame-wise sampling schedule with causal uncertainty, where each subsequent frame is predicted from partially denoised previous frames. The resulting framework supports high-quality text-to-motion generation, streaming synthesis, and long-horizon motion generation at interactive rates. Experiments on HumanML3D and SnapMoGen demonstrate that CMDM outperforms existing diffusion and autoregressive models in both semantic fidelity and temporal smoothness, while substantially reducing inference latency.",
+    "authors": [
+      "Qing Yu",
+      "Akihisa Watanabe",
+      "Kent Fujiwara"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-02-26T03:58:25.000Z"
+  },
+  {
+    "arxiv_id": "2602.23259",
+    "title": "Risk-Aware World Model Predictive Control for Generalizable End-to-End Autonomous Driving",
+    "abstract": "With advances in imitation learning (IL) and large-scale driving datasets, end-to-end autonomous driving (E2E-AD) has made great progress recently. Currently, IL-based methods have become a mainstream paradigm: models rely on standard driving behaviors given by experts, and learn to minimize the discrepancy between their actions and expert actions. However, this objective of \"only driving like the expert\" suffers from limited generalization: when encountering rare or unseen long-tail scenarios outside the distribution of expert demonstrations, models tend to produce unsafe decisions in the absence of prior experience. This raises a fundamental question: Can an E2E-AD system make reliable decisions without any expert action supervision? Motivated by this, we propose a unified framework named Risk-aware World Model Predictive Control (RaWMPC) to address this generalization dilemma through robust control, without reliance on expert demonstrations. Practically, RaWMPC leverages a world model to predict the consequences of multiple candidate actions and selects low-risk actions through explicit risk evaluation. To endow the world model with the ability to predict the outcomes of risky driving behaviors, we design a risk-aware interaction strategy that systematically exposes the world model to hazardous behaviors, making catastrophic outcomes predictable and thus avoidable. Furthermore, to generate low-risk candidate actions at test time, we introduce a self-evaluation distillation method to distill riskavoidance capabilities from the well-trained world model into a generative action proposal network without any expert demonstration. Extensive experiments show that RaWMPC outperforms state-of-the-art methods in both in-distribution and out-of-distribution scenarios, while providing superior decision interpretability.",
+    "authors": [
+      "Jiangxin Sun",
+      "Feng Xue",
+      "Teng Long",
+      "Chang Liu",
+      "Jian-Fang Hu",
+      "Wei-Shi Zheng",
+      "Nicu Sebe"
+    ],
+    "upvotes": 0,
+    "published_at": "2026-02-26T17:32:30.000Z"
+  },
+  {
+    "arxiv_id": "2602.23165",
+    "title": "DyaDiT: A Multi-Modal Diffusion Transformer for Socially Favorable Dyadic Gesture Generation",
+    "abstract": "Generating realistic conversational gestures are essential for achieving natural, socially engaging interactions with digital humans. However, existing methods typically map a single audio stream to a single speaker's motion, without considering social context or modeling the mutual dynamics between two people engaging in conversation. We present DyaDiT, a multi-modal diffusion transformer that generates contextually appropriate human motion from dyadic audio signals. Trained on Seamless Interaction Dataset, DyaDiT takes dyadic audio with optional social-context tokens to produce context-appropriate motion. It fuses information from both speakers to capture interaction dynamics, uses a motion dictionary to encode motion priors, and can optionally utilize the conversational partner's gestures to produce more responsive motion. We evaluate DyaDiT on standard motion generation metrics and conduct quantitative user studies, demonstrating that it not only surpasses existing methods on objective metrics but is also strongly preferred by users, highlighting its robustness and socially favorable motion generation. Code and models will be released upon acceptance.",
+    "authors": [
+      "Yichen Peng",
+      "Jyun-Ting Song",
+      "Siyeol Jung",
+      "Ruofan Liu",
+      "Haiyang Liu",
+      "Xuangeng Chu",
+      "Ruicong Liu",
+      "Erwin Wu",
+      "Hideki Koike",
+      "Kris Kitani"
+    ],
+    "upvotes": 0,
+    "published_at": "2026-02-26T16:30:07.000Z"
+  },
+  {
+    "arxiv_id": "2602.23058",
+    "title": "GeoWorld: Geometric World Models",
+    "abstract": "Energy-based predictive world models provide a powerful approach for multi-step visual planning by reasoning over latent energy landscapes rather than generating pixels. However, existing approaches face two major challenges: (i) their latent representations are typically learned in Euclidean space, neglecting the underlying geometric and hierarchical structure among states, and (ii) they struggle with long-horizon prediction, which leads to rapid degradation across extended rollouts. To address these challenges, we introduce GeoWorld, a geometric world model that preserves geometric structure and hierarchical relations through a Hyperbolic JEPA, which maps latent representations from Euclidean space onto hyperbolic manifolds. We further introduce Geometric Reinforcement Learning for energy-based optimization, enabling stable multi-step planning in hyperbolic latent space. Extensive experiments on CrossTask and COIN demonstrate around 3% SR improvement in 3-step planning and 2% SR improvement in 4-step planning compared to the state-of-the-art V-JEPA 2. Project website: https://steve-zeyu-zhang.github.io/GeoWorld.",
+    "authors": [
+      "Zeyu Zhang",
+      "Danning Li",
+      "Ian Reid",
+      "Richard Hartley"
+    ],
+    "upvotes": 2,
+    "published_at": "2026-02-26T14:42:53.000Z"
+  },
+  {
+    "arxiv_id": "2602.22437",
+    "title": "veScale-FSDP: Flexible and High-Performance FSDP at Scale",
+    "abstract": "Fully Sharded Data Parallel (FSDP), also known as ZeRO, is widely used for training large-scale models, featuring its flexibility and minimal intrusion on model code. However, current FSDP systems struggle with structure-aware training methods (e.g., block-wise quantized training) and with non-element-wise optimizers (e.g., Shampoo and Muon) used in cutting-edge models (e.g., Gemini, Kimi K2). FSDP's fixed element- or row-wise sharding formats conflict with the block-structured computations. In addition, today's implementations fall short in communication and memory efficiency, limiting scaling to tens of thousands of GPUs. We introduce veScale-FSDP, a redesigned FSDP system that couples a flexible sharding format, RaggedShard, with a structure-aware planning algorithm to deliver both flexibility and performance at scale. veScale-FSDP natively supports efficient data placement required by FSDP, empowering block-wise quantization and non-element-wise optimizers. As a result, veScale-FSDP achieves 5~66% higher throughput and 16~30% lower memory usage than existing FSDP systems, while scaling efficiently to tens of thousands of GPUs.",
+    "authors": [
+      "Zezhou Wang",
+      "Youjie Li",
+      "Zhiqi Lin",
+      "Jiacheng Yang",
+      "Cong Xie",
+      "Guanyu Feng",
+      "Zheng Zhong",
+      "Ziyue Huang",
+      "Hongyu Zhu",
+      "Zhi Zhang",
+      "Yanghua Peng",
+      "Xin Liu"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-02-25T21:55:43.000Z"
+  }
+]

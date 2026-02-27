@@ -1,0 +1,22 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion Models",
+    "Transformer",
+    "VAE",
+    "Autoregressive Models"
+  ],
+  "task": [
+    "Motion Generation",
+    "Text-to-Motion Generation",
+    "Motion Synthesis"
+  ],
+  "dataset": [
+    "HumanML3D",
+    "SnapMoGen"
+  ],
+  "open_source": false
+}

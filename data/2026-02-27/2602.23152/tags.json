@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal",
+    "Theory"
+  ],
+  "method": [
+    "Transformer",
+    "Diffusion",
+    "Multimodal Learning",
+    "Video Generation"
+  ],
+  "task": [
+    "Video Generation",
+    "Multi-frame Reasoning",
+    "World Modeling",
+    "Physical Dynamics Simulation"
+  ],
+  "dataset": [
+    "CoW-Bench"
+  ],
+  "open_source": false
+}

@@ -1,0 +1,353 @@
+# DyaDiT：用於社交友善二人互動手勢生成的多模態擴散 Transformer
+
+生成逼真的對話手勢對於實現與數位人類的自然、社交互動至關重要。然而，現有方法通常將單一音頻流對映到單一講者的動作，而未考慮社交背景或建模兩個進行對話的人之間的相互動態。我們提出 DyaDiT，這是一個多模態擴散 Transformer，能從二人互動音頻信號生成背景相關的人類動作。DyaDiT 在 Seamless Interaction Dataset [ 1 ] 上進行訓練，以二人互動音頻和可選的社交背景代幣作為輸入，以產生背景相關的動作。它融合來自兩位講者的訊息以捕捉互動動態，使用動作字典來編碼動作先驗，並可選擇性地利用對話夥伴的手勢以產生更具回應性的動作。我們在標準動作生成指標上評估 DyaDiT，並進行量化使用者研究，證明它不僅在客觀指標上超越現有方法，而且也強烈受到使用者偏好，突顯其穩健性和社交友善的動作生成。程式碼和模型將在接收後發佈。
+
+## 1 簡介
+
+建構可以與人自然互動的合成代理（也稱為數位人類、AI 代理、虛擬化身或機器人）是人機介面未來發展的關鍵。最近的語言模型如 GPT-4.5 [33] 和 LLaMA-3.1 [12] 已經展現出令人印象深刻的對話能力，許多使用者甚至感覺自己在與另一個人交談 [15]。然而，目前這種假象仍然侷限於文字視窗內。實際上，人類互動遠不止於口頭言語。人們會做出手勢、相互回應，並透過身體動作表達微妙的社交線索。為了讓人類真正感覺到合成代理是互動的，該代理必須伴隨其言語而做出隨著對話自然演進的手勢。
+
+然而，生成這樣的手勢具有挑戰性。手勢受到社會因素的強烈影響，例如個性、說話者之間的關係和他們的對話角色。這些線索影響人們如何移動、如何反應以及如何彼此協調，但大多數現有的手勢生成模型並未明確建模這些因素 [42、26、27]。因此，它們生成的手勢往往顯得普通或虛假。除了社交脈絡外，發生在兩個互動個體之間的雙人對話呈現出手勢生成模型難以處理的語音動態。兩個人可以同時說話、相互打斷，或在說話和聆聽之間快速切換 [8、28]。他們的音訊流混合在一起，使得難以區分誰在說話，誰在回應 [39、30、19]。然而，大多數現有的雙人手勢生成模型 [32、29] 簡單地將兩個語音流融合為一個，使得每個說話者的貢獻變得模糊，因此削弱了生成的手勢與底層互動之間的對應關係。
+
+為了解決這些限制，我們介紹 DyaDiT，一個基於擴散的 Transformer，可從雙人音訊生成具有社交意識的手勢。與以往只專注於音訊和生成動作之間對齐的工作 [22、23、36、10] 不同，DyaDiT 的生成以明確的社交線索（如關係和個性）為條件。此外，為了解決對話期間兩個重疊音訊流的強烈糾纏問題，我們提出了正交化交叉注意力（ORCA），一個簡單而有效的模組，可消除兩個音訊流的歧義，產生更清潔的音訊表徵以便更好地生成手勢。最後，由於雙人設定中的人類動作往往受到夥伴手勢的影響，DyaDiT 可以選擇性地將夥伴的動作作為額外輸入，允許模型生成更協調、更有回應性且更自然的手勢。
+
+我們的實驗顯示 DyaDiT 在標準量化指標上始終優於現有的雙人手勢生成方法，在手勢品質和分佈對齐方面取得顯著進展。此外，我們進行了廣泛的使用者研究以評估人類感知偏好。結果顯示參與者強烈偏好 DyaDiT 生成的手勢，表明我們生成的動作在社交意識上更高，更適合真實對話設定。
+
+總結而言，我們的主要貢獻如下：
+
+- • 我們提出 DyaDiT，一個擴散 Transformer (DiT)，可在雙人對話中生成具有社交脈絡意識的手勢。
+- • 我們引入正交化交叉注意力（ORCA）模組，減少兩個個體音訊流之間的干擾，為雙人對話中更好的手勢生成提供更清潔的音訊表徵。
+- • 透過廣泛的量化評估和使用者研究，我們展示了 DyaDiT 在標準指標上始終優於現有方法，並在感知真實性和社交一致性方面受到使用者偏好。
+
+我們提出 DyaDiT，一個擴散 Transformer (DiT)，可在雙人對話中生成具有社交脈絡意識的手勢。
+
+我們引入正交化交叉注意力（ORCA）模組，減少兩個個體音訊流之間的干擾，為雙人對話中更好的手勢生成提供更清潔的音訊表徵。
+
+透過廣泛的量化評估和使用者研究，我們展示了 DyaDiT 在標準指標上始終優於現有方法，並在感知真實性和社交一致性方面受到使用者偏好。
+
+[FIGURE:x2.png] 圖 2：DyaDiT 概覽。DyaDiT 以多種輸入模式為條件，包括音訊、夥伴動作、關係類型和個性得分。它採用音訊正交化交叉注意力（ORCA）模組以獲得更清潔的音訊表徵，以及一個動作字典來引導風格感知的手勢生成。
+
+## 2 相關工作
+
+### 2.1 共語手勢生成
+
+共語手勢生成專注於合成與單一說話者語音對齊的身體動作。早期方法將手勢生成表述為多模態語音線索的翻譯問題，通過遞迴或對抗模型結合文字、音訊和說話者身份，例如 Yoon 等人 [49] 的三模態框架，將手勢生成視為一個翻譯問題，通過對抗遞迴框架結合語音文字稿、音訊和說話者身份。Liu 等人 [23] 引入了 BEAT 資料集和 CaMN，一個能夠生成同步身體和手部手勢的級聯多模態對抗網路。其他工作，例如 EMAGE [22]、TalkSHOW [47]、MECo [5] 等 [34, 24, 11, 21, 45] 通過解糾纏節奏和語義運動特徵或透過 VQ-VAEs 整合離散潛在空間來增強真實性。
+
+儘管這些進展值得注意，但其中大多數專注於單一說話者共語手勢，忽略了人類溝通的互動本質。更複雜的設定，例如雙人手勢生成，需要建模兩個參與者的行為及其人際動態，仍然在很大程度上未被探索。
+
+### 2.2 雙人手勢和反應生成
+
+與共語手勢合成不同，雙人手勢生成必須建模兩個參與者之間的協調行為，包括人際時序、相互注意力和反應能力。該領域大多數先前工作來自於臉部反應生成 (FRG)，其目標是預測聽眾對說話者行為的非確定性臉部反應 [50, 16, 26, 27, 25, 38, 31]。
+
+儘管 FRG 為建模雙人互動提供了基礎，但它主要專注於臉部或頭部動作，而非全身手勢。由於這一限制，最近的一些工作已開始探索雙人設定中的身體手勢生成。
+
+一些努力，例如 Audio2Photoreal [32]、ConvoFusion [29] 和 TAG2G [9] 將單一說話者框架擴展到雙方設定。
+
+然而，這些模型通常要嘛 (1) 忽略兩個個體之間的社會背景，要嘛 (2) 將雙人音訊視為單一混合信號，而不明確建模跨人員動態，這往往導致模型呈現的角色和互動模式出現歧義。這些限制突出了對明確特徵解糾纏和更好的社會背景推理支援的需求。
+
+### 2.3 擴散模型為基礎的手勢生成
+
+擴散模型因其建模多模態和多對多分佈的能力，已成為人體動作的強大生成工具。
+許多研究已將原本為文本條件動作生成設計的擴散框架，如 MotionDiffuse [ 51 ]、FineMoGen [ 52 ] 和 MDM [ 41 ] 等 [ 37、40、6、3 ]，改編應用於語音–手勢領域。Alexanderson 等人 [ 2 ] 為共現語音手勢重新制定了 DiffWave，而 Zhu 等人 [ 55 ] 提出了 DiffGesture，將帶雜訊的手勢序列與語境嵌入整合用於時間建模。DiffuseStyleGesture+ [ 46 ] 進一步引入了對音訊、文本、風格和種子手勢的條件限制，利用基於 Transformer 的去雜訊以及注意力控制。其他研究如 UnifiedGesture [ 44 ]、LivelySpeaker [ 53 ] 和 AMUSE [ 7 ]，強調了語義和韻律的一致性，並分離了情感和風格潛在因素。考慮到擴散模型在手勢生成中的成功，以及二人對話固有的非決定性本質，我們基於擴散模型構建我們的方法，以更好地捕捉雙人互動中存在的可變性和動態特性。
+
+[FIGURE:x3.png] 圖 3：ORCA 減少了兩個音訊串流之間的歧義，使 DyaDiT 即使在一個人打斷對話中的另一個人時，也能生成逼真的動作。該示例展示了隨著對話轉變，生成的動作如何自然調整。
+
+## 3 DyaDiT
+
+我們介紹 DyaDiT，一個具有多模態輸入的擴散 Transformer（DiT），用於二人手勢生成。給定來自兩個個體的對話音訊串流（表示為自我和他人），我們的目標是根據對話語境為另一位說話者生成合理的上身手勢。為了進一步增強生成手勢的真實性，DyaDiT 在推論期間可選擇性地納入自我的關係、性格特徵和手勢序列作為輔助條件信號。我們在 Seamless Interaction 資料集 [ 1 ] 的子集上訓練我們的模型，資料集規範和前處理程序詳見第 3.1 節。完整架構概覽如圖 2 所示。音訊正交化交叉注意力（ORCA）模組的詳細資訊在第 3.3 節提供，而動作字典和動作分詞器分別呈現在第 3.4 和 3.5 節。
+
+### 3.1 Seamless Interaction 資料集
+
+Seamless Interaction 資料集 [ 1 ] 是一個大規模的雙人對話語料庫，包含同步的音訊、全身動作和臉部表情。在本研究中，我們使用該資料集自然場景集合中的策劃子集，共 3,000 個片段（約 182 小時），其中包含豐富且自發性的雙人對話，適合用於建模對話手勢。我們專注於生成上身手勢，表示為 $g \in \mathbb{R}^{T \times J \times 6}$，使用 6D 旋轉表示法 [ 54 ]，其中 $J$ 表示上身關節的數量。除了動作資料外，我們還納入資料集中提供的兩個高層次社交標籤：關係類型標籤 $f_{rs} \in \{0,1\}^{4}$，表示發言者是朋友、陌生人、家庭成員或約會對象；以及人格分數向量 $f_{ps} \in \mathbb{R}^{5}$，量化五個主要人格特質，分別是外向性、親和性、勤勞性、神經質和開放性。對於音訊輸入，我們從兩個個體提取雙人語音信號，並使用預訓練的 Wav2Vec2 編碼器 [ 4 ] 處理它們，以獲得音訊特徵嵌入以在我們的模型中進行條件設置。
+
+### 3.2 DiT 骨幹
+
+我們的模型採用遵循去噪擴散機率模型（DDPM）[ 13 ] 框架的擴散轉換器（DiT）骨幹。該網路採用帶雜訊的潛在姿態 $\mathbf{x}_{t}$，並根據時間步 $t$ 預測添加的高斯雜訊 $\boldsymbol{\epsilon}_{\theta}(\mathbf{x}_{t},t,\mathbf{c})$，條件基於多個背景輸入 $\mathbf{c}$，
+其中 $\mathbf{c}=(ORCA(a_{\text{self}},a_{\text{other}}),p_{\text{self}},f_{\text{relat}},f_{\text{ps}})$ 包括音訊、夥伴的動作、關係類型和人格分數。訓練目標遵循標準的 $\epsilon$ 預測損失：
+
+|  | $\mathcal{L}_{\text{diff}}=\mathbb{E}_{\mathbf{x}_{0},t,\boldsymbol{\epsilon}}\left[\left\|\boldsymbol{\epsilon}-\boldsymbol{\epsilon}_{\theta}(\mathbf{x}_{t},t,\mathbf{c})\right\|_{2}^{2}\right]$, |  | (1) |
+| --- | --- | --- | --- |
+
+其中 $\mathbf{x}_{t}=\sqrt{\bar{\alpha}_{t}}\mathbf{x}_{0}+\sqrt{1-\bar{\alpha}_{t}}\boldsymbol{\epsilon}$。
+
+如圖 2 (a) 所示，每個 DiT 區塊包含一個自注意層，用於建模潛在姿態序列中的時間依賴性，以及一個交叉注意層，用於整合來自多模態線索的背景信息。此外，關係和人格嵌入透過基於 FiLM [ 35 ] 的調節和交叉注意注入，使 DyaDiT 能夠聯合捕捉手勢生成中的社交屬性和個人表現風格。
+
+### 3.3 音訊正交化交叉注意力（ORCA）
+
+為了有效地捕捉兩位說話者之間的對話動態，我們引入了用於音訊融合的正交化交叉注意力模組（圖 2 (b)）。給定由 Wav2Vec2 編碼的來自兩位說話者的音訊特徵 $a_{\text{self}}$ 和 $a_{\text{other}}$，我們的目標是分離冗餘因素，同時將互補資訊對齊至聯合表示。
+
+我們首先應用正交化過程以過濾出兩個音訊流之間的冗餘成分：
+
+|  | $a_{\text{self}}^{\perp}=a_{\text{self}}-\mathrm{Proj}_{a_{\text{other}}}(a_{\text{self}})$ , |  | (2) |
+| --- | --- | --- | --- |
+
+其中 $\mathrm{Proj}_{a_{\text{other}}}(\cdot)$ 表示自身音訊特徵 $a_{\text{self}}$ 在他人音訊特徵子空間上的投影。此操作強制實現互補調節並減少二人組音訊中的相關資訊。
+
+隨後，我們採用兩個對稱的交叉注意力模組以實現雙向資訊交換。第一個模組使用 $a_{\text{other}}$ 作為查詢並關注 $a_{\text{self}}^{\perp}$，捕捉說話者對夥伴話語的回應。反之，第二個模組以 $a_{\text{self}}^{\perp}$ 作為查詢並關注 $a_{\text{other}}$，建模聽者的反應線索。兩個交叉注意力流的輸出隨後通過可學習的門控機制進行自適應融合：
+
+|  | $f_{\text{audio}}=\sigma(\mathbf{W}_{g})\cdot h_{\text{self}\rightarrow\text{other}}+(1-\sigma(\mathbf{W}_{g}))\cdot h_{\text{other}\rightarrow\text{self}}$ , |  | (3) |
+| --- | --- | --- | --- |
+
+其中 $\sigma(\cdot)$ 是 sigmoid 函數，$\mathbf{W}_{g}$ 是可學習的門控參數。
+
+得到的融合標記 $f_{\text{audio}}$ 被用作 DyaDiT 的最終音訊調節輸入，提供反映兩位對話者聲音行為的合理聲學嵌入。如圖 3 所示，透過 ORCA，DyaDiT 具備生成說話者或聽者姿態的能力。
+
+### 3.4 Motion Dictionary (MD)
+
+Inspired by prior work LIA [ 43 ] which learns a set of orthogonal motion-directions by enforcing orthonormality at initialization, we similarly introduce a learnable orthogonal motion dictionary to modulate the partner’s audio feature a o ​ t ​ h ​ e ​ r a_{other} according to the current style motion. The motion dictionary is a module designed to incorporate motion style conditioning when user requires motion style control. As shown in Figure 2 (c), it consists of a set of learnable motion bases { d 0 , d 1 , … , d n } \{d_{0},d_{1},\dots,d_{n}\} that encode representative gesture primitives. During training, we include ground truth motion style features f motion = [ m 0 , m 1 , … , m n ] f_{\text{motion}}=[m_{0},m_{1},\dots,m_{n}] to guide the model in learning style-aware correspondences between audio cues and motion patterns.
+
+Given the other-speaker audio feature a other a_{\text{other}} , the dictionary is integrated through a cross-attention (CA) operation followed by a weighted combination with the motion bases:
+
+|  | a other ′ = CA ​ ( a other , ∑ k = 0 n m k ​ d k ) + a other , a_{\text{other}}^{\prime}=\mathrm{CA}(a_{\text{other}},\sum_{k=0}^{n}m_{k}d_{k})+a_{\text{other}}, |  | (4) |
+| --- | --- | --- | --- |
+
+where Dict = [ d 0 , d 1 , … , d n ] \mathrm{Dict}=[d_{0},d_{1},\dots,d_{n}] and m k m_{k} denotes the style-dependent modulation weight derived from f motion f_{\text{motion}} .
+
+At inference, the motion dictionary can be optionally activated. With classifier-free guidance (CFG) [ 14 ] , the style conditioning can be strengthened to generate gestures with distinct stylistic patterns, or completely dropped to produce an unconditional, style-agnostic motion driven purely by the learned audio–motion prior.
+
+### 3.5 Motion Tokenizer
+
+我們不直接使用原始手勢序列 $x_0^{\prime}\in\mathbb{R}^{T\times J}$ 訓練 DiT 模型，而是先訓練一個 VQ-VAE 將連續動作空間離散化為緊湊的潛在表示。我們的實作遵循先前研究中引入的殘差向量量化框架 [18]，其中多個碼冊級聯以逐步精化量化誤差。具體來說，我們採用一個殘差長度為 4 的殘差 VQ-VAE，利用四個分層碼冊來捕捉逐漸更細粒度的動作細節。此外，為了減少時間冗餘，我們在編碼器中使用 1D 卷積層將輸入手勢序列下採樣 4 倍，使得每四個畫幀對應一個潛在令牌。在訓練 DyaDiT 期間，VQ-VAE 編碼器將手勢序列壓縮為量化令牌序列 $x_t^{\prime}\in\mathbb{R}^{T/4\times d}$，其中在我們的實驗中 $d=64$。在推論時，VQ-VAE 解碼器隨後從生成的量化嵌入重建連續動作。請注意，由於我們的擴散模型直接在潛在空間中運作，編碼器在推論期間不被使用，解碼器在訓練期間也不被使用。這種分層且時間上緊湊的量化允許擴散模型捕捉長距離依賴性，同時保持高保真動作重建。
+
+## 4 實驗
+
+我們透過定量和定性實驗評估 DyaDiT 在二人手勢生成上的有效性。對於定量評估，我們計算 Fréchet Distance (FD) 和多樣性指標，將 DyaDiT 與兩個現有的二人手勢生成模型 ConvoFusion [29] 和 Audio2PhotoReal [32] 進行比較。此外，我們報告關於真實手勢的分數，這些分數可作為資料集中底層動作分佈的參考。對於定性評估，我們進行使用者偏好研究，以評估生成手勢的整體感知品質及其與社交關係和個性特徵的對齐。
+
+### 4.1 Evaluation Metrics
+
+[FIGURE_CAPTION] Table 1: Quantitative comparison of DyaDiT and baselines in terms of Fréchet Distance (FD) and Diversity. Lower FD indicates higher realism, and higher diversity values indicate more varied motion generation.
+
+[FIGURE:x4.png] Figure 4 : Qualitative Results. Comparison of visualization results between DyaDiT , ConvoFusion [ 29 ] , and Audio2PhotoReal [ 3 ] . The gestures generated by DyaDiT exhibit higher diversity and greater realism compared to the other methods.
+
+[FIGURE:x5.png] Figure 5 : Visualization results under different personality score conditionings. All samples are generated using classifier-free guidance with CFG = 2.5.
+
+Following prior works on gesture generation [ 32 , 3 , 2 ] , we adopt both distribution and diversity metrics for quantitative evaluation. Specifically, we report the Fréchet Distance (FD) to measure the realism of generated motions, Diversity [ 20 ] to quantify motion variability across samples
+For reference, we also compute all metrics on ground truth samples from the Seamless Interaction dataset [ 1 ] to provide as baseline for comparison. Below, we provide the definitions of the quantitative metrics used in our evaluation.
+
+- • FD (Static) measures the pose realism for individual frames in the pose space ℝ 3 × j \mathbb{R}^{3\times j} , where j = 43 j{=}43 (including finger joints).
+- • FD (Kinetic) evaluates the realism of temporal dynamics by computing the FD over gesture velocities in ℝ T × 3 × j \mathbb{R}^{T\times 3\times j} , where T = 300 T{=}300 frames in our experiments.
+- • Diversity (Static) quantifies the variation of single-frame poses by computing the average mean squared error (MSE) between clips.
+- • Diversity (Kinetic) measures temporal motion diversity by averaging the pairwise velocity differences across generated gesture sequences.
+
+FD (Static) measures the pose realism for individual frames in the pose space ℝ 3 × j \mathbb{R}^{3\times j} , where j = 43 j{=}43 (including finger joints).
+
+FD (Kinetic) evaluates the realism of temporal dynamics by computing the FD over gesture velocities in ℝ T × 3 × j \mathbb{R}^{T\times 3\times j} , where T = 300 T{=}300 frames in our experiments.
+
+Diversity (Static) quantifies the variation of single-frame poses by computing the average mean squared error (MSE) between clips.
+
+Diversity (Kinetic) measures temporal motion diversity by averaging the pairwise velocity differences across generated gesture sequences.
+
+### 4.2 Baseline Methods
+
+We compare DyaDiT with two representative dyadic gesture generation models:
+
+- • ConvoFusion [ 29 ] implement a diffusion-based framework with multiple layers of cross-attention to fuse multimodal inputs, including audio and visual features. For a fair comparison, we retrain their model on our training subset of the Seamless Interaction Dataset [ 1 ] to match our experimental domain and output representation.
+- • Audio2PhotoReal [ 32 ] is a full-body gesture generation model that jointly synthesizes body and facial motion. We extract and adapt only the body gesture generation branch for comparison. Specifically, the model first predicts keyframe poses from audio using a causal transformer, and then employs a diffusion transformer to interpolate between keyframes to produce temporally coherent motion sequences. Likewise, we retrain the model on our dataset to ensure domain consistency with our evaluation study setup.
+
+ConvoFusion [ 29 ] implement a diffusion-based framework with multiple layers of cross-attention to fuse multimodal inputs, including audio and visual features. For a fair comparison, we retrain their model on our training subset of the Seamless Interaction Dataset [ 1 ] to match our experimental domain and output representation.
+
+Audio2PhotoReal [ 32 ] is a full-body gesture generation model that jointly synthesizes body and facial motion. We extract and adapt only the body gesture generation branch for comparison. Specifically, the model first predicts keyframe poses from audio using a causal transformer, and then employs a diffusion transformer to interpolate between keyframes to produce temporally coherent motion sequences. Likewise, we retrain the model on our dataset to ensure domain consistency with our evaluation study setup.
+
+During inference, both methods use a DDIM scheduler with 50 denoising steps (CFG = 2) to generate 300-frame gesture sequences (10 seconds).
+
+### 4.3 Quantitative Results
+
+The quantitative comparison between DyaDiT and the baseline models is shown in Table 1 .
+For interpretability, the GT diversity reflects the dataset’s upper bound, while the GT Random FD serves as its lower bound. Across all metrics, DyaDiT consistently outperforms existing baselines, achieving substantially lower FD(static) and FD(kinetic) scores while preserving high motion diversity. These results demonstrate that the proposed social-context-aware DiT framework is more effective than the multi-branch fusion design in ConvoFusion [ 29 ] and the keyframe interpolation approach used in Audio2PhotoReal [ 20 ] .
+
+### 4.4 消融研究
+
+我們進一步進行了多項消融研究，以分析不同的組件和條件信號如何對 DyaDiT 的性能做出貢獻。以下，我們明確解釋了各個變體之間的差異。
+
+- • DyaDiT (w/o ORCA) 移除 ORCA 模組，直接串聯原始的雙人對話音訊特徵。
+- • DyaDiT (w/o MD) 移除動作字典。
+- • DyaDiT (Uncond) 在沒有任何條件的情況下生成手勢。
+- • DyaDiT (Random) 使用隨機分配的關係和人格標籤執行推理。
+
+DyaDiT (w/o ORCA) 移除 ORCA 模組，直接串聯原始的雙人對話音訊特徵。
+
+DyaDiT (w/o MD) 移除動作字典。
+
+DyaDiT (Uncond) 在沒有任何條件的情況下生成手勢。
+
+DyaDiT (Random) 使用隨機分配的關係和人格標籤執行推理。
+
+不出所料，我們觀察到移除 ORCA 模組導致 FD 性能出現明顯下降，確認了其對動作真實性的貢獻。同樣地，移除動作字典也會降低整體性能，特別是在多樣性（靜態）上，下降了 9.12，這表明學習到的動作基礎在促進風格變化方面扮演著重要角色。
+
+此外，我們觀察到 DyaDiT 在生成品質方面優於 DyaDiT (Uncond) 和 DyaDiT (Random)。這表明社會語境對於產生更逼真的手勢生成至關重要。進一步地，我們發現當移除或隨機分配社會語境時，多樣性（靜態）指標下降了約 6 點。我們認為這是因為音訊信號與關係和人格特徵呈正相關，不匹配或缺失的社會語境導致更受限的動作分佈。
+
+最後，我們觀察到 DyaDiT (Uncond) 並未表現出比完全有條件的 DyaDiT 模型更高的多樣性。我們認為這是由於雙人對話的性質，其中大部分資料包含聽者行為，與說話者行為相比，這自然在靜態和動態手勢上表現出較少的變化。因此，額外的條件信號有助於引導模型產生更廣泛的手勢變化，從而實現更高的整體多樣性。
+
+## 5 使用者研究
+
+我們與十六名參與者進行了 A/B 偏好研究，以評估使用者對二人對話設置中人類動作的偏好。我們將我們的方法與 ConvoFusion [29] 以及真實動作進行了比較。使用者研究評估了生成手勢的三個方面：整體品質、關係一致性和個性一致性。參與者被展示成對的影片片段，並選擇他們偏好的手勢序列，影片對以隨機順序呈現以避免排序偏差。圖 6 展示了一個範例影片對。
+
+我們從 Seamless Interaction 資料集的驗證集中隨機選擇了 56 個十秒的序列來進行實驗。以下顯示了在每個部分中呈現給參與者的樣本問題。
+
+- • 整體品質：「橙色角色的哪個手勢看起來更像人類？」
+- • 關係一致性：「哪一對看起來更像是朋友（或陌生人、或家庭成員、或約會對象）？」
+- • 個性一致性：「哪個手勢更能反映認同性（或盡責性、或外向性、或神經質）的個性特質？」
+
+整體品質：「橙色角色的哪個手勢看起來更像人類？」
+
+關係一致性：「哪一對看起來更像是朋友（或陌生人、或家庭成員、或約會對象）？」
+
+個性一致性：「哪個手勢更能反映認同性（或盡責性、或外向性、或神經質）的個性特質？」
+
+對於每個影片對，參與者被要求提供他們的偏好和信心程度（強烈或輕微）。有關完整問卷和實驗中使用的介面設計，請參閱補充材料。
+
+[FIGURE:x6.png] 圖 6：使用者研究中使用的範例影片對，用於評估參與者對對話手勢生成的偏好。
+
+[FIGURE:x7.png] 圖 7：A/B 主觀評估百分比，比較我們的方法與 ConvoFusion [29] 和真實動作。參與者偏好我們生成的動作，因為其具有更自然和社交感知的對話行為。
+
+如圖 7 所示，DyaDiT 相比 ConvoFusion [29] 達到了明顯更高的使用者偏好分數，有趣的是，甚至略微超越了來自 Seamless Interaction 資料集的真實動作手勢。具體來說，在整體手勢品質、關係一致性和個性一致性部分中，分別有 73.9%、69.8% 和 66.7% 的參與者偏好 DyaDiT。這些結果表明 DyaDiT 不僅能夠生成更高品質的手勢，而且生成的動作在二人對話設置中更具社交適當性。此外，在兩個比較設置中，我們生成的手勢相比真實動作分別被偏好 1% 和 1.7%。我們假設這主要是因為（1）真實動作資料有時包含抖動偽影，而擴散過程隱式地正則化動作並產生更平滑、時間上更一致的手勢；以及（2）以社交背景作為條件促使模型生成稍微更富有表現力或誇張的動作，儘管這在真實互動中較為罕見，但傾向於對我們的參與者更具視覺吸引力。最後，值得注意的是，我們沒有在個性一致性部分將我們生成的手勢與真實動作進行比較。這是因為資料集中的個性註解是作為連續值而非離散類別提供的，這使得參與者很難可靠地判斷一個手勢是否更強烈地符合特定的個性特質。
+
+## 6 結論
+
+在本研究中，我們提出 DyaDiT，一個多模態的二人互動手勢生成模型，旨在產生兩個說話者之間社交一致且自然的對話行為。通過聯合調節二人互動音頻、社交屬性和夥伴的動作，DyaDiT 有效地捕捉了二人對話中的人際動態。我們的正交化交叉注意力（ORCA）模組有助於澄清每位說話者音頻的貢獻，而運動字典透過提供風格感知的運動先驗來增強表現力的豐富性。定量和主觀評估都證明了 DyaDiT 在現實性、多樣性和社交一致性方面相比現有方法達到了優越的效能。我們相信本研究向社交友善的合成代理邁出了重要的一步，並為未來的研究方向開闊了道路，例如社交感知的雙代理手勢生成。
+
+## 7 限制與未來工作
+
+目前，由於資料集的限制，我們的模型僅生成上半身手勢。然而，我們相信提出的框架可以自然地擴展至全身手勢和面部表情生成。此外，雖然我們的模型可以根據給定的關係或個性調節來生成社交友善的手勢，但某些個性線索可能無意中包含在音頻輸入中，導致調節衝突並降低生成運動的多樣性。為了進一步改進可控性和穩定多樣性，我們的未來工作將探索音頻中性化技術，以實現更多樣化的手勢生成。
+
+## 參考文獻
+
+- [1] V. Agrawal, A. Akinyemi, K. Alvero, M. Behrooz, and et al. (2025) Seamless interaction: dyadic audiovisual motion modeling and large-scale dataset . External Links: Link Cited by: §3.1 , §3 , 1st item , §4.1 , §9 , DyaDiT: A Multi-Modal Diffusion Transformer for Socially Favorable Dyadic Gesture Generation .
+- [2] S. Alexanderson, R. Nagy, J. Beskow, and G. E. Henter (2023-07) Listen, denoise, action! audio-driven motion synthesis with diffusion models . ACM Trans. Graph. 42 ( 4 ). External Links: ISSN 0730-0301 , Link , Document Cited by: §2.3 , §4.1 .
+- [3] T. Ao, Z. Zhang, and L. Liu GestureDiffuCLIP: gesture diffusion model with clip latents . ACM Trans. Graph. . External Links: Document Cited by: §2.3 , Figure 4 , Figure 4 , §4.1 .
+- [4] A. Baevski, H. Zhou, A. Mohamed, and M. Auli (2020) Wav2vec 2.0: a framework for self-supervised learning of speech representations . In Proceedings of the 34th International Conference on Neural Information Processing Systems , NIPS '20 , Red Hook, NY, USA . External Links: ISBN 9781713829546 Cited by: §3.1 , §9 .
+- [5] B. Chen, Y. Li, Y. Zheng, Y. Ding, and K. Zhou (2025) Motion-example-controlled co-speech gesture generation leveraging large language models . In Proceedings of the Special Interest Group on Computer Graphics and Interactive Techniques Conference Conference Papers , SIGGRAPH Conference Papers '25 , New York, NY, USA . External Links: ISBN 9798400715402 , Link , Document Cited by: §2.1 .
+- [6] X. Chen, B. Jiang, W. Liu, Z. Huang, B. Fu, T. Chen, and G. Yu (2023) Executing your commands via motion diffusion in latent space . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 18000–18010 . Cited by: §2.3 .
+- [7] K. Chhatre, R. Daněček, N. Athanasiou, G. Becherini, C. Peters, M. J. Black, and T. Bolkart (2024-06) AMUSE: emotional speech-driven 3D body animation via disentangled latent diffusion . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 1942–1953 . External Links: Link Cited by: §2.3 .
+- [8] M. Dunne and S. H. Ng (1994) Simultaneous speech in small group conversation: all-together-now and one-at-a-time? . Journal of Language and Social Psychology 13 ( 1 ), pp. 45–71 . Cited by: §1 .
+- [9] F. Favali, V. Schmuck, V. Villani, and O. Celiktutan (2024) TAG2G: a diffusion-based approach to interlocutor-aware co-speech gesture generation . Electronics 13 ( 17 ). External Links: Link , ISSN 2079-9292 , Document Cited by: §2.2 .
+- [10] C. Fu, Y. Wang, J. Zhang, Z. Jiang, X. Mao, J. Wu, W. Cao, C. Wang, Y. Ge, and Y. Liu (2024) MambaGesture: enhancing co-speech gesture generation with mamba and disentangled multi-modality fusion . In Proceedings of the 32nd ACM International Conference on Multimedia , MM '24 , New York, NY, USA , pp. 10794–10803 . External Links: ISBN 9798400706868 , Link , Document Cited by: §1 .
+- [11] S. Ginosar, A. Bar, G. Kohavi, C. Chan, A. Owens, and J. Malik (2019) Learning individual styles of conversational gesture . In 2019 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , Vol. , pp. 3492–3501 . External Links: Document Cited by: §2.1 .
+- [12] A. Grattafiori, A. Dubey, and A. J. et al. (2024) The llama 3 herd of models . External Links: 2407.21783 , Link Cited by: §1 .
+- [13] J. Ho, A. Jain, and P. Abbeel (2020) Denoising diffusion probabilistic models . arXiv preprint arxiv:2006.11239 . Cited by: §3.2 .
+- [14] J. Ho and T. Salimans (2021) Classifier-free diffusion guidance . In NeurIPS 2021 Workshop on Deep Generative Models and Downstream Applications , External Links: Link Cited by: §3.4 .
+- [15] C. R. Jones and B. K. Bergen (2025) Large language models pass the turing test . External Links: 2503.23674 , Link Cited by: §1 .
+- [16] S. Jung and T. Kim (2025) DiffListener: discrete diffusion model for listener generation . In ICASSP 2025 - 2025 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) , Vol. , pp. 1–5 . External Links: Document Cited by: §2.2 .
+- [17] R. Khirodkar, J. Song, J. Cao, Z. Luo, and K. Kitani (2024) Harmony4D: a video dataset for in-the-wild close human interactions . In Advances in Neural Information Processing Systems , A. Globerson, L. Mackey, D. Belgrave, A. Fan, U. Paquet, J. Tomczak, and C. Zhang (Eds.) , Vol. 37 , pp. 107270–107285 . External Links: Document , Link Cited by: §9 .
+- [18] D. Lee, C. Kim, S. Kim, M. Cho, and W. Han (2022) Autoregressive image generation using residual quantization . External Links: 2203.01941 , Link Cited by: §3.5 , §9 .
+- [19] Y. Lee, S. Choi, B. Kim, Z. Wang, and S. Watanabe (2024) Boosting unknown-number speaker separation with transformer decoder-based attractor . In ICASSP 2024-2024 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) , pp. 446–450 . Cited by: §1 .
+- [20] J. Li, D. Kang, W. Pei, X. Zhe, Y. Zhang, L. Bao, and Z. He (2024-08) Audio2Gestures: generating diverse gestures from audio . IEEE Transactions on Visualization and Computer Graphics 30 ( 8 ), pp. 4752–4766 . External Links: ISSN 1077-2626 , Link , Document Cited by: §4.1 , §4.3 , Table 1 .
+- [21] H. Liu, N. Iwamoto, Z. Zhu, Z. Li, Y. Zhou, E. Bozkurt, and B. Zheng (2022) DisCo: disentangled implicit content and rhythm learning for diverse co-speech gestures synthesis . In Proceedings of the 30th ACM International Conference on Multimedia , MM '22 , New York, NY, USA , pp. 3764–3773 . External Links: ISBN 9781450392037 , Link , Document Cited by: §2.1 .
+- [22] H. Liu, Z. Zhu, G. Becherini, Y. Peng, M. Su, Y. Zhou, X. Zhe, N. Iwamoto, B. Zheng, and M. J. Black (2024-06) EMAGE: towards unified holistic co-speech gesture generation via expressive masked audio gesture modeling . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 1144–1154 . Cited by: §1 , §2.1 .
+- [23] H. Liu, Z. Zhu, N. Iwamoto, Y. Peng, Z. Li, Y. Zhou, E. Bozkurt, and B. Zheng (2022) BEAT: a large-scale semantic and emotional multi-modal dataset for conversational gestures synthesis . In Computer Vision – ECCV 2022: 17th European Conference, Tel Aviv, Israel, October 23–27, 2022, Proceedings, Part VII , Berlin, Heidelberg , pp. 612–630 . External Links: ISBN 978-3-031-20070-0 , Link , Document Cited by: §1 , §2.1 .
+- [24] X. Liu, Q. Wu, H. Zhou, Y. Xu, R. Qian, X. Lin, X. Zhou, W. Wu, B. Dai, and B. Zhou (2022) Learning hierarchical cross-modal association for co-speech gesture generation . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 10462–10472 . Cited by: §2.1 .
+- [25] C. Luo, S. Song, W. Xie, M. Spitale, Z. Ge, L. Shen, and H. Gunes (2025) ReactFace: online multiple appropriate facial reaction generation in dyadic interactions . IEEE Transactions on Visualization and Computer Graphics 31 ( 9 ), pp. 6190–6207 . External Links: Document Cited by: §2.2 .
+- [26] C. Luo, S. Song, S. Yan, Z. Yu, and Z. Ge (2025) ReactDiff: fundamental multiple appropriate facial reaction diffusion model . In Proceedings of the 33rd ACM International Conference on Multimedia , MM '25 , New York, NY, USA , pp. 5607–5616 . External Links: ISBN 9798400720352 , Link , Document Cited by: §1 , §2.2 .
+- [27] C. Luo, J. Wang, B. Li, S. Song, and B. Ghanem (2025) OmniResponse: online multimodal conversational response generation in dyadic interactions . arXiv preprint arXiv:2505.21724 . Cited by: §1 , §2.2 .
+- [28] A. S. Meyer (2023) Timing in conversation . Journal of Cognition 6 ( 1 ), pp. 20 . Cited by: §1 .
+- [29] M. H. Mughal, R. Dabral, I. Habibie, L. Donatelli, M. Habermann, and C. Theobalt (2024-06) ConvoFusion: Multi-Modal Conversational Diffusion for Co-Speech Gesture Synthesis . In 2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , Vol. , Los Alamitos, CA, USA , pp. 1388–1398 . External Links: ISSN , Document , Link Cited by: §1 , §2.2 , Figure 4 , Figure 4 , 1st item , §4.3 , Table 1 , §4 , Figure 7 , Figure 7 , §5 , §5 .
+- [30] J. Neri and S. Braun (2023) Towards real-time single-channel speech separation in noisy and reverberant environments . External Links: 2303.07569 , Link Cited by: §1 .
+- [31] E. Ng, H. Joo, L. Hu, H. Li, T. Darrell, A. Kanazawa, and S. Ginosar (2022-06) Learning to listen: modeling non-deterministic dyadic facial motion . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 20395–20405 . Cited by: §2.2 .
+- [32] E. Ng, J. Romero, T. Bagautdinov, S. Bai, T. Darrell, A. Kanazawa, and A. Richard (2024-06) From audio to photoreal embodiment: synthesizing humans in conversations . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 1001–1010 . Cited by: §1 , §2.2 , 2nd item , §4.1 , §4 .
+- [33] OpenAI, J. Achiam, and S. A. et al. (2024) GPT-4 technical report . External Links: 2303.08774 , Link Cited by: §1 .
+- [34] K. Pang, D. Qin, Y. Fan, J. Habekost, T. Shiratori, J. Yamagishi, and T. Komura (2023-07) Bodyformer: semantics-guided 3d body gesture synthesis with transformer . ACM Trans. Graph. 42 ( 4 ). External Links: ISSN 0730-0301 , Link , Document Cited by: §2.1 .
+- [35] E. Perez, F. Strub, H. de Vries, V. Dumoulin, and A. Courville (2018) FiLM: visual reasoning with a general conditioning layer . In Proceedings of the Thirty-Second AAAI Conference on Artificial Intelligence and Thirtieth Innovative Applications of Artificial Intelligence Conference and Eighth AAAI Symposium on Educational Advances in Artificial Intelligence , AAAI'18/IAAI'18/EAAI'18 . External Links: ISBN 978-1-57735-800-8 Cited by: §3.2 , §9 .
+- [36] X. Qi, C. Liu, L. Li, J. Hou, H. Xin, and X. Yu (2024-01) EmotionGesture: audio-driven diverse emotional co-speech 3d gesture generation . Trans. Multi. 26 , pp. 10420–10430 . External Links: ISSN 1520-9210 , Link , Document Cited by: §1 .
+- [37] Y. Shafir, G. Tevet, R. Kapon, and A. H. Bermano (2024) Human motion diffusion as a generative prior . In The Twelfth International Conference on Learning Representations , Cited by: §2.3 .
+- [38] S. Song, M. Spitale, X. Kong, H. Zhu, C. Luo, C. Palmero, G. Barquero, S. Escalera, M. Valstar, M. Daoudi, et al. (2025) REACT 2025: the third multiple appropriate facial reaction generation challenge . In Proceedings of the ACM International Conference on Multimedia , Cited by: §2.2 .
+- [39] H. Taherian and D. Wang (2024) Multi-channel conversational speaker separation via neural diarization . IEEE/ACM Transactions on Audio, Speech, and Language Processing 32 , pp. 2467–2476 . Cited by: §1 .
+- [40] G. Tevet, B. Gordon, A. Hertz, A. H. Bermano, and D. Cohen-Or (2022) Motionclip: exposing human motion generation to clip space . In Computer Vision–ECCV 2022: 17th European Conference, Tel Aviv, Israel, October 23–27, 2022, Proceedings, Part XXII , pp. 358–374 . Cited by: §2.3 .
+- [41] G. Tevet, S. Raab, B. Gordon, Y. Shafir, D. Cohen-or, and A. H. Bermano (2023) Human motion diffusion model . In The Eleventh International Conference on Learning Representations , External Links: Link Cited by: §2.3 .
+- [42] M. Tran, D. Chang, M. Siniukov, and M. Soleymani (2024) Dyadic interaction modeling for social behavior generation . arXiv preprint arXiv:2403.09069 . Cited by: §1 .
+- [43] Y. Wang, D. Yang, F. Bremond, and A. Dantcheva (2024) LIA: latent image animator . IEEE Transactions on Pattern Analysis and Machine Intelligence , pp. 1–16 . Cited by: §3.4 .
+- [44] S. Yang, Z. Wang, Z. Wu, M. Li, Z. Zhang, Q. Huang, L. Hao, S. Xu, X. Wu, C. Yang, and Z. Dai (2023) UnifiedGesture: a unified gesture synthesis model for multiple skeletons . In Proceedings of the 31st ACM International Conference on Multimedia , MM '23 , New York, NY, USA , pp. 1033–1044 . External Links: ISBN 9798400701085 , Link , Document Cited by: §2.3 .
+- [45] S. Yang, Z. Xu, H. Xue, Y. Cheng, S. Huang, M. Gong, and Z. Wu (2024) Freetalker: controllable speech and text-driven gesture generation based on diffusion models for enhanced speaker naturalness . In ICASSP 2024 - 2024 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) , Cited by: §2.1 .
+- [46] S. Yang, H. Xue, Z. Zhang, M. Li, Z. Wu, X. Wu, S. Xu, and Z. Dai (2023) The diffusestylegesture+ entry to the genea challenge 2023 . In Proceedings of the 25th International Conference on Multimodal Interaction , ICMI '23 , New York, NY, USA , pp. 779–785 . External Links: ISBN 9798400700552 , Link , Document Cited by: §2.3 .
+- [47] H. Yi, H. Liang, Y. Liu, Q. Cao, Y. Wen, T. Bolkart, D. Tao, and M. J. Black (2023-06) Generating holistic 3d human motion from speech . In IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 469–480 . Cited by: §2.1 .
+- [48] W. Yin, Z. Cai, R. Wang, A. Zeng, C. Wei, Q. Sun, H. Mei, Y. Wang, H. E. Pang, M. Zhang, L. Zhang, C. C. Loy, A. Yamashita, L. Yang, and Z. Liu (2025) SMPLest-x: ultimate scaling for expressive human pose and shape estimation . arXiv preprint arXiv:2501.09782 . Cited by: §9 .
+- [49] Y. Yoon, B. Cha, J. Lee, M. Jang, J. Lee, J. Kim, and G. Lee (2020-11) Speech gesture generation from the trimodal context of text, audio, and speaker identity . ACM Trans. Graph. 39 ( 6 ). External Links: ISSN 0730-0301 , Link , Document Cited by: §2.1 .
+- [50] J. Zhang, L. Liang, Z. Xue, and Y. Liu (2020-05) APB2FACE: audio-guided face reenactment with auxiliary pose and blink signals . pp. 4402–4406 . External Links: Document Cited by: §2.2 .
+- [51] M. Zhang, Z. Cai, L. Pan, F. Hong, X. Guo, L. Yang, and Z. Liu (2024-06) MotionDiffuse: text-driven human motion generation with diffusion model . IEEE Trans. Pattern Anal. Mach. Intell. 46 ( 6 ), pp. 4115–4128 . External Links: ISSN 0162-8828 , Link , Document Cited by: §2.3 .
+- [52] M. Zhang, H. Li, Z. Cai, J. Ren, L. Yang, and Z. Liu (2023) FineMoGen: fine-grained spatio-temporal motion generation and editing . NeurIPS . Cited by: §2.3 .
+- [53] Y. Zhi, X. Cun, X. Chen, X. Shen, W. Guo, S. Huang, and S. Gao (2023-10) LivelySpeaker: towards semantic-aware co-speech gesture generation . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , pp. 20807–20817 . Cited by: §2.3 .
+- [54] Y. Zhou, C. Barnes, J. Lu, J. Yang, and H. Li (2018) On the continuity of rotation representations in neural networks . CoRR abs/1812.07035 . External Links: Link , 1812.07035 Cited by: §3.1 , §9 .
+- [55] L. Zhu, X. Liu, X. Liu, R. Qian, Z. Liu, and L. Yu (2023) Taming diffusion models for audio-driven co-speech gesture generation . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 10544–10553 . Cited by: §2.3 .
+
+## 補充材料
+
+本補充材料包含以下各節：
+
+- • 1. 生成結果的關係與個性聚類
+- • 2. DyaDiT 的實作細節
+- • 3. A/B 測試問卷的詳細資訊
+
+1. 生成結果的關係與個性聚類
+
+2. DyaDiT 的實作細節
+
+3. A/B 測試問卷的詳細資訊
+
+除了本補充 supplementary.pdf 外，我們還提供了 narration_video.mp4，其中提供了論文的簡要概述以及多個定性手勢生成範例。
+
+我們進一步在 dyadit_code.zip 中提供了我們的實作；請參考所含的 README.md 以取得執行程式碼的說明。
+
+訓練好的模型將在接受後發佈。
+
+## 8 生成手勢的聚類分析
+
+在主論文中，我們進行了一項 A/B 測試來評估生成手勢的關係和個性一致性。為了進一步評估 DyaDiT 中條件輸入的可控性，我們對生成的動作嵌入進行了 t-SNE 聚類分析。
+
+圖 8 展示了在不同條件信號下生成手勢的 t-SNE 嵌入。在左側，我們在固定個性分數的情況下，使用各種關係類型生成手勢。在右側，我們將連續的個性分數特徵離散化為五個「one-hot」向量，並為每個向量生成手勢以檢驗個性可控性。
+
+我們觀察到個性聚類形成了清晰可分的群組，表明 DyaDiT 有效地捕捉了與不同個性特徵相關的全局行為傾向。相比之下，關係聚類的分離程度不夠明顯。我們認為這與二元對話手勢的性質相符：Friend、Family 和 Dating 之間的風格存在某些重疊。因此，生成的手勢在這些類別中也表現為更連續的流形，而不是銳利的聚類邊界。
+
+[FIGURE:x8.png] 圖 8：關係（左）和個性分數（右）的 t-SNE 聚類結果。
+
+## 9 實現細節
+
+#### Diffusion Transformer
+
+輸入姿態序列被編碼到與 VQ-VAE 表示相對應的潛在空間中，產生 ℝ^{64} 中的潛在嵌入，而不是原始的 ℝ^{43×6} 6D 旋轉矩陣 [54] 關節表示。
+一個線性層將帶有噪聲的潛在輸入從 ℝ^{64} 投影到 ℝ^{512} 中的隱藏空間，隨後在輸出處進行對稱投影回 ℝ^{64}。
+
+該模型包含 4 個 Transformer 塊，每個均配備 4 頭多頭注意力（ℝ^{128}）和一個 ℝ^{2048} 前饋網路。
+我們採用 ℝ^{512} 正弦時間嵌入，通過 FiLM [35] 調制注入到每個塊中。
+
+兩個獨立的 Wav2Vec2 [4] 處理器從兩位說話者的對話語音中提取高階音訊特徵。
+這些產生特徵序列記為 $a_{\text{self}},a_{\text{other}}\in\mathbb{R}^{T\times 768}$，其中 T 表示音訊幀的數量。
+每個特徵序列通過線性轉換投影到 ℝ^{T×512}，隨後進行 LayerNorm 和門控融合機制以結合自我和對方說話者線索。
+
+一個可學習的動作庫包含 1000 個原型向量，位於 ℝ^{512} 中，通過交叉注意力提供上下文先驗。
+類似於時間嵌入，關係和個性嵌入被投影到 ℝ^{512}。
+這些向量通過 FiLM 式自適應縮放注入到 DiT 塊中。
+所有上下文線索被連接成 ℝ^{512} 中的統一序列，並通過交叉注意力注入到每個 DiT 塊中。
+
+#### 動作分詞器（VQ-VAE）
+
+我們實現一個時序 VQ-VAE [18] 以在擴散之前離散化姿態序列。
+給定關節特徵的輸入序列 $X\in\mathbb{R}^{T\times 6\times 43}$，編碼器是由三個 Conv1d 層組成的 1D CNN，在前兩層之後應用 LeakyReLU，整體時序下採樣因子為 4，產生 ℝ^{(T/4)×64} 中的潛在序列。
+該連續潛在空間由深度為 4 的殘差向量量化器進行量化，每個量化器均配備 512 項碼本，將每個時間步映射到一堆離散碼索引。
+解碼器是一個 1D CNN，包含初始 Conv1d-LeakyReLU 層、兩個上採樣塊（線性插值，隨後是 Conv1d 和 LeakyReLU）與額外的 Conv1d-LeakyReLU 細化層交錯，以及最終 Conv1d 投影，實現整體時序上採樣因子 4 並恢復原始時序解析度以重建 ℝ^{T×6×43} 中的姿態。
+DiT 去噪器使用的最終潛在表示是從量化碼獲得的，每 $4\times T$ 幀在 ℝ^{64} 中是緊湊的 64 維嵌入。
+
+#### 無縫互動資料集
+
+我們在 Seamless Interaction 資料集 [1] 的一部分上進行實驗。特別地，我們採用該資料集的自然主義劃分。對於訓練，我們利用前 10 個官方訓練檔案（以 zip 文件形式提供），包含約 182 小時的自然主義互動和 3000 對配對動作-音訊樣本。對於測試，我們選擇官方測試劃分中的第一個檔案以確保一致的評估設置。
+
+我們觀察到資料集中提供的 SMPL-H 參數在下身估計中表現出顯著的不準確性，可能是由於資料採集過程中相機視角有限和身體遮擋所致。為了避免將人工製品引入我們的動作建模中，我們丟棄下身關節，僅保留包含 43 個關節（包括手指）的上身。對於視覺化，所有未使用的關節以及全局方向和根部平移均設置為零。
+
+除了姿態資料外，資料集還包含高階註釋，例如關係和個性評分。雖然資料集為社交動態提供了人際傳播動態（IPC）標籤，但我們發現註釋過於嘈雜且模糊，不清楚它們適用於哪個說話者。因此，我們在當前研究中不採用 IPC 標籤監督，而是專注於更清潔的關係和個性線索。我們注意到，一旦未來資料集版本中 IPC 註釋得到改進，我們計畫使用 IPC 感知條件模組擴展我們的框架，以進一步捕捉二人互動手勢中的交流意圖。
+
+未來，我們計畫使用先進的人體姿態估計工具（例如 SMPLest-x [48]、Harmony4D [17] 或最近的最先進模型）重新註釋視訊資料，目的是獲得更可靠的全身動作監督。
+
+## 10 問卷
+
+我們提供了在使用者研究中使用的 A/B 測試問卷的重構版本。
+若要查看問卷，請先解壓縮問卷資料夾內的 questionnaire_video.zip 檔案。解壓縮後，在任何現代網頁瀏覽器中開啟 questionnaire.html。
+
+原始問卷是透過 Google Forms 進行的（見圖 9）。總共包含 28 × 2 個問題，其中包括 10 個關於整體手勢品質的問題、
+8 個關於關係一致性的問題，以及 10 個關於人格一致性的問題。
+每個問題呈現在兩種設定下進行比較的配對手勢影片：DyaDiT vs. ConvoFusion 和 DyaDiT vs. Ground Truth。
+
+為了獲得準確的觀看體驗，請佩戴耳機。
+左音頻通道對應於對話夥伴的語音，而右音頻通道
+對應於目標說話者的語音。
+
+重構的介面允許審查者瀏覽所有問題並播放
+相應的影片，以體驗與我們的參與者相同的評估過程。
+
+[FIGURE:x9.jpg] 圖 9：Google Form 中的問卷範例

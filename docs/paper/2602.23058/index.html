@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoWorld：幾何世界模型 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-02-27/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-02-27 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">GeoWorld：幾何世界模型</h1>
+  
+  <div class="en-title">GeoWorld: Geometric World Models</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Zeyu Zhang, Danning Li, Ian Reid, Richard Hartley</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.23058" target="_blank">2602.23058</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.23058" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.23058" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.23058" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">RL</span>
+    <span class="tag method">Energy-based Models</span><span class="tag method">Hyperbolic JEPA</span><span class="tag method">World Models</span><span class="tag method">Geometric Learning</span>
+    <span class="tag task">Visual Planning</span><span class="tag task">Multi-step Prediction</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 能量基礎預測性世界模型的幾何增強方法
+
+能量基礎預測性世界模型通過在潛在能量景觀上進行推理而非生成像素，為多步驟視覺規劃提供了強大的方法。然而，現有方法面臨兩個主要挑戰：(i) 其潛在表示通常在歐幾里得空間中學習，忽視了狀態之間的潛在幾何結構和層級關係；(ii) 它們在長地平線預測中表現不佳，導致在擴展展開過程中快速退化。為解決這些挑戰，我們引入 GeoWorld，一個幾何世界模型，通過 Hyperbolic JEPA 保存幾何結構和層級關係，該模型將潛在表示從歐幾里得空間映射到雙曲流形上。我們進一步引入用於能量基礎優化的幾何強化學習，在雙曲潛在空間中實現穩定的多步驟規劃。在 CrossTask 和 COIN 上的廣泛實驗表明，與最先進的 V-JEPA 2 相比，3 步規劃中取得約 3% 的 SR 提升，以及 4 步規劃中取得 2% 的 SR 提升。專案網站：https://steve-zeyu-zhang.github.io/GeoWorld。</p>
+  
+  <div class="abstract-en">Energy-based predictive world models provide a powerful approach for multi-step visual planning by reasoning over latent energy landscapes rather than generating pixels. However, existing approaches face two major challenges: (i) their latent representations are typically learned in Euclidean space, neglecting the underlying geometric and hierarchical structure among states, and (ii) they struggle with long-horizon prediction, which leads to rapid degradation across extended rollouts. To address these challenges, we introduce GeoWorld, a geometric world model that preserves geometric structure and hierarchical relations through a Hyperbolic JEPA, which maps latent representations from Euclidean space onto hyperbolic manifolds. We further introduce Geometric Reinforcement Learning for energy-based optimization, enabling stable multi-step planning in hyperbolic latent space. Extensive experiments on CrossTask and COIN demonstrate around 3% SR improvement in 3-step planning and 2% SR improvement in 4-step planning compared to the state-of-the-art V-JEPA 2. Project website: https://steve-zeyu-zhang.github.io/GeoWorld.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="geoworld">GeoWorld：</h1>
+<p>幾何世界模型</p>
+<p>基於能量的預測世界模型為多步驟視覺規劃提供了強大的方法，透過在潛在能量景觀上推理而非生成像素。然而，現有方法面臨兩個主要挑戰：（i）它們的潛在表示通常在歐幾里得空間中學習，忽視了狀態之間潛在的幾何和階層結構，以及（ii）它們在長時間序列預測上存在困難，導致在長期展開中快速退化。</p>
+<p>為了解決這些挑戰，我們引入 GeoWorld，一個幾何世界模型，透過 Hyperbolic JEPA 保持幾何結構和階層關係，將潛在表示從歐幾里得空間映射到雙曲流形上。我們進一步引入用於基於能量優化的幾何強化學習，在雙曲潛在空間中實現穩定的多步驟規劃。在 CrossTask 和 COIN 上的大量實驗證明，與最先進的 V-JEPA 2 相比，在 3 步規劃中提高約 3% 的 SR，在 4 步規劃中提高 2% 的 SR。</p>
+<h2 id="1">1 介紹</h2>
+<p>自迴歸（AR）次語言元預測已經為大型語言模型（LLMs）[ 79 ]和視覺語言模型（VLMs）[ 53 , 20 ]賦予了廣泛的世界知識和推理能力，使其能夠有效地解決涉及搜索[ 78 ]、推理[ 32 , 33 , 44 ]和規劃[ 8 , 35 , 82 , 65 ]的複雜任務。儘管 LLMs 的成功源於在語言空間內的建模，這充當了通往人類級知識的捷徑[ 48 ]，但它們仍然無法充分表示現實世界的豐富資訊，例如其物理和幾何性質[ 3 ]。在現實世界中，人類和生物認知通常主要通過視覺資訊來獲取知識，而不是僅依賴語言，因為視覺提供了比語言更高的資訊頻寬[ 62 ]。例如，人類嬰兒在開發語言系統之前的最初幾個月主要通過視覺感知進行學習[ 38 ]，而某些動物根本不具備語言能力[ 18 ]。因此，存在世界模型[ 46 , 59 , 63 , 4 , 3 ]，它們僅從視覺輸入（例如視頻）中學習，並使用生成式或預測式方法執行規劃。生成式世界模型[ 46 , 59 , 63 ]明確生成像素或潛在視覺語言元，這些語言元解碼為像素，以便一次只預測一步[ 67 ]。結果是，它們缺乏對完整軌跡結構或多步能量景觀的認識。相比之下，預測式世界模型[ 2 , 29 , 4 , 3 ]（例如 JPEA[ 41 ]）不生成像素。相反，它們在潛在空間中學習能量景觀，該景觀衡量當前狀態和目標狀態之間的相容性。這使得多步分層規劃成為可能，其中高層推理最小化潛在空間中的能量，而低層模組填充物理細節。</p>
+<p>然而，現有的基於能量的預測式世界模型面臨兩個重大挑戰：</p>
+<p>（1）幾何忽視。儘管預測式世界模型在潛在空間中執行多步分層規劃，但它們的表示通常在歐幾里得空間中學習，而不保留狀態之間的基礎幾何關係。結果是，所學習的能量景觀無法捕捉潛在狀態之間的有意義的測地距離或分層嵌入[ 51 ]，這削弱了模型在長視野上執行幾何一致性規劃的能力。</p>
+<p>（2）多步缺陷。多步視頻的獲取數量有限且成本高昂，因此現有的預測式世界模型主要在單步視頻轉換上進行訓練[ 31 , 40 , 66 , 12 , 37 , 47 ]。儘管在概念上學習整個軌跡上的能量景觀能夠實現長視野規劃，但隨著規劃視野的增加，其效能迅速下降，暴露了在建模長期時間依賴性方面的弱點。</p>
+<p>我們的動機是從幾何角度解決這些問題。針對第一個挑戰，需要一個幾何感知的世界模型，在學習用於分層規劃的能量景觀時保留幾何性質。針對第二個挑戰，強化學習（RL）已被證明在當預訓練基礎模型的輸出在某些方面不令人滿意時調整它時是有效的[ 54 , 60 ]。因此，需要一個幾何感知的 RL 方法來在潛在流形上獲得最優軌跡，改進模型的多步規劃能力。</p>
+<p>因此，我們引入了幾何世界模型（GeoWorld），一種通過保留潛在空間中的幾何結構和分層認知來增強基於能量的預測式世界模型的方法，如圖 LABEL:fig:teaser 所示。為了解決第一個挑戰，我們提出了雙曲 JEPA（H-JEPA），它將潛在表示從歐幾里得空間 $\mathbb{R}^{n}$ 映射到雙曲流形 $\mathbb{H}^{n}$ 上，其中測地距離自然編碼了狀態之間的分層關係。通過沿雙曲測地線學習動力學，H-JEPA 在多步預測期間保留潛在幾何，確保所學習的能量景觀與物理世界的基礎結構對齐，並支持幾何一致性規劃，如第 1 所示。</p>
+<p>為了解決第二個挑戰，我們設計了幾何強化學習（GRL），它將多步規劃重新表述為基於能量的價值函數的最佳化，其中較低的雙曲能量對應於較高的累積獎勵。GRL 直接最佳化世界模型的預測器，無需訓練額外的策略或獎勵模型。通過通過雙曲測地線最小化和三角形不等式正則化調整預測器的基於能量的價值表示，GRL 在潛在流形上強制測地線一致的滾出，有效改進了長視野穩定性和規劃效能。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.23058/x1.png" loading="lazy"></figure> （a）V-JEPA 2[ 3 ] 能量景觀</p>
+<p>為了驗證我們的方法在長視野規劃上的能力，我們在標準基準上評估多步目標條件視覺規劃，包括 CrossTask[ 88 ]和 COIN[ 71 ]。我們的 GeoWorld 相對於先前最先進的預測式世界模型 V-JEPA 2 實現了一致的改進，包括在兩個資料集上 3 步規劃中約 3% 的 SR 改進和 4 步規劃中約 2% 的 SR 改進。</p>
+<p>我們的工作貢獻可以總結如下：</p>
+<ul>
+<li>• 我們引入了幾何世界模型（GeoWorld）和雙曲 JEPA（H-JEPA），它通過將潛在表示映射到雙曲流形上並沿雙曲測地線學習動力學來保留幾何結構和分層關係，產生用於多步預測和規劃的幾何一致性能量景觀。</li>
+<li>• 我們提出了幾何強化學習（GRL），一個基於能量的最佳化框架，通過雙曲能量最小化和三角形不等式正則化直接改進預測器，實現測地線一致的滾出並改進長視野規劃穩定性。</li>
+<li>• 我們展示了在 CrossTask 和 COIN 上的長視野目標條件視覺規劃中的強大效能，相比 V-JEPA 2 在 3 步規劃中實現約 3% 的 SR 改進和在 4 步規劃中約 2% 的 SR 改進。</li>
+</ul>
+<p>我們引入了幾何世界模型（GeoWorld）和雙曲 JEPA（H-JEPA），它通過將潛在表示映射到雙曲流形上並沿雙曲測地線學習動力學來保留幾何結構和分層關係，產生用於多步預測和規劃的幾何一致性能量景觀。</p>
+<p>我們提出了幾何強化學習（GRL），一個基於能量的最佳化框架，通過雙曲能量最小化和三角形不等式正則化直接改進預測器，實現測地線一致的滾出並改進長視野規劃穩定性。</p>
+<p>我們展示了在 CrossTask 和 COIN 上的長視野目標條件視覺規劃中的強大效能，相比 V-JEPA 2 在 3 步規劃中實現約 3% 的 SR 改進和在 4 步規劃中約 2% 的 SR 改進。</p>
+<h2 id="2">2 相關工作</h2>
+<h3 id="_1">影片世界模型</h3>
+<p>影片世界建模有兩種主要方法：生成式世界模型 [46, 59, 63] 和預測式世界模型 [41, 2, 29, 4, 3]。生成式世界模型通常建立在自迴歸 [24, 77, 43] 或半自迴歸 [58, 34, 22, 72, 81, 17] 架構之上，這些架構觀察視覺背景並明確生成下一幀或其潛在表示。這些模型通常包含逆向動力學模組 [67]，經過訓練以從連續觀察中推斷動作，從而實現單步反應控制，但阻止多步推理，因為該模型無法存取全域軌跡結構，也無法捕捉長範圍動力學。此外，生成式方法必須在規劃期間解碼視覺符號或像素，這會引入不必要的噪聲和計算開銷，並限制其為階層規劃建立抽象能量景觀的能力 [59]。相比之下，預測式世界模型不生成像素。相反地，它們在潛在空間中學習能量景觀，該景觀量化當前狀態和目標狀態之間的相容性 [41]。這種設計允許使用基於採樣的規劃器（如交叉熵方法（CEM）[23]）進行多步軌跡最佳化，實現長視界規劃而無需明確的像素解碼。</p>
+<h3 id="_2">目標條件視覺規劃</h3>
+<p>目標條件視覺規劃旨在根據視覺觀察產生實現給定目標的動作序列。先前的工作已演變成三個獨立的設置，取決於觀察和目標的形式，這些形式可能是影像、影片或語言。(1) 在協助視覺規劃（VPA）[56] 中，觀察是影片，目標用自然語言描述。這通常需要基於具有多模態處理能力的 LLM 的模型 [36, 84, 16]。(2) 在程序規劃（PP）[15] 中，觀察和目標都指定為影像，不涉及任何語言，這限制了模型捕捉物理世界中時間資訊的能力 [42, 36, 52, 7, 86, 75, 50, 61, 87, 69, 74]。(3) 在使用影片的視覺規劃中，觀察和目標都以影片形式提供，這更自然地與真實世界中的時間動力學相符，通常使用影片 LLM [76, 79, 20, 53]、生成式世界模型 [59] 和預測式世界模型 [3] 來解決。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.23058/x3.png" loading="lazy"></figure> 圖 2：GeoWorld 概述。我們的幾何世界模型整合了用於幾何保留潛在動力學的 Hyperbolic JEPA 和用於測地線一致多步細化的幾何強化學習。結合使用 CEM 進行基於能量的規劃，GeoWorld 能夠實現穩定且具有幾何感知的長視界視覺規劃。</p>
+<h2 id="3">3 方法</h2>
+<h3 id="31">3.1 概述</h3>
+<p>我們介紹 GeoWorld，一個幾何世界模型，設計用於通過在潛在空間中保留幾何結構和層級感知來增強長地平線視覺規劃。為了解決歐幾里得潛在表示的限制，GeoWorld 結合了 Hyperbolic JEPA（H-JEPA），它將編碼器輸出從歐幾里得空間映射到雙曲流形，其中測地線距離自然地編碼狀態之間的層級關係。通過沿著雙曲測地線學習潛在動態，H-JEPA 強制執行幾何一致的轉移，更好地反映真實世界軌跡的結構。為了進一步改善多步預測的穩定性，我們開發了幾何強化學習（GRL），一個基於能量的最優化框架，將規劃視為最小化雙曲值函數，而無需訓練額外的策略或獎勵模型。GRL 通過雙曲能量最小化和三角形不等式正則化來優化預測器，鼓勵測地線一致的展開並改善長地平線時間相干性。利用基於能量的規劃與交叉熵方法（CEM）[23] 進一步通過搜索遵循雙曲潛在空間中測地線路徑的動作序列來實現高效的軌跡最優化。H-JEPA 和 GRL 共同形成了 GeoWorld 的核心，如圖 2 所示，在預測世界模型中實現了幾何感知的多步規劃。</p>
+<p>關於 JEPA [41]、雙曲幾何和強化學習中值函數的預備知識，見附錄 1。</p>
+<h3 id="32-hyperbolic-jepa">3.2 Hyperbolic JEPA</h3>
+<p>從表示的角度出發，我們的目標是學習一個從狀態對應到雙曲空間 ℍ n \mathbb{H}^{n} 的映射，使得最優計劃對應於雙曲空間中的測地線。
+因此，我們提出 Hyperbolic JEPA（H-JEPA），它在雙曲流形上建模潛在動態，以在多步規劃期間保留層次關係和底層幾何一致性。</p>
+<p>我們將時刻 t t 的觀察定義為 x t x_{t}。E θ ​ ( ⋅ ) E_{\theta}(\cdot) 表示預訓練編碼器 [ 3 ]，它將觀察 x t x_{t} 編碼為潛在狀態 s t x s_{t}^{x}：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>s t x = E θ ​ ( x t ) ∈ ℝ n . s_{t}^{x}=E_{\theta}(x_{t})\in\mathbb{R}^{n}.</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>為了有效地將編碼器輸出從歐幾里得空間 ℝ n \mathbb{R}^{n} 映射到雙曲空間 ℍ n \mathbb{H}^{n}，
+我們將歐幾里得嵌入 s t x s_{t}^{x} 解釋為原點處切空間 𝐓 0 ​ ℍ n \mathbf{T}<em>{0}\mathbb{H}^{n} 中的切向量。
+然後我們應用 Poincaré 球模型 𝔹 c n \mathbb{B}</em>{c}^{n} 在原點處的指數映射，其曲率 K = − c K=-c，
+該映射將切向量投影到雙曲流形上，詳見附錄 1.5.1。</p>
+<p>形式上，雙曲潛在狀態的獲得方式如下</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>s t , ℍ x = exp 0 ⁡ ( s t x ) = tanh ⁡ ( c ​ ‖ s t x ‖ ) ​ s t x c ​ ‖ s t x ‖ , s t , ℍ x ∈ 𝔹 c n . s_{t,\mathbb{H}}^{x}=\exp_{0}(s_{t}^{x})=\tanh!\big(\sqrt{c}|s_{t}^{x}|\big)\frac{s_{t}^{x}}{\sqrt{c}|s_{t}^{x}|},\quad s_{t,\mathbb{H}}^{x}\in\mathbb{B}_{c}^{n}.</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>隨後，動作條件預測器 P ϕ ​ ( ⋅ ) P_{\phi}(\cdot) 將一序列雙曲潛在狀態 ( s t , ℍ x ) t = 1 T (s_{t,\mathbb{H}}^{x})<em>{t=1}^{T} 和相應的動作序列 ( a t ) t = 1 T (a</em>{t})<em>{t=1}^{T} 作為輸入，並在規劃視野 T T 上預測下一狀態表示序列 ( s ^ t + 1 , ℍ x ) t = 1 T (\hat{s}</em>{t+1,\mathbb{H}}^{x})_{t=1}^{T}：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>( s ^ t + 1 , ℍ x ) t = 1 T = P ϕ ​ ( ( s t , ℍ x , a t ) t = 1 T ) . (\hat{s}<em>{t+1,\mathbb{H}}^{x})</em>{t=1}^{T}=P_{\phi}!\big((s_{t,\mathbb{H}}^{x},a_{t})_{t=1}^{T}\big).</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 θ \theta 和 ϕ \phi 分別表示編碼器和預測器網路的參數（權重）。</p>
+<h3 id="33">3.3 訓練目標</h3>
+<p>H-JEPA 的監督訓練目標是學習一個預測性的世界模型，該模型遵循雙曲空間中當前和目標潛在狀態之間最小能量成本的測地線路徑。
+具體而言，該模型最小化 Poincaré 球面雙曲距離 $d_{\mathbb{H}}$ 在預測和真實潛在表示之間的距離，如附錄 1.5.1 的等式 68 所定義，確保每個轉移都對齊流形上的最低能量軌跡。</p>
+<p>該目標由聯合損失函數組成，結合了教師強制損失和展開損失。
+教師強制損失透過將預測的下一狀態表示與地面真值潛在嵌入對齊，來鼓勵準確的單步預測，而展開損失則遞迴地將模型自身的預測作為輸入，以強制多個未來步驟之間的時間一致性。</p>
+<p><strong>教師強制</strong></p>
+<p>教師強制損失透過最小化預測潛在表示 $\hat{s}<em>{t+1,\mathbb{H}}^{x}$ 與編碼的地面真值潛在 $s</em>{t+1,\mathbb{H}}^{x}$ 之間在每個時間步 $t$ 的雙曲測地線距離 $d_{\mathbb{H}}$，來訓練模型準確執行單步未來預測：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle\mathcal{L}_{\text{TF}}(\theta,\phi)$</th>
+<th>$\displaystyle=\frac{1}{T}\sum_{t=1}^{T}d_{\mathbb{H}}!\left(P_{\phi}!\big(\exp_{0}!\big(E_{\theta}(x_{t})\big),a_{t}\right),$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle\qquad\left.\exp_{0}!\big(E_{\theta}(x_{t+1})\big)\right)$</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle=\frac{1}{T}\sum_{t=1}^{T}d_{\mathbb{H}}!\left(\hat{s}<em>{t+1,\mathbb{H}}^{x},s</em>{t+1,\mathbb{H}}^{x}\right)$</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle=\frac{1}{T}\sum_{t=1}^{T}\frac{1}{\sqrt{c}}\,\operatorname{arcosh}!\left(1\right.$</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle\qquad\left.{}+2c\frac{|\hat{s}<em>{t+1,\mathbb{H}}^{x}-s</em>{t+1,\mathbb{H}}^{x}|^{2}}{(1-c|\hat{s}<em>{t+1,\mathbb{H}}^{x}|^{2})(1-c|s</em>{t+1,\mathbb{H}}^{x}|^{2})}\right)$</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>展開</strong></p>
+<p>展開損失將預測器的輸出反饋作為輸入，使模型能夠學習多步未來預測。
+在這種情況下，我們設計一個雙步展開損失來增強模型的長時域規劃能力：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle\mathcal{L}_{\text{rollout}}(\theta,\phi)$</th>
+<th>$\displaystyle=\frac{1}{T}\sum_{t=1}^{T}d_{\mathbb{H}}!\left(P_{\phi}!\big(\exp_{0}!\big(E_{\theta}(x_{t})\big),a_{t},a_{t+1}\big)\right.,$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle\qquad\left.\exp_{0}!\big(E_{\theta}(x_{t+2})\big)\right)$</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle=\frac{1}{T}\sum_{t=1}^{T}d_{\mathbb{H}}!\left(\hat{s}<em>{t+2,\mathbb{H}}^{x},s</em>{t+2,\mathbb{H}}^{x}\right)$</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle=\frac{1}{T}\sum_{t=1}^{T}\frac{1}{\sqrt{c}}\,\operatorname{arcosh}!\left(1\right.$</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle\qquad\left.{}+2c\frac{|\hat{s}<em>{t+2,\mathbb{H}}^{x}-s</em>{t+2,\mathbb{H}}^{x}|^{2}}{(1-c|\hat{s}<em>{t+2,\mathbb{H}}^{x}|^{2})(1-c|s</em>{t+2,\mathbb{H}}^{x}|^{2})}\right),$</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>總損失</strong></p>
+<p>因此，監督階段的總損失定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{SFT}}(\theta,\phi)=\lambda\,\mathcal{L}</em>{\text{TF}}(\theta,\phi)+(1-\lambda)\,\mathcal{L}_{\text{rollout}}(\theta,\phi),$</th>
+<th></th>
+<th>(10)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\lambda$ 是損失加權超參數。</p>
+<p>總之，這兩個元件訓練預測器學習平滑、測地線一致的軌跡，在雙曲潛在空間中同時捕捉短期準確性和長時域穩定性。</p>
+<h3 id="34-geometric-reinforcement-learning">3.4 Geometric Reinforcement Learning</h3>
+<p>We propose a Geometric Reinforcement Learning ( GRL ) approach that improves the predictor in multi-step planning by adjusting its energy-based value representation, aligning lower energy with higher expected reward.</p>
+<p>Energy Cost</p>
+<p>Given a frozen encoder E E and a trainable predictor P ϕ P_{\phi} , we define the energy cost of moving from state s t , ℍ x s_{t,\mathbb{H}}^{x} to state s t + 1 , ℍ x s_{t+1,\mathbb{H}}^{x} as</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>c t ​ ( s t , ℍ x , s t + 1 , ℍ x ) \displaystyle c_{t}(s_{t,\mathbb{H}}^{x},s_{t+1,\mathbb{H}}^{x})</th>
+<th>= d ℍ ​ ( P ϕ ​ ( exp 0 ⁡ ( E ​ ( x t ) ) , a t ) , exp 0 ⁡ ( E ​ ( x t + 1 ) ) ) \displaystyle=d_{\mathbb{H}}!\left(P_{\phi}!\big(\exp_{0}!\big(E(x_{t})\big),a_{t}\big),\exp_{0}!\big(E(x_{t+1})\big)\right)</th>
+<th></th>
+<th>(11)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>= d ℍ ​ ( s ^ t + 1 , ℍ x , s t + 1 , ℍ x ) . \displaystyle=d_{\mathbb{H}}(\hat{s}<em>{t+1,\mathbb{H}}^{x},s</em>{t+1,\mathbb{H}}^{x}).</td>
+<td></td>
+<td>(12)</td>
+</tr>
+</tbody>
+</table>
+<p>which ideally indicates that we aim to minimize the energy cost of moving from state s t , ℍ x s_{t,\mathbb{H}}^{x} to state s t + 1 , ℍ x s_{t+1,\mathbb{H}}^{x} , which is identical to minimizing the geodesic distance between the predicted state s ^ t + 1 , ℍ x \hat{s}<em>{t+1,\mathbb{H}}^{x} and the target state s t + 1 , ℍ x s</em>{t+1,\mathbb{H}}^{x} .</p>
+<p>Reward</p>
+<p>We then define the reward as the negative energy cost of moving between states:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>r t ​ ( s t , ℍ x , a t , s t + 1 , ℍ x ) = − c t ​ ( s t , ℍ x , s t + 1 , ℍ x ) . r_{t}(s_{t,\mathbb{H}}^{x},a_{t},s_{t+1,\mathbb{H}}^{x})=-c_{t}(s_{t,\mathbb{H}}^{x},s_{t+1,\mathbb{H}}^{x}).</th>
+<th></th>
+<th>(13)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Path Value Function</p>
+<p>As mentioned in Appendix 1.6 , the value function V V is a mathematical object that quantifies the amount of energy required for an agent to reach optimality from a given state to a target state, where lower energy corresponds to a higher expected cumulative reward.</p>
+<p>Hence, the path value function between the current and goal latent states, given a planning horizon T T , is defined as the expected cumulative reward:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>V ​ ( s 1 , ℍ x , s 1 + T , ℍ x ) = 𝔼 a 1 : T ∼ ϕ ​ [ ∑ t = 1 T γ t − 1 ​ r t ​ ( s t , ℍ x , a t , s t + 1 , ℍ x ) ] , V(s_{1,\mathbb{H}}^{x},s_{1+T,\mathbb{H}}^{x})=\mathbb{E}<em>{a</em>{1:T}\sim\phi}!\left[\sum_{t=1}^{T}\gamma^{t-1}r_{t}(s_{t,\mathbb{H}}^{x},a_{t},s_{t+1,\mathbb{H}}^{x})\right],</th>
+<th></th>
+<th>(14)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>where γ ∈ [ 0 , 1 ) \gamma\in[0,1) is the discount factor.</p>
+<p>Our objective is to maximize the total reward (i.e., maximize the return) such that P ϕ P_{\phi} follows the geodesics. Therefore, the optimal path value function maximizes the expected cumulative reward:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>V ∗ ​ ( s 1 , ℍ x , s 1 + T , ℍ x ) \displaystyle V^{*}(s_{1,\mathbb{H}}^{x},s_{1+T,\mathbb{H}}^{x})</th>
+<th>= max ϕ 𝔼 a 1 : T ∼ ϕ [ ∑ t = 1 T γ t − 1 r t ( s t , ℍ x , a t , \displaystyle=\max_{\phi}\,\mathbb{E}<em>{a</em>{1:T}\sim\phi}!\left[\sum_{t=1}^{T}\gamma^{t-1}\,r_{t}(s_{t,\mathbb{H}}^{x},a_{t},\right.</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>s t + 1 , ℍ x ) ] . \displaystyle\qquad\qquad\qquad\qquad\left.s_{t+1,\mathbb{H}}^{x})\right].</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>= min ϕ 𝔼 a 1 : T ∼ ϕ [ ∑ t = 1 T γ t − 1 d ℍ ( s ^ t + 1 , ℍ x , \displaystyle=\min_{\phi}\,\mathbb{E}<em>{a</em>{1:T}\sim\phi}!\left[\sum_{t=1}^{T}\gamma^{t-1}\,d_{\mathbb{H}}(\hat{s}_{t+1,\mathbb{H}}^{x},\right.</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>s t + 1 , ℍ x ) ] . \displaystyle\qquad\qquad\qquad\qquad\left.s_{t+1,\mathbb{H}}^{x})\right].</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>which is equivalent to minimizing the total hyperbolic distance between the predicted and target states.</p>
+<p>Triangle Inequality Regularization</p>
+<p>The hyperbolic geodesic distance d ℍ d_{\mathbb{H}} satisfies the triangle inequality. Therefore, for any consecutive triplet in the predictor’s rollouts:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>d ℍ ​ ( s ^ t , ℍ x , s ^ t + 2 , ℍ x ) ≤ d ℍ ​ ( s ^ t , ℍ x , s ^ t + 1 , ℍ x ) + d ℍ ​ ( s ^ t + 1 , ℍ x , s ^ t + 2 , ℍ x ) . d_{\mathbb{H}}(\hat{s}<em>{t,\mathbb{H}}^{x},\hat{s}</em>{t+2,\mathbb{H}}^{x})\leq d_{\mathbb{H}}(\hat{s}<em>{t,\mathbb{H}}^{x},\hat{s}</em>{t+1,\mathbb{H}}^{x})+d_{\mathbb{H}}(\hat{s}<em>{t+1,\mathbb{H}}^{x},\hat{s}</em>{t+2,\mathbb{H}}^{x}).</th>
+<th></th>
+<th>(16)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>This indicates that minimizing the sum of consecutive step distances encourages the predicted trajectory to align with the geodesic path. Hence, we introduce a regularization term:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>ℒ Δ = 1 T − 2 ∑ t = 1 T − 2 [ d ℍ ( s ^ t , s ^ t + 2 ) − d ℍ ( s ^ t , s ^ t + 1 ) \displaystyle\mathcal{L}<em>{\Delta}=\frac{1}{T-2}\sum</em>{t=1}^{T-2}\Big[d_{\mathbb{H}}(\hat{s}<em>{t},\hat{s}</em>{t+2})-d_{\mathbb{H}}(\hat{s}<em>{t},\hat{s}</em>{t+1})</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>− d ℍ ( s ^ t + 1 , s ^ t + 2 ) ] + . \displaystyle\qquad\qquad-d_{\mathbb{H}}(\hat{s}<em>{t+1},\hat{s}</em>{t+2})\Big]_{+}.</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>This term enforces multi-step rollout consistency by encouraging predicted trajectories to satisfy hyperbolic geodesic properties.</p>
+<p>Total Loss</p>
+<p>Hence, the total loss in Geometric Reinforcement Learning can be expressed as</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>ℒ GRL ​ ( ϕ ) = 𝔼 a 1 : T ∼ ϕ ​ [ ∑ t = 1 T γ t − 1 ​ d ℍ ​ ( s ^ t + 1 , ℍ x , s t + 1 , ℍ x ) ] + β ​ ℒ Δ . \mathcal{L}<em>{\mathrm{GRL}}(\phi)=\mathbb{E}</em>{a_{1:T}\sim\phi}!\left[\sum_{t=1}^{T}\gamma^{t-1}d_{\mathbb{H}}(\hat{s}<em>{t+1,\mathbb{H}}^{x},s</em>{t+1,\mathbb{H}}^{x})\right]+\beta\mathcal{L}_{\Delta}.</th>
+<th></th>
+<th>(18)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>where β \beta is the regularization factor.</p>
+<h3 id="35">3.5 基於能量的規劃</h3>
+<p>隨後在訓練後執行基於能量的規劃，使用凍結的編碼器 E 和預測器 P。
+預測器作為世界模型，能夠預測當應用動作序列時潛在表示如何演化。
+在規劃期間，我們搜尋一個最優的動作序列，該序列遵循當前和目標潛在狀態之間的測地線路徑，有效地最小化在雙曲線潛在空間中定義的目標條件能量成本。</p>
+<p>給定當前觀測 $x_1$、未來目標 $x_{1+T}$ 和規劃地平線 $T$，
+我們將當前和目標觀測編碼為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s_{1,\mathbb{H}}^{x}=\exp_{0}(E(x_{1})),\qquad s_{1+T,\mathbb{H}}^{x}=\exp_{0}(E(x_{1+T})).$</th>
+<th></th>
+<th>(19)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>隨後我們根據龐加萊測地距離定義能量成本函數 $C$，該函數在規劃地平線上測量預測和目標潛在狀態之間的雙曲線能量：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$C((\hat{a}<em>{t})</em>{t=1}^{T};s_{1,\mathbb{H}}^{x},s_{1+T,\mathbb{H}}^{x})=d_{\mathbb{H}}!\left(P((\hat{a}<em>{t})</em>{t=1}^{T};s_{1,\mathbb{H}}^{x}),\,s_{1+T,\mathbb{H}}^{x}\right),$</th>
+<th></th>
+<th>(20)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>因此，最優動作序列 $(a_{t}^{*})_{t=1}^{T}$ 通過最小化此雙曲線能量成本來獲得：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$(a_{t}^{*})<em>{t=1}^{T}=\arg\min</em>{(\hat{a}<em>{t})</em>{t=1}^{T}}d_{\mathbb{H}}!\left(P((\hat{a}<em>{t})</em>{t=1}^{T};s_{1,\mathbb{H}}^{x}),\,s_{1+T,\mathbb{H}}^{x}\right).$</th>
+<th></th>
+<th>(21)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>最佳化使用交叉熵方法（Cross-Entropy Method, CEM）[23] 執行，
+詳細內容見附錄 1.3.3 的算法 1。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$(a_{t}^{*})<em>{t=1}^{T}=\operatorname{CEM}!\left(x</em>{1},\,\,x_{1+T},\,P(\cdot),\,E(\cdot),\,T,\,N,\,K,\,I,\,\mu_{0},\,\Sigma_{0}\right)$</th>
+<th></th>
+<th>(22)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $x_1$ 是當前觀測，$x_{1+T}$ 是目標觀測，$P_{\phi}$ 是預測器，$E(\cdot)$ 是編碼器，$T$ 是規劃地平線，$N$ 是樣本數量，$K$ 是精英樣本數量，$I$ 是迭代次數，
+且 $(\mu_{0},\Sigma_{0})$ 表示動作分佈的初始平均值和協方差。</p>
+<h2 id="4">4 實驗</h2>
+<h3 id="41">4.1 基準測試與評估指標</h3>
+<p>基準測試</p>
+<p>為了評估我們的世界模型在多步目標條件規劃中的能力，我們採用了兩個標準的目標條件視覺規劃資料集，CrossTask [ 88 ] 和 COIN [ 71 ]，這些資料集包含人類日常活動的多樣化細粒度動作標籤和時間戳。</p>
+<p>CrossTask 包含 83 項任務中的 4.7K 個影片，涵蓋 105 種動作，平均每個影片 8 個動作。總時長為 375 小時。</p>
+<p>COIN 包含 180 項任務中的 11,287 個影片，涵蓋 778 種動作，平均每個影片 3.9 個動作。總時長為 476 小時。</p>
+<p>指標</p>
+<p>根據目標條件視覺規劃的先前研究 [ 7 ]，我們採用三個指標進行評估：(1) 成功率（Success Rate, SR）計算預測的動作序列是否與真實標籤序列完全相符。(2) 平均準確度（Mean Accuracy, mAcc）計算預測動作在每個時間步的平均準確度。(3) 平均交集比（Mean Intersection over Union, mIoU）量化預測程序與真實標籤之間的重疊度。</p>
+<h3 id="42">4.2 基準線和評估協議</h3>
+<p>我們遵循先前的研究 [ 15 , 7 , 59 , 3 ]，並根據觀測和目標的模態，在兩個設置中評估目標條件視覺規劃，如第 2 節所討論的。對於程序規劃 [ 15 ]，觀測和目標都被指定為影像，這更符合傳統視覺規劃的設置。對於使用視頻的視覺規劃 [ 59 ]，觀測和目標都被指定為視頻片段，這更忠實地反映了真實世界中的時空資訊。</p>
+<p>對於這兩個設置，評估是在規劃視野 $T$ 上進行的，其中模型根據觀測和目標輸出 $T$ 個動作的序列。</p>
+<p>在這兩個設置中，我們包含三類基準線。基於 LLM 的方法利用 LLM 或 VLM 進行推理和規劃 [ 42 , 36 , 52 , 76 , 79 , 20 , 53 ]。生成式（世界）模型明確生成像素或潛在視覺標記，這些標記解碼為像素以進行規劃 [ 15 , 7 , 86 , 75 , 50 , 61 , 87 , 59 ]。預測式（世界）模型預測動作序列，無需依賴像素生成 [ 27 , 1 , 68 , 69 , 74 , 3 ]。</p>
+<p>程序規劃設置中有兩個額外的基準線。隨機（Random）從所有動作中隨機選擇一個動作，作為性能的經驗下界 [ 15 ]。基於檢索的方法（Retrieval-Based approach）通過最小化訓練資料集內的視覺特徵距離來檢索最近的鄰居，然後使用與檢索鄰居相關聯的動作序列作為規劃 [ 87 ]。</p>
+<p>此外，對於 V-JEPA 2 [ 3 ] 和我們的 GeoWorld，我們採用凍結編碼器，而對於 VideoWorld [ 59 ] 我們執行完整的微調。對於視頻視覺規劃中的通用 VLM [ 76 , 79 , 20 , 53 ]，所有評估都在零樣本設置中進行。有關基準線的更多詳細信息，請參見附錄 3。</p>
+<p>表 1：在 CrossTask [ 88 ] 和 COIN [ 71 ] 資料集上使用影像進行目標條件視覺規劃。我們在程序規劃設置 [ 15 ] 下評估視野 $T$ 上的多步規劃，其中觀測和目標都被指定為影像。</p>
+<h3 id="43-implementation-details">4.3 Implementation Details</h3>
+<p>For a fair comparison, both the V-JEPA 2 [ 3 ] baseline and our GeoWorld adopt frozen encoders pretrained on VideoMix22M.
+The exponential map exp 0 ⁡ ( ⋅ ) \exp_{0}(\cdot) is implemented and trained as a differentiable hyperbolic projection layer, where the curvature c c is treated as a learnable parameter [ 14 ] .
+The predictor network P ϕ ​ ( ⋅ ) P_{\phi}(\cdot) is a ∼ 300 \sim!300 M-parameter transformer with 24 layers, 16 heads, a 1024-dimensional hidden size, and GELU activations.</p>
+<p>We conduct a two-stage training procedure for both V-JEPA 2 and our GeoWorld, consisting of supervised post-training followed by geometric reinforcement learning.</p>
+<p>In the supervised post-training stage, both V-JEPA 2 and GeoWorld are trained with the AdamW optimizer [ 45 ] using a warmup–constant–decay learning rate schedule and a constant weight decay of 0.04. We linearly warm up the learning rate from 7.5 × 10 − 5 7.5\times 10^{-5} to 4.25 × 10 − 4 4.25\times 10^{-4} over 4500 iterations, hold it constant for 85,500 iterations, and then decay it to 0 over the final 4500 iterations, with a batch size of 256.</p>
+<p>For geometric reinforcement learning, we keep the same AdamW optimizer and weight decay as in the supervised post-training stage, but adopt a smaller learning rate and a shorter schedule due to the higher variance of the RL objective. Specifically, we linearly warm up the learning rate from 5.0 × 10 − 5 5.0\times 10^{-5} to 2.0 × 10 − 4 2.0\times 10^{-4} over 2,000 iterations, hold it constant for 18,000 iterations, and then linearly decay it to 0 over the final 5,000 iterations, with a batch size of 128. Unless otherwise specified, we set the discount factor to γ = 0.99 \gamma=0.99 and the triangle-inequality regularization weight to β = 0.1 \beta=0.1 .</p>
+<p>For energy-based planning with CEM [ 23 ] , we adopt a sample size of N = 800 N=800 , an elite set size of K = 80 K=80 , and I = 10 I=10 refinement iterations.</p>
+<p>The entire training is conducted on 4 nodes, each equipped with 8 NVIDIA H100 GPUs, 48-core Intel Xeon Platinum 8469C CPUs, and 230 GB of RAM. We use only a single H100 GPU for inference.</p>
+<p>Table 2: Goal-conditioned visual planning with videos on CrossTask [ 88 ] and COIN [ 71 ] datasets. We evaluate multi-step planning over a horizon T T under the visual planning with videos [ 59 ] setup, where both observations and goals are specified as video clips.</p>
+<p>Table 3: Long horzion planning on CrossTask [ 88 ] .</p>
+<h3 id="44">4.4 主要結果</h3>
+<p>如表 1 和表 2 所示，GeoWorld 在 CrossTask 和 COIN 上持續改善多步目標條件視覺規劃。在程序規劃設置下，GeoWorld 相比先前的預測世界模型取得顯著進展，尤其是在長視界設置中，在 $T = 3$ 和 $T = 4$ 時都實現了更高的 SR、mAcc 和 mIoU。在基於視頻的規劃設置下，GeoWorld 在所有模型規模上持續優於 V-JEPA 2，其中 ViT-g 384 變體達到最佳整體結果，超越強大的基於 LLM 的規劃器。這些改進突出了幾何感知潛在動態和幾何強化學習在增強長視界穩定性和規劃準確性中的有效性。</p>
+<p>關於消融研究，請參見附錄 5。</p>
+<h3 id="45">4.5 長視界規劃</h3>
+<p>表 3 突出了 GeoWorld 在長視界規劃中的優勢。隨著視界從 $T = 3$ 增加到 $T = 6$，現有預測和生成世界模型的性能持續下降，這是由於歐幾里得潛在空間中積累的幾何漂移。相比之下，GeoWorld 保持更高的穩定性，並在所有視界上實現最佳成功率。</p>
+<h2 id="5">5 結論</h2>
+<p>我們引入了 GeoWorld，一個幾何世界模型，旨在通過在潛在空間中保留幾何結構和層級關係來改善長視界視覺規劃。通過 Hyperbolic JEPA，GeoWorld 將歐幾里得潛在表示映射到雙曲流形上，從而實現大地線感知的潛在動態，產生結構更清晰且物理上更有意義的能量景觀。基於這種表示，幾何強化學習通過雙曲能量優化和三角不等式正則化進一步細化預測器，產生大地線一致的回滾並減少擴展視界上的誤差積累。在 CrossTask 和 COIN 上的大量實驗表明，GeoWorld 相比強大的預測世界模型（如 V-JEPA 2）持續改善長視界性能，在 $T = 3$ 到 $T = 6$ 的規劃中實現更高的成功率。這些結果強調了在預測世界模型中納入幾何原理的重要性，並強化了幾何感知強化學習對穩定有效的多步規劃的價值。</p>
+<h2 id="references">References</h2>
+<ul>
+<li>[1] Y. Abu Farha and J. Gall (2019) Uncertainty-aware anticipation of activities . In Proceedings of the IEEE/CVF International Conference on Computer Vision Workshops , pp. 0–0 . Cited by: §3 , §4.2 , Table 1 .</li>
+<li>[2] M. Assran, Q. Duval, I. Misra, P. Bojanowski, P. Vincent, M. Rabbat, Y. LeCun, and N. Ballas (2023) Self-supervised learning from images with a joint-embedding predictive architecture . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 15619–15629 . Cited by: §1.1 , §1.3.2 , §1.4 , §1 , §2 .</li>
+<li>[3] M. Assran, A. Bardes, D. Fan, Q. Garrido, R. Howes, M. Muckley, A. Rizvi, C. Roberts, K. Sinha, A. Zholus, et al. (2025) V-jepa 2: self-supervised video models enable understanding, prediction and planning . arXiv preprint arXiv:2506.09985 . Cited by: Figure 1 , Figure 1 , 1(a) , 1(a) , §1.1 , §1.3.3 , §1.4 , §1 , §2 , §2 , §3 , §3.2 , §4 , §4 , §4.2 , §4.2 , §4.2 , §4.3 , Table 1 , Table 1 , Table 1 , Table 1 , Table 2 , Table 2 , Table 2 , Table 2 , Table 3 , Table 3 , Table 2 , Table 3 , Table 4 .</li>
+<li>[4] A. Bardes, Q. Garrido, J. Ponce, X. Chen, M. Rabbat, Y. LeCun, M. Assran, and N. Ballas (2024) Revisiting feature prediction for learning visual representations from video . Transactions on Machine Learning Research . Cited by: §1.1 , §1.3.3 , §1.4 , §1 , §2 .</li>
+<li>[5] A. Bardes, J. Ponce, and Y. Lecun (2022) VICReg: variance-invariance-covariance regularization for self-supervised learning . In ICLR 2022-International Conference on Learning Representations , Cited by: §1.3.1 .</li>
+<li>[6] R. Bellman (1966) Dynamic programming . science 153 ( 3731 ), pp. 34–37 . Cited by: §1.6 .</li>
+<li>[7] J. Bi, J. Luo, and C. Xu (2021) Procedure planning in instructional videos via contextual modeling and model-based policy learning . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 15611–15620 . Cited by: §2 , §3 , §4.1 , §4.2 , §4.2 , Table 1 , Table 1 .</li>
+<li>[8] K. Black, N. Brown, D. Driess, A. Esmail, M. Equi, C. Finn, N. Fusai, L. Groom, K. Hausman, B. Ichter, et al. (2024) \textpi 0 : A Vision–Language–Action Flow Model for General Robot Control . arXiv preprint arXiv:2410.24164 . Cited by: §1 .</li>
+<li>[9] R. Boney, J. Kannala, and A. Ilin (2020) Regularizing model-based planning with energy-based models . In Conference on Robot Learning , pp. 182–191 . Cited by: §1.1 .</li>
+<li>[10] D. Brandfonbrener, O. Nachum, and J. Bruna (2023) Inverse dynamics pretraining learns good representations for multitask imitation . Advances in Neural Information Processing Systems 36 , pp. 66953–66978 . Cited by: §1.4 .</li>
+<li>[11] M. R. Bridson and A. Haefliger (2013) Metric spaces of non-positive curvature . Vol. 319 , Springer Science &amp; Business Media . Cited by: §1.5 .</li>
+<li>[12] F. Caba Heilbron, V. Escorcia, B. Ghanem, and J. Carlos Niebles (2015) Activitynet: a large-scale video benchmark for human activity understanding . In Proceedings of the ieee conference on computer vision and pattern recognition , pp. 961–970 . Cited by: §1 .</li>
+<li>[13] E. Cetin, B. P. Chamberlain, M. M. Bronstein, and J. J. Hunt (2023) Hyperbolic deep reinforcement learning . In The Eleventh International Conference on Learning Representations , Cited by: §1.5.1 , §1.5.1 , §1.5 .</li>
+<li>[14] I. Chami, Z. Ying, C. Ré, and J. Leskovec (2019) Hyperbolic graph convolutional neural networks . Advances in neural information processing systems 32 . Cited by: §4.3 , §5 .</li>
+<li>[15] C. Chang, D. Huang, D. Xu, E. Adeli, L. Fei-Fei, and J. C. Niebles (2020) Procedure planning in instructional videos . In European Conference on Computer Vision , pp. 334–350 . Cited by: §2 , §3 , §3 , §4.2 , §4.2 , §4.2 , Table 1 , Table 1 , Table 1 , Table 3 , Table 3 .</li>
+<li>[16] D. Chen, T. Moutakanni, W. Chung, Y. Bang, Z. Ji, A. Bolourchi, and P. Fung (2025) Planning with reasoning using vision language world model . arXiv preprint arXiv:2509.02722 . Cited by: §2 .</li>
+<li>[17] G. Chen, D. Lin, J. Yang, C. Lin, J. Zhu, M. Fan, H. Zhang, S. Chen, Z. Chen, C. Ma, et al. (2025) Skyreels-v2: infinite-length film generative model . arXiv preprint arXiv:2504.13074 . Cited by: §2 .</li>
+<li>[18] D. L. Cheney and R. M. Seyfarth (1998) Why animals don’t have language . Tanner lectures on human values 19 , pp. 173–210 . Cited by: §1 .</li>
+<li>[19] K. C. Ciesielski, A. X. Falcão, and P. A. Miranda (2018) Path-value functions for which dijkstra’s algorithm returns optimal mapping . Journal of Mathematical Imaging and Vision 60 ( 7 ), pp. 1025–1036 . Cited by: §1.6 .</li>
+<li>[20] G. Comanici, E. Bieber, M. Schaekermann, I. Pasupat, N. Sachdeva, I. Dhillon, M. Blistein, O. Ram, D. Zhang, E. Rosen, et al. (2025) Gemini 2.5: pushing the frontier with advanced reasoning, multimodality, long context, and next generation agentic capabilities . arXiv preprint arXiv:2507.06261 . Cited by: §1 , §2 , §3 , §4.2 , §4.2 , Table 2 , Table 3 .</li>
+<li>[21] B. C. Csáji and L. Monostori (2008) Value function based reinforcement learning in changing markovian environments. . Journal of Machine Learning Research 9 ( 8 ). Cited by: §1.6 .</li>
+<li>[22] J. Cui, J. Wu, M. Li, T. Yang, X. Li, R. Wang, A. Bai, Y. Ban, and C. Hsieh (2025) Self-forcing++: towards minute-scale high-quality video generation . arXiv preprint arXiv:2510.02283 . Cited by: §2 .</li>
+<li>[23] P. De Boer, D. P. Kroese, S. Mannor, and R. Y. Rubinstein (2005) A tutorial on the cross-entropy method . Annals of operations research 134 ( 1 ), pp. 19–67 . Cited by: §1.3.3 , §2 , §3.1 , §3.5 , §4.3 .</li>
+<li>[24] H. Deng, T. Pan, H. Diao, Z. Luo, Y. Cui, H. Lu, S. Shan, Y. Qi, and X. Wang (2024) Autoregressive video generation without vector quantization . arXiv preprint arXiv:2412.14169 . Cited by: §2 .</li>
+<li>[25] K. Desai, M. Nickel, T. Rajpurohit, J. Johnson, and S. R. Vedantam (2023) Hyperbolic image-text representations . In International Conference on Machine Learning , pp. 7694–7731 . Cited by: §1.5 , §1.5 , §5 .</li>
+<li>[26] Y. Du, S. Li, J. Tenenbaum, and I. Mordatch (2022) Learning iterative reasoning through energy minimization . In International Conference on Machine Learning , pp. 5570–5582 . Cited by: §1.1 .</li>
+<li>[27] K. Ehsani, H. Bagherinezhad, J. Redmon, R. Mottaghi, and A. Farhadi (2018) Who let the dogs out? modeling dog behavior from visual data . In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition , pp. 4051–4060 . Cited by: §3 , §4.2 , Table 1 .</li>
+<li>[28] O. Ganea, G. Bécigneul, and T. Hofmann (2018) Hyperbolic neural networks . Advances in neural information processing systems 31 . Cited by: §1.5.1 , §1.5.1 .</li>
+<li>[29] Q. Garrido, M. Assran, N. Ballas, A. Bardes, L. Najman, and Y. LeCun (2024) Learning and leveraging world models in visual representation learning . arXiv preprint arXiv:2403.00504 . Cited by: §1.4 , §1 , §2 .</li>
+<li>[30] S. Ge, S. Mishra, S. Kornblith, C. Li, and D. Jacobs (2023) Hyperbolic contrastive learning for visual representations beyond objects . In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 6840–6849 . Cited by: §1.5 , §1.5 .</li>
+<li>[31] R. Goyal, S. Ebrahimi Kahou, V. Michalski, J. Materzynska, S. Westphal, H. Kim, V. Haenel, I. Fruend, P. Yianilos, M. Mueller-Freitag, et al. (2017) The" something something" video database for learning and evaluating visual common sense . In Proceedings of the IEEE international conference on computer vision , pp. 5842–5850 . Cited by: §1 .</li>
+<li>[32] D. Guo, D. Yang, H. Zhang, J. Song, R. Zhang, R. Xu, Q. Zhu, S. Ma, P. Wang, X. Bi, et al. (2025) Deepseek-r1: incentivizing reasoning capability in llms via reinforcement learning . arXiv preprint arXiv:2501.12948 . Cited by: §1 .</li>
+<li>[33] T. Huang, Z. Zhang, and H. Tang (2025) 3d-r1: enhancing reasoning in 3d vlms for unified scene understanding . arXiv preprint arXiv:2507.23478 . Cited by: §1 .</li>
+<li>[34] X. Huang, Z. Li, G. He, M. Zhou, and E. Shechtman (2025) Self forcing: bridging the train-test gap in autoregressive video diffusion . arXiv preprint arXiv:2506.08009 . Cited by: §2 .</li>
+<li>[35] P. Intelligence, K. Black, N. Brown, J. Darpinian, K. Dhabalia, D. Driess, A. Esmail, M. Equi, C. Finn, N. Fusai, et al. (2025) \textpi 0.5 : A Vision–Language–Action Model with Open-World Generalization . arXiv preprint arXiv:2504.16054 . Cited by: §1 .</li>
+<li>[36] M. M. Islam, T. Nagarajan, H. Wang, F. Chu, K. Kitani, G. Bertasius, and X. Yang (2024) Propose, assess, search: harnessing llms for goal-oriented planning in instructional videos . In European Conference on Computer Vision , pp. 436–452 . Cited by: §2 , §3 , §4.2 , Table 1 , Table 1 .</li>
+<li>[37] W. Kay, J. Carreira, K. Simonyan, B. Zhang, C. Hillier, S. Vijayanarasimhan, F. Viola, T. Green, T. Back, P. Natsev, et al. (2017) The kinetics human action video dataset . arXiv preprint arXiv:1705.06950 . Cited by: §1 .</li>
+<li>[38] P. J. Kellman, M. Arterberry, W. Damon, R. Lerner, D. Kuhn, R. Siegler, et al. (2006) Infant visual perception . Cited by: §1 .</li>
+<li>[39] A. Khazatsky, K. Pertsch, S. Nair, A. Balakrishna, S. Dasari, S. Karamcheti, S. Nasiriany, M. K. Srirama, L. Y. Chen, K. Ellis, et al. DROID: a large-scale in-the-wild robot manipulation dataset . In RSS 2024 Workshop: Data Generation for Robotics , Cited by: §1.3.3 .</li>
+<li>[40] H. Kuehne, H. Jhuang, E. Garrote, T. Poggio, and T. Serre (2011) HMDB: a large video database for human motion recognition . In 2011 International conference on computer vision , pp. 2556–2563 . Cited by: §1 .</li>
+<li>[41] Y. LeCun (2022) A path towards autonomous machine intelligence version 0.9. 2, 2022-06-27 . Open Review 62 ( 1 ), pp. 1–62 . Cited by: §1.1 , §1.2 , §1.3 , §1.4 , §1.4 , §1 , §2 , §3.1 , §7 .</li>
+<li>[42] J. Liu, S. Li, Z. Wang, M. Li, and H. Ji (2023) A language-first approach for procedure planning . In Findings of the Association for Computational Linguistics: ACL 2023 , pp. 1941–1954 . Cited by: §2 , §3 , §4.2 , Table 1 .</li>
+<li>[43] J. Liu, J. Han, B. Yan, H. Wu, F. Zhu, X. Wang, Y. Jiang, B. Peng, and Z. Yuan (2025) InfinityStar: unified spacetime autoregressive modeling for visual generation . arXiv preprint arXiv:2511.04675 . Cited by: §2 .</li>
+<li>[44] Q. Liu, T. Huang, Z. Zhang, and H. Tang (2025) Nav-r1: reasoning and navigation in embodied scenes . arXiv preprint arXiv:2509.10884 . Cited by: §1 .</li>
+<li>[45] I. Loshchilov and F. Hutter (2017) Decoupled weight decay regularization . arXiv preprint arXiv:1711.05101 . Cited by: §4.3 .</li>
+<li>[46] R. Mendonca, S. Bahl, and D. Pathak (2023) Structured world models from human videos . Cited by: §1.4 , §1 , §2 .</li>
+<li>[47] A. Miech, D. Zhukov, J. Alayrac, M. Tapaswi, I. Laptev, and J. Sivic (2019) Howto100m: learning a text-video embedding by watching hundred million narrated video clips . In Proceedings of the IEEE/CVF international conference on computer vision , pp. 2630–2640 . Cited by: §1 .</li>
+<li>[48] M. Mitchell and D. C. Krakauer (2023) The debate over understanding in ai’s large language models . Proceedings of the National Academy of Sciences 120 ( 13 ), pp. e2215907120 . Cited by: §1 .</li>
+<li>[49] S. Mitsuhashi and S. Ishii (2023) Triangle inequality for inverse optimal control . IEEE Access 11 , pp. 119187–119199 . Cited by: §1.6 .</li>
+<li>[50] K. R. Y. Nagasinghe, H. Zhou, M. Gunawardhana, M. R. Min, D. Harari, and M. H. Khan (2024) Why not use your textbook? knowledge-enhanced procedure planning of instructional videos . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 18816–18826 . Cited by: §2 , §3 , §4.2 , Table 1 , Table 3 .</li>
+<li>[51] M. Nickel and D. Kiela (2017) Poincaré embeddings for learning hierarchical representations . Advances in neural information processing systems 30 . Cited by: §1.5.1 , §1.5 , §1.5 , §1 .</li>
+<li>[52] Y. Niu, W. Guo, L. Chen, X. Lin, and S. Chang (2024) Schema: state changes matter for procedure planning in instructional videos . arXiv preprint arXiv:2403.01599 . Cited by: §2 , §3 , §4.2 , Table 1 , Table 3 .</li>
+<li>[53] OpenAI (2025) GPT-5 system card, version 1.0, 2025-08-13 . Note: https://cdn.openai.com/gpt-5-system-card.pdf Cited by: §1 , §2 , §3 , §4.2 , §4.2 , Table 2 , Table 3 .</li>
+<li>[54] L. Ouyang, J. Wu, X. Jiang, D. Almeida, C. Wainwright, P. Mishkin, C. Zhang, S. Agarwal, K. Slama, A. Ray, et al. (2022) Training language models to follow instructions with human feedback . Advances in neural information processing systems 35 , pp. 27730–27744 . Cited by: §1 .</li>
+<li>[55] A. Pal, M. van Spengler, G. M. D. di Melendugno, A. Flaborea, F. Galasso, and P. Mettes (2024) Compositional entailment learning for hyperbolic vision-language models . arXiv preprint arXiv:2410.06912 . Cited by: §1.5 , §1.5 .</li>
+<li>[56] D. Patel, H. Eghbalzadeh, N. Kamra, M. L. Iuzzolino, U. Jain, and R. Desai (2023) Pretrained language models as visual planners for human assistance . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 15302–15314 . Cited by: §2 .</li>
+<li>[57] S. Pitis, H. Chan, K. Jamali, and J. Ba (2020) An inductive bias for distances: neural nets that respect the triangle inequality . In International Conference on Learning Representations , Cited by: §1.6 .</li>
+<li>[58] S. Ren, C. Chen, Z. Wang, L. Song, X. Zhu, A. Yuille, Y. Yang, and J. Lu (2025) Autoregressive video generation beyond next frames prediction . arXiv preprint arXiv:2509.24081 . Cited by: §2 .</li>
+<li>[59] Z. Ren, Y. Wei, X. Guo, Y. Zhao, B. Kang, J. Feng, and X. Jin (2025) Videoworld: exploring knowledge learning from unlabeled videos . In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 29029–29039 . Cited by: §1.4 , §1 , §2 , §2 , §3 , §4.2 , §4.2 , §4.2 , Table 2 , Table 2 , Table 3 .</li>
+<li>[60] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov (2017) Proximal policy optimization algorithms . arXiv preprint arXiv:1707.06347 . Cited by: §1 .</li>
+<li>[61] L. Shi, P. Bürkner, and A. Bulling (2025) Actiondiffusion: an action-aware diffusion model for procedure planning in instructional videos . In 2025 IEEE/CVF Winter Conference on Applications of Computer Vision (WACV) , pp. 8816–8825 . Cited by: §2 , §3 , §4.2 , Table 1 .</li>
+<li>[62] M. Sigman and S. Dehaene (2008) Brain mechanisms of serial and parallel processing during dual-task performance . Journal of Neuroscience 28 ( 30 ), pp. 7585–7598 . Cited by: §1 .</li>
+<li>[63] H. G. Singh, A. Loquercio, C. Sferrazza, J. Wu, H. Qi, P. Abbeel, and J. Malik (2025) Hand-object interaction pretraining from videos . In 2025 IEEE International Conference on Robotics and Automation (ICRA) , pp. 3352–3360 . Cited by: §1.4 , §1 , §2 .</li>
+<li>[64] G. Skenderi, H. Li, J. Tang, and M. Cristani (2025) Graph-level representation learning with joint-embedding predictive architectures . Transactions on Machine Learning Research . Cited by: §2 .</li>
+<li>[65] Z. Song, G. Ouyang, M. Li, Y. Ji, C. Wang, Z. Xu, Z. Zhang, X. Zhang, Q. Jiang, Z. Chen, et al. (2025) Maniplvm-r1: reinforcement learning for reasoning in embodied manipulation with large vision-language models . arXiv preprint arXiv:2505.16517 . Cited by: §1 .</li>
+<li>[66] K. Soomro, A. R. Zamir, and M. Shah (2012) Ucf101: a dataset of 101 human actions classes from videos in the wild . arXiv preprint arXiv:1212.0402 . Cited by: §1 .</li>
+<li>[67] M. W. Spong and R. Ortega (2002) On adaptive inverse dynamics control of rigid robots . IEEE Transactions on Automatic Control 35 ( 1 ), pp. 92–95 . Cited by: §1.4 , §1 , §2 .</li>
+<li>[68] A. Srinivas, A. Jabri, P. Abbeel, S. Levine, and C. Finn (2018) Universal planning networks: learning generalizable representations for visuomotor control . In International conference on machine learning , pp. 4732–4741 . Cited by: §3 , §4.2 , Table 1 .</li>
+<li>[69] J. Sun, D. Huang, B. Lu, Y. Liu, B. Zhou, and A. Garg (2022) Plate: visually-grounded planning with transformers in procedural tasks . IEEE Robotics and Automation Letters 7 ( 2 ), pp. 4924–4930 . Cited by: §2 , §3 , §4.2 , Table 1 .</li>
+<li>[70] R. S. Sutton, A. G. Barto, et al. (1998) Reinforcement learning: an introduction . Vol. 1 , MIT press Cambridge . Cited by: §1.6 .</li>
+<li>[71] Y. Tang, D. Ding, Y. Rao, Y. Zheng, D. Zhang, L. Zhao, J. Lu, and J. Zhou (2019) Coin: a large-scale dataset for comprehensive instructional video analysis . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 1207–1216 . Cited by: §1 , §4 , §4.1 , Table 1 , Table 1 , Table 1 , Table 2 , Table 2 , Table 2 , §7 .</li>
+<li>[72] H. Teng, H. Jia, L. Sun, L. Li, M. Li, M. Tang, S. Han, T. Zhang, W. Zhang, W. Luo, et al. (2025) MAGI-1: autoregressive video generation at scale . arXiv preprint arXiv:2505.13211 . Cited by: §2 .</li>
+<li>[73] Y. Tian, S. Yang, J. Zeng, P. Wang, D. Lin, H. Dong, and J. Pang (2025) Predictive inverse dynamics models are scalable learners for robotic manipulation . In The Thirteenth International Conference on Learning Representations , Cited by: §1.4 .</li>
+<li>[74] A. Wang, K. Lin, J. Du, J. Meng, and W. Zheng (2023) Event-guided procedure planning from instructional videos with text supervision . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 13565–13575 . Cited by: §2 , §3 , §4.2 , Table 1 , Table 3 .</li>
+<li>[75] H. Wang, Y. Wu, S. Guo, and L. Wang (2023) Pdpp: projected diffusion for procedure planning in instructional videos . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 14836–14845 . Cited by: §2 , §3 , §4.2 , Table 1 , Table 3 .</li>
+<li>[76] W. Wang, Z. Gao, L. Gu, H. Pu, L. Cui, X. Wei, Z. Liu, L. Jing, S. Ye, J. Shao, et al. (2025) InternVL3.5: advancing open-source multimodal models in versatility, reasoning, and efficiency . arXiv preprint arXiv:2508.18265 . Cited by: §2 , §3 , §4.2 , §4.2 , Table 2 , Table 3 .</li>
+<li>[77] Y. Wang, T. Xiong, D. Zhou, Z. Lin, Y. Zhao, B. Kang, J. Feng, and X. Liu (2024) Loong: generating minute-level long videos with autoregressive language models . arXiv preprint arXiv:2410.02757 . Cited by: §2 .</li>
+<li>[78] J. Wei, X. Wang, D. Schuurmans, M. Bosma, F. Xia, E. Chi, Q. V. Le, D. Zhou, et al. (2022) Chain-of-thought prompting elicits reasoning in large language models . Advances in neural information processing systems 35 , pp. 24824–24837 . Cited by: §1 .</li>
+<li>[79] A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao, C. Huang, C. Lv, et al. (2025) Qwen3 technical report . arXiv preprint arXiv:2505.09388 . Cited by: §1 , §2 , §3 , §4.2 , §4.2 , Table 2 , Table 3 .</li>
+<li>[80] C. Yang, X. Ma, W. Huang, F. Sun, H. Liu, J. Huang, and C. Gan (2019) Imitation learning from observations by minimizing inverse dynamics disagreement . Advances in neural information processing systems 32 . Cited by: §1.4 .</li>
+<li>[81] S. Yang, W. Huang, R. Chu, Y. Xiao, Y. Zhao, X. Wang, M. Li, E. Xie, Y. Chen, Y. Lu, et al. (2025) Longlive: real-time interactive long video generation . arXiv preprint arXiv:2509.22622 . Cited by: §2 .</li>
+<li>[82] A. Ye, Z. Zhang, B. Wang, X. Wang, D. Zhang, and Z. Zhu (2025) Vla-r1: enhancing reasoning in vision-language-action models . arXiv preprint arXiv:2510.01623 . Cited by: §1 .</li>
+<li>[83] Y. Yue, F. Lin, K. D. Yamada, and Z. Zhang (2023) Hyperbolic contrastive learning . arXiv preprint arXiv:2302.01409 . Cited by: §1.5 , §1.5 .</li>
+<li>[84] C. Zhang, Y. Song, R. Desai, M. L. Iuzzolino, J. Tighe, G. Bertasius, and S. Kottur (2025) Enhancing visual planning with auxiliary tasks and multi-token prediction . arXiv preprint arXiv:2507.15130 . Cited by: §2 .</li>
+<li>[85] Z. Zhang, Y. Wang, D. Li, D. Gong, I. Reid, and R. Hartley (2025) FlashMo: geometric interpolants and frequency-aware sparsity for scalable efficient motion generation . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , Cited by: §1.5.1 .</li>
+<li>[86] H. Zhao, I. Hadji, N. Dvornik, K. G. Derpanis, R. P. Wildes, and A. D. Jepson (2022) P3iv: probabilistic procedure planning from instructional videos with weak supervision . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 2938–2948 . Cited by: §2 , §3 , §4.2 , Table 1 , Table 3 .</li>
+<li>[87] Y. Zhou, Z. Qi, L. Lin, J. Jing, T. Chai, B. Zhang, S. Wang, and W. Zhang (2025) Masked temporal interpolation diffusion for procedure planning in instructional videos . arXiv preprint arXiv:2507.03393 . Cited by: §2 , §3 , §3 , §4.2 , §4.2 , Table 1 , Table 1 , Table 3 , Table 3 , §5 .</li>
+<li>[88] D. Zhukov, J. Alayrac, R. G. Cinbis, D. Fouhey, I. Laptev, and J. Sivic (2019) Cross-task weakly supervised learning from instructional videos . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 3537–3545 . Cited by: §1 , Figure 1 , Figure 1 , §4.1 , Table 1 , Table 1 , Table 1 , Table 2 , Table 2 , Table 2 , Table 3 , §5 , Table 1 , Table 2 , Table 3 , Table 4 , Table 5 , §7 .</li>
+</ul>
+<p>Supplementary Material</p>
+<h2 id="1_1">1 預備知識</h2>
+<h3 id="11">1.1 基於能量的世界模型</h3>
+<p>基於能量的世界模型 (Energy-Based World Models, EBWM) [41, 2, 4, 3] 源自基於能量的模型 (Energy-Based Models, EBM) [9, 26]，其定義了一個標量能量函數 $F(x,y)$ 來衡量兩個變數的相容程度，例如當前世界狀態 $s_x$ 和可能的未來狀態 $s_y$。低能量值對應於合理的情境，而高能量值則表示不合理的情境。能量景觀隱含地將所有合理的未來表示為低能量的谷值，而不是預測單一的未來。由於能量取代了概率，該模型可以自然地處理多峰或不確定的世界，而無需顯式採樣或正規化。推理和規劃因此被公式化為能量最小化，其目標是找到使預期能量最小的組態（動作、隱變數或下一個狀態）：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\text{Plan}=\arg\min_{\text{actions}}F(s_{t},s_{t+1:T}).$</th>
+<th></th>
+<th>(23)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="12">1.2 層級規劃</h3>
+<p>層級規劃通常由兩個層級組成：高層級規劃在抽象潛在空間中計算軌跡以最小化能量（即最合理且成本最低的轉換），而低層級則填補物理細節 [41]。</p>
+<p>世界模型學習層級潛在抽象，其中低層級模組預測短期精細細節，而高層級模組捕捉長期抽象動態。</p>
+<p>具體來說，規劃成為潛在空間中的能量最小化。高層級模組對緩慢演化的抽象潛在狀態 $s^{(2)}$ 進行操作，其中規劃對應於在抽象狀態 $s_{A}^{(2)}$ 和 $s_{B}^{(2)}$ 之間找到最小能量的測地線，產生作為整體規劃的粗軌跡。低層級隨後將此軌跡細化為精細預測 $s_{t}^{(1)}$，最小化以高層級規劃為條件的子能量。因此，整體行為通過層級能量下降而出現，其中每一層都在其預測與上層之間強制執行一致性。換句話說，高層級規劃在抽象潛在空間中計算軌跡以最小化能量（即最合理且成本最低的轉換），而低層級則填補物理細節。</p>
+<p>形式上，對於層級世界模型 $F^{(L)}$，最優規劃定義為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\text{Optimal Plan:}\qquad\min_{{a_{t},z_{t}}}\sum_{l=1}^{L}\sum_{t}F^{(l)}\big(s_{t}^{(l)},s_{t+1}^{(l)},z_{t}^{(l)}\big).$</th>
+<th></th>
+<th>(24)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>每個 $F^{(l)}$ 表示在層級 $l$ 處抽象狀態之間移動的能量成本，而通過此層級的梯度產生跨尺度的一致規劃。</p>
+<h3 id="13">1.3 聯合嵌入預測架構</h3>
+<p>聯合嵌入預測架構（Joint-Embedding Predictive Architectures, JEPA）[41] 直接在潛在空間中學習預測世界模型，而不是生成像素。JEPA 將觀測編碼為緊湊的表示空間，並通過最小化編碼目標與預測嵌入之間的能量或相似度目標來預測未來的潛在狀態。這種聯合嵌入公式化繞過了自迴歸像素生成的需要，自迴歸像素生成在計算上很昂貴，並容易在長時間範圍內發生誤差累積。在潛在空間中學習使模型能專注於高級結構、語義和時間依賴性，而不是低級外觀細節，從而實現更穩定且高效的多步預測。通過對表示而非圖像進行操作，JEPA 捕捉環境的基礎動力學，同時避免了對原始像素分佈建模的挑戰。</p>
+<h4 id="131-jepa">1.3.1 JEPA</h4>
+<p>我們定義當前觀測 $x$ 和目標 $y$。$E_{\theta}(\cdot)$ 表示觀測編碼器，將原始視覺輸入映射到潛在表示空間，$\bar{E}<em>{\theta}(\cdot)$ 表示具有指數移動平均（EMA）權重的目標編碼器，$s</em>{x}$ 和 $s_{y}$ 是從編碼器獲得的當前和目標狀態的潛在表示，$z$ 是捕捉不確定性的潛在變數。$P_{\phi}(\cdot)$ 表示預測器，$\theta$ 和 $\phi$ 分別表示編碼器和預測器網路的參數（權重）。</p>
+<p>對於統一的單步觀測-目標公式化，我們首先編碼當前觀測：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s_{x}=E_{\theta}(x)$</th>
+<th></th>
+<th>(25)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>然後我們執行潛在預測，它取當前狀態 $s_{x}$ 和不確定性 $z$ 作為輸入，並預測目標狀態的潛在表示 $\hat{s}_{y}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\hat{s}<em>{y}=P</em>{\phi}(s_{x},z)$</th>
+<th></th>
+<th>(26)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>類似地，我們編碼目標表示：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s_{y}=\bar{E}_{\theta}(y)$</th>
+<th></th>
+<th>(27)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>用於規劃，訓練目標變成潛在空間中的能量最小化，涉及找到 $s_{x}$ 和 $s_{y}$ 之間的最小能量測地線以獲得最優計劃。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\min_{z}\;C(s_{x},s_{y},z),\qquad\text{其中 }s_{x}=E_{\theta}(x),\;s_{y}=\bar{E}_{\theta}(y).$</th>
+<th></th>
+<th>(28)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此處，$C$ 代表在抽象狀態 $s_{x}$ 和 $s_{y}$ 之間移動的能量成本。它學習兩個編碼器（用於過去和未來）和一個將 $s_{x}$ 映射到 $s_{y}$ 的預測器，其中能量被定義為預測嵌入與真實嵌入之間的表示不匹配。JEPA 是非生成性的，並以非對比方式進行訓練，以確保嵌入保持信息豐富和可預測性 [5]。因此，它形成了一個學習潛在抽象的預測世界模型。</p>
+<p><strong>層次化 JEPA</strong></p>
+<p>如果我們擴展到層次化規劃，我們可以開發一個學習層次化潛在抽象的模型（層次化 JEPA），其中低級模組預測短期細節，而高級模組捕捉長期抽象動力學。例如，考慮一個兩級模型，其中高級 JEPA 層在緩慢演變的抽象潛在狀態 $s^{(2)}$ 上操作。在此上下文中的規劃對應於在抽象狀態 $s_{x}^{(2)}$ 和 $s_{y}^{(2)}$ 之間找到最小能量的測地線，產生粗軌跡，即計劃。同時，較低級別將此軌跡細化為細粒度預測 $s_{t}^{(1)}$，最小化以高級計劃為條件的子能量。整體行為通過層次能量下降而出現，其中每一層強制其預測與上一層之間的一致性。</p>
+<p>換句話說，高級規劃計算抽象潛在空間中的軌跡，以最小化能量（即最可能和成本最低的轉移），而較低級別填入物理細節。</p>
+<p>正式地，層次化 JEPA 的訓練目標為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\min_{{z_{t}}}\sum_{l=1}^{L}\sum_{t}C^{(l)}\big(s_{t}^{(l)},s_{t+1}^{(l)},z_{t}^{(l)}\big),$</th>
+<th></th>
+<th>(29)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中每個 $C^{(l)}$ 代表在級別 $l$ 處在抽象狀態之間移動的能量成本，且通過此層次結構的梯度產生跨尺度的連貫計劃。</p>
+<h4 id="132-i-jepa">1.3.2 I-JEPA</h4>
+<p>圖像 JEPA（Image-JEPA, I-JEPA）[2] 擴展 JEPA 以通過從可見上下文塊預測掩蔽圖像區域的潛在特徵來學習語義圖像表示。</p>
+<p>在 I-JEPA 中，圖像 $y$ 被分成非重疊的塊，其中單個大塊被採樣為上下文，而多個較小的塊被採樣為目標。上下文塊 $x$ 被餵入上下文編碼器 $E_{\theta}(\cdot)$ 以獲得塊級潛在表示 $s_{x}$，而目標塊由具有 EMA 權重的目標編碼器 $\bar{E}<em>{\theta}(\cdot)$ 處理，以產生目標嵌入 $s</em>{y}$。預測器網路 $P_{\phi}(\cdot)$ 接收上下文表示 $s_{x}$ 以及表示每個目標塊空間位置的位置掩蔽標記 ${m_{j}}<em>{j\in B</em>{i}}$，並預測對應的特徵向量 $\hat{s}<em>{y}=P</em>{\phi}(s_{x},{m_{j}}<em>{j\in B</em>{i}})$ 針對這些區域。</p>
+<p>訓練目標最小化目標塊的預測表示與目標表示之間的平均平方距離，在資料集 $\mathcal{D}$ 中的所有採樣塊和訓練樣本上平均：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\min_{\theta,\phi}\;\mathbb{E}<em>{(x,y)\sim\mathcal{D}}\Bigg[\frac{1}{M}\sum</em>{i=1}^{M}\sum_{j\in B_{i}}\Big|P_{\phi}\big(E_{\theta}(x),{m_{j}}<em>{j\in B</em>{i}}\big)-\bar{E}<em>{\theta}(y)</em>{j}\Big|_{2}^{2}\Bigg].$</th>
+<th></th>
+<th>(30)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此處，$M$ 表示目標塊的數量，$\mathbb{E}[\cdot]$ 表示對所有訓練樣本 $(x,y)$ 的期望（平均），損失衡量表示級別的預測誤差而非像素級重構，允許 I-JEPA 學習高度語義的、非生成性表示。</p>
+<h4 id="133-v-jepa">1.3.3 V-JEPA</h4>
+<p>視頻 JEPA（Video-JEPA, V-JEPA）[4] 和 V-JEPA 2 [3] 擴展 JEPA 以通過從可見上下文區域預測掩蔽的 tubelet 特徵來學習時空視頻表示。</p>
+<p>在 V-JEPA 和 V-JEPA 2 中，視頻片段 $y$ 被標記化為時空塊（tubelets），其中這些塊的子集被掩蔽（替換為掩蔽標記）。未被掩蔽的塊形成上下文視圖，而掩蔽的塊形成目標視圖。觀測（上下文）編碼器 $E_{\theta}(\cdot)$ 處理掩蔽版本 $x$（包含可見和掩蔽標記）並為所有位置（包括掩蔽位置）產生潛在嵌入。但是，預測器 $P_{\phi}(\cdot)$ 僅關注掩蔽位置。具有 EMA 權重的目標編碼器 $\bar{E}<em>{\theta}(\cdot)$ 計算完整（未掩蔽）輸入的目標嵌入 $s</em>{y}$。預測器接收上下文表示 $s_{x}=E_{\theta}(x)$ 以及掩蔽標記指示器 $\Delta_{y}$，並為每個掩蔽塊位置預測特徵向量 $\hat{s}_{y}$。</p>
+<p>訓練目標是最小化掩蔽區域的預測表示與目標編碼器的目標表示之間的 $L_{1}$ 距離，在資料集 $\mathcal{D}$ 上平均：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\min_{\theta,\phi}\;\mathbb{E}<em>{(x,\Delta</em>{y},y)\sim\mathcal{D}}\left|P_{\phi}\big(E_{\theta}(x),\Delta_{y}\big)-\bar{E}<em>{\theta}(y)\right|</em>{1}$</th>
+<th></th>
+<th>(31)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbb{E}[\cdot]$ 表示對所有訓練樣本 $(x,\Delta_{y},y)$ 的期望（平均）。</p>
+<p>即，</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\min_{\theta,\phi}\;\mathbb{E}<em>{(s</em>{x},\Delta_{y},s_{y})\sim\mathcal{D}}\left[\left|\hat{s}<em>{y}-s</em>{y}\right|<em>{1}\right],~\text{其中 }\hat{s}</em>{y}=P_{\phi}(s_{x},\Delta_{y}).$</th>
+<th></th>
+<th>(32)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>因此測量 $\hat{s}<em>{y}$ 和 $s</em>{y}$ 之間 $L_{1}$ 距離的損失函數 $\mathcal{L}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}(\theta,\phi)=\left|P_{\phi}\big(E_{\theta}(x),\Delta_{y}\right)-\bar{E}<em>{\theta}(y)\right|</em>{1}$</th>
+<th></th>
+<th>(33)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>V-JEPA 2-AC</strong></p>
+<p>動作條件變體（V-JEPA 2-AC）作為 V-JEPA 2 的下游擴展，預測以代理動作為條件的未來潛在表示。</p>
+<p>作為逐步（1 步預測）公式化，V-JEPA 2-AC 改變來自 V-JEPA 2 的凍結編碼器 $E(\cdot)$，該編碼器在無標籤視頻上預訓練，以將當前觀測 $x_{t}$ 編碼為潛在表示 $s_{t}^{x}$ 並將未來目標 $x_{t+1}$ 編碼為 $s_{t+1}^{x}$。動作條件預測器 $P_{\phi}(\cdot)$ 接收當前潛在 $s_{t}^{x}$ 和動作 $a_{t}$ 作為輸入，預測下一狀態潛在表示 $\hat{s}<em>{t+1}^{x}$。潛在空間中的 $L</em>{1}$ 損失然後訓練預測器將其預測的下一狀態表示與編碼的未來表示對齊：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}_{\text{AC}}(\phi)$</th>
+<th>$=\left|P_{\phi}\big(E(x_{t}),a_{t}\big)-E(x_{t+1})\right|_{1}$</th>
+<th></th>
+<th>(34)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>$=\left|\hat{s}<em>{t+1}^{x}-s</em>{t+1}^{x}\right|_{1}.$</td>
+<td></td>
+<td>(35)</td>
+</tr>
+</tbody>
+</table>
+<p>在多步展開設置中，V-JEPA 2-AC 將單步公式化擴展到在時間範圍 $T$ 上預測一系列未來潛在表示，以動作序列為條件。</p>
+<p>我們從 Droid 資料集 [39] 中隨機採樣 4 秒的視頻片段迷你批次，為簡單起見，丟棄任何短於 4 秒的視頻，留下我們一個包含不足 62 小時視頻的較小資料集子集。視頻片段以 $256 \times 256$ 的解析度和 4 fps 的幀速率採樣，產生 16 幀片段 $(x_{t})<em>{t=1}^{16}$，其中每個 $x</em>{t}$ 代表單個視頻幀。每個觀測中機器人末端執行器狀態由序列 $(s_{t}^{e})<em>{t=1}^{16}$ 表示，其中 $s</em>{t}^{e}$ 是相對於機器人基座定義的實值 7D 向量。我們通過計算相鄰幀之間的末端執行器狀態變化來構建動作序列 $(a_{t})<em>{t=1}^{15}$。我們使用 V-JEPA 2 編碼器 $E(\cdot)$ 作為圖像編碼器，並在給定片段中獨立編碼每個幀以獲得特徵圖序列 $(s</em>{t}^{x})<em>{t=1}^{16}$。觀測特徵圖、末端執行器狀態和動作的序列以時間交錯方式為 $(s</em>{t}^{x},s_{t}^{e},a_{t})<em>{t=1}^{15}$，並用 transformer 預測器網路 $P</em>{\phi}(\cdot)$ 處理，以獲得下一狀態表示預測的序列 $(s_{t+1}^{x})_{t=1}^{15}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$(\hat{s}<em>{t+1}^{x})</em>{t=1}^{15}=P_{\phi}!\big((s_{t}^{x},s_{t}^{e},a_{t})_{t=1}^{15}\big).$</th>
+<th></th>
+<th>(36)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>教師強制損失訓練預測器 $P_{\phi}(\cdot)$ 通過最小化預測潛在表示 $\hat{s}<em>{t+1}^{x}$ 與每個時間步 $t$ 處編碼的地面真實潛在 $s</em>{t+1}^{x}$ 之間的 $L_{1}$ 距離來準確執行單步未來預測：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}_{\text{TF}}(\phi)$</th>
+<th>$=\frac{1}{T}\sum_{t=1}^{T}\left|P_{\phi}(E(x_{t}),s_{t}^{e},a_{t})-E(x_{t+1})\right|_{1}$</th>
+<th></th>
+<th>(37)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>$=\frac{1}{T}\sum_{t=1}^{T}\left|\hat{s}<em>{t+1}^{x}-s</em>{t+1}^{x}\right|_{1},~\text{其中 }T=15.$</td>
+<td></td>
+<td>(38)</td>
+</tr>
+</tbody>
+</table>
+<p>展開損失涉及將預測器的輸出反饋作為輸入，允許模型被訓練以提前預測多個時間步。在這種情況下，我們設計兩步展開損失以改進模型在推理期間執行自迴歸展開的能力。我們現在可以將展開損失表示為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}_{\text{rollout}}(\phi)$</th>
+<th>$=\left|P_{\phi}(E(x_{t}),s_{t}^{e},(a_{t})<em>{t}^{t+n})-E(x</em>{t+n+1})\right|_{1},$</th>
+<th></th>
+<th>(39)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>$=\left|P_{\phi}(s_{t}^{x},s_{t}^{e},a_{t},a_{t+1})-s_{t+2}^{x})\right|_{1},$</td>
+<td></td>
+<td>(40)</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>$=\left|\hat{s}<em>{t+2}^{x}-s</em>{t+2}^{x}\right|_{1},~\text{其中 }n=1.$</td>
+<td></td>
+<td>(41)</td>
+</tr>
+</tbody>
+</table>
+<p>因此，總損失為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{AC}}(\phi)=\mathcal{L}</em>{\text{TF}}(\phi)+\mathcal{L}_{\text{rollout}}(\phi).$</th>
+<th></th>
+<th>(42)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>推理</strong></p>
+<p>訓練後，我們可以使用凍結編碼器 $E$ 和預測器 $P$ 執行基於能量的規劃。此預測器充當世界模型，能夠想像當應用動作序列時潛在表示如何演變。在測試時，不訓練任何權重，相反，我們搜尋動作序列以最小化想像未來與目標潛在表示之間的目標條件能量成本。</p>
+<p>給定當前觀測 $x_{1}$、當前末端執行器狀態 $s_{1}^{e}$、目標目標圖像 $x_{1+T}$ 和規劃範圍 $T$，我們編碼當前和目標觀測為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s_{1}^{x}=E(x_{1}),\hskip 28.80008pts_{1+T}^{x}=E(x_{1+T}).$</th>
+<th></th>
+<th>(43)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>然後我們定義 $L_{1}$ 能量成本函數：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$C((\hat{a}<em>{t})</em>{t=1}^{T};s_{1}^{e},s_{1}^{x},s_{1+T}^{x})=\left|P((\hat{a}<em>{t})</em>{t=1}^{T};s_{1}^{e},s_{1}^{x})-s_{1+T}^{x}\right|_{1}.$</th>
+<th></th>
+<th>(44)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>最優動作序列通過最小化此成本獲得：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$(a_{t}^{*})<em>{t=1}^{T}=\arg\min</em>{(\hat{a}<em>{t})</em>{t=1}^{T}}C((\hat{a}<em>{t})</em>{t=1}^{T};s_{1}^{e},s_{1}^{x},s_{1+T}^{x}).$</th>
+<th></th>
+<th>(45)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>因此，預測器被用來想像未來潛在軌跡，規劃簡化為找到最小化目標嵌入潛在 $L_{1}$ 距離的動作序列。</p>
+<p>V-JEPA 2-AC 使用交叉熵方法（Cross-Entropy Method, CEM）[23]，具有 800 個樣本和 10 次反覆，以在每個規劃步驟高效地最小化 $C$，如演算法 1 所示。它在重新規劃之前僅在機器人上執行第一個動作，如同在遞迴地平線控制中一樣，並且僅在 $T=1$ 的範圍上進行測試。</p>
+<p>演算法 1 使用交叉熵方法（CEM）的基於能量的規劃</p>
+<p>換句話說，在推理期間，預測器 $P$ 充當用於基於能量規劃的世界模型，其中在每一步，CEM 搜尋動作序列以最小化想像未來與目標表示之間的潛在空間成本 $C$，在重新規劃之前僅執行第一個動作 $a_{1}^{*}$。</p>
+<h3 id="14-world-modeling">1.4 World Modeling 範式</h3>
+<p>有兩種典型的目標條件式 world modeling 方法：生成式 world models [ 46 , 59 , 63 ] 和預測式 world models [ 41 , 2 , 29 , 4 , 3 ] 。</p>
+<p>生成式 world models。</p>
+<p>生成式 world models 通常建立在自迴歸（AR）Transformer 或半自迴歸（自迴歸擴散）模型 ρ \rho 之上，該模型觀察視覺上下文 x t x_{t}，並自迴歸地預測潛在向量 z t z_{t} 和下一幀 x ^ t + 1 \hat{x}_{t+1} ：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>( z t , x ^ t + 1 ) = ρ ​ ( x t ) . (z_{t},\hat{x}<em>{t+1})=\rho(x</em>{t}).</th>
+<th></th>
+<th>(46)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>它們通常依賴於一個單獨訓練的逆動力學模型（IDM）π \pi [ 67 ]，該模型將配對 ( x t , z t , x ^ t + 1 ) (x_{t},z_{t},\hat{x}_{t+1}) 映射到明確的動作 [ 80 , 10 , 73 ] ：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>a t = π ​ ( x t , z t , x ^ t + 1 ) . a_{t}=\pi(x_{t},z_{t},\hat{x}_{t+1}).</th>
+<th></th>
+<th>(47)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>換句話說，這是環境動力學的單步逆映射。因此，它一次只能預測一步，因為它不知道完整的軌跡結構或多步的能量景觀。</p>
+<p>此外，它必須明確生成或重構下一幀（或解碼為像素的潛在視覺標記），並通過預測隱含動作後世界的樣貌來執行規劃，這與第 1.3 節提到的挑戰相關。</p>
+<p>預測式 world models</p>
+<p>預測式 world models 不是生成式的，它們不對像素分佈進行建模。相反，它們在潛在空間中學習一個能量景觀，該景觀衡量當前狀態和目標狀態之間的相容性。</p>
+<p>然而，預測式 world models 需要明確的目標觀察 x t + 1 x_{t+1} 來計算其目標條件式能量，如方程式 44 所示，並使用 CEM 最小化規劃中的能量成本。</p>
+<p>這種設計權衡是有意的，而非偶然。如第 1.3 節所提，我們需要避免在規劃過程中進行像素預測，因為像素是嘈雜、不重要且計算昂貴的 [ 41 ]。因此，預測式 world models 不是為了成為自給自足的模擬器。此外，與只根據連續狀態預測單個動作的 IDM 不同，CEM 透過搜尋候選動作序列以最小化潛在空間能量成本來執行多步軌跡最佳化，從而實現長視界規劃而非單步反應控制。</p>
+<h3 id="15">1.5 雙曲線學習</h3>
+<p>雙曲空間（記為 $\mathbb{H}^{n}$）是一個負曲率的黎曼流形，具有指數型體積成長和鞍形幾何特性 [11]。與歐幾里得空間不同（其中平行線保持等距），雙曲空間中的直線發散，體積隨著半徑呈指數增長。這個性質使得雙曲幾何自然地適合表示階層結構或樹狀資料結構 [51, 55]，例如世界模型的階層規劃，其中節點數量隨著深度呈指數增長。在深度學習中，雙曲空間通過壓縮大規模差異同時保持細粒度局部關係，使得能夠以指數級的效率表示層級結構。因此，它已廣泛應用於表示學習 [51, 83, 25, 55]、電腦視覺和圖形 [30]，這些領域需要建模多層級的非歐幾里得結構。</p>
+<p>雙曲空間 $\mathbb{H}^{n}$ 是一個抽象的黎曼流形，具有常數負曲率，不依賴於任何坐標系統。為了在計算中表示這個曲面空間中的點，引入了坐標模型將 $\mathbb{H}^{n}$ 映射到歐幾里得空間，同時保持其幾何結構。兩個最常見的模型是龐加萊球模型 $\mathbb{B}^{n}$ [51, 83, 30, 13] 和洛倫茲（或雙曲面）模型 $\mathbb{L}^{n}$ [25, 55]，兩者都提供同一流形的等距表示，但在坐標系統和數值性質上有所不同。</p>
+<h4 id="151">1.5.1 龐加萊球模型</h4>
+<p>龐加萊球模型 $\mathbb{B}^{n}$ 將雙曲空間表示為嵌入在歐幾里得空間中的開單位球，定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbb{B}^{n}={z\in\mathbb{R}^{n}:|z|&lt;1}.$</th>
+<th></th>
+<th>(48)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>它配備了一個黎曼度量，該度量編碼常數負曲率，確保歐幾里得距離被重新加權以反映雙曲幾何。每個點 $z$ 嚴格位於球內，距離使用雙曲度量而不是歐幾里得範數來測量。這種有界表示使得幾何直觀且適於視覺化，因為樹狀層級自然適應有限域內，其中邊界對應於無窮遠距離。
+它限制嵌入為歸一化半徑，但請注意在龐加萊模型中「歸一化」意味著保持點在單位球內，而不是球面上的單位範數（那對應於超球面情況）。</p>
+<p><strong>測地線</strong></p>
+<p>龐加萊球雙曲距離（測地線），即兩個點 $u,v\in\mathbb{B}^{n}$ 之間的距離，是垂直於球邊界的圓弧。
+其長度由雙曲距離函數給出 [51, 28]</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$d_{\mathbb{H}}(u,v)=\operatorname{arcosh}!\left(1+2\frac{|u-v|^{2}}{(1-|u|^{2})(1-|v|^{2})}\right).$</th>
+<th></th>
+<th>(49)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此度量測量沿著曲面流形的最短路徑而不是在歐幾里得空間中的路徑，捕捉了當點接近龐加萊球邊界時距離的指數增長。</p>
+<p><strong>指數映射</strong></p>
+<p>在黎曼幾何中，指數映射</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\exp_{x}:\mathbf{T}_{x}\mathbb{H}^{n}\rightarrow\mathbb{H}^{n}$</th>
+<th></th>
+<th>(50)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>取一個切向量 $v\in\mathbf{T}<em>{x}\mathbb{H}^{n}$（點 $x$ 處的切空間）並沿著從 $x$ 開始、方向為 $v$ 的測地線移動它，在雙曲度量下遍歷距離等於 $|v|$ 的路程。換句話說，$\exp</em>{x}(v)$ 可以理解為從 $x$ 開始，沿著流形沿著 $v$ 的方向行走距離 $|v|$。此操作將局部歐幾里得更新 $v$ 映射到全局流形坐標，確保更新與雙曲空間的幾何保持一致。在雙曲空間中，從切空間到流形的映射通過指數映射是一一對應的。儘管存在配備雙曲度量的流形使得此映射不是一一對應 [85]，龐加萊模型的雙曲空間保持了這種一一對應，確保了切空間和流形之間的明確關係。</p>
+<p>龐加萊球原點的指數映射（記為 $\exp_{0}(v)$）將歐幾里得向量直接映射到雙曲空間，這對初始化特別有用。它定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\exp_{0}(v)=\tanh(|v|)\frac{v}{|v|}.$</th>
+<th></th>
+<th>(51)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此公式簡潔是因為原點處的切空間完美對齊於歐幾里得空間，使歐幾里得和雙曲表示之間的映射直接明了。</p>
+<p>從一般點 $x\in\mathbb{B}^{n}$ 的指數映射必須考慮圍繞 $x$ 的曲率。它沿著測地線沿著切向量 $v$ 的方向移動點 $x$。與原點情況的關鍵區別在於 $x$ 不是原點，所以我們需要一種方式在雙曲幾何下將 $v$ 「相加」到 $x$。在歐幾里得空間中，從點 $x$ 沿著向量 $v$ 移動只需簡單計算為 $x+v$。然而，在雙曲幾何中，向量加法被莫比烏斯加法替代，記為 $x\oplus v$。因此，一般指數映射表示為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\exp_{x}(v)=x\oplus\left(\tanh!\left(\frac{\lambda_{x}|v|}{2}\right)\frac{v}{|v|}\right),$</th>
+<th></th>
+<th>(52)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\lambda_{x}=\frac{2}{1-|x|^{2}}$</th>
+<th></th>
+<th>(53)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>是局部重新調整距離的共形因子。此公式確保運算尊重雙曲曲率而不是歐幾里得線性。</p>
+<p>兩個向量 $x$ 和 $y$ 的莫比烏斯加法定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$x\oplus y=\frac{(1+2\langle x,y\rangle+|y|^{2})x+(1-|x|^{2})y}{1+2\langle x,y\rangle+|x|^{2}|y|^{2}}.$</th>
+<th></th>
+<th>(54)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>代入 $y=\tanh!\left(\frac{\lambda_{x}|v|}{2}\right)\frac{v}{|v|}$，我們得到雙曲空間中 $\exp_{x}(v)$ 的顯式表達式</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\exp_{x}(v)=\frac{\big(1+2\alpha\langle x,\tfrac{v}{|v|}\rangle+\alpha^{2}\big)x+(1-|x|^{2})\alpha\tfrac{v}{|v|}}{1+2\alpha\langle x,\tfrac{v}{|v|}\rangle+\alpha^{2}|x|^{2}},$</th>
+<th></th>
+<th>(55)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\alpha=\tanh!\left(\frac{\lambda_{x}|v|}{2}\right),\qquad\lambda_{x}=\frac{2}{1-|x|^{2}}.$</th>
+<th></th>
+<th>(56)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此公式明確展示了指數映射如何將曲率調整後的縮放（通過 $\lambda_{x}$ 和 $\tanh$）與 $x$ 和 $v$ 在莫比烏斯加法下的非線性組合相結合，確保與雙曲幾何的一致性。</p>
+<p><strong>對數映射</strong></p>
+<p>對數映射作為指數映射的反函數，將點從流形映射回給定點 $x\in\mathbb{B}^{n}$ 處的切空間。形式上，它定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\log_{x}:\mathbb{B}^{n}\rightarrow\mathbf{T}_{x}\mathbb{H}^{n},$</th>
+<th></th>
+<th>(57)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>它取一個點 $y\in\mathbb{B}^{n}$ 並返回一個切向量 $v\in\mathbf{T}<em>{x}\mathbb{H}^{n}$，當通過指數映射重新投影時，滿足 $\exp</em>{x}(v)=y$。此操作在 $x$ 周圍局部線性化流形，允許在切空間中執行微分計算（如基於梯度的最優化）。</p>
+<p>龐加萊球原點的對數映射（記為 $\log_{0}(y)$）將點 $y\in\mathbb{B}^{n}$ 轉換回其歐幾里得切向量，定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\log_{0}(y)=\operatorname{arctanh}(|y|)\frac{y}{|y|}.$</th>
+<th></th>
+<th>(58)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此公式是原點處指數映射的反函數，滿足 $\exp_{0}(\log_{0}(y))=y$，並且計算簡單因為原點處的切空間與 $\mathbb{R}^{n}$ 一致。</p>
+<p>對於一般點 $x\in\mathbb{B}^{n}$，對數映射必須考慮 $x$ 周圍的局部曲率。它可以使用莫比烏斯加法的反函數表示為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\log_{x}(y)=\frac{2}{\lambda_{x}}\operatorname{arctanh}!\big(|{-x}\oplus y|\big)\frac{{-x}\oplus y}{|{-x}\oplus y|},$</th>
+<th></th>
+<th>(59)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\lambda_{x}=\frac{2}{1-|x|^{2}}$</th>
+<th></th>
+<th>(60)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>是與指數映射中相同的共形因子，$-x\oplus y$ 表示與 $x$ 的反函數的莫比烏斯加法。</p>
+<p>將莫比烏斯加法的定義展開到對數映射表達式中，我們得到龐加萊球模型中 $\log_{x}(y)$ 的顯式公式。
+代入方程 54 到方程 59，我們首先計算中間項 $-x\oplus y$ 為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>${-x}\oplus y=\frac{(1-2\langle x,y\rangle+|y|^{2})(-x)+(1-|x|^{2})y}{1-2\langle x,y\rangle+|x|^{2}|y|^{2}}.$</th>
+<th></th>
+<th>(61)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>然後，對數映射可以明確寫為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\log_{x}(y)=\frac{2}{\lambda_{x}}\,\operatorname{arctanh}!\left(\frac{|N(x,y)|}{D(x,y)}\right)\,\frac{N(x,y)}{|N(x,y)|},$</th>
+<th></th>
+<th>(62)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$N(x,y)$</th>
+<th>$=\big(1-2\langle x,y\rangle+|y|^{2}\big)(-x)+\big(1-|x|^{2}\big)\,y,$</th>
+<th></th>
+<th>(63)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>$D(x,y)$</td>
+<td>$=1-2\langle x,y\rangle+|x|^{2}|y|^{2},\quad\lambda_{x}=\frac{2}{1-|x|^{2}}.$</td>
+<td></td>
+<td>(64)</td>
+</tr>
+</tbody>
+</table>
+<p>此展開形式明確地用 $x$ 和 $y$ 表達對數映射，展示了龐加萊球的非線性幾何如何通過莫比烏斯加法修改向量位移。它提供了在 $x$ 處的切向量，指向 $y$ 且其大小對應於它們之間的雙曲距離。</p>
+<p>此公式確保 $\log_{x}(y)$ 返回在 $x$ 處的切向量，其指數映射精確恢復 $y$，即 $\exp_{x}(\log_{x}(y))=y$。總之，指數和對數映射建立了歐幾里得切空間和曲面流形之間的光滑且可逆的對應，在雙曲空間中實現一致的最優化和表示學習。</p>
+<p><strong>曲率</strong></p>
+<p>上述公式對應於單位曲率情況，其中曲率固定為 $K=-1$。
+一般而言，雙曲空間具有常數負曲率，通常寫為 $K=-c$，其中 $c&gt;0$。
+當 $c=1$ 時，空間的曲率為 $-1$，這是大多數研究採用的歸一化慣例。
+一般形式將 $c$ 保持為自由曲率參數，因此球的半徑變為 $1/\sqrt{c}$。
+這允許不同程度的曲率——當 $c\to 0$ 時更平坦，當 $c\to\infty$ 時曲率更大。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbb{B}^{n}={z\in\mathbb{R}^{n}:c|z|^{2}&lt;1},$</th>
+<th></th>
+<th>(65)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中半徑為 $1/\sqrt{c}$ 且曲率 $K=-c$。
+黎曼度量由共形因子縮放</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\lambda_{x}=\frac{2}{1-c|x|^{2}},$</th>
+<th></th>
+<th>(66)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其定義度量張量為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{G}<em>{x}=\lambda</em>{x}^{2}\mathbf{I}.$</th>
+<th></th>
+<th>(67)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在曲率 $K=-c$（$c&gt;0$）下龐加萊球雙曲距離的一般形式 [13] 在兩點 $u,v\in\mathbb{B}^{n}$ 之間給出為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$d_{\mathbb{H}}(u,v)=\frac{1}{\sqrt{c}}\operatorname{arcosh}!\left(1+2c\frac{|u-v|^{2}}{(1-c|u|^{2})(1-c|v|^{2})}\right).$</th>
+<th></th>
+<th>(68)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>帶有曲率 $c$ 的指數映射表示為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\exp_{x}(v)=x\oplus_{c}\left(\tanh!\left(\frac{\sqrt{c}\,\lambda_{x}|v|}{2}\right)\frac{v}{\sqrt{c}\,|v|}\right),$</th>
+<th></th>
+<th>(69)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\lambda_{x}=\frac{2}{1-c|x|^{2}},$</th>
+<th></th>
+<th>(70)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>且 $\oplus_{c}$ 表示曲率 $c$ 下的莫比烏斯加法。</p>
+<p>兩個向量 $x$ 和 $y$ 在曲率 $c$ 下的莫比烏斯加法定義為 [28, 13]</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$x\oplus_{c}y=\frac{(1+2c\langle x,y\rangle+c|y|^{2})x+(1-c|x|^{2})y}{1+2c\langle x,y\rangle+c^{2}|x|^{2}|y|^{2}}.$</th>
+<th></th>
+<th>(71)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>因此在曲率 $c$ 下雙曲空間中 $\exp_{x}(v)$ 的顯式表達式由以下給出</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\exp_{x}(v)=\frac{\big(1+2c\alpha\langle x,\tfrac{v}{|v|}\rangle+c\alpha^{2}|v|^{2}\big)x+(1-c|x|^{2})\alpha v}{1+2c\alpha\langle x,\tfrac{v}{|v|}\rangle+c^{2}\alpha^{2}|x|^{2}|v|^{2}},$</th>
+<th></th>
+<th>(72)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\alpha=\tanh!\left(\frac{\sqrt{c}\,\lambda_{x}|v|}{2}\right),\qquad\lambda_{x}=\frac{2}{1-c|x|^{2}}.$</th>
+<th></th>
+<th>(73)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>對於一般曲率 $K=-c$（$c&gt;0$），對數映射必須考慮 $x$ 周圍的局部曲率。它可以使用莫比烏斯加法的反函數表示為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\log_{x}(y)=\frac{2}{\lambda_{x}\sqrt{c}}\,\operatorname{arctanh}!\big(\sqrt{c}|{-x}\oplus_{c}y|\big)\frac{{-x}\oplus_{c}y}{|{-x}\oplus_{c}y|},$</th>
+<th></th>
+<th>(74)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\lambda_{x}=\frac{2}{1-c|x|^{2}}$</th>
+<th></th>
+<th>(75)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>是共形因子，$-x\oplus_{c}y$ 表示曲率 $-c$ 下的莫比烏斯加法。</p>
+<p>將莫比烏斯加法的定義展開到對數映射表達式中，我們得到帶有曲率 $-c$ 的一般龐加萊球模型中 $\log_{x}(y)$ 的顯式公式。代入 $c$ 相依的莫比烏斯加法（方程 71）
+到方程 74，我們首先計算中間項 $-x\oplus_{c}y$ 為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>${-x}\oplus_{c}y=\frac{(1-2c\langle x,y\rangle+c|y|^{2})(-x)+(1-c|x|^{2})y}{1-2c\langle x,y\rangle+c^{2}|x|^{2}|y|^{2}}.$</th>
+<th></th>
+<th>(76)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>然後，對數映射可以明確寫為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\log_{x}(y)=\frac{2}{\lambda_{x}\sqrt{c}}\,\operatorname{arctanh}!\left(\sqrt{c}\frac{|N_{c}(x,y)|}{D_{c}(x,y)}\right)\,\frac{N_{c}(x,y)}{|N_{c}(x,y)|},$</th>
+<th></th>
+<th>(77)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$N_{c}(x,y)$</th>
+<th>$=\big(1-2c\langle x,y\rangle+c|y|^{2}\big)(-x)+\big(1-c|x|^{2}\big)\,y,$</th>
+<th></th>
+<th>(78)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>$D_{c}(x,y)$</td>
+<td>$=1-2c\langle x,y\rangle+c^{2}|x|^{2}|y|^{2},\quad\lambda_{x}=\frac{2}{1-c|x|^{2}}.$</td>
+<td></td>
+<td>(79)</td>
+</tr>
+</tbody>
+</table>
+<p>當 $c=1$ 時，此表達式化簡為方程 59 中給定的單位曲率對數映射形式。</p>
+<p><strong>洛倫茲模型</strong></p>
+<p>洛倫茲模型 $\mathbb{L}^{n}$ 將雙曲空間表示為嵌入在閔可夫斯基空間 $\mathbb{R}^{n+1}$ 中的雙葉超曲面的上葉，定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbb{L}^{n}={p\in\mathbb{R}^{n+1}:\langle p,p\rangle_{L}=-1/\kappa,\,p_{0}&gt;0},$</th>
+<th></th>
+<th>(80)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\langle p,q\rangle_{L}=-p_{0}q_{0}+\sum_{i=1}^{n}p_{i}q_{i}$ 是洛倫茲內積。此公式無界且代數上便利，允許測地線距離和穩定梯度最優化的閉式計算。由於其數值穩健性和指數和對數映射的簡單解析表達式，洛倫茲模型在雙曲表示學習中被廣泛採用，特別是在基於蘊含和階層視覺語言模型中。</p>
+<h3 id="16">1.6 價值函數</h3>
+<p>強化學習（Reinforcement Learning, RL）是指在環境中學習行動，以最大化未來獎賞的過程。
+RL 中的價值函數估計智能體從特定狀態或狀態-行動對中可以獲得的預期累積未來獎賞[70]。它幫助智能體決定哪些行動在長期內更為理想，引導其做出能最大化其長期總獎賞的決策。
+主要有兩種類型：狀態價值函數 $V(s)$，用於預測給定狀態的價值；以及狀態-行動價值函數 $V(s,a)$，用於預測在給定狀態下採取特定行動的價值。</p>
+<p><strong>狀態價值函數。</strong></p>
+<p>價值函數 $V(s)$ 表示從特定狀態 $s$ 開始並遵循特定策略（該策略定義了智能體選擇行動的策略）的預期回報（累積獎賞）。它表示智能體處於某一特定狀態的優劣程度。例如，如果一個智能體位於迷宮中的特定位置，價值函數 $V(s)$ 表示假設其繼續遵循當前策略，從該點開始直到到達目標所將獲得的預期總獎賞。</p>
+<p><strong>狀態-行動價值函數。</strong></p>
+<p>價值函數 $V(s,a)$ 或 $Q(s,a)$，又稱為行動價值函數，表示從特定狀態 $s$ 開始、採取行動 $a$，然後遵循特定策略的預期回報（累積獎賞）。它表示智能體在給定狀態下採取特定行動的優劣程度。例如，如果一個智能體位於迷宮中的特定位置，函數 $V(s,a)$ 表示通過在該點選擇特定行動，然後遵循其當前策略直到到達目標所將獲得的預期總獎賞。</p>
+<p><strong>正式定義。</strong></p>
+<p>給定狀態 $s_{t}$、行動 $a_{t}$、定義智能體如何行動的策略 $\pi(a\mid s)$、獎賞函數 $r(s,a)$，以及折扣因子 $\gamma\in[0,1)$，策略 $\pi$ 下的狀態價值函數正式定義為</p>
+<p>|  | $V^{\pi}(s_{t})=\mathbb{E}<em>{\pi}\left[\sum</em>{k=0}^{\infty}\gamma^{k}\,r(s_{t+k},a_{t+k})\,\middle|\,s_{t}\right]$. | (81) |
+| --- | --- | --- |</p>
+<p>它測量智能體從狀態 $s_{t}$ 開始並此後遵循策略 $\pi$ 時將接收的預期累積獎賞。</p>
+<p><strong>最優價值函數。</strong></p>
+<p>如果智能體遵循最佳可能策略以最大化預期獎賞，我們將獲得最優價值函數：</p>
+<p>|  | $V^{*}(s_{t})=\max_{\pi}\,\mathbb{E}<em>{\pi}\left[\sum</em>{k=0}^{\infty}\gamma^{k}\,r(s_{t+k},a_{t+k})\,\middle|\,s_{t}\right]$. | (82) |
+| --- | --- | --- |</p>
+<p>直觀地說，$V^{*}(s_{t})$ 量化了智能體從狀態 $s_{t}$ 開始並此後遵循最優策略時可以達到的最大預期累積獎賞。</p>
+<p><strong>Bellman 最優性方程。</strong></p>
+<p>價值函數編碼了行動的長期後果，並構成了強化學習推理的基礎[6]。一旦已知 $V^{<em>}(s)$，如果有一步轉移動態 $P(s^{\prime}\mid s,a)$，便可推導出最優策略。具體來說，最優策略 $\pi^{</em>}$ 滿足 Bellman 最優性方程：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\pi^{<em>}(s)=\arg\max_{a}\left[r(s,a)+\gamma\sum_{s^{\prime}}P(s^{\prime}\mid s,a)\,V^{</em>}(s^{\prime})\right]$.</th>
+<th>(83)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>這種遞迴關係表達了狀態的價值如何依賴於其後繼狀態的價值，從而捕捉了序列決策的本質。</p>
+<p><strong>解釋。</strong></p>
+<p>最優價值函數 $V^{*}(s)$ 可被視為狀態空間上的位勢場或能量地圖。具有高價值的狀態對應於理想的或低能態配置，更接近獎賞；而具有低價值的狀態代表不理想或高能態配置，距離獎賞更遠。從這一角度來看，最優行動可被解釋為沿著價值景觀的梯度朝著更高價值的區域（或更低能量的區域）行動。此類比將強化學習與基於能量的建模相聯繫，表明價值函數隱含地定義了一個能量表面，引導智能體朝向最優行為。</p>
+<p><strong>路徑價值函數。</strong></p>
+<p>在上述通用 RL 設定中，價值取決於最優策略下的未來獎賞。但如果我們將獎賞重新定義為狀態間移動的負能量成本 $-c$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$r(s,a,s^{\prime})=-c(s,s^{\prime})$,</th>
+<th>(84)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>且累積獎賞變為總負成本，則最優路徑價值函數 $V^{*}(s,s^{\prime})$ 對應於從 $s$ 到 $s^{\prime}$ 的最小累積成本的負值[19]。</p>
+<p>在此情況下，最優路徑價值函數 $V^{*}(s,s^{\prime})$ 遵守三角不等式[57, 21, 49]：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle c(s_{1},s_{3})$</th>
+<th>$\displaystyle\leq c(s_{1},s_{2})+c(s_{2},s_{3})$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>$\displaystyle\Rightarrow\quad V^{*}(s_{1},s_{3})$</td>
+<td>$\displaystyle\geq V^{<em>}(s_{1},s_{2})+V^{</em>}(s_{2},s_{3})$.</td>
+<td>(85)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2_1">2 動機</h2>
+<p>世界狀態轉移（來自影片觀察）自然形成了適合在雙曲空間中表示的階層結構。令 $s_t$ 表示時間 $t$ 時的狀態，$\mathcal{A}$ 為一個離散動作集合，其基數為 $|\mathcal{A}|=B$。世界根據轉移 $s_{t+1}=f(s_{t},a_{t})$ 進行演化，其中 $a_{t}\in\mathcal{A}$。當預測 $d$ 步進入未來時，每個動作選擇產生一個不同的未來軌跡，導致 $N_{d}=B^{d}$ 個可能的未來狀態。這些未來形成一個指數分支樹，其中深度對應於預測視界，分支因子由動作空間決定。因此，未來世界狀態自然地被組織成階層結構：較小深度處的狀態代表粗略、高層級的抽象，而較大深度處的狀態對應於更精細、更詳細的未來。類似的動機也受到 [64] 的支持。</p>
+<h2 id="3_1">3 基準線詳情</h2>
+<p>如第 4.2 節主要內容所述，在程序規劃（PP）和視覺規劃與視頻設定中，我們針對三類基準線進行評估。LLM 基礎方法依賴大型語言或視覺語言模型進行推理、指令跟隨和多步驟規劃。生成式（世界）模型通過生成像素或潛在視頻令牌並使用視覺展開來指導決策來執行規劃。預測式（世界）模型專注於純動作預測，直接估計未來動作序列，無需生成視覺幀。</p>
+<p>隨機選擇。遵循先前工作 [ 15 ]，動作從可用動作集中均勻隨機採樣以形成計劃，不考慮任務語境。</p>
+<p>基於檢索。遵循先前工作 [ 87 ]，給定開始和目標觀察，此方法通過最小化視覺特徵距離從訓練集中檢索最相似的軌跡。來自檢索示例的相應動作序列隨後被用作預測計劃。</p>
+<p><strong>LLM 基礎</strong></p>
+<p><strong>LFP（語言優先規劃）[ 42 ]</strong>。此方法首先將開始和目標觀察轉換為文本，然後提示大型語言模型推斷缺失的步驟。LLM 基於純語言推理而非視覺規劃來預測中間動作序列。</p>
+<p><strong>VidAssist [ 36 ]</strong>。此方法使用視覺語言模型從視頻中提取時間和空間線索，然後查詢大型語言模型以解釋這些線索並生成動作序列。LLM 將預測的步驟細化並結構化為連貫計劃，將視覺接地與基於語言的推理相結合。</p>
+<p><strong>SCHEMA [ 52 ]</strong>。此方法通過建模狀態如何隨時間演變來執行程序規劃。它通過跨模態對比學習將視覺觀察與文本狀態描述對齐，並使用 transformer 骨幹來表示狀態轉移。隨後使用大型語言模型對這些推斷的中間狀態進行推理並生成下一步動作，在教學視頻設定中啟用結構化的逐步規劃。</p>
+<p><strong>其他 VLM</strong>。我們還評估了多個大型視覺語言模型，包括 InternVL3.5-241B [ 76 ]、Qwen3-VL-Max [ 79 ]、Gemini 2.5 Pro [ 20 ] 和 GPT-5 [ 53 ]，在零樣本設定中使用它們直接從視頻觀察執行視覺推理和規劃，無需特定任務的訓練。</p>
+<p><strong>生成式（世界）模型</strong></p>
+<p><strong>DDN [ 15 ]</strong>。此方法使用具有兩個協調分支的自回歸結構：一個分支學習動作步驟的緊湊表示，另一個分支預測潛在特徵空間中的轉移。通過預測下一視覺狀態而非直接選擇動作，DDN 通過迭代幀預測來建模程序進度。</p>
+<p><strong>Int-MGAIL 和 Ext-MGAIL [ 7 ]</strong>。這些生成式模型通過對抗性訓練聯合學習潛在世界模型和動作策略來執行程序規劃，啟用以視覺目標狀態為條件的多步驟動作合成。</p>
+<p><strong>P3IV [ 86 ]</strong>。此基於 transformer 的模型使用可學習的記憶模組和對抗生成設定，類似於我們的方法，在單個前向傳遞中輸出所有動作步驟，而非順序生成它們。</p>
+<p><strong>PDPP [ 75 ]</strong>。此雙分支基於擴散的框架建模時間依賴性和動作轉移，並行生成完整動作序列，並在多個去噪階段上逐步細化以改進連貫性和邏輯結構。</p>
+<p><strong>KEPP [ 50 ]</strong>。此方法通過從訓練計劃學習的概率知識圖來納入結構化程序知識，其作為步驟排序的外部指導。KEPP 在單一傳遞中預測完整動作序列，監督有限，在教學視頻規劃中產生強大性能。</p>
+<p><strong>ActionDiffusion [ 61 ]</strong>。此基於擴散的方法通過迭代去噪潛在表示來生成完整動作序列，允許模型在多個步驟上細化預測並捕捉教學程序中的長期依賴性。</p>
+<p><strong>MTID [ 87 ]</strong>。此模型將程序規劃視為多模態軌跡生成問題，使用基於擴散的潛在策略來合成以視頻觀察為條件的完整動作序列，同時通過迭代去噪建模長期依賴性。</p>
+<p><strong>VideoWorld [ 59 ]</strong>。此自回歸框架逐步生成未來視頻幀以建模程序進度，使用預測視覺狀態來隱式指導展開的動作序列。</p>
+<p><strong>預測式（世界）模型</strong></p>
+<p><strong>WLTDO [ 27 ]</strong>。此遞迴神經網路模型直接從配對觀察生成動作序列，使用編碼特徵上的時間推理來預測有序程序步驟。</p>
+<p><strong>UAAA [ 1 ]</strong>。此雙階段方法通過將 RNN 與隱馬可夫模型結合來自回歸預測動作步驟，以在程序任務中建模時間不確定性和步驟轉移。</p>
+<p><strong>UPN [ 68 ]</strong>。此方法學習適合規劃的可微分潛在空間，通過在特徵空間中預測軌跡，並使用 softmax 輸出層將連續計劃表示轉換為離散動作步驟。</p>
+<p><strong>PlaTe [ 69 ]</strong>。此模型建立在 DDN 基礎上，將 transformer 模組引入其用於動作和狀態預測的雙分支架構中，但遵循與其他程序規劃方法不同的評估協定。</p>
+<p><strong>E3P [ 74 ]</strong>。此方法採用以事件為中心的公式，從視覺觀察推斷潛在事件並使用它們指導中間動作預測。通過事件感知提示和動作關係建模，E3P 改進了預測步驟的邏輯結構，並在程序規劃基準上達到強大性能。</p>
+<p><strong>V-JEPA 2 [ 3 ]</strong>。大規模預測世界模型，在一百萬小時未標籤視頻上預訓練，用於掩蔽潛在特徵預測。動作條件化後訓練啟用自回歸展開用於規劃，無需像素生成。</p>
+<h2 id="4_1">4 能量景觀</h2>
+<p>為了更好地說明 Euclidean 預測世界模型與我們的雙曲公式之間的差異，我們可視化給定潛在狀態周圍的能量景觀。</p>
+<p>Δ x 和 Δ y。</p>
+<p>在原始的 V-JEPA 2-AC 設置 [3] 中，Δ x 和 Δ y 代表 Cartesian 坐標中的物理末端執行器偏移。可視化展示了當末端執行器的目標位置沿著 Δ x 和 Δ y 軸變化時（同時保持垂直位移固定 Δ z=0），模型的能量如何變化。</p>
+<p>正式地，繪製的量為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s_{t+1}^{\mathrm{hyp}}=s_{t}+(\Delta x,\Delta y,0)$</th>
+<th></th>
+<th>(86)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>$\text{Energy}(\Delta x,\Delta y)=c(s_{t},s_{t+1}^{\mathrm{hyp}})$</td>
+<td></td>
+<td>(87)</td>
+</tr>
+</tbody>
+</table>
+<p>其中 c 表示在方程式 11 中定義的能量成本。</p>
+<p>在視覺規劃中，Δ x 和 Δ y 不再是物理位移。相反，它們代表潛在位移，用於探測世界模型圍繞視覺狀態的局部幾何。</p>
+<p>在 Euclidean 空間中，編碼器將觀測 $x_{t}$ 映射到潛在向量 $s_{t}^{x}\in\mathbb{R}^{n}$。為了可視化模型如何評估假設的未來狀態，V-JEPA 2 [3] 沿著兩個 Euclidean 軸擾動潛在表示。我們在潛在空間中選擇兩個正交歸一化方向 $u_{1},u_{2}\in\mathbb{R}^{n}$。一個自然的、語義對齊的選擇是：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$u_{1}=\frac{E_{\theta}(x_{t+T})-E_{\theta}(x_{t})}{\left\lVert E_{\theta}(x_{t+T})-E_{\theta}(x_{t})\right\rVert}$</th>
+<th></th>
+<th>(88)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>它代表從當前狀態朝向目標的方向（即沿著程序的進度）。</p>
+<p>第二個方向 $u_{2}$ 跨越與此進度方向正交的變化（即從另一個軌跡在同一步驟採樣，然後相對於 $u_{1}$ 進行正交歸一化）。</p>
+<p>然後，假設的下一個潛在狀態定義為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s^{\text{hyp}}<em>{t+1}=s^{x}</em>{t}+\Delta x\,u_{1}+\Delta y\,u_{2}$</th>
+<th></th>
+<th>(89)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>對應的能量景觀為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\text{Energy}(\Delta x,\Delta y)=\left\lVert s^{x}<em>{t+1}-s^{\text{hyp}}</em>{t+1}\right\rVert$</th>
+<th></th>
+<th>(90)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在 GeoWorld 中，編碼器將每個觀測 $x_{t}$ 映射到雙曲流形上的潛在表示 $s_{t,\mathbb{H}}^{x}$。為了探測圍繞此潛在狀態的局部幾何，我們掃過切空間 $\mathbf{T}_{0}\mathbb{H}^{n}$ 中的兩個正交歸一化方向，記為 $(\Delta x,\Delta y)$。每對坐標 $(\Delta x,\Delta y)$ 對應於在切空間中應用的小位移，然後通過指數映射投影到流形上：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s^{\text{hyp}}<em>{t+1,\mathbb{H}}=\exp</em>{0}!\big(s_{t}^{x}+\Delta x\,u_{1}+\Delta y\,u_{2}\big)$</th>
+<th></th>
+<th>(91)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $u_{1}$ 和 $u_{2}$ 在 $\mathbf{T}_{0}\mathbb{H}^{n}$ 中形成正交歸一化基底。因此，$(\Delta x,\Delta y)$ 描述潛在狀態的局部擾動，而不是像素空間偏移。</p>
+<p>能量景觀為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\text{Energy}<em>{\mathbb{H}}(\Delta x,\Delta y)=d</em>{\mathbb{H}}!\left(s^{x}<em>{t+1,\mathbb{H}},\;s^{\text{hyp}}</em>{t+1,\mathbb{H}}\right)$</th>
+<th></th>
+<th>(92)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="_3">可視化</h3>
+<p>在圖 1 中，我們從 COIN 資料集 [71] 中的「替換記憶晶片」(Replace Memory Chip) 任務的初始步驟選擇參考潛在狀態 $s_{t}$，並通過掃過繞著此狀態的兩個正交歸一化切空間方向 $(\Delta x,\Delta y)$ 來可視化局部能量幾何。圖 1 比較了 Euclidean（左）和雙曲（右）景觀。Euclidean 表面顯示平滑、幾乎對稱的拋物面，具有弱方向結構，表示 V-JEPA 2 將擾動視為同質的。相比之下，GeoWorld 中的雙曲表面形成更尖銳、曲率感知的盆地，具有更明顯的方向變化。這反映了 H-JEPA 編碼階層結構的能力：位於任務階層較高位置的狀態在雙曲上產生更大的距離，在規劃過程中創造更多信息豐富的能量梯度。</p>
+<p>這種曲率感知的能量景觀促進了更穩定的長期視域規劃：CEM 自然跟隨由 GeoWorld 塑造的雙曲測地線，導致更準確的多步軌跡最佳化。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.23058/hyperbolicity.png" loading="lazy"></figure> 圖 1：CrossTask [88] 上的 Gromov δ-超度量性。</p>
+<h2 id="5_1">5 消融實驗</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-02-27/2602.23058/x4.png" loading="lazy"></figure> (a) 曲率與測地線。</p>
+<p><strong>曲率</strong></p>
+<p>如第 4.3 節所述，曲率 $K = -c$ 在對數空間中通過優化 $\log(c)$ 來學習，初始化時 $c = 1$，並被視為可學習的標量。此公式確保 $c$ 保持正值，並穩定雙曲距離和指數映射的梯度 $[14, 25]$。學習到的曲率進一步被限制在 $[0.1, \,10.0]$ 範圍內，以防止訓練不穩定。</p>
+<p>我們分析可學習曲率在訓練期間如何演變，以及它如何影響幾何規劃質量。如圖 2 (d) 所示，GeoWorld 中的曲率參數 $c$ 通常從接近 $1$ 開始，逐漸降低到約 $0.3$ 的穩定值，表明該模型學習到更平坦但仍然是雙曲的潛在幾何。較小的曲率減少了指數映射中的失真，並導致更穩定的多步規劃，特別是對於較大的骨幹編碼器。曲率的幾何效果在圖 2 (a)–(c) 中進一步可視化：隨著 $c$ 減小，測地線路徑向原點彎曲的程度減少（圖 2 (a)），邊界錨定的測地線模式變得更平坦（圖 2 (b)），以及當曲率接近零時，$x$ 和 $y$ 之間的雙曲距離平滑收縮（圖 2 (c)）。這表明適度的負曲率足以捕捉層次結構，同時在長規劃範圍內保留穩定的價值傳播。</p>
+<p><strong>Gromov $\delta$-雙曲性</strong></p>
+<p>我們通過在 CrossTask $[88]$ 中採樣潛在四元組，並在每個模型的內蘊度量（GeoWorld 的雙曲測地線距離和 V-JEPA 2 的歐幾里得距離）下評估四點條件，來可視化 Gromov $\delta$-雙曲性。如圖 1 所示，GeoWorld 展示了接近零 $\delta$ 值的實質上更集中的分布，表明其學習的表示空間中具有更強的樹狀層次幾何。</p>
+<p><strong>凍結編碼器 vs. 完全微調</strong></p>
+<p>表 1：在 CrossTask $[88]$ 上進行視訊視覺規劃的凍結編碼器與完全微調模型的消融。</p>
+<p>如表 1 所示，我們評估在監督微調階段完全微調 (FFT) 編碼器的影響，相比於原始配置（編碼器保持凍結，只有輕量級指數投影層可訓練）。完全微調在所有指標和模型規模上都產生一致但適度的改進，在 $T = 3$ 和 $T = 4$ 規劃範圍內，SR 的收益約為 $0.3{-}0.8\%$，mAcc 和 mIoU 的收益約為 $0.5{-}1.2\%$。雖然這些改進表明編碼器仍可受益地適應下游視覺規劃目標，但這些收益是以顯著增加的可訓練參數和更慢的優化為代價的。此外，隨著模型大小增加，相對性能差距縮小，表明較大骨幹的收益遞減。這些結果意味著凍結編碼器設計已經有效捕捉了任務相關的結構，完全編碼器微調相對於引入的額外計算和記憶開銷，只提供增量式的益處。</p>
+<p>表 2：在 CrossTask $[88]$ 上進行視訊視覺規劃的監督微調 (SFT) vs. 幾何強化學習 (GRL) 的消融。</p>
+<p>表 3：在 CrossTask $[88]$ 上進行視訊視覺規劃的監督微調 (SFT) 中加權超參數 $\lambda$ 的消融。</p>
+<p><strong>GRL 的有效性</strong></p>
+<p>如表 2 所示，納入幾何強化學習 (GRL) 相比於監督微調 (SFT) 基線產生了明確且一致的改進。雖然 SFT 單獨相對於預訓練的 V-JEPA 2 模型只產生邊際收益，但獨立應用 GRL 進一步提升了兩個規劃範圍內的 SR、mAcc 和 mIoU，表明 GRL 更好地將學習到的能量景觀與多步規劃目標對齊。SFT 和 GRL 的組合實現了最強的性能，表明 SFT 提供了強的初始化，而 GRL 將潛在動態優化為長地平線推理所需的能量最小化軌跡。這些發現強調了監督學習和基於強化的價值塑造在預測世界模型中的互補性質。</p>
+<p><strong>SFT 超參數</strong></p>
+<p>如表 3 所示，將展開損失納入 SFT 相比於純一步目標 ($\lambda = 1$) 一致地改進了視覺規劃性能。一旦 $1 - \lambda &gt; 0$，所有指標都表現出穩定的收益，表明多步展開監督提供了超越標準單步訓練的額外時間一致性。隨著展開權重增加（即 $\lambda$ 更小），改進變得更加明顯，特別是對於較長的規劃範圍 ($T = 4$)。例如，當 $\lambda$ 從 $1$ 減小到 $0.5$ 時，SR 和 mIoU 穩定增加，表明更強的展開監督有效地減緩了較長序列上的誤差累積。此趨勢符合直覺，即較長範圍的預測需要明確的多步一致性約束，而不是僅依靠局部一步精度。</p>
+<p>在 $\lambda = 0.5$ 周圍的平衡加權實現了跨越指標的最強整體性能，展示了對一步預測和展開一致性的同等重視產生了最佳的權衡。進一步增加展開權重（例如 $\lambda = 0.3$）對於較短的範圍 ($T = 3$) 導致可忽略的變化，而對於較長的範圍 ($T = 4$) 產生輕微但一致的收益。此行為表明更強的展開監督主要惠及長範圍規劃，尤其是在多步測地線一致性變得更為關鍵的雙曲結構下。相比之下，短範圍規劃不會誘導強層次結構，限制了雙曲幾何的優勢和 GRL。GeoWorld 的主要優勢隨著規劃範圍增加而出現，其中指數分支和長期抽象變得至關重要，如表 5 所示。</p>
+<p><strong>GRL 超參數</strong></p>
+<p>如表 4 所示，折扣因子 $\gamma$ 和正則化權重 $\beta$ 都在形成 GRL 中的學習動態中扮演重要角色。增加 $\gamma$ 通過對後期預測步驟分配更大的權重來加強長範圍監督，這有益於多步展開一致性，並隨著規劃範圍從 $T = 3$ 增加到 $T = 4$，改進 SR、mAcc 和 mIoU。同時，通過 $\beta &gt; 0$ 引入三角不等式正則化項相比於 $\beta = 0$ 設置一致地提升性能，表明執行雙曲測地線約束有助於穩定預測器並防止潛在空間中的退化捷徑。適度的正則化 ($\beta = 0.1$) 與大折扣因子 ($\gamma = 0.99$) 配對實現了最強的結果，表明鼓勵長範圍一致性的同時柔和地執行測地線結構產生了最有效的平衡。這些結果驗證了 GRL 作為幾何約束機制和規劃對齊訓練信號的有效性。</p>
+<p><strong>長範圍規劃中的雙曲幾何 vs. GRL</strong></p>
+<p>表 4：幾何強化學習 (GRL) 中折扣因子 $\gamma$ 和正則化權重 $\beta$ 的消融，用於 CrossTask $[88]$ 上的視訊視覺規劃。</p>
+<p>主論文中的第 4.5 節報告了高達 $T = 6$ 的結果，遵循 $[87]$ 中的長範圍設置。表 5 進一步將評估擴展到 $T = 8$，以在越來越長的展開下進行規劃穩定性的壓力測試。隨著範圍增長，vanilla V-JEPA 2 基線表現出快速的性能降低，SR 從 $T = 3$ 時的 $50.16$ 急劇下降到 $T = 8$ 時的 $4.95$，突出了長範圍預測中的嚴重誤差累積。</p>
+<p>引入雙曲幾何實質上減緩了這種崩潰。雙曲空間中的 SFT 已經改進了較長範圍的穩定性，在 $T \geq 7$ 時維持顯著更高的 SR。在歐幾里得空間中應用 GRL 進一步加強了多步一致性，並持續優於基線，展示了即使沒有雙曲建模，基於展開的幾何正則化單獨也貢獻了有意義的收益。</p>
+<p>當 GRL 在雙曲空間中實現時，優勢變得更加明顯，特別是對於 $T \geq 6$，表明在曲率感知的潛在空間中執行測地線一致性更好地保留了長距離結構依賴性。完全模型 (SFT + GRL) 在所有範圍內實現了最強的結果，性能差距隨著 $T$ 增加而擴大。此趨勢表明 SFT 和 GRL 扮演互補角色：SFT 穩定短期預測，而 GRL 增強長範圍展開一致性，一起在擴展規劃情景中產生了明確的優勢。</p>
+<p>表 5：CrossTask $[88]$ 視訊上長範圍規劃的 SR。</p>
+<h2 id="6">6 長範圍規劃中的誤差累積</h2>
+<p>自迴歸（AR）方法在長範圍規劃中不可避免地導致誤差累積，這就是為什麼許多現有研究專注於通過 rollout loss 來緩解這個問題。然而，我們的主張並非層級結構取代這種效應，而是幾何形狀決定誤差如何累積。在歐幾里得潛在空間中，小的預測誤差會導致無約束的漂移，隨時間均勻複合，而雙曲幾何則在潛在空間上施加了層級結構，將長範圍軌跡約束在測地線意義上有意義的方向上。從這個意義上講，誤差累積和幾何漂移密切相關：層級幾何減輕了誤差如何傳播，而 rollout loss 和 GRL 有助於消除它們。</p>
+<h2 id="7">7 限制與未來工作</h2>
+<p>我們對層級結構的直觀認識來自於多步規劃中的狀態轉移。因此，即使 CrossTask [88] 和 COIN [71] 中標註的動作序列看起來是線性的，從一個狀態預測 $d$ 步未來也會誘導出可能軌跡的指數級分支集合（$B^d$），形成層級結構下的隱含樹。我們必須澄清，如第 1.2 節所提到的，涉及多層級規劃的子任務層級結構是原始 JEPA [41] 的直覺。然而，GeoWorld 中的層級結構產生於多步未來擴展，而非來自明確的高層級規劃和低層級執行。</p>
+<p>未來的工作可能涉及子任務層級，例如高層級任務標籤、中層級動作和低層級末端執行器。此外，我們的框架與具身規劃相容。由於這是一個計算機視覺會議，我們計劃在未來將我們的工作擴展到具身設置。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>
