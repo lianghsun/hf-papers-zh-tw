@@ -1,0 +1,331 @@
+# SenCache：通過靈敏度感知快取加速擴散模型推論
+
+擴散模型在視訊生成品質上達到最先進的水準，但由於需要大量的順序去噪步驟，其推論仍然成本高昂。這促發了一系列關於加速擴散推論的研究。在無訓練加速方法中，快取通過跨時步重用先前計算的模型輸出來降低計算量。現有的快取方法依賴於啟發式準則來選擇快取/重用時步，並需要廣泛的調整。我們通過一個原則性的靈敏度感知快取框架來解決此限制。具體而言，我們通過分析模型輸出對去噪輸入（即噪聲潛變數和時步）中擾動的靈敏度，來形式化快取誤差，並展示該靈敏度是快取誤差的關鍵預測因子。基於此分析，我們提出靈敏度感知快取（SenCache），一個動態快取策略，可根據每個樣本進行自適應地選擇快取時步。我們的框架為自適應快取提供了理論基礎，解釋了為什麼先前的經驗啟發式方法可以部分有效，並將其擴展至一個動態的、樣本特定的方法。在 Wan 2.1、CogVideoX 和 LTX-Video 上的實驗表明，在相似的計算預算下，SenCache 相比現有快取方法達到了更好的視覺品質。程式碼可在 https://github.com/vita-epfl/SenCache.git 取得。
+
+[FIGURE_CAPTION] 圖 1：SenCache 是用於加速擴散模型推論的快取演算法。不同於依賴啟發式方法的先前方法，SenCache 使用一個理論上有根據的網路輸入擾動靈敏度測量作為快取的準則。所有範例都是使用 Wan 2.1 [38] 生成的。在相同的計算預算下，SenCache 更好地保留了生成樣本的視覺品質。
+
+## 1 引言
+
+擴散模型 [12, 36] 和流匹配模型 [2, 20] 已透過在影像和影片合成中設定最先進水準，重新塑造了生成式建模。儘管取得成功，擴散推理仍然計算成本高昂：樣本生成需要多次去噪迭代，每次迭代都需要大型網路的完整前向傳播。這項成本對於包含數十億參數的現代影片擴散 Transformer 尤其令人難以接受，即使只生成幾秒的影片也可能需要數分鐘的計算 [38, 40]。因此，在不重新訓練模型或降低輸出品質的情況下，降低推理延遲已成為實際部署的關鍵挑戰。
+
+在加速策略中，基於快取的方法 [15, 21, 28] 特別吸引人，因為它們透過重複使用先前計算的去噪器輸出來降低推理成本，而無需重新訓練（如基於蒸餾的方法 [31, 35, 23]）或修改模型架構。基本前提是連續時間步的去噪器輸出足夠相似，允許快取輸出替代昂貴的前向評估。然而，現有方法使用經驗啟發式方法來確定這些重複使用時間步。例如，TeaCache [21] 透過時間嵌入差異或調變輸入差異的輸出殘差建模來建立快取重複使用規則，而 MagCache [28] 根據殘差的大小（模型預測與其輸入之間的差異）選擇重複使用時間步。雖然在良好的環境中有效，但這些啟發式方法有兩個基本限制：(1) 它們缺乏理論依據，需要大量超參數調整，以及 (2) 它們產生靜態快取排程，無法適應每個樣本的變化難度。因此，快取可能會過度快取具有挑戰性的樣本或對簡單樣本快取不足，因為重複使用決策不適應樣本特定的動態。
+
+在這項工作中，我們針對擴散推理中的快取/重複使用決策提出了一個基於敏感性的準則。我們的關鍵想法是使用去噪器的局部敏感性——即其輸出相對於雜訊潛在變數和時間步擾動變化的程度——作為相鄰去噪步驟之間輸出變化的代理。我們表明這種變化由去噪器相對於雜訊潛在變數和時間步的導數很好地表徵。這些敏感性量化了潛在變數漂移和時間步距離對去噪器輸出的影響，使我們能夠預測何時誘發的輸出變化足夠小以進行快取重複使用。
+
+透過分析和實驗研究，我們表明局部敏感性是快取誤差的強預測因子，並且潛在變數和時間步敏感性都有顯著貢獻。這揭示了先前啟發式政策的核心限制，它們沒有明確建模兩種變化來源。
+
+受到這項洞察的啟發，我們引入了敏感性感知快取（SenCache），一個原則性的、動態快取框架，可根據每個樣本調整快取/重複使用決策。在每個去噪步驟，SenCache 使用一階敏感性近似來預測去噪器輸出變化，只有當預測偏差低於目標容限時才重複使用快取輸出。我們在三個最先進影片擴散模型 Wan 2.1 [38]、CogVideoX [40] 和 LTX-Video [10] 上的實驗表明，SenCache 在相似計算預算下的視覺品質上優於現有快取策略。
+
+SenCache 框架提供了多項優勢：
+
+- 1. 它為快取提供了理論驅動的決策規則，並明確容限以控制速度–品質折衷。
+- 2. 它提供了敏感性基礎的解釋，說明為什麼先前的啟發式方法在某些區域成功而在其他區域失敗。
+- 3. 它根據每個樣本調整快取/重複使用決策，不同於使用固定時間步的先前方法。
+- 4. 它不需要額外訓練和模型修改，與架構和取樣器無關。
+- 5. 儘管我們的實驗集中在視覺領域，但使用網路敏感性作為快取/重複使用決策代理的基本原理是通用的，可以擴展到其他領域，例如音頻和人體動作。
+
+它為快取提供了理論驅動的決策規則，並明確容限以控制速度–品質折衷。
+
+它提供了敏感性基礎的解釋，說明為什麼先前的啟發式方法在某些區域成功而在其他區域失敗。
+
+它根據每個樣本調整快取/重複使用決策，不同於使用固定時間步的先前方法。
+
+它不需要額外訓練和模型修改，與架構和取樣器無關。
+
+儘管我們的實驗集中在視覺領域，但使用網路敏感性作為快取/重複使用決策代理的基本原理是通用的，可以擴展到其他領域，例如音頻和人體動作。
+
+## 2 相關工作
+
+Diffusion models [12, 36] 和 flow matching models [2, 20] 已成為高品質影像和影片合成的基礎工具 [38, 40, 10, 25]。早期的影片 diffusion 系統將基於 2D U-Net 的影像模型擴展到時間域 [13, 11, 34, 45]，但 U-Nets 的感受野有限，難以建模長距離的時空依賴性。這促使了 Diffusion Transformers (DiTs) [29] 的引入，目前已成為許多最先進文本轉影片生成器的主要骨幹。CogVideoX [40] 和 Wán 2.1 [38] 等大規模系統採用具有專家 transformer 模組的 DiTs，並提供強大的視覺品質，但在單個 A800 GPU 上生成 5 秒的片段仍需數分鐘。LTX-Video [10] 通過將 Video-VAE 與基於 DiT 的去噪器緊密耦合，進一步改進了效率。儘管取得這些進展，目前基於 DiT 的影片生成器計算成本仍然很高，強調了對更快推理方法的需求。
+
+#### 減少單步成本：量化、剪枝和 NAS
+
+加速 diffusion 推理的一種策略是減少每個去噪步驟的計算。量化透過訓練後校準或輕量級微調來降低精度，同時嘗試保留保真度，但通常需要任務特定的校準資料，並需要小心避免時步逐級錯誤累積 [33, 17, 18, 43]。剪枝移除通道/區塊以縮小 FLOPs，但通常需要額外的最佳化或資料相依的準則來保留品質 [6, 3]。一種互補的方法使用（訓練無關或輕監督的）神經架構搜尋來共同設計時步和更輕量的主幹，但搜尋仍會產生非平凡的計算成本，且可能需要工作負載特定的調整 [16, 41]。
+
+#### 減少採樣步驟數
+
+蒸餾方法明確學習少步生成器：漸進蒸餾迭代地將步驟減半 [31]，而 Consistency Models 及其潛在變體 (LCM) 直接學習支援 1-4 步生成的映射 [35, 23]。這些方法大幅減少步驟計數，但通常需要額外訓練，且對域和指導設定敏感。
+
+#### 快取加速
+
+快取方法透過在時步間重複使用計算來加速 diffusion 推理。對於 U-Net 模型，DeepCache 跨相鄰時步重複使用高層次特徵，以最小品質損失減少冗餘工作 [26]。對於 DiT 風格的 transformers，Δ-DiT 快取注意力層間的殘差以針對 transformer 區塊進行快取 [4]，而 FORA 在不重新訓練的情況下跨步驟重複使用中間注意力/MLP 輸出 [32]。PAB 透過以金字塔排程廣播注意力圖來針對影片 DiTs，利用注意力差異的 U 形冗餘實現即時生成 [44]。超越固定排程，AdaCache 針對影片 DiTs 的內容/時步動態調整快取決策 [15]。FasterCache 進一步展示無分類器引導中條件和無條件分支間的強冗餘，並在時步內有效地重複使用它們 [24]。某些方法需要學習明確的快取路由器（例如，DiTs 的 Learning-to-Cache），增加最佳化開銷 [27]；其他方法無需訓練，但仍可能需要校準以避免長影片上的累積錯誤。
+
+#### 完整前向快取
+
+另一種方法系列執行完整前向快取，在選定的時步存儲去噪器網路輸出，而非中間特徵。此類方法的最近範例是 TeaCache 和 MagCache [21, 28] 以及並行工作 LeMiCa [7]。TeaCache 基於殘差建模建構提示特定的跳過規則，存在過度擬合風險，需要非平凡的校準。MagCache 使用殘差大小啟發式方法，並假設跨模型和提示的一致「大小定律」。LeMiCa 採取不同的視角，將快取排程制定為全域路徑最佳化問題（字典序最小最大化），以控制跨步驟的最壞情況累積誤差。雖然在良好調整的設定下有效，這些方法依賴於無理論保證的啟發式觸發，且通常需要廣泛的超參數調整或最佳化以平衡速度和品質。
+
+#### 與先前方法的差異
+
+SenCache 也是一種完整前向快取方法，但它用以去噪器對 $\mathbf{x}_{t}$ 和 $t$ 的局部靈敏度為基礎的快取決策取代臨時啟發式方法。具體來說，SenCache 僅在基於一階靈敏度的估計預測輸出變化很小時快取。此準則是模態無關的、架構無關的和採樣器無關的，因為它取決於局部模型靈敏度和步驟間的實際輸入變化，而非手工製作的觸發器。因此，該框架在啟發式規則因其假設不成立而可能失效的設定中自然延伸。
+
+[FIGURE:figure2F.png] 圖 2：SenCache 使用靈敏度作為快取準則。在每個去噪步驟，如果嘈雜潛在變數 $x_{t}$ 和採樣步驟 $t$ 中的變化足夠小，使得靈敏度分數（見方程式 9）低於 $\varepsilon$，我們重複使用快取的去噪器輸出；否則，我們在目前狀態重新整理快取。透過在預期輸出變化最小時跳過昂貴的去噪器評估，SenCache 加速 diffusion 模型推理。
+
+## 3 背景
+
+#### Flow Matching 與 Probability Flow ODE。
+
+我們採用 diffusion models 的 flow-matching 觀點 [1, 25]，其中資料樣本 $\mathbf{x}_{0}\sim p_{\mathrm{data}}$ 在 $t\in[0,T]$ 上連續轉換為雜訊變數 $\mathbf{x}_{t}$，透過
+
+|  | $\mathbf{x}_{t}=\alpha_{t}\mathbf{x}_{0}+\sigma_{t}\boldsymbol{\epsilon},\qquad\boldsymbol{\epsilon}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$, |  | (1) |
+| --- | --- | --- | --- |
+
+其中 $\alpha_{t}$ 與 $\sigma_{t}$ 是純量排程，滿足 $\alpha_{0}=1,\ \sigma_{0}=0$ 與 $\alpha_{T}=0,\ \sigma_{T}=1$。
+
+$\mathbf{x}_{t}$ 的邊際分佈在速度場 $\mathbf{v}(\mathbf{x},t)$ 下演化，採樣遵循相關的 ODE
+
+|  | $\dot{\mathbf{x}}_{t}=\mathbf{v}(\mathbf{x}_{t},t)$. |  | (2) |
+| --- | --- | --- | --- |
+
+對於上述插值，條件目標速度為
+
+|  | $\mathbf{v}(\mathbf{z},t)=\mathbb{E}\!\left[\dot{\alpha}_{t}\mathbf{x}_{0}+\dot{\sigma}_{t}\boldsymbol{\epsilon}\mid\mathbf{x}_{t}=\mathbf{z}\right]$. |  | (3) |
+| --- | --- | --- | --- |
+
+一個神經網路 $\mathbf{v}_{\theta}(\mathbf{x}_{t},t)$ 以標準的速度匹配目標進行訓練
+
+|  | $\mathcal{L}_{\mathrm{vel}}(\theta)=\mathbb{E}_{\mathbf{x}_{0},\boldsymbol{\epsilon},t}\left[\left\|\mathbf{v}_{\theta}(\mathbf{x}_{t},t)-(\dot{\alpha}_{t}\mathbf{x}_{0}+\dot{\sigma}_{t}\boldsymbol{\epsilon})\right\|^{2}\right]$. |  | (4) |
+| --- | --- | --- | --- |
+
+在推論時間，樣本由從 $\mathbf{x}_{T}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$ 向後數值積分方程式 2 至 $t=0$ 來產生。
+
+實踐上，ODE 求解器（例如 Euler 或 diffusion ODE 求解器如 DPM-Solver [22]）在各個時間步驟上重複評估學習到的場 $\mathbf{v}_{\theta}(\mathbf{x}_{t},t)$，這些網路評估主導了推論成本。因此，函數評估數量（NFEs）在很大程度上決定了延遲。我們的目標是當本地變化/誤差準則指示更新方向改變極少時，透過重新使用去雜訊器輸出來降低此成本。
+
+## 4 靈敏度感知快取
+
+在擴散生成模型中，推理通過許多時步上的迭代去噪過程進行，逐步移除噪聲以重建目標樣本。此過程開銷很大：每一步都是一個大型網路 $f_{\theta}(\mathbf{x}_{t},t,c)$ 的完整前向傳遞，通常每個樣本要重複數百次。快取試圖通過識別網路預測僅邊際改變的步驟並重新使用先前計算的去噪輸出來避免冗餘計算。核心問題是何時重用是安全的。我們尋求一個決策規則，給定當前輸入（潛變量 $\mathbf{x}_{t}$、時步 $t$ 和條件 $c$），檢測具有可忽略輸出變化的步驟，以便可以安全地跳過網路評估。
+
+### 4.1 模型靈敏度
+
+網路靈敏度 [30] 量化模型的輸出在對其輸入的小擾動下變化多少。形式上，給定一個網路 $f_{\theta}(\mathbf{w})$，局部靈敏度通過 Jacobian 範數表示：
+
+|  | $S(\mathbf{w})=\left\|\frac{\partial f_{\theta}(\mathbf{w})}{\partial\mathbf{w}}\right\|$ |  | (5) |
+| --- | --- | --- | --- |
+
+它測量擾動如何通過網路傳播。網路靈敏度已被用於改進深度網路的穩定性 [8, 9] 以及分析學習映射的魯棒性和平滑性 [30]。
+
+直觀上，靈敏度捕捉網路函數在給定輸入周圍的"剛度"或"平滑度"。小的 Jacobian 範數表示一個局部平坦區域，在小擾動下網路輸出變化很小，而大的範數揭示了一個高度反應性或高度非線性的區域。因此，網路靈敏度為快取提供了一個有原則的基礎，因為它識別了網路輸出對擾動局部反應較弱的區域。
+
+[FIGURE:merged_jacob.png] (a) 網路靈敏度分析。（左）相對於有噪潛變量的 Jacobian 範數。（右）相對於時步的 Jacobian 範數。
+
+### 4.2 觀察
+
+為了探測何時快取重用是安全的，我們分析了在 ImageNet 256 × 256 [5] 上訓練的 SiT-XL/2 檢查點 [25] 的輸入敏感性。
+對於每個樣本和時間步 $t$，我們計算去噪器輸出相對於帶噪潛在變數和時間步的雅可比矩陣和偏導數，分別為：
+
+|  | $J_{x}\;=\;\frac{\partial f_{\theta}(\mathbf{x}_{t},t,c)}{\partial\mathbf{x}_{t}},\qquad J_{t}\;=\;\frac{\partial f_{\theta}(\mathbf{x}_{t},t,c)}{\partial t},$ |  | (6) |
+| --- | --- | --- | --- |
+
+並記錄它們的範數 $\|J_{x}\|$ 和 $\|J_{t}\|$。
+隨後我們在驗證樣本中彙總這些範數，並將其演變視覺化為 $t$ 的函數（見圖 3）。
+
+出現了兩個經驗觀察：
+
+- 1. 不可忽視的時間步敏感性。$\|J_{t}\|$ 在 $t$ 的寬範圍內始終達到大值，表明即使潛在變數變化 $\|\Delta\mathbf{x}_{t}\|$ 很小，網路的預測對時間步仍然敏感。
+因此，跨越大的 $\Delta t$ 可能會導致明顯的誤差；僅基於潛在變數變化的快取存在風險會產生偽影。
+- 2. 潛在變數和時間步都很重要。$\|J_{x}\|$ 也很substantial，並隨 $t$ 變化，這表明輸出偏差共同取決於潛在變數漂移 $\|\Delta\mathbf{x}_{t}\|$ 和時間步間隙 $|\Delta t|$。
+因此，有效的快取準則必須考慮兩項，而不是依賴於單一代理。
+
+不可忽視的時間步敏感性。$\|J_{t}\|$ 在 $t$ 的寬範圍內始終達到大值，表明即使潛在變數變化 $\|\Delta\mathbf{x}_{t}\|$ 很小，網路的預測對時間步仍然敏感。
+因此，跨越大的 $\Delta t$ 可能會導致明顯的誤差；僅基於潛在變數變化的快取存在風險會產生偽影。
+
+潛在變數和時間步都很重要。$\|J_{x}\|$ 也很substantial，並隨 $t$ 變化，這表明輸出偏差共同取決於潛在變數漂移 $\|\Delta\mathbf{x}_{t}\|$ 和時間步間隙 $|\Delta t|$。
+因此，有效的快取準則必須考慮兩項，而不是依賴於單一代理。
+
+這些發現激發了一種基於敏感性的快取演算法，該演算法明確結合了潛在變數和時間步的變化，將快取決策與模型的局部穩定性特性相對應。
+
+### 4.3 自適應敏感度感知快取
+
+關鍵挑戰是定義一個有原則的輸入變化區域，在該區域內去雜訊器的輸出可以安全地被重複使用。
+
+我們通過輸入敏感度量化局部輸出變化。連續步驟之間的一階展開給出：
+
+|  | f θ ​ ( 𝐱 t + Δ ​ t , t + Δ ​ t , c ) − f θ ​ ( 𝐱 t , t , c ) ≈ J x ​ Δ ​ 𝐱 t + J t ​ Δ ​ t , f_{\theta}(\mathbf{x}_{t+\Delta t},\,t+\Delta t,\,c)-f_{\theta}(\mathbf{x}_{t},\,t,\,c)\;\approx\;J_{x}\,\Delta\mathbf{x}_{t}\;+\;J_{t}\,\Delta t, |  | (7) |
+| --- | --- | --- | --- |
+
+其中 Δ ​ 𝐱 t = 𝐱 t + Δ ​ t − 𝐱 t \Delta\mathbf{x}_{t}=\mathbf{x}_{t+\Delta t}-\mathbf{x}_{t} 。取範數得到界：
+
+|  | ‖ f θ ​ ( 𝐱 t + Δ ​ t , t + Δ ​ t , c ) − f θ ​ ( 𝐱 t , t , c ) ‖ ≤ ‖ J x ‖ ​ ‖ Δ ​ 𝐱 t ‖ + ‖ J t ‖ ​ | Δ ​ t | + 𝒪 ​ ( ‖ Δ ​ 𝐱 t ‖ 2 + | Δ ​ t | 2 ) . \big\|f_{\theta}(\mathbf{x}_{t+\Delta t},t+\Delta t,c)-f_{\theta}(\mathbf{x}_{t},t,c)\big\|\\
+\leq\|J_{x}\|\,\|\Delta\mathbf{x}_{t}\|+\|J_{t}\|\,|\Delta t|+\mathcal{O}\!\left(\|\Delta\mathbf{x}_{t}\|^{2}+|\Delta t|^{2}\right). |  | (8) |
+| --- | --- | --- | --- |
+
+因此，Jacobian 範數作為局部 Lipschitz 常數，控制模型對潛在變數和時間步擾動的響應性。
+
+我們定義敏感度分數
+
+|  | S t = ‖ J x ‖ ​ ‖ Δ ​ 𝐱 t ‖ + ‖ J t ‖ ​ | Δ ​ t | , S_{t}\;=\;\|J_{x}\|\,\|\Delta\mathbf{x}_{t}\|\;+\;\|J_{t}\|\,|\Delta t|, |  | (9) |
+| --- | --- | --- | --- |
+
+並採用下列快取規則：
+
+|  | 在步驟 ​ t 時快取 ⟺ S t ≤ ε , \text{Cache at step }t\;\;\Longleftrightarrow\;\;S_{t}\leq\varepsilon, |  | (10) |
+| --- | --- | --- | --- |
+
+其中 ε > 0 \varepsilon>0 控制精度–速度的權衡。當此條件滿足時，輸出在 t t 和 t + Δ ​ t t{+}\Delta t 之間的預測變化低於容差，因此我們重複使用快取的 f θ ​ ( 𝐱 t , t , c ) f_{\theta}(\mathbf{x}_{t},t,c) 而不評估網路。算法 1 總結了我們提議的快取方法。
+
+[FIGURE_CAPTION] 算法 1 敏感度感知快取
+
+### 4.4 與先前快取方法的關聯
+
+我們的敏感度視角闡明了為何先前的啟發式策略可以奏效，以及它們何時會失敗。
+
+#### TeaCache。
+
+TeaCache [21] 藉由使用時間嵌入中的差異建模輸出殘差，來構造步驟跳過規則。在我們的符號中，此信號主要跟蹤沿著時間步維度的變化，即它近似於方程式 9 中的 $\|J_{t}\|\,|\Delta t|$ 項。
+當潛在漂移很小時，聚焦於時間嵌入差異是合理的。然而，如果採樣器在含噪潛在中誘發非可忽視的變化（大 $\|\Delta\mathbf{x}_{t}\|$），TeaCache 會低估輸出變化，因為它未明確加權 $\|J_{x}\|\,\|\Delta\mathbf{x}_{t}\|$ 貢獻。這解釋了在跨越潛在明顯移動的步驟時觀察到的偽影。
+
+#### MagCache。
+
+MagCache [28] 基於連續殘差輸出的幅度比觸發跳過。在我們的框架中，這主要反映 $\|J_{x}\|\,\|\Delta\mathbf{x}_{t}\|$ 分量：小殘差幅度通常表示對潛在擾動的局部平緩響應。限制與 TeaCache 互補：MagCache 未明確考慮時間步項 $\|J_{t}\|\,|\Delta t|$，因此當時間表採用較大的 $\Delta t$ 步或在去噪器高度 $t$-敏感的區域中時，它可能過度自信。
+
+此外，連續步驟間的一階變化取決於 $\Delta\mathbf{x}_{t}$ 和 $\Delta t$，而非 $\Delta c$（其為零）。這與 MagCache 報告的經驗觀察相一致，即一旦 $c$ 固定後，快取品質大多與提示內容無關。
+
+### 4.5 實務實現
+
+由於計算精確敏感性成本高昂，我們使用方向有限差分（割線法）估計來近似它們。更具體地說，保持 $t$ 固定，關於 $\mathbf{x}_{t}$ 的敏感性估計如下：
+
+|  | $$\|J_{x}\|\;\approx\;\frac{\bigl\|f_{\theta}(\mathbf{x}_{t}+\Delta\mathbf{x},\,t,c)-f_{\theta}(\mathbf{x}_{t},\,t,c)\bigr\|_{2}}{\bigl\|\Delta\mathbf{x}\bigr\|_{2}},$$ |  | (11) |
+| --- | --- | --- | --- |
+
+其中 $\Delta\mathbf{x}$ 是在求解器步驟方向上的小擾動。保持 $\mathbf{x}_{t}$ 固定，關於時間的敏感性為：
+
+|  | $$\|J_{t}\|\;\approx\;\frac{\bigl\|f_{\theta}(\mathbf{x}_{t},\,t+\Delta t,c)-f_{\theta}(\mathbf{x}_{t},\,t,c)\bigr\|_{2}}{|\Delta t|}.$$ |  | (12) |
+| --- | --- | --- | --- |
+
+這些敏感性值在小型校準集上針對每個模型計算一次，並快取供推論過程中使用。在我們的實驗中，我們僅使用 8 部具有不同運動動態和場景內容的影片來估計敏感性。
+
+由於一階估計僅在局部準確，我們引入了一個超參數 $n$，用來限制連續快取步驟的最大數量。在重複使用 $n$ 次後，快取被重新整理以防止隨著軌跡演化而產生的漂移。此參數在速度和準確性之間進行權衡：較小的 $n$ 提供保守但穩定的快取，而較大的 $n$ 以一階近似變得不準確時精度降低為代價來提供更高的加速倍數。
+
+## 5 實驗
+
+[FIGURE_CAPTION] 表 1：我們對視頻生成模型的推理效率和視覺品質進行定量評估。效率通過 NFE 和快取比率進行測量，而視覺品質則使用 LPIPS、PSNR 和 SSIM 進行評估。我們的結果表明，在與先前方法相同的計算量下，SenCache 以改進的 LPIPS、PSNR 和 SSIM 分數實現了優越的視覺品質。
+
+[FIGURE_CAPTION] 表 2：對最大連續快取步數 $n$ 的消融研究。在 Wan 2.1 模型 [38] 上進行，$\varepsilon=0.05$。增加 $n$ 可提高效率（降低 NFE），直至 $n=4$，此時 NFE 達到飽和。進一步增加 $n$ 不會帶來效率收益，反而會降低視覺品質，因為底層有限差分近似變得不夠準確。
+
+[FIGURE_CAPTION] 表 3：對誤差容限 $\varepsilon$ 的消融研究。在 Wan 2.1 [38] 上進行，$n=3$。結果揭示了明確的準確性-效率權衡。
+
+[FIGURE:all-models3.png] 圖 4：校準集大小對敏感度估計的影響。我們比較了從 8 支視頻與 4096 支視頻估計的敏感度配置文件，發現 8 支多樣化的視頻已經產生接近的匹配，表明不需要大型校準集。
+
+#### 設定。
+
+為了展示我們方法的有效性，我們對三個最先進的視頻擴散模型進行定量評估：Wan 2.1 [38]、CogVideoX [40] 和 LTX-Video [10]。我們將我們的方法與 TeaCache [21] 和 MagCache [28] 進行比較。按照 MagCache [28] 的做法，我們報告 LPIPS [42]、SSIM [39] 和 PSNR 作為視覺品質指標。我們也報告 NFE（函數評估次數）和快取比率（從快取中檢索的去噪步驟百分比）來評估計算效率。
+
+#### 實現細節。
+
+我們使用 MixKit 資料集 [19] 中的 8 支視頻計算有限 Jacobian 範數估計。我們在 VBench [14] 的完整提示集上評估所有方法。對於消融研究，我們使用從 T2V-CompBench 中隨機選擇的 70 個提示（每個類別 10 個）來生成視頻 [37]。我們使用先前工作 [21, 28] 的官方實現中的超參數。對於我們的方法，我們為慢版本設定 $n=2$，為快速版本設定 $n=3$。如先前工作所示，前 $20\%$ 的去噪步驟對整個生成過程至關重要 [28]；因此，我們為這些早期步驟設定了嚴格的 $1\%$ 誤差（$\varepsilon=0.01$）閾值。對於其餘的實驗，我們為 Wan 慢版本設定 $\varepsilon=0.1$，Wan 快速版本設定 $0.2$，CogVideoX 設定 $0.6$，LTX 設定 $0.5$。
+
+### 5.1 Main Results
+
+Our quantitative results are summarized in Table 1 . We begin with Wan 2.1 [ 38 ] . In the slow (conservative) regime, all three methods achieve comparable visual quality, but TeaCache [ 21 ] yields lower speedups (higher NFE) than both MagCache [ 28 ] and SenCache. This suggests that when reuse is conservative, different reuse criteria often select similar “safe” regions of the denoising trajectory, and the remaining differences mainly affect the achieved compute reduction. In the fast (aggressive) regime, the gap between methods becomes clearer: SenCache consistently attains better visual quality than MagCache at comparable compute (matched NFE), indicating that sensitivity-based decisions better identify timesteps where reuse incurs minimal degradation.
+
+For CogVideoX [ 40 ] and LTX-Video [ 10 ] , matching the low NFE achieved by prior caching methods requires using larger tolerance values (e.g., ε = 0.5 \varepsilon=0.5 and 0.6 0.6 ), corresponding to more permissive reuse. Under these aggressive settings, all methods exhibit a clearer quality drop, reflected by degraded LPIPS/PSNR/SSIM compared to Wan 2.1. Empirically, this indicates that CogVideoX and LTX-Video are less tolerant to approximation in the denoising updates, whereas Wan 2.1 appears to admit more reuse while preserving fidelity. Nevertheless, across all models and compute regimes, SenCache consistently achieves equal or better visual quality than prior caching baselines at similar (and often lower) NFE.
+
+### 5.2 Ablation Studies
+
+#### Ablation on n n .
+
+We first ablate the cache lifetime parameter n n , which limits the maximum number of consecutive cache reuses before a refresh. We run this study on Wan 2.1, fixing ε = 0.05 \varepsilon=0.05 and varying n n . Results are summarized in Table 2 . As expected, increasing n n reduces the number of function evaluations (NFE) by permitting longer reuse chains. Interestingly, the NFE improvement saturates beyond n = 4 n=4 : while the achieved NFE remains nearly unchanged, visual quality degrades. This suggests that overly long consecutive reuse chains can be harmful, as the first-order approximation becomes less accurate as the trajectory drifts away from the reference point.
+
+#### Ablation on ε \varepsilon .
+
+We next ablate the tolerance ε \varepsilon on Wan 2.1, fixing n = 3 n=3 and varying ε \varepsilon (see Table 3 ). We observe a clear accuracy–efficiency trade-off. Increasing ε \varepsilon from 0.04 0.04 to 0.13 0.13 decreases NFE from 25 25 to 21 21 , indicating that a more permissive threshold enables more aggressive caching. This reduction in compute comes with a gradual loss in fidelity: LPIPS increases from 0.0455 0.0455 to 0.0513 0.0513 , PSNR drops from 29.01 ​ dB 29.01\,\mathrm{dB} to 28.72 ​ dB 28.72\,\mathrm{dB} , and SSIM declines from 0.930 0.930 to 0.924 0.924 . Over the tested range, the trends are approximately linear, supporting the interpretation of ε \varepsilon as a tolerance that directly controls the reuse rate and thus the speed–quality trade-off. Notably, ε ∈ [ 0.06 , 0.07 ] \varepsilon\in[0.06,0.07] captures most of the NFE savings ( 25 → 22 25\!\rightarrow\!22 – 23 23 ) while incurring only minor quality degradation.
+
+#### Ablation on calibration set size.
+
+Finally, we study how many videos are needed to obtain stable sensitivity estimates. We compute the sensitivity profiles using calibration sets ranging from 8 videos to 4096 videos and compare the resulting profiles (see Figure 4 ). We find that using as few as 8 diverse videos yields sensitivity estimates that closely match those obtained with much larger calibration sets, suggesting that the sensitivity statistics are stable and that large calibration batches are not necessary in practice.
+
+## 6 討論與未來工作
+
+目前我們的實現依賴於一階靈敏度代理；一個有趣的方向是尋找有效但更豐富（高階或學習型）的估計器，這可能會在非線性制度中減少誤差。此外，由於靈敏度閾值 $\varepsilon$ 直接對應於每個去噪步驟的誤差預算，動態調整 $\varepsilon$ 跨越時間步長可進一步加速推理同時維持生成品質：不同的步驟對最終保真度的貢獻不相等，因此在較不關鍵的階段允許更大的誤差可能是可接受的。在本論文中，我們使用了固定閾值；設計調度和表徵有效模式留待未來工作。最後，雖然我們在影片擴散模型上驗證了靈敏度感知快取，但核心原理不限於視覺領域。將此方法擴展到其他模態—例如文本、音頻或多模態擴散系統—代表未來研究的一個令人興奮的方向。
+
+## 7 結論
+
+在本研究中，我們引入了一個有原則的框架，通過利用去噪網路的局部光滑性來加速擴散模型推理。
+透過量化模型相對於雜訊潛在變數和時間步長的靈敏度，我們開發了一個有原則的準則，用於決定何時可以安全地重複使用快取輸出。
+我們的分析顯示，潛在和時間靈敏度都在決定快取重用有效性中扮演關鍵角色，這促使了一個組合指標，該指標適應網路的局部行為。
+我們進一步提出了一個有效的有限差分近似來實踐估計這些靈敏度，只需要一個小的校準集合和每個模型的單次預計算。
+在影片擴散模型上的實驗證明此策略顯著降低推理成本同時維持生成品質。我們希望這個基於靈敏度的觀點能夠作為未來在擴散架構和模態上的適應性加速方法的基礎。
+
+## 誌謝
+
+本研究得到瑞士人工智慧倡議的支持，透過瑞士國家超級計算中心（CSCS）的撥款支持，計畫編號 a144（Alps）。本研究亦獲瑞士國家科學基金會（SNSF）在撥款編號 10003100 下的支持。
+
+## 參考文獻
+
+---
+
+**注意**：您提供的只有標題 "## References"，沒有具體的參考文獻內容。
+
+如果您需要翻譯完整的參考文獻列表，請提供詳細的參考內容，我會按照以下方式處理：
+
+1. **保留所有 Markdown 格式**（##、-、*、[link] 等）
+2. **中文部分翻譯成繁體中文**
+3. **論文標題、作者名、出版社、期刊名等保留英文原文**
+4. **DOI、URL 等完整保留**
+
+請提供完整的參考文獻內容，我將進行翻譯。
+
+- [1] M. S. Albergo, N. M. Boffi, and E. Vanden-Eijnden (2023) Stochastic interpolants: a unifying framework for flows and diffusions . arXiv preprint arXiv:2303.08797 . 被引用於: §3 .
+- [2] M. S. Albergo and E. Vanden-Eijnden (2022) Building normalizing flows with stochastic interpolants . arXiv preprint arXiv:2209.15571 . 被引用於: §1 , §2 .
+- [3] T. Castells, S. Dhouib, N. Duchesne, et al. (2024) LD-Pruner: efficient pruning of latent diffusion models using task-agnostic insights . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops (CVPRW) , 被引用於: §2 .
+- [4] P. Chen, M. Shen, P. Ye, J. Cao, C. Tu, C. Bouganis, Y. Zhao, and T. Chen (2024) Δ \Delta -DiT: a training-free acceleration method tailored for diffusion transformers . arXiv preprint arXiv:2406.01125 . 被引用於: §2 .
+- [5] J. Deng, W. Dong, R. Socher, L. Li, K. Li, and L. Fei-Fei (2009) Imagenet: a large-scale hierarchical image database . In 2009 IEEE conference on computer vision and pattern recognition , pp. 248–255 . 被引用於: §4.2 .
+- [6] G. Fang, X. Ma, and X. Wang (2023) Structural pruning for diffusion models . In Advances in Neural Information Processing Systems (NeurIPS) , 被引用於: §2 .
+- [7] H. Gao, P. Chen, F. Shi, C. Tan, Z. Liu, F. Zhao, K. Wang, and S. Lian (2025) Lemica: lexicographic minimax path caching for efficient diffusion-based video generation . arXiv preprint arXiv:2511.00090 . 被引用於: §2 .
+- [8] X. Glorot and Y. Bengio (2010) Understanding the difficulty of training deep feedforward neural networks . In Proceedings of the thirteenth international conference on artificial intelligence and statistics , pp. 249–256 . 被引用於: §4.1 .
+- [9] I. J. Goodfellow, J. Shlens, and C. Szegedy (2014) Explaining and harnessing adversarial examples . arXiv preprint arXiv:1412.6572 . 被引用於: §4.1 .
+- [10] Y. HaCohen, N. Chiprut, B. Brazowski, D. Shalem, D. Moshe, E. Richardson, E. Levin, G. Shiran, N. Zabari, O. Gordon, P. Panet, S. Weissbuch, V. Kulikov, Y. Bitterman, Z. Melumian, and O. Bibi (2024) LTX-video: realtime video latent diffusion . arXiv preprint arXiv:2501.00103 . 被引用於: §1 , §2 , §5 , §5.1 , 表格 1 .
+- [11] J. Ho, W. Chan, C. Saharia, J. Whang, R. Gao, A. Gritsenko, D. P. Kingma, B. Poole, M. Norouzi, D. J. Fleet, and T. Salimans (2022) Imagen video: high definition video generation with diffusion models . arXiv preprint arXiv:2210.02303 . 被引用於: §2 .
+- [12] J. Ho, A. Jain, and P. Abbeel (2020) Denoising diffusion probabilistic models . arXiv preprint arXiv:2006.11239 . 被引用於: §1 , §2 .
+- [13] J. Ho, T. Salimans, A. Gritsenko, W. Chan, M. Norouzi, and D. J. Fleet (2022) Video diffusion models . arXiv preprint arXiv:2204.03458 . 被引用於: §2 .
+- [14] Z. Huang, Z. Han, S. Zhang, Y. Xu, and X. Wang (2024) VBench: comprehensive benchmark suite for video generation evaluation . In Advances in Neural Information Processing Systems (NeurIPS) , 被引用於: §5 .
+- [15] K. Kahatapitiya, B. Fan, R. AlJundi, A. Ranjan, A. A. Efros, D. Ramanan, A. Vedaldi, P. Tokmakov, and C. Feichtenhofer (2025) Adaptive caching for faster video generation with diffusion transformers . In ICCV , 外部連結: 連結 被引用於: §1 , §2 .
+- [16] L. Li, Y. Li, et al. (2023) AutoDiffusion: training-free optimization of time steps and architectures for automated diffusion model acceleration . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , 被引用於: §2 .
+- [17] X. Li, J. Wang, Y. Yuan, P. Luo, J. Yan, et al. (2023) Q-diffusion: quantizing diffusion models . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , 被引用於: §2 .
+- [18] Y. Li, Q. Yao, et al. (2023) Q-DM: an efficient low-bit quantized diffusion model . In Advances in Neural Information Processing Systems (NeurIPS) , 被引用於: §2 .
+- [19] B. Lin, Y. Ge, X. Cheng, Z. Li, B. Zhu, S. Wang, X. He, Y. Ye, S. Yuan, L. Chen, et al. (2024) Open-sora plan: open-source large video generation model . arXiv preprint arXiv:2412.00131 . 被引用於: §5 .
+- [20] Y. Lipman, R. T. Chen, H. Ben-Hamu, M. Nickel, and M. Le (2022) Flow matching for generative modeling . arXiv preprint arXiv:2210.02747 . 被引用於: §1 , §2 .
+- [21] F. Liu et al. (2025) Timestep embedding tells: it's time to cache for video diffusion . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 被引用於: §1 , §2 , §4.4 , §5 , §5 , §5.1 .
+- [22] C. Lu, Y. Zhou, F. Bao, J. Chen, C. Li, and J. Zhu (2022) DPM-solver: a fast ode solver for diffusion probabilistic model sampling in around 10 steps . Advances in Neural Information Processing Systems (NeurIPS) . 被引用於: §3 .
+- [23] S. Luo, S. Xie, et al. (2023) Latent consistency models: synthesizing high-resolution images with few-step inference . arXiv preprint arXiv:2310.04378 . 被引用於: §1 , §2 .
+- [24] Z. Lv, C. Si, J. Song, Z. Yang, Y. Qiao, Z. Liu, and K. K. Wong (2024) FasterCache: training-free video diffusion model acceleration with high quality . arXiv:2410.19355 . 外部連結: 連結 被引用於: §2 .
+- [25] N. Ma, M. Goldstein, M. S. Albergo, N. M. Boffi, E. Vanden-Eijnden, and S. Xie (2024) Sit: exploring flow and diffusion-based generative models with scalable interpolant transformers . In European Conference on Computer Vision , pp. 23–40 . 被引用於: §2 , §3 , §4.2 .
+- [26] X. Ma, G. Fang, R. Qiu, Y. Duan, and X. Wang (2024) DeepCache: accelerating diffusion models for free . In CVPR , 外部連結: 連結 被引用於: §2 .
+- [27] X. Ma, G. Fang, and X. Wang (2024) Accelerating diffusion transformer via layer caching . In NeurIPS , 外部連結: 連結 被引用於: §2 .
+- [28] Z. Ma, L. Wei, F. Wang, S. Zhang, and Q. Tian (2025) MagCache: fast video generation with magnitude-aware cache . arXiv preprint arXiv:2506.09045 . 被引用於: §1 , §2 , §4.4 , §5 , §5 , §5.1 .
+- [29] W. Peebles and S. Xie (2023) Scalable diffusion models with transformers . arXiv preprint arXiv:2212.09748 . 被引用於: §2 .
+- [30] S. Rifai, P. Vincent, X. Muller, X. Glorot, and Y. Bengio (2011) Contractive auto-encoders: explicit invariance during feature extraction . In Proceedings of the 28th international conference on international conference on machine learning , pp. 833–840 . 被引用於: §4.1 , §4.1 .
+- [31] T. Salimans and J. Ho (2022) Progressive distillation for fast sampling of diffusion models . In International Conference on Learning Representations (ICLR) , 被引用於: §1 , §2 .
+- [32] P. Selvaraju, M. Chen, et al. (2024) Fast-forward caching (fora): fast-forward caching in diffusion transformer acceleration . arXiv:2407.01425 . 外部連結: 連結 被引用於: §2 .
+- [33] Y. Shang, Z. Yuan, B. Xie, B. Wu, and Y. Yan (2023) Post-training quantization on diffusion models . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 24254–24264 . 被引用於: §2 .
+- [34] U. Singer, A. Polyak, T. Hayes, X. Yin, J. An, S. Zhang, Q. Hu, H. Yang, O. Ashual, O. Gafni, D. Parikh, S. Gupta, and Y. Taigman (2022) Make-a-video: text-to-video generation without text-video data . arXiv preprint arXiv:2209.14792 . 被引用於: §2 .
+- [35] Y. Song, P. Dhariwal, M. Chen, I. Sutskever, and J. Sohl-Dickstein (2023) Consistency models . In Proceedings of the 40th International Conference on Machine Learning (ICML) , Proceedings of Machine Learning Research . 被引用於: §1 , §2 .
+- [36] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B. Poole (2021) Score-based generative modeling through stochastic differential equations . arXiv preprint arXiv:2011.13456 . 被引用於: §1 , §2 .
+- [37] Y. Sun, W. Li, L. Chen, Y. Wang, and H. Zhao (2025) T2V-compbench: a comprehensive benchmark for text-to-video generation with compositionality challenges . arXiv preprint arXiv:2501.01234 . 被引用於: §5 .
+- [38] T. Wan et al. (2025) Open and advanced large-scale video generative models . arXiv preprint arXiv:2503.20314 . 註: Wan 2.1 影片基礎模型套件 被引用於: 圖 1 , 圖 1 , §1 , §1 , §2 , §5 , §5.1 , 表格 1 , 表格 2 , 表格 2 , 表格 3 , 表格 3 .
+- [39] Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli (2004) Image quality assessment: from error visibility to structural similarity . IEEE Transactions on Image Processing 13 ( 4 ), pp. 600–612 . 被引用於: §5 .
+- [40] Z. Yang, J. Teng, W. Zheng, M. Ding, S. Huang, J. Xu, Y. Yang, W. Hong, X. Zhang, et al. (2025) CogVideoX: text-to-video diffusion models with an expert transformer . In International Conference on Learning Representations (ICLR) , 被引用於: §1 , §1 , §2 , §5 , §5.1 , 表格 1 .
+- [41] H. Zhang, K. Xu, et al. (2025) Flexiffusion: training-free segment-wise neural architecture search for efficient diffusion models . In Proceedings of the ACM Web Conference (The Web Conf.) , 註: 也可作為 arXiv:2506.02488 取得 被引用於: §2 .
+- [42] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang (2018) The unreasonable effectiveness of deep features as a perceptual metric . In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 586–595 . 被引用於: §5 .
+- [43] X. Zhang, Y. Wang, Z. Li, et al. (2024) ViDiT-Q: efficient and accurate quantization of diffusion transformers . arXiv preprint arXiv:2406.XXXXX . 被引用於: §2 .
+- [44] X. Zhao, R. Yu, et al. (2024) Real-time video generation with pyramid attention broadcast . arXiv:2408.12588 . 外部連結: 連結 被引用於: §2 .
+- [45] D. Zhou, W. Wang, H. Yan, W. Lv, Y. Zhu, and J. Feng (2022) MagicVideo: efficient video generation with latent diffusion models . arXiv preprint arXiv:2211.11018 . 被引用於: §2 .
+
+# 補充材料
+
+#### 對於 CogVid 和 LTX 高 $\varepsilon$ 的洞察
+
+我們設計了以下診斷方法。對於三個模型中的每一個，我們生成 100 個影片，並計算去噪器在兩個連續時間步驟輸出之間的平均絕對誤差（MAE），即 $\|f(x_{t_{k}},t_{k})-f(x_{t_{k-1}},t_{k-1})\|_{1}$。較小的數值表示在鄰近步驟之間重複使用快取輸出會引入較少的誤差。100 個影片的平均值報告於圖 5。我們觀察到在中間範圍的時間步驟（大約 800–200），其中快取最頻繁地被應用，CogVideoX 和 LTX-Video 的連續步驟 MAE 始終高於 Wan。這表明這些模型表現出更大的逐步變化（更高的有效敏感度），因此實現相同的 NFE 縮減需要更大的快取容許度 $\varepsilon$，這本質上允許更多的近似誤差，並可能導致觀察到的品質下降。
+
+[FIGURE:models_epsilon.png] 圖 5：去噪器在兩個連續時間步驟輸出之間的 MAE。
+
+#### SenCache 與全域時間步驟最佳化方法的比較
+
+SenCache 中的局部敏感度是略過多一個步驟的邊際成本的代理。全域排程方法可視為做相同的事情但帶有規劃：它們跨時間步驟分配誤差預算以避免許多「小」局部略過累加的情況。從這個角度來看，SenCache 就像使用固定的逐步預算（通過 $\varepsilon$），而全域最佳化是選擇該預算如何隨時間變化的更通用版本。一個有趣的未來方向是將兩者結合：全域排程器可以提供動態 $\varepsilon(t)$ 值供 SenCache 用於局部決策。
+
+#### 額外的效率指標
+
+在 Wan 2.1 的 GH200 GPU 上，我們的方法將端到端實際牆鐘時間從 182.3 秒（原始）降低至 107.3 秒（41.1% 加速），相比 MagCache 的 110.6 秒（39.3% 加速）；兩者都將總計算量從 8,244,043.09 降低至 3,482,412.58 GFLOPs（減少 57.8%）。
+
+#### 跨模型敏感度模式
+
+我們在圖 4 中提供了估計網路敏感性的視覺化。在所有模型中，我們首先觀察到時間步 $t$ 和雜訊樣本的變化都必須被考慮以進行有效的快取，因為網路對兩者都很敏感。其次，只需 8 個多樣化樣本的小批次就足以獲得可靠的敏感性估計；不需要大批次。第三，敏感性模式在不同模型之間明顯不同。對於 Wan 2.1 和 LTX，在大時間步處，模型對 $t$ 變化的敏感性很高。然而，CogVideoX 的情況並非如此。此外，雖然 CogVideoX 和 LTX 在小時間步處對輸入變化表現出低敏感性，但 wan 2.1 表現出相反的行為，在此範圍內敏感性很高。最後，特別是對於 LTX，我們觀察到它在大時間步處對 $t$ 和雜訊潛在變數的變化都高度敏感，但在較小的時間步處敏感性較低。

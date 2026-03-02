@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DLEBench：評估基於指令的圖像編輯模型的小規模物體編輯能力 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-02/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-02 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">DLEBench：評估基於指令的圖像編輯模型的小規模物體編輯能力</h1>
+  
+  <div class="en-title">DLEBench: Evaluating Small-scale Object Editing Ability for Instruction-based Image Editing Model</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Shibo Hong, Boxian Ai, Jun Kuang, Wei Wang, FengJiao Chen, Zhongyuan Peng, Chenhao Huang, Yixin Cao</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.23622" target="_blank">2602.23622</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：PDF + DotsOCR
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.23622" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.23622" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.23622" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Diffusion</span><span class="tag method">LMM</span>
+    <span class="tag task">Image Editing</span><span class="tag task">Instruction Following</span><span class="tag task">Benchmark Evaluation</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+基於指令的影像編輯模型（Instruction-based Image Editing Models, IIEMs）在該領域取得了重大進展。然而，儘管這些模型在當前基準上展現出合理的指令遵循能力和強大的推理能力，但它們在編輯小物體方面的能力仍未被充分探討，儘管這對於實際和生成影像中的精確局部編輯和細節優化至關重要。本論文介紹了 DeepLookEditBench（DLEBench），這是首個專門用於評估 IIEMs 在編輯小規模物體能力的基準。具體而言，我們構建了一個涵蓋七種指令類型、包含 1889 個樣本的具有挑戰性的測試集。在這些樣本中，目標物體僅佔影像面積的 1%-10%，涵蓋了部分遮擋和多物體編輯等複雜場景。為了確保在此基準上的穩健評估，我們提出了一個評估協議，包含經過精化的評分標準，以最小化兩個評估標準上的主觀性和歧義：指令遵循（Instruction Following）和視覺一致性（Visual Consistency）。該協議還引入了雙模式評估框架（工具驅動模式和 Oracle 引導模式），以解決 LMM-as-a-Judge 與人類判斷在 DLEBench 上的不對齊問題。對 10 個 IIEMs 的實證結果揭示了小規模物體編輯中存在的顯著性能差距，突出了開發專門化基準以推進此能力的必要性。</p>
+  
+  <div class="abstract-en">Significant progress has been made in the field of Instruction-based Image Editing Models (IIEMs). However, while these models demonstrate plausible adherence to instructions and strong reasoning ability on current benchmarks, their ability to edit small objects remains underexplored, despite its importance for precise local editing and refining details in both real and generated images. In this paper, we introduce DeepLookEditBench (DLEBench), the first benchmark dedicated to assessing the abilities of IIEMs in editing small-scale objects. Specifically, we construct a challenging testbed comprising 1889 samples across seven instruction types. In these samples, target objects occupy only 1%-10% of the image area, covering complex scenarios such as partial occlusion and multi-object editing. To ensure robust evaluation on this benchmark, we propose an evaluation protocol with refined score rubrics to minimize subjectivity and ambiguity in two criteria: Instruction Following and Visual Consistency. This protocol also introduces a dual-mode evaluation framework (Tool-driven and Oracle-guided Modes) addressing the misalignment between LMM-as-a-Judge and human judgements on DLEBench. Empirical results on 10 IIEMs reveal significant performance gaps in small-scale object editing, highlighting the need for specialized benchmarks to advance this ability.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <p>arXiv:2602.03561v2 [cs.CV] 27 Feb 2026</p>
+<p>DLEBench：評估指令型影像編輯模型的小規模物件編輯能力</p>
+<p>Shibo Hong<sup>1,2,<em></sup>, Boxian Ai<sup>1,</em></sup>, Jun Kuang<sup>2</sup>, Wei Wang<sup>2</sup>, FengJiao Chen<sup>2</sup>, Zhongyuan Peng<sup>1</sup>, Chenhao Huang<sup>1</sup>, Yixin Cao<sup>1,†</sup></p>
+<p><sup>1</sup>復旦大學計算機科學與人工智慧學院, <sup>2</sup>美團</p>
+<p>arXiv:2602.12622/v1 [cs.LG] 12 Feb 2026</p>
+<p><strong>摘要</strong></p>
+<p><strong>摘要</strong></p>
+<p>指令型影像編輯模型（IIEMs）領域已取得顯著進展。然而，儘管這些模型在目前基準測試中展示出對指令的合理遵循和強大的推理能力，但它們編輯小物件的能力仍未被充分探索，儘管這對精確的局部編輯和細化真實及生成影像中的細節非常重要。在本論文中，我們引入了 DeepLookEditBench（DLEBench），這是首個專門用於評估 IIEMs 在編輯小規模物件能力上的基準。具體而言，我們構建了一個包含 1889 個樣本、涵蓋七種指令類型的具有挑戰性的測試集。在這些樣本中，目標物件僅佔影像面積的 1%-10%，涵蓋部分遮擋和多物件編輯等複雜場景。為了確保在此基準上進行穩健評估，我們提出了一項評估協議，該協議基於精細化的評分標準，旨在最小化兩個評估準則上的主觀性和歧義性：指令遵循和視覺一致性。該協議還引入了一個雙模式評估框架（工具驅動和預言機引導模式），以應對 LMM-as-a-Judge 與 DLEBench 上人類判斷之間的不對齊問題。在 10 個 IIEMs 上的實驗結果揭示了小規模物件編輯中的顯著性能差距，強調了需要專門的基準來推進這一能力的發展。</p>
+<p><strong>通訊作者：</strong> yxcao@fudan.edu.cn
+<strong>資料集：</strong> https://huggingface.co/datasets/SPUH/DLEBench
+<strong>程式碼：</strong> https://github.com/ALEX-nrp/DLEBench</p>
+<h1 id="1">1 介紹</h1>
+<p>基於指令的圖像編輯模型（Instruction-based Image Editing Models, IIEMs）[1, 5, 6, 11, 28, 29] 相比基於遮罩的圖像編輯模型（Mask-based Image Editing Models, MIEMs）[2, 7, 21] 具有更優越的可用性，因為它們只需要文字指令而無需額外的遮罩。這種使用者友善的特性推動了 IIEM 的重大進展。</p>
+<p>IIEM 的快速發展推動了評測基準的並行開發，以全面評估其能力。早期基準 [16] 專注於單輪、單一物體的編輯，逐步演進為多輪、多物體的設定 [27] 以測試指令遵循能力。最近的基準進一步擴展，評估推理能力 [32]，包括時間和邏輯推導。然而，儘管編輯任務的複雜性不斷增加，且現有基準對推理的需求也隨之提高，它們卻普遍存在偏向於編輯具有主導空間足跡的顯著物體的偏見。我們主張，隨著物體空間範圍的減小，編輯範式從廣泛修改轉向局部編輯，這對 IIEM 的小規模物體編輯造成了重大挑戰。如圖 1 所示，即使是 Gemini-3-Pro 等最先進的 IIEM 也無法準確定位目標物體，導致編輯失敗。重要的是，解決這一挑戰對於生成任務至關重要。它能夠實現對小規模錯誤的有針對性修正，避免從頭再生成圖像帶來的計算浪費和不一致性。</p>
+<p>為了評估 IIEM 的小規模物體編輯能力，我們致力於建立一個專門的基準。然而，存在兩個挑戰：首先，雖然視覺密集推理資料集中存在包含小規模物體的圖像，但針對它們的成對編輯指令卻很稀缺。手動整理這些配對非常耗時。其次，評估小規模物體編輯仍然具有挑戰性。傳統的相似度指標（例如 CLIP）與人類對細粒度細節的判斷相比對齐度較差。此外，即使是先進的 LMM 型評估器（即 LMM-as-a-Judge [9, 33]）也無法識別細微的視覺變化，因此會產生不可靠的評估。</p>
+<p>為了應對第一個挑戰，我們設計了一個半自動化三階段轉換管道，將視覺推理樣本轉換為圖像編輯樣本。首先，我們採用反事實合成策略將問答對轉換為元資料，包括編輯指令、指令類型、目標物體和圖像標題。其次，為了應對為小物體編輯生成可靠的真值參考圖像的挑戰，我們引入了裁剪編輯機制。這一策略將目標區域隔離以進行精確操作，能夠生成高品質的參考圖像，而這些對於在完整圖像上運作的 SOTA IIEM 來說是難以獲得的。最後，管道以人工驗證結束，以確保資料品質。基於此管道，我們構建了 DeepLookEditBench（DLEBench），這是第一個專門用於評估 IIEM 小規模物體編輯能力的基準。它包含 1,889 個樣本，目標物體面積限制在 1%-10% 範圍內，並在七種指令類型中融入複雜場景，例如部分遮擋和多物體編輯。</p>
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig1.png" loading="lazy" alt="Figure 1"></figure>
+<p><strong>圖 1</strong> 展示小規模編輯挑戰的範例。在編輯綠色圍巾的指令下，Gemini-3-Pro 錯誤識別了目標，改為修改了前景物體。</p>
+<p>為了應對第二個挑戰，我們提出了一個為小規模物體編輯量身定制的評估協議。首先，我們採用兩個標準：指令遵循（Instruction Following, IF），評估 IIEM 編輯小規模物體的能力；以及視覺一致性（Visual Consistency, VC），評估全局非目標區域的保留情況。至關重要的是，現有的 IF 和 VC 評分標準存在主觀性和模糊性的問題（例如依賴「大多數」等含糊不清的量詞），導致評估不可靠。為了克服這一點，我們建立了由不同失敗模式（例如定位失敗、錯誤操作）定義的客觀評分標準。這種重新設計改進了評估結果的可重現性，並實現了精確的錯誤診斷。其次，對於評估方法，我們提出了一個雙模式評估框架，以解決 LMM-as-a-Judge 與 DLEBench 上人類判斷對齐度低的問題。具體而言，工具驅動模式通過調用外部工具進行迭代評估來確保實用性，實現了無需人類干預的評估。相反，預言機導向模式利用人工標註的邊界框隔離目標物體，從而消除定位誤差，優先考慮可靠性。實驗結果表明，我們的評估方法相比 LMM-as-a-Judge 能夠實現更好地與人類判斷的對齐，提供可靠的自動化評估。</p>
+<p>總結而言，我們的主要貢獻如下：(1) 我們提出了 DLEBench，這是第一個專門用於評估 IIEM 小規模物體編輯能力的基準，在該領域樹立了基礎。(2) 我們設計了一個評估協議，包含改進的評分標準和雙模式框架，以確保小規模編輯的可靠評估。(3) 我們對 10 個代表性的 IIEM 進行了全面的評估和分析，提供了關於其小物體編輯能力的新穎見解。</p>
+<h2 id="2">2 相關工作</h2>
+<h3 id="21">2.1 影像編輯基準</h3>
+<p>為了評估 IIEM 不斷演進的能力，基準已從基本的單輪編輯進展到複雜、需要推理的場景。諸如 I2EBench [16] 等基準建立了評估標準單輪、單物件編輯能力的基礎基線。隨著該領域的進展，焦點轉向更複雜和更逼真的設定：PIE-Bench++ [10] 和 GIE-Bench [17] 針對多物件和有根據的編輯，而 ImgEdit [27] 和 ChatEdit [3] 引入多輪互動協議以模擬迭代使用者工作流程。最近，基準已擴展到高階推理密集型任務，諸如 KRIS-Bench [26] 和 UniREditBench [8] 等套件評估對物理知識和邏輯約束的遵循。然而，儘管這些基準強調語義和邏輯複雜性，但它們通常忽視了小規模物件所需的細粒度視覺感知和精確編輯能力。</p>
+<h3 id="22">2.2 影像編輯評估</h3>
+<p>早期評估協議 [19, 30] 主要依賴於基於相似性的指標（例如 CLIP 分數），在複雜編輯場景中這些指標往往與人類判斷的相關性很差。因此，最近的基準採用了 LMM-as-a-judge 範例 [8, 16, 27]，利用強大的大型多模型模型（LMM）跨三個核心維度評估結果：指令遵循、視覺一致性和視覺品質。然而，這些標準經常受到定義模糊和評分規則不清楚的困擾，導致評估過程中存在顯著的主觀性和歧義。此外，即使是先進的 LMM 評判器也難以應對我們的基準所需的細粒度視覺感知。當編輯目標只佔據影像的極小部分時，標準 LMM 評估器往往無法區分細微的修改與背景雜訊，因此需要更嚴格和解析度感知的評估協議。</p>
+<h2 id="3-dlebench">3 DLEBench</h2>
+<p>在本節中，我們介紹 DLEBench，一個用於評估 IIEM 小規模物件編輯能力的基準。我們在第 3.1 節詳細說明基準構建，然後在第 3.2 節給出基準統計資訊。</p>
+<h3 id="31">3.1 基準測試構建</h3>
+<p>為了構建 DLEBench，我們首先需要物體僅佔據場景中很小比例的影像。為此，我們從視覺密集推理基準中收集影像，其中推理問題特別針對嵌入雜亂環境中的單個或多個小尺度物體。此外，這些物體中有些被部分遮擋，因此可作為準確感知和隨後編輯它們的嚴格測試平台。我們選擇三個基準作為主要來源：MME-Realworld [31]、Pixel-Reasoner [20] 和 V*-Bench [25]，聚合為 2,043 個原始視覺推理樣本。每個原始樣本包含一張影像 $I$、一個視覺問題 $Q$ 和一個真實答案 $A$（連同候選選項 $O$），這些都是我們後續資料生成的基礎。</p>
+<p>如圖 2 所示，我們設計了一個三階段流程，包括元資料構建、參考影像生成和人工驗證，以將原始視覺推理樣本轉變為結構化影像編輯實例，記為 $(S_I, S_C, T_O, \text{Type}, \text{Instruction}, R_I, R_C)$。具體而言，$S_I$ 代表包含目標物體 $T_O$ 的源影像，並附帶其標題 $S_C$。編輯任務由 Instruction 及其特定類別 <em>Type</em> 定義。此外，$R_I$ 表示真實編輯影像（帶有標題 $R_C$），作為評估參考，用於評估模型生成的影像 $E_I$。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig2.jpeg" loading="lazy" alt="Figure 2"></figure>
+<p><strong>圖 2</strong> 三階段資料轉換流程概覽。我們開始從 V*-Bench 中選擇一個原始視覺推理樣本，特別是詢問女性圍巾顏色的樣本。在階段 1 中，我們通過 GPT-4.1 採用反事實合成策略來生成影像編輯元資料（如下方紅色框所示）。隨後，階段 2 利用 Gemini-3-Pro 的裁剪和編輯策略來生成參考影像。最後，所有資料提交至階段 3 進行嚴格的人工驗證。</p>
+<p><strong>元資料構建。</strong> 在此階段，我們採用反事實合成策略將視覺推理元組 (Q, O, A) 轉變為編輯元資料 (S<sub>C</sub>, T<sub>O</sub>, Type, Instruction, R<sub>C</sub>)，如圖 2 所示。具體而言，我們首先從 O 中選擇一個不正確的選項 A<sub>neg</sub>，作為轉換的目標屬性。通過在 Q 的背景下將 A 與此反事實狀態 A<sub>neg</sub> 進行對比，我們合成相應的編輯 <em>Instruction</em>。同時，我們分別通過將有效對 (Q, A) 和反事實對 (Q, A<sub>neg</sub>) 轉換為陳述句來生成 S<sub>C</sub> 和 R<sub>C</sub>，同時直接從 Q 的主體中提取 T<sub>O</sub>。最後，我們根據 Q 中查詢的視覺屬性對編輯 <em>Type</em> 進行分類。此過程產生七種不同編輯指令類型的分類法，分為屬性級別修改（材質、顏色、形狀、OCR）和物體級別修改（數量、替換、移除）。為了大規模實現此轉換，我們使用由精心設計的提示引導的 GPT-4.1（詳見表 15），利用其在邏輯推理和自然語言處理中的先進能力。</p>
+<p><strong>參考影像生成。</strong> 此階段的主要目標是為評估目的生成高品質的參考 R<sub>I</sub>，同時驗證生成的 <em>Instruction</em> 的有效性。最初，我們將原始 $I$ 視為源 $S_I$，並嘗試使用 IIEM 將 <em>Instruction</em> 直接應用於 $S_I$ 的標準做法。然而，初步實驗表明，即使是最先進的 IIEM（例如 Gemini-3-Pro）也經常無法在全圖像編輯設置中對小尺度 T<sub>O</sub> 進行定位。</p>
+<p>為了緩解這個問題，我們採用裁剪和編輯策略，將模型的注意力集中在目標區域。然而，這種方法遇到了兩個關鍵障礙：(1) 定位不準確：即使是更強大的檢測器如 GroundingDINO [18] 或 YOLOv13 [12] 也很難精確定位小尺度物體；(2) 背景缺陷：對於小尺度物體，緊密的裁剪剝奪了模型的全局背景，導致重新整合時出現邊界偽影和結構不一致。</p>
+<p>我們通過雙重方法來解決這些挑戰。首先，我們依靠人工標註來確保所有目標的精確邊界框。其次，我們提出了一個自適應邊界框擴展策略，以平衡局部焦點與全局背景。該策略根據物體的大小動態調整裁剪尺寸：為較小的物體納入更廣泛的背景以促進無縫重新整合，同時限制較大物體的擴展以保持局部焦點。擴展比率 $\lambda(s)$ 的正式表述為：</p>
+<p>$$ λ(s) = \begin{cases} λ_{max} &amp; \text{if } s ≤ S_{min}, \ λ_{min} &amp; \text{if } s ≥ S_{max}, \ (1-α) λ_{max} + α λ_{min} &amp; \text{otherwise,} \end{cases} \quad (1) $$</p>
+<p>其中 $s = min(w, h)$ 代表標註邊界框的最小尺寸。我們使用線性因子 $\alpha = \frac{s-S_{min}}{S_{max}-S_{min}}$ 在最大比率 $\lambda_{max}$（對應尺寸 $S_{min}$）和最小比率 $\lambda_{min}$（對應尺寸 $S_{max}$）之間內插 $\lambda(s)$。實際上，我們設定 $\lambda_{max} = 6.0$、$\lambda_{min} = 0.3$、$S_{min} = 32$ 和 $S_{max} = 256$。</p>
+<p><strong>人工驗證。</strong> 完成上述階段後，我們實施人工驗證階段以確保樣本的品質。此過程涉及二重檢查：(1) 語義一致性：我們確認人工標註的邊界框準確地包圍 $T_O$。此外，他們確保由 GPT-4.1 生成的元資料，特別是 $(S_C, T_O, \text{Type, Instruction, R_C})$，與原始 $(Q, O, A)$ 的邏輯保持嚴格的語義對齊。任何發現的差異都被手動更正。(2) 視覺驗證：我們驗證生成的參考 $R_I$ 是否嚴格遵守 <em>Instruction</em>，根據第 4.1 節定義的準則對其進行評估。在不符合的情況下，我們最多重新生成 $R_I$ 三次。如果在這些重試後仍然不滿意，我們認為編輯指令在視覺上是不可行的，並捨棄該樣本。</p>
+<h2 id="32">3.2 基準統計</h2>
+<p>透過採用我們的資料轉換管道，我們構建了 DLEBench，其包含 1,889 個小規模物體編輯樣本，涵蓋七種不同的編輯指令類型，詳見附錄 10。為了突出我們的基準對小規模物體編輯的獨特關注，我們將目標物體的規模分布與主流影像編輯基準進行比較，包括 ImageEdit [27]、UniREditBench [8]、RISE [32] 和 KRIS-Bench [26]（更多資訊請見附錄 11）。圖 3 中的累積分布函數（CDF）顯示 DLEBench 明顯偏向較小的比例，大多數目標物體佔據影像面積的不到 1%，而其他基準則主要以大規模目標為特徵。這種差異突出了我們的基準在評估小規模編輯能力方面的獨特價值。</p>
+<p>關於每張影像的目標物體數量，DLEBench 主要由單物體編輯組成（1,771 個實例），輔以具有挑戰性的多物體編輯子集（118 個實例），涉及多達 8 個目標。除了目標物體計數外，我們分析了按目標物體相對面積分類的樣本分布。如圖 4 所示，樣本在物體面積區間上的分布近似對數常態分布。分布並非隨機散佈或過度偏向極端異常值，而是自然地集中在 [0.07%, 0.8%) 區間周圍。此外，分布平順地逐漸減少至兩端，涵蓋從精細修改（$&lt;$ 0.07%）到相對</p>
+<hr />
+<p>大規模編輯（0.8%）的廣泛範圍。這種平衡結構確保了在不同空間粒度級別上進行穩健、全面的評估。</p>
+<h1 id="4">4 評估協議</h1>
+<h2 id="41">4.1 評估標準</h2>
+<p>為了評估 IIEM 的小規模編輯能力，我們使用<strong>指令遵循</strong>（IF）標準。該標準評估模型是否準確定位目標物體，並正確執行編輯，同時嚴格保留與指令無關的內在屬性。然而，現有的 IF 評分規則 [26, 32] 通常受到主觀性和模糊性的限制（例如，「評分 2：大部分所需的更改遺失」）。這些規則導致評估不可靠。為了解決這些限制，我們引入了由明確失敗模式定義的客觀評分規則。與整體評分不同，我們的規則實施分層檢查程序，根據失敗嚴重程度對性能進行排名，範圍從評分 1（定位失敗）、評分 2（錯誤操作）、評分 3（過度修改）到評分 4（完美執行）。通過嚴格區分定位錯誤與操縱和保留問題，此層次結構確保可重複的評估結果，並能夠精確診斷模型瓶頸。</p>
+<p>除了 IF 外，我們還加入了<strong>視覺一致性</strong>（VC），這是影像編輯任務的關鍵標準。該標準評估非目標區域的完整性。它確保非目標元素保持一致。鏡像 IF 規則，我們根據視覺異常的嚴重程度，將 VC 規則重新設計為分層 4 點量表，範圍從評分 1（場景崩潰）、評分 2（多重異常）、評分 3（單一異常）到評分 4（完美一致）。</p>
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig5.jpeg" loading="lazy" alt="Figure 5"></figure>
+<p><strong>Figure 5</strong> 我們工具驅動模式中採用的工具的輸入和輸出資料概述。這些工具在預言機引導模式中評估 VC 時也被使用。</p>
+<p><strong>Figure 5</strong> 我們工具驅動模式中採用的工具的輸入和輸出資料概述。這些工具在預言機引導模式中評估 VC 時也被使用。</p>
+<h2 id="42">4.2 雙模式評估框架</h2>
+<p>我們的基準不僅挑戰 IIEM，也挑戰現有的評估方法。初步實驗（如圖 8 所示）揭示即使是先進的 LMM-as-a-Judge 方法（例如 GPT-4.1 或 Gemini-3-Pro）也難以與人類判斷達到高度一致，主要源於其較弱的視覺感知能力。為了解決這一限制，我們引入了一個雙模式評估框架，包含兩種不同的配置：(1) <strong>Tool-driven Mode</strong>：在此模式中，LMM 充當代理來調用外部視覺工具，主動補償其自身的感知限制。(2) <strong>Oracle-guided Mode</strong>：LMM 在預處理資料上運作，利用人類標註的 bbox 和參考圖像來規避定位錯誤。這種雙重策略有效地協調了實用性與可靠性之間的權衡。在以下各節中，我們詳細說明這兩種模式的實現。</p>
+<p><strong>Tool-driven Mode。</strong> 為了緩解 LMM 在視覺感知中的不足，我們引入了一套工具</p>
+<hr />
+<p><strong>表 1</strong> 不同 IIEM 在 DLEBench 上各種指令類型的表現。我們使用 Oracle-guided Mode 在兩個標準上評估每個輸出：IF 和 VC。最終分數是通過這兩個標準結果的平均值獲得的（詳見表 4 以了解每個標準的具體分數）。最佳表現用<strong>粗體</strong>標示，次佳表現用<strong>底線</strong>標示。</p>
+<table>
+<thead>
+<tr>
+<th>指令類型</th>
+<th>閉源模型</th>
+<th>開源模型</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>Gemini-3-Pro</td>
+<td>GPT-Image-1</td>
+<td>OmniGen2</td>
+<td>Bagel-Think</td>
+<td>UniREEdit-Bagel</td>
+<td>MagicBrush</td>
+<td>Qwen-Edit</td>
+<td>UniWorld-V1</td>
+<td>UniWorld-V2</td>
+<td>Step1X-Edit</td>
+</tr>
+<tr>
+<td>Change Material</td>
+<td>74.01</td>
+<td>44.31</td>
+<td>47.03</td>
+<td>71.03</td>
+<td>41.66</td>
+<td>24.24</td>
+<td>48.91</td>
+<td>40.37</td>
+<td>57.74</td>
+<td>62.50</td>
+</tr>
+<tr>
+<td>Change Color</td>
+<td>66.99</td>
+<td>37.87</td>
+<td>33.58</td>
+<td>62.24</td>
+<td>39.47</td>
+<td>24.32</td>
+<td>44.52</td>
+<td>30.69</td>
+<td>55.21</td>
+<td>57.93</td>
+</tr>
+<tr>
+<td>Change OCR</td>
+<td>66.54</td>
+<td>37.28</td>
+<td>38.93</td>
+<td>49.46</td>
+<td>29.69</td>
+<td>18.39</td>
+<td>36.79</td>
+<td>28.65</td>
+<td>47.79</td>
+<td>59.39</td>
+</tr>
+<tr>
+<td>Change Shape</td>
+<td>68.84</td>
+<td>46.38</td>
+<td>41.31</td>
+<td>67.75</td>
+<td>43.02</td>
+<td>28.99</td>
+<td>33.34</td>
+<td>35.51</td>
+<td>53.63</td>
+<td>60.87</td>
+</tr>
+<tr>
+<td>Removal Object</td>
+<td>73.76</td>
+<td>50.52</td>
+<td>52.67</td>
+<td>67.29</td>
+<td>48.65</td>
+<td>28.41</td>
+<td>55.72</td>
+<td>35.50</td>
+<td>52.53</td>
+<td>63.90</td>
+</tr>
+<tr>
+<td>Replace Object</td>
+<td>64.86</td>
+<td>40.37</td>
+<td>48.23</td>
+<td>63.36</td>
+<td>37.62</td>
+<td>29.43</td>
+<td>41.13</td>
+<td>35.00</td>
+<td>57.58</td>
+<td>57.45</td>
+</tr>
+<tr>
+<td>Change Count</td>
+<td>43.87</td>
+<td>25.00</td>
+<td>32.64</td>
+<td>45.84</td>
+<td>23.68</td>
+<td>8.34</td>
+<td>31.81</td>
+<td>21.22</td>
+<td>24.14</td>
+<td>25.70</td>
+</tr>
+<tr>
+<td>平均</td>
+<td>65.55</td>
+<td>40.25</td>
+<td>42.06</td>
+<td>61.00</td>
+<td>37.68</td>
+<td>23.16</td>
+<td>41.75</td>
+<td>32.42</td>
+<td>49.80</td>
+<td>55.39</td>
+</tr>
+</tbody>
+</table>
+<p>（如圖 5 所示）設計用於增強 LMM 的感知能力，包括 Grounding、Zoom-In、Difference 和 Enhancer。每個工具產生經過轉換的圖像或文本資訊，從而提供更明確的視覺或文本證據以緩解模型的感知缺陷。</p>
+<p>具體而言，我們使用 GroundingDINO [18] 實現 Grounding 工具以進行物件定位。然而，由於 GroundingDINO 經常難以檢測小規模物件，我們引入了互補的 Zoom-In 工具以啟用主動空間搜尋。在此過程中，LMM 在反饋迴圈中運作：它迭代地生成和調整 bbox 以調用 Zoom-In 工具，重複搜尋直到目標物件被成功定位。除了上述定位輔助工具外，我們引入了 Difference 工具以找到兩張圖像中的差異。它比較兩張圖像的像素以識別變化的位置，並輸出強調這些不同區域的並排裁剪補丁。最後，為了確保由 Zoom-In 和 Difference 工具生成的所有裁剪圖像的視覺清晰度，我們使用由 Real-ESRGAN [22] 提供支持的 Enhancer 工具，該工具對這些裁剪進行上採樣以為評估產生更清晰的輸入。</p>
+<p>對於 Tool-driven Mode 的評估管線。給定 $(S_I, Instruction, E_I)$，LMM 迭代運作。在每個步驟 $i$，LMM 生成一個思考 $T_i$ 其後是一個動作 $A_i$ 或最終評估結果 $R$。具體而言，$A_i$ 可以是 JSON 格式的工具調用命令，$R$ 基於特定層面的評分基準（參見第 4.1 節）。在工具調用的情況下，執行產生一個觀察 $O_i$，該觀察被附加到交互歷史中作為後續步驟的輸入。當 LMM 輸出 $R$ 或達到最大交互輪次時，過程結束。正式地，我們在步驟 $i$ 定義 LMM 的推論過程如下：</p>
+<p>$$T_i, {A_i|R} \sim E(\cdot | S_I, Instruction, E_I, H_{i-1}), \quad (2)$$</p>
+<p>其中 $H_{i-1} = {T_j; A_j; O_j}_{j=1}^{i-1}$ 表示到步驟 $i-1$ 的交互歷史，而 $E$ 表示 LMM。</p>
+<p><strong>Oracle-guided Mode。</strong> 除了依賴工具外，我們引入了一種替代評估模式，該模式利用人類標註的目標物件 bbox 來預處理輸入圖像 $(S_I, E_I, R_I)$，從而將評估與定位解耦。具體而言，對於 IF，我們圍繞目標物件 $T_O$ 裁剪 $(S_I, E_I, R_I)$ 以強制 LMM 專注於編輯區域。相反，對於 VC，我們用白色像素遮蔽 $T_O$ 同時提供與 Tool-driven Mode 相同的工具集以輔助評估。此策略消除了目標的視覺影響，允許 LMM 評估非目標區域的一致性而不受干擾。</p>
+<h1 id="5">5 實驗</h1>
+<h2 id="51">5.1 實驗設定</h2>
+<p>為了全面評估 IIEM 的小規模物體編輯能力，我們策劃了涵蓋不同架構的多樣化代表性模型集合。我們將其分為三組：(1) 自迴歸模型：</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig6.jpeg" loading="lazy" alt="Figure 6"></figure>
+<p><strong>圖 6</strong> 物體規模對效能的影響。中央散點圖說明了目標物體的相對規模（對數尺度）與 IF 分數之間的關係。左上角的插圖顯示了隨著邊界框面積增加，平均分數的趨勢，以及 Pearson 相關係數 (r) 和統計顯著性 (p)。右下角的插圖呈現了分數的整體分佈。</p>
+<h3 id="omnigen2-24bagel-think-4-unireedit-bagel-8">OmniGen2 [24]、Bagel-Think [4] 和 UniREEdit-Bagel [8]</h3>
+<p>(2) 基於 LMM 的擴散模型：MagicBrush [30]、Qwen-Edit [23]、UniWorld-V1 [14] 和 UniWorld-V2 [13]，它們採用 LMM 作為文字編碼器，搭配擴散 Transformer 主幹；以及 (3) 混合架構：由 Step1X-Edit [15] 表示，結合 LMM 能力與 DiT 風格的擴散框架。此外，我們還納入了兩個專有模型 GPT-Image-1 和 Gemini-3-Pro，透過其官方 API 訪問。為了確保評估準確性，我們採用 Oracle 引導模式來評估所有模型在 IF 和 VC 上的表現。此外，我們將所有分數標準化為 100 分制，以便於跨模型的直接比較。</p>
+<h2 id="52-dlebench"><strong>5.2 DLEBench 上的基準測試結果</strong></h2>
+<p><strong>整體效能。</strong> 表 1 呈現了不同 IIEM 在 DLEBench 上跨指令的量化結果。這些結果質疑了閉源模型始終優於開源模型的普遍假設。雖然 Gemini-3-Pro 以 65.55 的平均分數排名第一，展現了穩健的整體能力，但某些開源模型表現出了顯著的競爭力。值得注意的是，開源模型 Bagel-Think（61.00）以相當大的差距超越了專有 GPT-Image-1（40.25）。這表明在特定的小規模編輯場景中，專有模型不一定能保持絕對優勢，不同於在一般推理基準測試中的情況 [8, 26]。</p>
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig7.jpeg" loading="lazy" alt="Figure 7"></figure>
+<p><strong>圖 7</strong> DLEBench 上跨不同指令類型和兩種不同評估標準的效能。上方：閉源模型。下方：開源模型。</p>
+<hr />
+<p>在跨不同指令的效能方面，我們觀察到所有模型的 Change Count 分數都出現一致的降低。我們將此歸因於準確隔離和列舉多個小目標物體的內在複雜性。與編輯單一小規模實例的指令不同，Change Count 需要更高水平的視覺感知來同時處理多個小實體，使其成為我們基準測試中最具挑戰性的類型。</p>
+<p><strong>按評估標準分析。</strong> 圖 7 呈現了一張雷達圖，描繪了模型在各種標準上的效能，具體數值詳見表 4。關於 IF，結果表明所有模型的表現都不理想。即使是表現最佳的 Gemini-3-Pro 平均也僅達 48.97，凸顯了現有 IIEM 在小規模編輯能力方面的顯著不足。為了直觀展示這些限制，我們在附錄 9 中提供了大量的定性比較。相反，大多數模型在 VC 上表現良好，該指標評估全域一致性。然而，GPT-Image-1 和 Bagel-Think 之間存在驚人的差異（35.17 對 86.43）。我們將此歸因於 GPT-Image-1 在定位目標物體失敗時傾向於錯誤地修改非目標區域，從而嚴重破壞全域一致性。相比之下，雖然 Bagel-Think 的 IF 分數低於 GPT-Image-1（35.55 對 45.32），但它在定位失敗時避免了任意修改。這些發現表明，保守策略——在不確定時棄權編輯——比激進修改更傾向於保持全域一致性。</p>
+<p><strong>物體尺度對效能的影響。</strong> 為了研究 IIEM 對目標物體尺度的敏感性，圖 6 視覺化了目標物體邊界框面積與 IF 分數之間的關係。散點圖使用相對寬度和高度的對數軸，將小規模物體聚集在左下象限，大規模物體聚集在右上象限。這些結果呈現出兩種不同的行為模式。對於大多數模型，效能顯示出尺度相關的模式：具有小空間佔有率的目標物體與低分相關（紅點），而較大物體與高分相關（藍點）。相比之下，UniWorld-V1、Gwen-Edit 和 MagicBrush 等模型在所有尺度上都表現出一致的低效能，整個光譜中都以低分樣本（紅點）為主。因此，與其他 IIEM 相比，這些模型缺乏編輯小規模物體的能力。</p>
+<p>我們進一步透過左上角嵌入圖表中呈現的相關性分析來量化這些視覺觀察。具體來說，我們應用滑動窗口（大小 = 10）來計算按邊界框面積排序的樣本間的平均分數。雖然大多數競爭模型顯示正相關——確認它們確實受到物體尺度的有效限制——前述三個模型顯示出明顯較弱的相關性。相關性的缺乏表明編輯任務超過了模型的能力，即使在我們基準測試中的最大物體尺度也是如此。</p>
+<p>最後，分數分佈（右下角嵌入圖表）提供了對模型失敗性質的細粒度洞察。OminiGen2、UniWorld-V1、Gwen-Edit、MagicBrush 和 Bagel-Think 等模型中 Score 1（紅色：定位失敗）的優勢凸顯了識別目標物體的關鍵缺陷。相反，Step1X-Edit、UniWorld-V2 和 Gemini-3-Pro 表現出較高的 Score 3（藍色：過度修改）頻率。這些結果表明，雖然這些模型能準確定位目標，但它們傾向於過度改變，損害了屬性保持。與眾不同的是，GPT-Image-1 中 Score 2（橙色：錯誤動作）的優勢表明其主要瓶頸在於指令遵循而非空間定位。值得注意的是，UniREdit-Bagel 表現出系統性不足，在定位、執行和保持度量上都表現不佳。</p>
+<p><strong>5.3 雙模式評估框架的有效性</strong></p>
+<p>為了驗證我們的框架，我們評估了它與人類判斷的一致性。具體來說，四位註釋者評估了由 10 個 IIEM 在整個 DLEBench 上生成的隨機抽樣輸出子集（註釋文件見附錄 7）。在正式註釋之前，我們對 100 個隨機抽樣的輸出進行了校準階段，以解決由模糊案例引起的差異並統一評估標準，從而最大化標註者間一致性（IAA）。以這些註釋作為基準事實，我們使用 Spearman（ρ）和 Pearson（r）相關係數以及平均絕對誤差（MAE）來量化一致性。在實施方面，我們使用 Gemini-3-Pro 作為我們評估框架和 LMM-as-a-Judge 的骨幹 LMM，同時在 LMM-as-a-Judge 範例內使用 GPT-4.1 作為評估器以供參考。所有提示詳見附錄 13。為了確保公平性，我們使用相同的基礎提示，僅為需要它們的方法附加工具指令。</p>
+<p>在表 2 中，我們呈現了使用 Krippendorff's Alpha（$\alpha$）跨各種指令類型計算的 IAA。在我們嚴格的註釋指南指導下，我們在所有類別中觀察到高度的一致性分數。這些結果證明了人類註釋的可靠性，為驗證我們的評估框架奠定了堅實基礎。</p>
+<p>基於這個可靠的人類基線，我們在圖 8 中量化了不同評估方法與人類判斷之間的一致性。結果表明 Oracle 導向模式獲得了最強的一致性，達到了最高的 ρ 和 r 以及最低的 MAE，其次是工具驅動模式。相比之下，LMM-as-a-Judge 基線，無論是使用 Gemini-3-Pro 還是 GPT-4.1，都表現出較低的相關係數和顯著更高的 MAE。這個效能差距表明即使是 SOTA LMM 也難以可靠地評估我們的基準測試（更多定性比較見附錄 12）。</p>
+<h1 id="6">6 結論、限制與未來工作</h1>
+<p>在本論文中，我們引入 DLEBench，一個包含 1,889 個樣本的基準，用於評估圖像編輯模型（IIEMs）的小規模物體編輯能力，其中目標物體僅佔據面積的 1%–10%。通過評估 10 個 IIEMs，我們發現當前模型在此類限制下難以保持編輯保真度和一致性。為了實現可靠的評估，我們提出了一個雙模式評估框架，配合改進的評分標準，相比於 LMM-as-a-Judge 更好地與人類判斷相符。我們基準的主要限制是指令類型分佈不平衡，這源於從視覺推理數據集轉換樣本。我們將開發一個自動化數據擴展流程，以改進指令分佈的多樣性和平衡。</p>
+<hr />
+<h1 id="_1">附錄</h1>
+<h2 id="7">7 標註文件</h2>
+<p>您將會看到一張源圖像、一個編輯指令、一張編輯後的圖像和一張參考圖像。您的任務是根據兩個不同維度評估編輯的品質：指令遵循度和視覺一致性。標註界面如圖 11 所示。</p>
+<h3 id="71">7.1 評估標準的定義</h3>
+<p><strong>指令遵循度：</strong> 此維度評估模型是否準確地定位了目標物體，並正確執行編輯，同時嚴格保留與指令無關的內在屬性，是評估小規模編輯能力的主要指標。鑑於目標區域或物體佔據的像素比率很小，可能被部分遮擋，或呈現模糊狀態，評估重點在於模型準確定位目標區域的能力，同時確保不對目標物體進行過度修改。有必要考慮以下三個子維度：</p>
+<ul>
+<li>
+<p>目標物體位置：模型是否在正確的目標位置進行了修改？</p>
+</li>
+<li>
+<p>動作對齊：模型是否按要求對該物體執行了正確的修改動作（例如，替換、移除、改變）？</p>
+</li>
+<li>
+<p>過度修改：模型是否保留了未被指定要改變的目標物體的原始身份和細節？</p>
+</li>
+</ul>
+<p><strong>視覺一致性：</strong> 此維度測量輸入和輸出圖像之間與指令無關的環境和視覺元素的保留程度，該維度考慮全局保留。這在視覺編輯任務中尤為重要，因為它可以區分基於原始圖像進行有根據編輯的模型（例如，原生生成模型）和從零開始重新生成場景的模型（例如，級聯型模型）。有必要考慮以下三個子維度：</p>
+<ul>
+<li>
+<p>全局場景穩定性：模型是否保留了場景的基本視覺背景，包括藝術風格和場景風格？</p>
+</li>
+<li>
+<p>局部異常檢測：模型是否嚴格保留了非目標物體，確保沒有改變、刪除、扭曲或添加額外物體？</p>
+</li>
+</ul>
+<h3 id="72">7.2 評分準則</h3>
+<p>表格 5 和表格 3 分別呈現了指令遵循（Instruction Following）和視覺一致性（Visual Consistency）的評分準則。指令遵循包含四個層級結構，從最好到最差分別為：評分 4（完美執行）、評分 3（過度修改）、評分 2（錯誤動作）和評分 1（定位失敗）。同時，視覺一致性也包含四個層級結構：評分 4（完美一致性）、評分 3（單一異常）、評分 2（多個異常）和評分 1（場景崩潰）。我們採用離散的形容詞評級而非數值評分，以便 LMMs 能更好地理解。</p>
+<h3 id="73">7.3 評估流程</h3>
+<p>我們針對兩項標準提出評估流程，以及在圖 9 中展示的兩個註釋範例。</p>
+<p><strong>關於指令遵循，</strong> 可以應用以下評估流程：</p>
+<ul>
+<li>
+<p><strong>步驟 1：檢查精確定位</strong></p>
+</li>
+<li>
+<p>比較來源影像和編輯後的影像。不要依賴於單純的視覺差異或像素級別的變化。相反地，應專注於預期的編輯是否已有效進行。即使影像展現出變化（例如偽影、色彩偏移或輕微扭曲），如果目標物體仍然可識別或未經歷所請求的修改，您必須將其標記為定位失敗。</p>
+</li>
+</ul>
+<hr />
+<p><strong>表格 3</strong> 視覺一致性的評分標準。</p>
+<table>
+<thead>
+<tr>
+<th>標籤</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>完美一致性</td>
+<td>最高標準。背景環境和所有非目標物體在視覺上保持與原始影像完全相同。編輯無縫整合，不干擾周圍像素。場景看起來就像完全相同的照片，只是特定目標被修改了。</td>
+</tr>
+<tr>
+<td>單一異常</td>
+<td>總體背景環境保持一致，但恰好有一個特定的非目標物體或細節已被更改、移除或扭曲。例如，一切都很完美，除了桌子上的一個杯子改變了顏色，或添加了原始影像中不存在的一個人。只影響整體影像紋理或全球視覺效果的變化（例如照明濾鏡或顆粒感）不被視為異常。</td>
+</tr>
+<tr>
+<td>多個異常</td>
+<td>總體背景環境保持一致，但有兩個或更多個不同的非目標物體或細節已被更改、移除或扭曲。例如，牆上的繪畫改變了內容，並且角落裡的椅子消失了。場景中有多個分散的錯誤。同樣地，只影響整體影像紋理或全球視覺效果的變化不計算為異常。</td>
+</tr>
+<tr>
+<td>場景崩潰</td>
+<td>環境的高級語義類別或藝術風格已從根本上改變。編輯後的影像描繪的是完全不同類型的位置（例如，城市變成森林）或意味著媒介的完全轉變（例如，從照片寫實風格轉變為油畫）。關鍵：您必須忽略對特定背景物體或場景佈局的變化；此標籤僅在一般設定類別或藝術風格被破壞時適用。</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>
+<p>如果嚴重的模糊使得無法區分修改是否發生，或者修改明確影響目標區域外的區域，請停止並標記為定位失敗。</p>
+</li>
+<li>
+<p>如果模型在目標物體內的不正確子組件上執行任何修改，並且指令中指定的特定部分或屬性未被正確修改，請將其標記為定位失敗。</p>
+</li>
+<li>
+<p>如果發生了變化，請進行步驟 2。</p>
+</li>
+</ul>
+<h3 id="2_1">第 2 步：檢查動作對齊</h3>
+<ul>
+<li>
+<p>比較編輯後影像與源影像。模型是否執行了文本中要求的正確動作？</p>
+</li>
+<li>
+<p>如果發生了變化，檢查其是否與編輯指令相符。判斷具體動作（例如顏色變化、物體移除）是否正確執行。您可以參考參考影像以獲取視覺背景，但文本指令是主要規則。如果模型執行了與指令相矛盾的修改（例如將物體變成綠色而不是紅色），將其標記為錯誤動作。</p>
+</li>
+<li>
+<p>對於物體數量減少指令，如果目標物體沒有減少到指定的確切數量，這被分類為錯誤動作；同樣地，對於物體增加指令，如果目標物體沒有增加到指定的確切數量，這也被分類為錯誤動作。</p>
+</li>
+<li>
+<p>如果動作執行正確，請進行第 3 步。</p>
+</li>
+</ul>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig9.jpeg" loading="lazy" alt="Figure 9"></figure>
+<p>圖 9 兩個評估維度的標註範例。</p>
+<p><strong>第 3 步：檢查過度修改</strong></p>
+<ul>
+<li>
+<p>比較編輯後影像與源影像。除了指令明確針對的部分外，物體是否保留其原始形狀、紋理和結構細節？</p>
+</li>
+<li>
+<p>如果物體在結構上扭曲，出現未要求的樣式變化（例如 T 恤變成連帽衫），將其標記為過度修改。注意：對於物體移除指令，非目標物體的刪除不算作過度修改。對於物體替換指令，如果目標成功替換為要求的物體類型，且替換的物體清晰可認為該物體，則周圍物體的改變不被分類為過度修改。但是，如果替換的物體不清晰可認，應將其分類為過度修改。</p>
+</li>
+<li>
+<p>如果修改動作可識別，但物體的其他部分變得模糊或失去精細細節，使您無法確認其原始形狀、紋理和結構，將其標記為過度修改。</p>
+</li>
+<li>
+<p>如果物體保持清晰並忠於原始狀態，將其標記為完美執行。</p>
+</li>
+</ul>
+<p><strong>對於視覺一致性</strong>，可應用以下評估過程：</p>
+<p><strong>第 1 步：檢查全局場景穩定性</strong></p>
+<hr />
+<p><strong>表 4</strong> DLEBench 在不同指令類型和兩個不同標準上的效能。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>指令類型</th>
+<th>閉源模型</th>
+<th>開源模型</th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>Gemini-3-Pro</td>
+<td>GPT-Image-1</td>
+<td>OmniGen2</td>
+<td>Bagel-Think</td>
+<td>UniREdit-Bagel</td>
+<td>MagicBrush</td>
+<td>Qwen-Edit</td>
+<td>UniWorld-V1</td>
+<td>UniWorld-V2</td>
+<td>Step1X-Edit</td>
+</tr>
+<tr>
+<td><strong>指令跟隨 (IF)</strong></td>
+<td>變更材質</td>
+<td><strong>59.92</strong></td>
+<td>54.07</td>
+<td>36.11</td>
+<td>51.19</td>
+<td>51.59</td>
+<td>12.70</td>
+<td>24.80</td>
+<td>16.06</td>
+<td>51.98</td>
+<td>52.78</td>
+</tr>
+<tr>
+<td></td>
+<td>變更顏色</td>
+<td><strong>49.21</strong></td>
+<td>40.17</td>
+<td>22.37</td>
+<td>39.82</td>
+<td>39.97</td>
+<td>14.62</td>
+<td>18.84</td>
+<td>10.70</td>
+<td><strong>45.27</strong></td>
+<td>42.74</td>
+</tr>
+<tr>
+<td></td>
+<td>變更 OCR</td>
+<td><strong>54.84</strong></td>
+<td>39.73</td>
+<td>14.73</td>
+<td>22.34</td>
+<td>22.56</td>
+<td>6.04</td>
+<td>8.09</td>
+<td>15.45</td>
+<td>40.95</td>
+<td><strong>47.69</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>變更形狀</td>
+<td><strong>55.07</strong></td>
+<td><strong>53.62</strong></td>
+<td>21.74</td>
+<td>49.28</td>
+<td>40.58</td>
+<td>20.29</td>
+<td>7.25</td>
+<td>10.14</td>
+<td>46.38</td>
+<td>44.93</td>
+</tr>
+<tr>
+<td></td>
+<td>移除物體</td>
+<td>60.26</td>
+<td><strong>65.68</strong></td>
+<td>37.82</td>
+<td>43.09</td>
+<td>60.01</td>
+<td>26.80</td>
+<td>40.76</td>
+<td>21.20</td>
+<td>56.32</td>
+<td>56.00</td>
+</tr>
+<tr>
+<td></td>
+<td>替換物體</td>
+<td><strong>48.23</strong></td>
+<td>45.93</td>
+<td>30.50</td>
+<td>37.59</td>
+<td>39.01</td>
+<td>25.53</td>
+<td>12.77</td>
+<td>14.19</td>
+<td>45.65</td>
+<td><strong>46.10</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>變更計數</td>
+<td><strong>15.28</strong></td>
+<td><strong>18.06</strong></td>
+<td>6.94</td>
+<td>5.56</td>
+<td>12.50</td>
+<td>1.39</td>
+<td>6.67</td>
+<td>9.11</td>
+<td>9.72</td>
+<td>8.33</td>
+</tr>
+<tr>
+<td></td>
+<td>平均</td>
+<td><strong>48.97</strong></td>
+<td>45.32</td>
+<td>24.32</td>
+<td><strong>35.55</strong></td>
+<td>38.03</td>
+<td>15.34</td>
+<td>17.03</td>
+<td>13.84</td>
+<td><strong>42.32</strong></td>
+<td>42.65</td>
+</tr>
+<tr>
+<td><strong>視覺一致性 (VC)</strong></td>
+<td>變更材質</td>
+<td><strong>88.10</strong></td>
+<td>34.54</td>
+<td>57.94</td>
+<td><strong>90.87</strong></td>
+<td>31.73</td>
+<td>35.77</td>
+<td>73.02</td>
+<td>64.68</td>
+<td>63.49</td>
+<td>72.22</td>
+</tr>
+<tr>
+<td></td>
+<td>變更顏色</td>
+<td><strong>84.76</strong></td>
+<td>35.57</td>
+<td>44.79</td>
+<td><strong>84.65</strong></td>
+<td>38.97</td>
+<td>34.01</td>
+<td>70.20</td>
+<td>50.67</td>
+<td>65.14</td>
+<td>73.11</td>
+</tr>
+<tr>
+<td></td>
+<td>變更 OCR</td>
+<td><strong>78.23</strong></td>
+<td>34.82</td>
+<td>63.13</td>
+<td><strong>76.58</strong></td>
+<td>36.82</td>
+<td>30.73</td>
+<td>65.49</td>
+<td>41.85</td>
+<td>54.63</td>
+<td>71.09</td>
+</tr>
+<tr>
+<td></td>
+<td>變更形狀</td>
+<td><strong>82.61</strong></td>
+<td>39.13</td>
+<td>60.87</td>
+<td><strong>86.21</strong></td>
+<td>45.45</td>
+<td>37.68</td>
+<td>59.42</td>
+<td>60.87</td>
+<td>60.87</td>
+<td>76.81</td>
+</tr>
+<tr>
+<td></td>
+<td>移除物體</td>
+<td><strong>87.25</strong></td>
+<td>35.36</td>
+<td>67.51</td>
+<td><strong>91.49</strong></td>
+<td>37.28</td>
+<td>30.01</td>
+<td>70.68</td>
+<td>49.79</td>
+<td>48.73</td>
+<td>71.80</td>
+</tr>
+<tr>
+<td></td>
+<td>替換物體</td>
+<td>81.49</td>
+<td>34.81</td>
+<td>65.96</td>
+<td><strong>89.13</strong></td>
+<td>36.23</td>
+<td>33.33</td>
+<td>69.50</td>
+<td>55.80</td>
+<td>69.50</td>
+<td>68.79</td>
+</tr>
+<tr>
+<td></td>
+<td>變更計數</td>
+<td><strong>72.46</strong></td>
+<td>31.94</td>
+<td>58.33</td>
+<td><strong>86.11</strong></td>
+<td>34.85</td>
+<td>15.28</td>
+<td>56.94</td>
+<td>33.33</td>
+<td>38.56</td>
+<td>43.06</td>
+</tr>
+<tr>
+<td></td>
+<td>平均</td>
+<td>82.13</td>
+<td>35.17</td>
+<td>59.79</td>
+<td><strong>86.43</strong></td>
+<td>37.33</td>
+<td>30.97</td>
+<td>66.46</td>
+<td>51.00</td>
+<td>57.27</td>
+<td>68.13</td>
+</tr>
+</tbody>
+</table>
+<p>– 比較編輯後影像與源影像的背景環境，嚴格忽略目標物體。</p>
+<p>– 模型是否保留了通用的背景環境和藝術風格？</p>
+<ul>
+<li>
+<p>如果場景看起來像完全不同的地方、不同的時間或風格有所改變，停止並標記為場景崩潰。</p>
+</li>
+<li>
+<p>如果全局環境保持穩定，請進行第 2 步。</p>
+</li>
+</ul>
+<p><strong>第 2 步：掃描局部異常</strong></p>
+<ul>
+<li>
+<p>仔細掃描非目標區域，尋找源影像中出現的特定物體或細節，但在編輯後影像中丟失、扭曲或改變的情況，以及編輯後影像中出現但在原始影像中不存在的任何新物體或元素。</p>
+</li>
+<li>
+<p>計算發現的不同錯誤的數量（例如，缺失的燈、改變的地毯圖案）。</p>
+</li>
+<li>
+<p>如果您找到<strong>兩個或以上</strong>的不同錯誤，標記為多個異常。</p>
+</li>
+<li>
+<p>如果您找到恰好<strong>一個</strong>不同的錯誤，標記為單個異常。</p>
+</li>
+</ul>
+<p>– 如果背景完美無暇，沒有<strong>任何</strong>錯誤，標記為完美一致性。</p>
+<p><strong>模糊注意事項</strong>：如果目標過於模糊以至於無法驗證定位是否成功，將其標記為定位失敗。如果編輯的物體清晰遵循編輯指令，但物體的其他部分出現模糊或退化，導致您無法判斷原始特性是否被保留，將其標記為過度修改。</p>
+<p><strong>多個目標物體注意事項</strong>：目標物體可能在影像中出現多次。在這種情況下，必須根據上述標準獨立評估每個目標實例，影像的最終得分應為所有目標物體中最差的結果。</p>
+<p><strong>8 更多定量結果</strong></p>
+<p>表 4 呈現了十個 IIEMs 在兩個維度和七種指令類型上的效能。我們利用 oracle 引導模式以確保評估準確性，並將所有分數歸一化為 100 分制，以便進行直接的跨模型比較。</p>
+<p><strong>9 更多定量比較結果</strong></p>
+<p>我們在圖 13 至 19 中提供了 DLEBench 上的定性比較</p>
+<hr />
+<p><strong>表 5</strong> 指令跟隨的評分標準。</p>
+<table>
+<thead>
+<tr>
+<th>標籤</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>完美執行</td>
+<td>模型展示了完美的指令跟隨。它正確識別了目標區域或物體，準確執行了特定修改，並嚴格保留了物體的原始身份（包括形狀、紋理和結構），沒有引入任何無意的變化。</td>
+</tr>
+<tr>
+<td>過度修改</td>
+<td>當模型正確定位了目標並執行了要求的編輯，但未能保留應該保持不變的物體的原始細節時，此標籤適用。除了指令明確要求的特定變化外，目標物體必須在視覺上與原始影像保持相同；因此，對物體結構或精細細節的任何未要求的改變—例如當只要求顏色變化時將 T 恤變成連帽衫—被分類為過度修改。值得注意的是，對於物體移除指令，非目標物體的意外刪除不在此類別中受罰。對於物體替換指令，只要目標成功替換為要求的物體類型，且替換的物體本身清晰可認為該物體，則周圍物體的改變不被分類為過度修改。但是，如果替換的物體不清晰可認，應將其分類為過度修改。此外，如果新物體與原始影像的風格不一致（例如光照、渲染風格或寫實水平），也應將其分類為過度修改。</td>
+</tr>
+<tr>
+<td>錯誤動作</td>
+<td>模型成功定位了目標物體，但執行的修改與要求的動作類別不匹配。您必須嚴格針對這些特定類別進行驗證：變更顏色、變更材質、變更文本、變更形狀、物體計數（減少、增加）和物體操作（移除、替換）。如果模型執行的動作屬於與要求不同的類別（例如當要求「變更顏色」時執行「移除物體」操作，或當只要求「變更材質」時執行「替換物體」），必須標記為錯誤動作。值得注意的是，對於物體數量減少指令，如果目標物體沒有減少到指定的確切數量，這被分類為錯誤動作；同樣地，對於物體增加指令，如果目標物體沒有增加到指定的確切數量，這也被分類為錯誤動作。對於物體移除指令，移除後填補物體所在的區域不應被視為錯誤動作，除非清楚地表明已執行了替換操作。</td>
+</tr>
+<tr>
+<td>定位失敗</td>
+<td>定位失敗發生在模型未能在預期目標上執行指定修改，使物體有效地保持不變時。此得分涵蓋目標出現輕微、無意人為產物的情況—例如微妙的顏色轉變或輕微的幾何扭曲—這些不構成要求的編輯，以及嚴重模糊或扭曲使修改的視覺驗證不可能的情況。此外，此得分也包括在目標物體內的定位錯誤，其中模型修改了目標物體的不正確子組件（例如，當目標物體是輪子且指令是將輪轂變成紅色時，但模型反而將輪胎變成紅色），因為指令定義的特定屬性保持未修改。</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig10.jpeg" loading="lazy" alt="Figure 10"></figure>
+<p><strong>圖 10</strong> DLEBench 的指令統計。(a) 屬性級修改的分佈，以顏色和 OCR 為主。(b) 物體級修改的分佈，其中移除是最常見的操作。</p>
+<h1 id="10">10 編輯指令類型分佈</h1>
+<p>通過我們的數據轉換管道，DLEBench 包含 1,889 個高品質影像編輯樣本，涵蓋七種不同的編輯指令類型，分為屬性級別和物體級別的修改。圖 10(a) 展示了屬性級別修改的分佈。繼承了源視覺推理基準的特徵，色彩（Color）和光學字符識別（OCR）成為主要類別，因為這些視覺屬性在視覺推理任務中被查詢最為頻繁。除了這些主要類型外，數據集還包括其他基於屬性的編輯，包括材質（Material）和形狀（Shape）。圖 10(b) 詳細說明了物體級別的修改。同樣地，受源數據中物體存在查詢普遍性的影響，移除（Removal）佔據了大多數例子，而替換（Replacement）和計數（Count）出現得較少。</p>
+<h1 id="11">11 目標區域比例的計算</h1>
+<p>為了將目標尺度分佈與主流基準（ImageEdit [27]、UniREditBench [8]、RISE [32] 和 KRIS-Bench [26]）進行比較，我們利用雙階段管道來解決這些數據集中目標物體缺乏真實邊界框的問題。首先，我們利用 GPT-4.1 從每個編輯指令中提取特定的目標物體名稱，遵循表 6 中詳述的提示。其次，基於這些基準中的目標通常是顯著的觀察，我們採用 GroundingDINO 從提取的名稱中定位物體並生成邊界框，從而能夠計算目標區域比例。</p>
+<p><strong>表 6</strong> GPT-4.1 用於提取目標物體的提示。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig11.jpeg" loading="lazy" alt="Figure 11"></figure>
+<p><strong>圖 11</strong> 用於標註 IF 和 VC 進行人工判斷的使用者界面。</p>
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig12.jpeg" loading="lazy" alt="Figure 12"></figure>
+<p><strong>圖 12</strong> 用於標記目標物體邊界框的使用者界面。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig13.jpeg" loading="lazy" alt="Figure 13"></figure>
+<p>圖 13 變更色彩的視覺化結果。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig14.jpeg" loading="lazy" alt="Figure 14"></figure>
+<p><strong>圖 14</strong> 變更光學字符識別的視覺化結果。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig15.jpeg" loading="lazy" alt="Figure 15"></figure>
+<p><strong>圖 15</strong> 變更材質的視覺化結果。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig16.jpeg" loading="lazy" alt="Figure 16"></figure>
+<p><strong>圖 16</strong> 替換物體的視覺化結果。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig17.jpeg" loading="lazy" alt="Figure 17"></figure>
+<p><strong>圖 17</strong> 變更計數的視覺化結果。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig18.jpeg" loading="lazy" alt="Figure 18"></figure>
+<p><strong>圖 18</strong> 移除物體的視覺化結果。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig19.jpeg" loading="lazy" alt="Figure 19"></figure>
+<p>圖 19 變更形狀的視覺化結果。</p>
+<hr />
+<h1 id="12">12 定性評估方法比較示例</h1>
+<p>表7至表10將我們的Oracle-guided和Tool-driven模式與Gemini-3-Pro和GPT-4.1基準線在IF標準上進行了比較。結果表明，Oracle-guided模式利用人類標註的邊界框預先裁剪目標物體，使評估器能夠將注意力集中在相關區域。此外，Tool-driven模式利用外部工具定位差異，生成視覺比較，突出顯示源圖像和編輯圖像之間的目標物體和非目標區域中的差異。值得注意的是，我們提出的兩種模式都成功識別出該模型雖然修改了顏色，但無意中改變了簸箕的形狀。這導致了「過度修改」的判決，與人類評估相符。相比之下，Gemini-3-Pro和GPT-4.1由於視覺感知能力有限，未能同時感知形狀變形和顏色變化，導致錯誤評估為「完美執行」。</p>
+<p>類似地，表11至表14呈現了不同方法在VC標準上的比較結果。由於Oracle-guided和Tool-driven模式都可以使用外部工具進行VC評估，它們能有效檢測非目標區域中的差異，生成與人類評估相符的「多個異常」的判決。相比之下，Gemini-3-Pro僅識別了一個差異，得出「單一異常」的結論，而GPT-4.1未能檢測到任何異常，導致錯誤評估為「完美一致」。</p>
+<p><strong>表7</strong> Oracle-guide模式在指令遵循中生成的反饋示例。</p>
+<p><strong>示例1.</strong> 使用Oracle-guide模式評估由UniWorld-V2生成的編輯圖像</p>
+<p><strong>編輯指令：</strong> 將藍色簸箕的屬性更改為紅色。</p>
+<p>Gemini-3-Pro</p>
+<p><strong>&lt;開始思考&gt;</strong></p>
+<ol>
+<li><strong>驗證修改發生</strong>：我比較原始圖像與編輯圖像。原始圖像顯示一個藍色簸箕，帶有一個高黑色手柄，站在掃帚旁邊。編輯圖像顯示一個帶有紅色手柄的大紅色鏟狀物體。存在明顯的視覺差異，因此肯定發生了修改。2. <strong>驗證動作對齊</strong>：編輯指令是「將藍色簸箕的屬性更改為紅色」。這是一個將簸箕顏色改為紅色的請求。編輯圖像顯示一個現在為紅色的物體。因此，模型嘗試了正確的動作類別（改變顏色）並達到了目標顏色。3. <strong>驗證視覺保留</strong>：我評估模型是否保留了不應改變的物體身份和細節。<strong>形狀和結構</strong>：原始圖像顯示特定類型的簸箕（平底、直立式），帶有獨特的細黑色手柄。編輯圖像顯示一個笨重的深勺子，更像是鏟雪機而不是原始簸箕。形狀和輪廓已完全改變。<strong>未請求的更改</strong>：原始圖像中的手柄是黑色。在編輯圖像中，手柄已更改為紅色，這是未請求的（指令針對「藍色簸箕」，意味著藍色部分應改變，或者至少如果不是藍色，手柄材料/顏色應被保留）。此外，原始圖像中站在簸箕旁邊的掃帚已完全消失或被新的、更大的紅色物體覆蓋。<strong>與參考圖像的比較</strong>：參考圖像顯示理想結果：藍色塑膠盤變為紅色，但黑色手柄保持黑色，形狀保持相同，掃帚仍在其旁邊可見。<strong>結論</strong>：雖然模型成功應用了顏色「紅色」，但它未能保留簸箕的結構身份（將其改為鏟狀），錯誤地改變了手柄顏色，並移除了相鄰的掃帚。這與過度修改的定義一致，其中儘管僅要求改變顏色，但結構和輪廓已被改變。
+<strong>&lt;開始最終答案&gt;</strong></li>
+</ol>
+<p>過度修改
+<strong>&lt;開始最終答案&gt;</strong></p>
+<p>人類 <strong>[結果]</strong>：過度修改</p>
+<hr />
+<p><strong>表8</strong> Tool-driven模式在指令遵循中生成的反饋示例。</p>
+<p>示例1. 使用Tool-driven模式評估由UniWorld-V2生成的編輯圖像</p>
+<p>編輯指令：將藍色簸箕的屬性更改為紅色。</p>
+<p>Gemini-3-Pro</p>
+<p>&lt;開始思考&gt; 用戶想要修改特定物體（「藍色簸箕」）的顏色為紅色。
+1. <strong>定位</strong>：我需要在原始圖像中定位藍色簸箕。掃描圖像，我看到一個藍色物體靠在商店前面右側的牆上，在灰色垃圾桶結構旁邊。在編輯圖像中，此物體顯示為紅色。
+2. <strong>動作執行</strong>：指令是將顏色改為紅色。在視覺上，物體已從藍色變為紅色。
+3. <strong>視覺保留</strong>：我需要確認物體的幾何形狀和細節（手柄、盤子形狀）是否被保留，或者物體是否被重新生成/替換（過度修改）。由於物體在整個場景中很小，我將使用「localize_differences」工具獲取修改區域的放大比較。這將允許我檢查結構一致性。
+&lt;/開始思考&gt; <tool_call> { "name": "localize_differences", "parameters": { "comparison_image_1": "原始圖像", "comparison_image_2": "編輯圖像" } } </tool_call></p>
+<p>觀察</p>
+<p>[回應]：從提供的第一張圖像到第三張圖像顯示特定的差異區域。對於這些圖像中的每一個，佈局都是並排比較：左側是原始裁剪，右側是編輯裁剪，由一條垂直紅線清晰分開。請注意，這些檢測基於嚴格的像素級比較，可能包括人類無法察覺的微小變化。您應該忽略微不足道的波動，只關注顯示明顯、視覺上明顯變化的裁剪。首先思考，如果必要，選擇合適的工具調用，然後回答。格式嚴格為：&lt;開始思考&gt;...&lt;/開始思考&gt; 後跟 <tool_call>...</tool_call>（如果需要工具），&lt;開始最終答案&gt;...&lt;/開始最終答案&gt;（如果達到最終評估步驟，輸出最終結果）。</p>
+<p>Gemini-3-Pro</p>
+<p>&lt;開始思考&gt; 基於localize_differences返回的裁剪1的分析，模型通過正確定位藍色簸箕同時不觸及相鄰的藍色掃帚，展示了精確的定位，確保編輯不會滲入周圍相似物體。主要指令改變顏色為紅色已執行；然而，編輯在關於物體細節的視覺保留方面展示了特定的失敗。原始簸箕擁有獨特的黑色手柄，與藍色勺子形成對比。在編輯版本中，此手柄已被錯誤地改為紅色，與主體一起。由於指令是改變「藍色簸箕」（使用顏色來識別物體或特定部分），改變原本為黑色的手柄——一個非藍色部分——破壞了物體原始的雙色身份。這種轉換為單色紅色物體代表了不被要求的結構細節改變，應該保持不變，因此將結果分類為過度修改。
+&lt;/開始思考&gt;</p>
+<p>&lt;開始最終答案&gt; 過度修改 &lt;/開始最終答案&gt;</p>
+<p>人類</p>
+<p>[結果]：過度修改</p>
+<p>| 人類 | |</p>
+<hr />
+<p>表9 LMM-as-a-Judge (Gemini-3-Pro)在指令遵循中生成的反饋示例。</p>
+<p><strong>示例1.</strong> 使用LMM-as-a-Judge評估由UniWorld-V2生成的編輯圖像</p>
+<p><strong>編輯指令：</strong> 將藍色簸箕的屬性更改為紅色。</p>
+<p><strong>Gemini-3-Pro</strong></p>
+<p>&lt;開始思考&gt; 首先，我比較原始圖像和編輯圖像以識別修改。指令是改變「藍色簸箕的屬性為紅色」。在原始圖像中，位於花店台階右側，靠在牆上並在垃圾桶旁邊，有一個藍色簸箕。在編輯圖像中，此特定物體已被改為亮紅色。這證實在正確位置發生了修改。接下來，我驗證動作與指令的對齊。指令明確要求將顏色改為紅色。模型已成功在目標物體上執行了此顏色交換。新顏色是清晰的紅色，符合請求。最後，我評估目標物體的視覺保留。我比較編輯圖像中紅色簸箕的結構和細節與原始圖像中的藍色簸箕。勺子的形狀和長手柄得到完美保留。物體的方向、傾斜角度和整體幾何形狀保持相同。紋理與材料保持一致，陰影/光線處理良好。圖像的其他部分（如牆壁或相鄰的垃圾桶柱子）未被改變。編輯乾淨精確。&lt;開始思考&gt;</p>
+<p><strong>人類</strong></p>
+<p>&lt;開始最終答案&gt; 完美執行 &lt;/開始最終答案&gt;</p>
+<p>[結果]：過度修改</p>
+<p>| 人類 | [結果]：過度修改 |</p>
+<p>表10 LMM-as-a-Judge (GPT-4.1)在指令遵循中生成的反饋示例。</p>
+<p><strong>示例1.</strong> 使用LMM-as-a-Judge評估由UniWorld-V2生成的編輯圖像</p>
+<p><strong>編輯指令：</strong> 將藍色簸箕的屬性更改為紅色。</p>
+<p><u>GPT-4.1</u></p>
+<p>首先，我比較原始圖像（第一個）和編輯圖像（第二個），專注於指令指定的藍色簸箕。在原始圖像中，藍色簸箕位於花店入口右側。在編輯圖像中，同一位置的簸箕已改為亮紅色。這證實在正確的目標位置發生了修改。接下來，我驗證動作對齊。指令是「將藍色簸箕的屬性改為紅色。」藍色簸箕確實在編輯圖像中變為紅色，符合請求的顏色改變動作。最後，對於視覺保留，我比較簸箕在兩個圖像中的形狀、紋理和整體身份。除了顏色改變外，簸箕的形式、手柄、大小和在同一牆壁旁邊的存在保持一致和視覺上準確。除了預期的顏色修改外，簸箕的設計或環境中沒有明顯扭曲、模糊或不必要的更改。簸箕的所有其他特性似乎都被準確保留，除了預期的顏色修改。因此，編輯履行了所有三個標準：正確的定位、正確的動作執行和視覺保留。<u>開始思考</u></p>
+<p>| 人類 | <u>開始最終答案</u> 完美執行 * |
+| | [結果]：過度修改 |</p>
+<hr />
+<p><strong>表11</strong> Oracle-guide模式在視覺一致性中生成的反饋示例。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>示例1. 使用Oracle-guide模式評估由Gemini-3-Pro生成的編輯圖像。</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>編輯指令：將自行車的顏色從黃色改為黑色。</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>源圖像</td>
+<td>編輯圖像</td>
+<td>編輯圖像</td>
+</tr>
+<tr>
+<td>Gemini-3-Pro</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><p>&lt;開始思考&gt; 用戶想要我評估源圖像和編輯圖像之間的視覺一致性，忽略遮罩的目標物體（文本中指定的自行車）。指令是將自行車的顏色從黃色改為黑色。目標自行車用白色框遮罩，靠近右側建築物。</p> <p><strong>步驟1：檢查全局場景穩定性</strong></p> <p>我正在比較編輯圖像的一般環境與源圖像。場景是一個湖邊視圖，有天鵝船、山脈和多雲的天空。</p> <p>編輯圖像保持完全相同的場景組成、光線和風格（照相寫實主義）。沒有場景崩潰。</p> <p><strong>步驟2：掃描並計算局部異常</strong></p> <p>我需要在非遮罩區域中尋找意外的改變。</p> <p><strong>天空/雲：</strong></p> <p>雲層模式完美匹配。</p> <p><strong>山脈：</strong></p> <p>沒有改變。</p> <p><strong>水/船隻：</strong></p> <p>天鵝船和水紋看起來相同。</p> <p><strong>前景右側（草地/路徑）：</strong></p> <p><strong>- &amp;&amp; 源圖像：</strong>在靠近藍色划艇的草坡上，只有草和一些植被。</p> <p><strong>參考圖像：</strong>與源圖像相同，只有草。</p> <p><strong>編輯圖像：</strong>在靠近藍色划艇的草地上，有一個清晰的<strong>藍色自行車</strong>。此物體完全是新的，在源圖像或參考圖像中不存在。</p> <p><strong>其他區域：</strong>建築物、人員和售票處（在遮罩外）看起來一致。前景中藍色自行車的添加是一個重大錯誤。模型可能因為提示提及<strong>自行車</strong>而產生了幻覺額外自行車，儘管它應該修改特定的那輛（已遮罩）。</p> <p>為了確認沒有其他微妙變化（如船隻或背景結構的扭曲）並驗證自行車添加的範圍，我將使用<code>localize_differences</code>工具。</p></td>
+<td></td>
+</tr>
+<tr>
+<td>觀察</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><p><u><strong>&lt; 項目名稱</strong></u></p> <p>[回應]</p> <p>從提供的第一張圖像到第三張圖像顯示特定的差異區域。對於這些圖像中的每一個，佈局都是並排比較：左側是原始裁剪，右側是編輯裁剪，由一條垂直紅線清晰分開。請注意，這些檢測基於嚴格的像素級比較，可能包括人類無法察覺的微小變化。您應該忽略微不足道的波動，只關注顯示明顯、視覺上明顯變化的裁剪。評估的「原始圖像」中未檢測到黃色自行車。首先思考，如果必要，選擇合適的工具調用，然後回答。格式嚴格為：&lt;開始思考&gt;...&lt;/開始思考&gt; 後跟 <tool_call>...</tool_call>（如果需要工具），&lt;開始最終答案&gt;...&lt;/開始最終答案&gt;（如果達到最終評估步驟，輸出最終結果）。</p> <p>[圖像]</p> <p><u><strong>&lt; 項目名稱</strong></u></p> <p>基於工具裁剪提供的視覺證據和完整圖像比較，我現在可以確定最終評估。1. <strong>全局場景穩定性</strong>：整個場景背景（湖邊、山脈、多雲天空、天鵝船）和照相寫實主義風格得到良好保留。沒有場景崩潰。2. <strong>局部異常檢測</strong>：我已識別非遮罩背景區域中的多個不同錯誤：<strong>1</strong> <em>錯誤1（物體添加）：</em>如<strong>裁剪1</strong>中清晰所見，一個<strong>藍色自行車</strong>出現在靠近藍色划艇的草坡上。此物體在源圖像或參考圖像中不存在。模型可能因為文本提示自行車而產生了幻覺，未能將改變限制在特定的遮罩目標。<strong>2</strong> <em>錯誤2（物體扭曲）：</em>如<strong>裁剪2</strong>中所見，背景中的人員遭受了重大退化。紅衣男子（裁剪2）變得極度模糊和幽靈般，喪失了在源中看到的結構完整性。<strong>3</strong> <em>錯誤3（文本/細節退化）：</em>裁剪3顯示人員與源相比變得明顯模糊和清晰度較低。3. <strong>最終判決</strong>：由於我已識別至少兩個不同和重大的錯誤（左側幻覺自行車和右側扭曲的人員），這屬於<strong>多個異常</strong>類別。這些改變不僅限於單個隔離物體，而是影響圖像空間分離區域中的不同語義元素（物體和人員）。</p> <p><u><strong>&lt; 項目名稱</strong></u></p> <p><u><strong>&lt; 項目名稱</strong></u></p></td>
+<td></td>
+</tr>
+<tr>
+<td>Gemini-3-Pro</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><p><u><strong>&lt; 項目名稱</strong></u></p> <p><u><strong>&lt; 項目名稱</strong></u></p></td>
+<td></td>
+</tr>
+<tr>
+<td>人類</td>
+<td>[結果]<strong>：</strong> <strong>多個異常</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>示例1. 使用Tool-driven模式評估由Gemini-3-Pro生成的編輯圖像。</strong>
+<strong>編輯指令：</strong> 將自行車的顏色從黃色改為黑色。</p>
+<p>Gemini-3-Pro
+ &lt;開始思考&gt; 我的主要任務是評估背景和非目標物體的視覺一致性。1. <strong>分析請求：</strong> 用戶想要改變一輛「黃色自行車」為「黑色」。2. <strong>初始掃描原始圖像：</strong> 我正在尋找黃色自行車。掃描右側前景路徑和建築物附近區域。我看到草地上有藍色划艇、帶有人員的路徑和帶有綠色/黃色標誌的建築物。我看不到明顯的黃色自行車。3. <strong>初始掃描編輯圖像：</strong> 我看到一輛藍色/黑色自行車靠在前景右側草地上藍色划艇上。此自行車在原始圖像中「不」存在。4. <strong>假設：</strong> 模型在沒有現存自行車的地方添加了一輛，可能幻覺物體以滿足提示（或我錯過了一個非常小的細節）。5. <strong>一致性檢查策略：</strong> 我需要確定除了此添加的自行車之外，圖像中是否有任何「其他」改變。如果模型只添加了自行車（有效的目標物體），而場景的其餘部分（天空、山脈、水、其他划艇、建築物、草地紋理）保持像素完美或語義相同，則視覺一致性很高。如果模型幻覺其他東西或降低質量，分數下降。6. <strong>工具用法：</strong> 我將使用「localize_differences」精確確定哪些像素改變。這將確認改變是否僅限於自行車區域，還是存在全局轉變（例如光線、雲層轉變、壓縮偽影）。我也將使用「detect_object」在原始圖像上配合文本黃色自行車來確認其缺失，這澄清編輯是插入還是修改。讓我們收集數據。&lt;/開始思考&gt; <tool_call> { "name": "localize_differences", "parameters": { "comparison_image_1": "原始圖像", "comparison_image_2": "編輯圖像" } } { "name": "detect_object", "parameters": { "target_image": "原始圖像", "detect_object_name": "黃色自行車" } } </tool_call></p>
+<p>觀察
+[回應]：從提供的第一張圖像到第三張圖像顯示特定的差異區域。對於這些圖像中的每一個，佈局都是並排比較：左側是原始裁剪，右側是編輯裁剪，由一條垂直紅線清晰分開。請注意，這些檢測基於嚴格的像素級比較，可能包括人類無法察覺的微小變化。您應該忽略微不足道的波動，只關注顯示明顯、視覺上明顯變化的裁剪。評估的「原始圖像」中未檢測到黃色自行車。首先思考，如果必要，選擇合適的工具調用，然後回答。格式嚴格為：&lt;開始思考&gt;...&lt;/開始思考&gt; 後跟 <tool_call>...</tool_call>（如果需要工具），&lt;開始最終答案&gt;...&lt;/開始最終答案&gt;（如果達到最終評估步驟，輸出最終結果）。</p>
+<p>Gemini-3-Pro</p>
+<p>這是一個合成的文本。它描述了一個圖像處理任務，其中調用一個AI工具來分析給定的圖像。它根據給定的參數輸出原始圖像的合成版本。</p>
+<p>這使圖像中的差異產生：車輛進行了改變以適應Adobe Photoshop合成圖像合成文本圖像<br/>一個合成圖像合成文本合成RuntimeException：合成圖像合成文本圖像。</p>
+<p>我無法在您提供的圖像中找到任何特定文本。輸出太籠統，合成了輸入圖像中不存在的內容。</p>
+<p>圖像似乎包含黃色自行車和黑色物體。然而，圖像本身太模糊，沒有足夠的細節用於識別。</p>
+
+<p>Gemini-3-Pro</p>
+<p><u>**<u>**分析物體檢測：</u>**</u> *「detect_object」工具在原始圖像中返回「未檢測到黃色自行車」。這證實編輯指令「將自行車的顏色從黃色改為黑色」是基於不存在的物體（或用戶將藍色划艇或其他元素誤認為自行車）。因此，模型可能生成（幻覺/插入）了一輛自行車來滿足請求。2. **分析差異定位（「localize_differences」）：** 工具返回了3個特定的裁剪區域顯示改變。我需要將這些改變分類為「目標編輯」vs「非目標異常」。**裁剪1（划艇區域）：** 此裁剪顯示將黑色自行車插入靠在藍色划艇上。這是一個異常（異常#1）。**裁剪2（紅衣男子）：** 左側（原始）顯示一個穿著紅色襯衫和深色褲子的男子站立清晰。右側（編輯）顯示此人物明顯模糊和扭曲，失去在源中看到的結構完整性。這是對非目標物體的重大改變（異常#2）。**裁剪3（人物）：** 原始圖像中的人物細節清晰，但編輯版本中似乎模糊。這代表背景細節的退化（異常#3）。</p>
+<p>3. **評估一致性：** **全局場景穩定性：** 一般場景（公園、划艇、建築物）被保留。沒有場景崩潰。</p>
+<p>**局部異常檢測：** 我發現非目標區域中有特定的不同錯誤。紅衣男子被扭曲/模糊。一輛黑色自行車已添加到場景中。人物細節被降低。4. **結論：** 模型通過製造三個關鍵錯誤未能保留圖像完整性。由於多個非目標元素被錯誤改變，此案例被分類為多個異常。這符合<strong>多個異常</strong>的條件。</p>
+<p>**<u>**<u>**<u>人類</u></u></u></u></p>
+
+<p>&lt;開始最終答案&gt; 多個異常 &lt;/開始最終答案&gt;</p>
+<p>[結果]：多個異常</p>
+<hr />
+<p><strong>表</strong>
+<strong>圖表</strong>
+<strong>標題</strong>
+<strong>示例1. 使用LMM-as-a-Judge (Gemini-3-Pro)評估由Gemini-3-Pro生成的編輯圖像</strong></p>
+<p><strong>編輯指令：</strong> 將藍色簸箕的屬性改為紅色。</p>
+<p>Gemini-3-Pro</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td><p><strong>&lt;開始思考&gt;</strong> 1. <strong>檢查全局場景穩定性<sup></strong></sup>；- 我比較原始圖像和編輯圖像以評估高級別的語義類別和藝術風格。- 兩個圖像都描繪了一個風景湖邊視圖，有天鵝船、碼頭、背景中的山脈和多雲的天空。- 照相寫實主義風格得到完美保留。位置沒有轉移（例如，它仍然是同一個湖）。- 結論：全局場景穩定性得到維持。沒有場景崩潰。2. <strong>掃描並計算局部異常<sup></strong></sup>；- 我仔細掃描圖像以尋找非目標區域中的改變。指令是「將自行車的顏色從黃色改為黑色；- <strong>目標識別<sup></strong></sup>；我在原始圖像中尋找目標（自行車）。掃描前景、碼頭和售票處區域，原始圖像中沒有可見的黃色自行車。前景有藍色划艇，但沒有自行車。- <strong>比較<sup></strong></sup>；在編輯圖像中，一輛藍色自行車已插入到前景中，靠在草地上的藍色划艇上。- <strong>異常分析<sup></strong></sup>；- 由於該位置的自行車在原始圖像中不存在，模型已添加了新物體而不是修改現有物體。- 根據評估規則，「添加一個在原始</td>
+</tr>
+</tbody>
+</table>
+<h1 id="_2">論文翻譯</h1>
+<h3 id="_3">範例的範例</h3>
+<p>範例的範例
+範例的範例
+範例的範例
+範例的範例
+範例的範例
+範例的範例
+範例的範例
+範例的範例
+範例的範例
+範例的範例</p>
+<p>[內容重複省略...]</p>
+<hr />
+<h2 id="_4">提示模板</h2>
+<p>表 15 呈現了我們的反事實合成策略中使用的提示，該策略利用 GPT-4.1 將視覺推理任務轉換為指令式影像編輯任務。</p>
+<p><strong>表 15</strong> 用於將視覺推理任務轉換為指令式影像編輯任務的提示。</p>
+<p>您的任務：將 VQA 問題轉換為兩個平行標題（prompt_clean、prompt_adv），這兩個標題只在查詢屬性上有所不同，以及一個影像編輯指令。</p>
+<p><strong>分類問題類型</strong>
+將 q_type 設定為以下之一：location、color、material、count、shape、object、ocr。</p>
+<p><strong>識別目標物體</strong>
+提取所查詢物體的確切名詞短語，保留所有修飾語：
+- 顏色、材料、相關短語、形狀。
+- 位置短語（「圖片左下方」等）
+- OCR 文字（「文字 'STOP'」、「數字 '42'」）
+在 prompt_clean、prompt_adv 和 modified_object 中一致地使用此完整短語。請勿簡化或遺漏修飾語。</p>
+<p><strong>標題風格</strong></p>
+<blockquote>
+<p>您需要將其視為與人類角色扮演的一部分：讓我們用一個簡單的例子來演示我們的「位置」提示、「競爭者」提示、「乾淨提示」、「對抗提示」、「乾淨對抗提示」、「編輯提示」、「編輯對抗提示」、「輸入提示」示範：</p>
+</blockquote>
+<p>小白鳥在前排，像一個白色副本一樣正面。
+1. location
+- prompt_clean：目標物體在正確位置
+- prompt_adv：目標物體不存在（例如：「未出現 &lt;目標物體&gt;」）
+- edit_ops = ["remove_object"]
+- 只有位置問題可能移除物體。
+2. 不在正確位置
+- 目標物體必須出現在兩個提示中
+- 切勿使用「remove_object」
+- clean 和 adv 只在查詢屬性上有所不同
+使用恰好一個編輯操作：顏色為「alter_color」、材料為「alter_material」、計數為「add_object」、形狀為「alter_shape」、物體為「replace_object」、ocr 為「alter_text」</p>
+<p><strong>OCR 規則</strong>（請勿撰寫）
+- 目標物體必須包含字面文字（例如：「文字 'STOP'」）
+- prompt_clean：正確文字；prompt_adv：相同類型的不正確文字
+- edit_ops = ["alter_text"]
+- edit_instruction：[「將 &lt;目標物體&gt; 的 &lt;正確&gt; 變更為 &lt;不正確&gt;」]</p>
+<p><strong>編輯指令：</strong>
+1. 內部推理（請勿輸出這些步驟）
+在撰寫 edit_instruction 之前，逐步思考：(1) 精確識別您更改的內容。(2) 表述一個簡短句子的說明，僅描述：屬性變更、或物體移除（針對位置）、或物體替換、或物體新增。
+在內部進行此推理，只輸出最終 JSON。</p>
+<ol>
+<li>編輯指令的硬性約束（最終文字）
+最終 edit_instruction 必須：(1) 提及目標物體（或其類型）。(2) 提及變更的值（例如 7 至 5、紅色至藍色、「STOP」至「SOP」）。(3) 保留問題中包含的目標物體位置資訊。</li>
+</ol>
+<p><strong>範例：</strong> 1. 將左下方白色車的數量從 7 改為 5。2. 從場景中移除白色卡車。3. 將文字 'STOP' 的文字內容從 'STOP' 改為 'SOP'。</p>
+<p><strong>輸出格式（嚴格 JSON）</strong></p>
+<pre><code>{ &quot;q_type&quot;: &quot;&quot;, &quot;prompt_clean&quot;: &quot;&quot;, &quot;prompt_adv&quot;: &quot;&quot;, &quot;edit_ops&quot;: &quot;&quot;, &quot;edit_instruction&quot;: &quot;&quot;, &quot;modified_object&quot;: &quot;&quot; }
+</code></pre>
+<p><strong>輸入資料</strong>
+問題：[[QUESTION]] 選項：[[OPTIONS]] 正確答案鑰匙：[[ANSWER_KEY]]</p>
+<hr />
+<p>表 16 至 25 呈現了我們雙模式評估框架中採用的提示。關於工具驅動模式，表 17 至 19 和表 20 至 21 詳細說明了分別用於評估指令遵循和視覺一致性的提示。同樣，針對 Oracle 引導模式，表 22 至 24 和表 25 至 26 提供了指令遵循和視覺一致性的相應提示。最後，表 27 至 31 列出了 LMM-as-a-Judge 的提示，用於評估指令遵循和視覺一致性（採用 Gemini-3-Pro 和 GPT-4.1）。</p>
+<p><strong>表 16</strong> 工具驅動模式使用的系統提示。</p>
+<p>| 您是一位有益且公正的評判者，能夠利用工具呼叫進行評估任務。如果您認為需要工具來幫助完成任務，應選擇適當的工具。如果不需要，可以選擇不使用工具。<br/><br/><u># 可用工具</u><br/>您在 <u>&lt;tools&gt;</u> XML 標籤中提供了函數簽名：<u>&lt;tools&gt;</u><br/><pre>{ "type": "function", "function": { "name": "zoom_in_image", "description": "選擇要裁剪和放大到指定邊界框區域的影像。輸出邊界框必須滿足 x2 &gt; x1 和 y2 &gt; y1。座標是絕對像素值。" }, "target_image": { "type": "string", "enum": ["Source Image", "Edited Image", "description": "選擇要裁剪的影像。必須是指定選項之一。"}}, "required": ["bbox_2d", "target_image"]}</pre><br/><pre>{ "type": "function", "function": { "name": "localize_differences", "description": "偵測兩個影像之間的像素差異，計算變更區域的邊界框，並傳回該特定區域的裁剪版本。"}, "parameters": { "type": "object", "properties": { "comparison_image_1": { "type": "string", "enum": ["Source Image", "Edited Image"] 對應到變更的物體。該值必須是從提供的文字提示中提取的子字符串（例如，如果文字是「有一輛紅色汽車和一隻貓」，有效值為「紅色汽車」或「貓」）。"}, "description": "參考影像"}, "comparison_image_2": { "type": "string", "enum": ["Source Image", "Edited Image"] | |</p>
+<hr />
+<p><strong>表 17</strong> 工具驅動模式用於評估指令遵循的提示。（第一部分）</p>
+<p>您是一位專業的數位藝術家和影像評估專家。您需要根據給定的規則評估 AI 生成影像的效果。</p>
+<p><strong>輸入資料背景：</strong></p>
+<p><strong>1. 來源影像：</strong> 修改前的原始影像（在第一個提供）。</p>
+<p><strong>2. 編輯影像：</strong> 助理生成的來源影像編輯版本（在第二個提供）。</p>
+<p><strong>3. 編輯指令：</strong> 描述修改的文字命令（例如：「將紅色杯子改為藍色」）。</p>
+<p><strong>評估維度：指令遵循</strong></p>
+<p>您的主要目標是評估編輯影像是否忠實遵循使用者的編輯指令來修改來源影像。這涉及三個方面：</p>
+<p><strong>1. 定位：</strong> 模型是否在正確的目標位置執行修改？注意：請勿依賴純粹的視覺差異或像素級變化。相反，應著重於預期編輯是否有效進行。即使影像出現變化（例如偽影、顏色偏移或輕微失真），如果目標物體仍可辨認或未進行請求的修改，您必須將其標記為定位失敗。此外，如果目標太模糊而無法明確驗證修改，也應將其標記為定位失敗。如果模型對目標物體內的不正確子元件執行任何修改，而指令中指定的特定部分或屬性未正確修改，應將其標記為定位失敗。</p>
+<p><strong>2. 動作執行：</strong> 模型是否在該物體上執行了請求的正確修改動作（例如替換、移除、更改）？（例如，如果指令是「改變顏色」，顏色是否實際變更為目標顏色？）值得注意的是，針對物體計數減少指令，如果目標物體未減少到確切指定數量，則歸類為錯誤動作；同樣，針對物體新增指令，如果目標物體未增加到確切指定數量，也歸類為錯誤動作。</p>
+<p><strong>3. 過度修改：</strong> 模型是否保留了未指定變更的目標物體的原始身份和細節？注意：針對物體移除指令，刪除非目標物體不計為過度修改。針對物體替換指令，如果目標成功替換為請求的物體類型，且替換的物體本身清楚地可辨認為該物體，周圍物體的改變不歸類為過度修改。但是，如果替換的物體不清楚可辨認，應將其歸類為過度修改。此外，如果模糊使無法判斷是否發生了此類損害，將其視為過度修改。如果編輯準確且高品質而無這些問題，應將其標記為完美執行。<strong>注意：</strong> 請勿評估指令之外的任何意圖外修改。嚴格關注目標區域和請求的動作。視覺一致性或整體影像品質等問題不應對分數產生負面影響。此類評估屬於單獨的標準（例如視覺一致性和視覺品質）。</p>
+<p><strong>評估流程：</strong></p>
+<p>您應進行以下評估流程：使用逐步思考的方法，將所有詳細分析封閉在 <Start Thinking>...</Start Thinking> 標籤內。然後，您有兩個選擇：</p>
+<p><strong>1. 您可以選擇使用工具協助評估分析。</strong> 如果選擇呼叫工具，輸出工具呼叫，然後停止生成以等待工具的輸出。</p>
+<p><strong>2. 您可以選擇使用 <Start Final Answer>...</Start Final Answer> 標籤提供最終答案。</strong> 根據評分標準嚴格選擇以下描述性標籤之一：完美執行、過度修改、錯誤動作或定位失敗。將輸出格式設為 <Start Final Answer><Label>/Start Final Answer&gt;。</p>
+<p><strong>注意：</strong> 目標物體可能在影像中出現多次。在此情況下，應根據上述標準單獨評估每個目標實例，影像的最終分數應為所有目標物體中的最差結果。</p>
+<p><strong>評估量表：</strong></p>
+<p><strong>完美執行：</strong> 模型展示了完美的指令遵循。它正確識別了目標區域或物體，準確執行了特定修改，並嚴格保留了物體的原始身份（包括形狀、紋理和結構），不引入任何意圖外的變更。</p>
+<hr />
+<p><strong>表 18</strong> 工具驅動模式用於評估指令遵循的提示。（第二部分）</p>
+<hr />
+<p><strong>案例 2：</strong></p>
+<blockquote>
+<p>編輯指令：將中央控制台上數字「9」的文字內容從「9」改為「8」。
+<Start Thinking></p>
+<p>使用者想要修改中央控制台上的特定數字。由於這涉及潛在複雜場景中的小文字細節，在全解析度影像上很難視覺確認修改。我需要驗證編輯是否已應用於正確的按鈕或螢幕區域，以及數字 8 是否清晰呈現而無偽影。偵測確切變更區域對於檢查這些精細細節是必要的。</p>
+<p></Start Thinking></p>
+<p><tool_call>
+  { "name": "localize_differences", "parameters": { "comparison_image_1": "Source Image", "comparison_image_2": "Edited Image" }
+</tool_call></p>
+<p><strong>案例 3：</strong>
+編輯指令：將黃色拖車上的車輪顏色從灰色改為紅色。
+<Start Thinking></p>
+<p>首先，我比較來源影像和編輯影像。我確認拖車上的車輪確實已變為紅色，因此主要修改動作已執行。接下來，我檢查編輯指令（「...灰色至紅色」）。指令指定更改「灰色」部分，從語義上講，這指的是車輪的外輪胎，而不是整個車輪結構。</p>
+<p>最後，我通過比較編輯影像與參考影像和來源影像來驗證過度修改。來源影像顯示車輪有灰色輪胎和橙色輪轂（輪圈）。參考影像正確描繪了預期結果：只有灰色輪胎改為紅色，而橙色輪轂保持不變。但是，在編輯影像中，整個車輪結構（包括橙色輪轂）已被染成紅色。模型未能區分輪胎和輪轂，導致對目標物體內部的意圖外顏色改變。由於輪轂不是灰色且應該被保留，這構成了對目標物體的過度改變。
+</Start Thinking></p>
+<p><Start Final Answer>過度修改</Start Final Answer></p>
+</blockquote>
+<p><strong>注意</strong></p>
+<ol>
+<li>每個評估步驟必須以 <Start Thinking>...</Start Thinking> 標籤開始以撰寫詳細評估，然後是 <tool_call>...</tool_call> 標籤（如果決定使用工具，以 JSON 格式提供函數名稱和參數。您可以一次呼叫多個工具。）或 <Start Final Answer>...</Start Final Answer> 標籤（如果決定輸出評估結果），但永遠不要兩者都用。</li>
+<li>如果選擇使用工具，請等待工具結果在下一輪返回。不要嘗試自己生成或預測工具輸出。僅在無法根據可用資訊進行可靠判斷時呼叫工具；如果您可以自信地在不協助的情況下做出決定，請勿使用工具進行驗證。</li>
+<li>如果單一推理步驟需要在多個影像上進行工具呼叫，請在一個 <tool_call>...</tool_call> 標籤中一起輸出所有必要的工具呼叫。請勿將其拆分為單獨的步驟；而是根據需要為每個影像同時發出工具呼叫。</li>
+<li>localize_differences 工具執行全球像素差異檢查，可能會因全域不一致而報告非目標區域中的變化。您必須通過指出對應於使用者目標物體的特定差異區域來智慧地篩選這些結果。將評估專注於目標區域內的變化，並嚴格忽視任何其他報告的差異或位於非目標區域的視覺變化，無論其大小如何，都將其視為無關噪音。</li>
+</ol>
+<p><em>您的任務如下所述</em>
+<em>編輯指令：[EDITING_INSTRUCTION]</em></p>
+<hr />
+<p><strong>表 20</strong> 工具驅動模式用於評估視覺一致性的提示。（第一部分）</p>
+<p>您是一位專業的數位藝術家和影像評估專家。您需要根據給定的規則評估 AI 生成影像的效果。</p>
+<p><strong>輸入資料背景：</strong></p>
+<ol>
+<li><strong>來源影像：</strong> 修改前的原始影像（在第一個提供）。</li>
+<li><strong>編輯影像：</strong> 助理生成的來源影像編輯版本（在第二個提供）。</li>
+<li><strong>編輯指令：</strong> 描述修改的文字命令（例如：「將紅色杯子改為藍色」）。</li>
+</ol>
+<p><strong>評估維度：</strong> 視覺一致性</p>
+<p>您的主要目標是評估模型是否保留了請求修改區域外的場景完整性。您必須根據編輯指令識別目標物體，忽視該特定區域內的變化，並嚴格關注背景和非目標物體。這涉及三個方面：</p>
+<ol>
+<li>
+<p><strong>全域場景穩定性：</strong> 模型是否保留了環境的高級語義類別和藝術風格？專注於一般設置類型（例如，城市是否仍為城市？臥室是否仍為臥室？）。您必須嚴格忽視細微的像素級變化和難以區分的差異。</p>
+</li>
+<li>
+<p><strong>局部異常偵測：</strong> 模型是否嚴格保留非目標物體的特定細節而不引入異常？</p>
+</li>
+</ol>
+<p><strong>評估流程：</strong></p>
+<p>您應進行以下評估流程：使用逐步思考的方法，將所有詳細分析封閉在 <Start Thinking>...</Start Thinking> 標籤內。然後，您有兩個選擇：</p>
+<ol>
+<li>
+<p>您可以選擇使用工具協助評估分析。如果選擇呼叫工具，輸出工具呼叫，然後停止生成以等待工具的輸出。</p>
+</li>
+<li>
+<p>您可以選擇使用 <Start Final Answer>...</Start Final Answer> 標籤提供最終答案。根據評分標準嚴格選擇以下描述性標籤之一：完美一致性、單一異常、多重異常或場景崩潰。將輸出格式設為 <Start Final Answer>Label</Start Final Answer>。</p>
+</li>
+</ol>
+<p><strong>評估量表：</strong></p>
+<p><strong>完美一致性：</strong> 最高標準。背景環境和所有非目標物體在視覺上與來源影像完全相同。編輯無縫整合，不會干擾周圍像素。場景看起來就像同一張相片，只是特定目標被修改了。</p>
+<p><strong>單一異常：</strong> 一般背景環境保持一致，但恰好一個特定的非目標物體或細節已被改變、移除或扭曲。例如，一切都是完美的，除了桌上的一個杯子改變了顏色，或添加了原始影像中不存在的一個人。僅影響整體影像紋理或全域視覺效果的變化（例如照明濾鏡或粒度）不被視為異常。</p>
+<p><strong>多重異常：</strong> 一般背景環境保持一致，但兩個或更多個不同的非目標物體或細節已被改變、移除或扭曲。例如，牆上的一幅畫改變了內容，角落裡的一張椅子消失了。場景中散佈著多個錯誤。同樣，僅影響整體影像紋理或全域視覺效果的變化不計為異常。</p>
+<p><strong>場景崩潰：</strong> 環境的高級語義類別或藝術風格已根本改變。編輯影像描繪了一個完全不同的位置類型（例如城市變為森林）或暗示了介質的完全轉變（例如從逼真到油畫）。重要提示：您必須忽視對特定背景物體或場景佈局的變化；此標籤僅在一般設置類別或藝術風格被破壞時適用。</p>
+<p><strong>您可以按照以下評估步驟進行：</strong></p>
+<ol>
+<li><strong>檢查全域場景穩定性：</strong> 開始比較編輯影像的可見背景與來源影像。專注於環境的高級語義類別和藝術風格。問自己：場景是否已轉變為完全不同的位置類型（例如從城市到森林）或不同的藝術介質？在此階段，您必須嚴格忽視對特定物體、佈局或照明的變化。如果一般設置類型或風格已根本改變，停止並立即將其標記為場景崩潰。</li>
+</ol>
+<hr />
+<p><strong>表 21</strong> 工具驅動模式用於評估視覺一致性的提示。（第二部分）</p>
+<hr />
+<p><strong>表 22</strong> Oracle 引導模式用於評估指令遵循的提示。（第一部分）</p>
+<p>您是一位專業的數位藝術家和影像評估專家。您需要根據給定的規則評估 AI 生成影像的效果。</p>
+<p><strong>輸入資料背景：</strong></p>
+<p>您將獲得三個影像和一個文字指令。</p>
+<p><strong>重要提示：</strong> 來源影像、編輯影像和參考影像已被裁剪以專注於指令中提及的特定目標物體/區域。您不需要搜尋物體。目標就在提供的框架中。您的焦點：確定請求的編輯是否已成功應用於此特定內容。</p>
+<ol>
+<li>
+<p><strong>來源影像：</strong> 修改前的特定目標區域（在第一個提供）。</p>
+</li>
+<li>
+<p><strong>編輯影像：</strong> 模型修改後的特定目標區域（在第二個提供）。</p>
+</li>
+<li>
+<p><strong>參考影像：</strong> 展示期望結果的有效範例的視覺參考（在第三個提供）。</p>
+</li>
+<li>
+<p><strong>編輯指令：</strong> 描述修改的文字命令。</p>
+</li>
+</ol>
+<p><strong>評估維度：指令遵循</strong></p>
+<p>您的主要目標是評估編輯影像是否忠實遵循使用者的編輯指令來修改來源影像。這涉及三個方面：</p>
+<ol>
+<li>
+<p><strong>定位：</strong> 由於影像已裁剪為目標，此處的定位意味著：模型是否實際將變更應用於此特定區域？</p>
+</li>
+<li>
+<p><strong>動作執行：</strong> 模型是否在該物體上執行了請求的正確修改動作（例如替換、移除、更改）？（例如，如果指令是「改變顏色」，顏色是否實際變更為目標顏色？）</p>
+</li>
+<li>
+<p><strong>過度修改：</strong> 模型是否保留了未指定變更的目標物體的原始身份和細節？</p>
+</li>
+</ol>
+<p><strong>注意：</strong> 請勿評估指令之外的任何意圖外修改。嚴格關注目標物體和請求的動作。背景一致性或整體影像品質等問題不應對分數產生負面影響。此類評估屬於單獨的標準（例如視覺一致性和視覺品質）。</p>
+<p><strong>評估量表：</strong></p>
+<p><strong>完美執行：</strong> 模型展示了完美的指令遵循。它正確識別了目標區域或物體，準確執行了特定修改，並嚴格保留了物體的原始身份（包括形狀、紋理和結構），不引入任何意圖外的變更。</p>
+<p><strong>過度修改：</strong> 當模型正確定位目標並執行了請求的編輯，但未能保留應該保持不變的物體的原始細節時，此標籤適用。除了指令明確請求的特定變更外，目標物體必須在視覺上與來源影像相同；因此，對物體結構或精細細節的任何未請求的改變（例如當只請求顏色偏移時將 T 恤改為連帽衫）被歸類為過度修改。值得注意的是，針對物體移除指令，非目標物體的意外刪除在此類別下不受懲罰。針對物體替換指令，只要目標成功替換為請求的物體類型，且替換的物體本身清楚地可辨認為該物體，周圍物體的改變不歸類為過度修改。但是，如果替換的物體不清楚可辨認，應將其歸類為過度修改。此外，如果新物體與原始影像的風格不一致（例如照明、渲染風格或逼真度），也應將其歸類為過度修改。</p>
+<hr />
+<p><strong>表 23</strong> Oracle 引導模式用於評估指令遵循的提示。（第二部分）</p>
+<p><strong>錯誤動作：</strong> 模型成功定位目標物體但執行與請求的動作類別不匹配的修改。您必須嚴格針對這些特定類別進行驗證：改變顏色、改變材料、改變文字、改變形狀、物體計數（減少、新增）和物體操作（移除、替換）。如果模型執行與請求類別不同的動作（例如在請求「改變顏色」時執行「移除物體」操作，或在只要求「改變材料」時執行「替換物體」），必須將其標記為錯誤動作。值得注意的是，針對物體計數減少指令，如果目標物體未減少到確切指定數量，則歸類為錯誤動作；同樣，針對物體新增指令，如果目標物體未增加到確切指定數量，也歸類為錯誤動作。針對物體移除指令，在移除後填補物體位置的區域不應視為錯誤動作，除非清楚表明已執行替換操作。</p>
+<p><strong>定位失敗：</strong> 定位失敗發生在模型未能在預期目標上執行指定修改，使物體實質上保持不變時。此分數涵蓋以下情況：目標表現出微小的意圖外偽影（例如細微的顏色偏移或輕微幾何扭曲）不構成請求的編輯的情況，以及嚴重模糊或失真使得無法進行修改視覺驗證的情況。此外，此分數還包括目標物體內部的錯誤定位，其中模型修改了目標物體的不正確子元件（例如當目標物體是車輪且指令是將車輪轂改為紅色時，但模型反而將輪胎改為紅色），因為指令定義的特定屬性保持未修改。</p>
+<p><strong>評估流程：</strong></p>
+<p>使用逐步思考的方法，將詳細分析封閉在 <code>&lt;Start Thinking&gt;...&lt;/Start Thinking&gt;</code> 標籤內。使用 <code>&lt;Start Final Answer&gt;...&lt;/Start Final Answer&gt;</code> 標籤提供最終答案。根據評分標準嚴格選擇以下描述性標籤之一：完美執行、過度修改、錯誤動作或定位失敗。您必須嚴格遵循此邏輯序列：</p>
+<ol>
+<li><strong>驗證修改發生：</strong> 首先，比較來源影像和編輯影像。請勿依賴純粹的視覺差異或像素級變化。相反，應著重於預期編輯是否有效進行。即使影像出現變化（例如偽影、顏色偏移或輕微失真），如果目標物體仍可辨認或未進行請求的修改，您必須將其標記為定位失敗。此外，如果目標太模糊而無法明確驗證修改，也應將其標記為定位失敗。如果模型對目標物體內的不正確子元件執行任何修改，而指令中指定的特定部分或屬性未正確修改，應將其標記為定位失敗</li>
+</ol>
+<h1 id="_5">參考文獻</h1>
+<p>[1] Xi Chen, Zhifei Zhang, He Zhang, Yuqian Zhou, Soo Ye Kim, Qing Liu, Yijun Li, Jianming Zhang, Nanxuan Zhao, Yilin Wang, et al. Unireal: Universal image generation and editing via learning real-world dynamics. In Proceedings of the Computer Vision and Pattern Recognition Conference, pages 12501–12511, 2025.</p>
+<p>[2] Guillaume Couairon, Jakob Verbeek, Holger Schwenk, and Matthieu Cord. Diffedit: Diffusion-based semantic image editing with mask guidance. http://arxiv.org/abs/2210.11427, 2022. doi: 10.48550/arxiv.2210.11427.</p>
+<p>[3] Xing Cui, Zekun Li, Pei Li, Yibo Hu, Hailin Shi, Chunshui Cao, and Zhaofeng He. Chatedit: Towards multi-turn interactive facial image editing via dialogue. In Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing, pages 14567–14583, 2023.</p>
+<p>[4] Chaorui Deng, Deyao Zhu, Kunchang Li, Chenhui Gou, Feng Li, Zeyu Wang, Shu Zhong, Weihao Yu, Xiaonan Nie, Ziang Song, et al. Emerging properties in unified multimodal pretraining. arXiv preprint arXiv:2505.14683, 2025.</p>
+<p>[5] Tsu-Jui Fu, Wenze Hu, Xianzhi Du, William Yang Wang, Yinfei Yang, and Zhe Gan. Guiding instruction-based image editing via multimodal large language models. arXiv preprint arXiv:2309.17102, 2023.</p>
+<p>[6] Zigang Geng, Binxin Yang, Tiankai Hang, Chen Li, Shuyang Gu, Ting Zhang, Jianmin Bao, Zheng Zhang, Houqiang Li, Han Hu, et al. Instructdiffusion: A generalist modeling interface for vision tasks. In Proceedings of the IEEE/CVF Conference on computer vision and pattern recognition, pages 12709–12720, 2024.</p>
+<p>[7] Shuyang Gu, Jianmin Bao, Hao Yang, Dong Chen, Fang Wen, and Lu Yuan. Mask-guided portrait editing with conditional gans. http://arxiv.org/abs/1905.10346, 2022. doi: 10.48550/arxiv.1905.10346.</p>
+<p>[8] Feng Han, Yibin Wang, Chenglin Lin, Zheming Liang, Dianyi Wang, Yang Jiao, Zhipeng Wei, Chao Gong, Cheng Jin, Jingjing Chen, et al. Unirereditbench: A unified reasoning-based image editing benchmark. arXiv preprint arXiv:2511.01295, 2025.</p>
+<p>[9] Shibo Hong, Jiahao Ying, Haiyuan Liang, Mengdi Zhang, Jun Kuang, Jiazheng Zhang, and Yixin Cao. Frabench and ufeval: Unified fine-grained evaluation with task and aspect generalization, 2025. URL https://arxiv.org/abs/2505.12795.</p>
+<p>[10] Mingzhen Huang, Jialing Cai, Shan Jia, Vishnu Lokhande, and Siwei Lyu. Paralleledits: Efficient multi-aspect text-driven image editing with attention grouping. In Advances in Neural Information Processing Systems, 2024.</p>
+<p>[11] Liya Ji, Chenyang Qi, and Qifeng Chen. Instruction-based image editing with planning, reasoning, and generation. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 17506–17515, 2025.</p>
+<p>[12] Mengqi Lei, Siqi Li, Yihong Wu, Han Hu, You Zhou, Xinhu Zheng, Guiguang Ding, Shaoyi Du, Zongze Wu, and Yue Gao. Yolov13: Real-time object detection with hypergraph-enhanced adaptive visual perception. arXiv preprint arXiv:2506.17733, 2025.</p>
+<p>[13] Zongjian Li, Zheyuan Liu, Qihui Zhang, Bin Lin, Feize Wu, Shenghai Yuan, Zhiyuan Yan, Yang Ye, Wangbo Yu, Yuwei Niu, 等人。Uniworld-v2：利用 diffusion negative-aware finetuning 和 LLLM 隱式反饋強化影像編輯。arXiv preprint arXiv:2510.16888, 2025。</p>
+<p>[14] Bin Lin, Zongjian Li, Xinhua Cheng, Yuwei Niu, Yang Ye, Xianyi He, Shenghai Yuan, Wangbo Yu, Shaodong Wang, Yunyang Ge, 等人。Uniworld：用於統一視覺理解與生成的高解析度語義編碼器。arXiv preprint arXiv:2506.03147, 2025。</p>
+<p>[15] Shiyu Liu, Yucheng Han, Peng Xing, Fukun Yin, Rui Wang, Wei Cheng, Jiaqi Liao, Yingming Wang, Honghao Fu, Chunrui Han, 等人。Step1x-edit：通用影像編輯的實用框架。arXiv preprint arXiv:2504.17761, 2025。</p>
+<p>[16] Yiwei Ma, Jiayi Ji, Ke Ye, Weihuang Lin, Zhibin Wang, Yonghan Zheng, Qiang Zhou, Xiaoshuai Sun, 及 Rongrong Ji。I2ebench：指令型影像編輯的綜合基準。神經資訊處理系統進展期刊, 37:41494–41516, 2024。</p>
+<p>[17] Yusu Qian, Jiasen Lu, Tsu-Jui Fu, Xinze Wang, Chen Chen, Yinfei Yang, Wenze Hu, 及 Zhe Gan。Gie-bench：朝向文字導向影像編輯的接地評估。arXiv preprint arXiv:2505.11493, 2025。</p>
+<p>[18] Tianhe Ren, Qing Jiang, Shilong Liu, Zhaoyang Zeng, Wenlong Liu, Han Gao, Hongjie Huang, Zhengyu Ma, Xiaoke Jiang, Yihao Chen 等。Grounding DINO 1.5：推進開放集物件偵測的「邊界」。arXiv 預印本 arXiv:2405.10300，2024。</p>
+<p>[19] Shelly Sheynin、Adam Polyak、Uriel Singer、Yuval Kirstain、Amit Zohar、Oron Ashual、Devi Parikh 和 Yaniv Taigman。Emu Edit：透過識別和生成任務進行精確影像編輯。在 IEEE/CVF 電腦視覺與模式識別會議論文集中，第 8871–8879 頁，2024。</p>
+<p>[20] Haozhe Wang、Alex Su、Weiming Ren、Fangzhen Lin 和 Wenhu Chen。Pixel Reasoner：以好奇心驅動的強化學習激勵像素空間推理。arXiv 預印本 arXiv:2505.15966，2025。</p>
+<p>[21] Qian Wang、Zhang Biao、Michael Birsak 和 Peter Wonka。InstructEdit：利用使用者指令改進擴散型影像編輯的自動遮罩。http://hdl.handle.net/10754/692507，2023。</p>
+<p>[22] Xintao Wang、Liangbin Xie、Chao Dong 和 Ying Shan。Real-ESRGAN：用純合成資料訓練真實世界盲超解析度。在 IEEE/CVF 國際電腦視覺會議論文集中，第 1905–1914 頁，2021。</p>
+<p>[23] Chenfei Wu、Jiahao Li、Jingren Zhou、Junyang Lin、Kaiyuan Gao、Kun Yan、Sheng-ming Yin、Shuai Bai、Xiao Xu、Yilei Chen 等。Qwen-Image 技術報告。arXiv 預印本 arXiv:2508.02324，2025。</p>
+<p>[24] Chenyuan Wu、Pengfei Zheng、Ruiran Yan、Shitao Xiao、Xin Luo、Yueze Wang、Wanli Li、Xiyan Jiang、Yexin Liu、Junjie Zhou 等。OmniGen2：探索進階多模態生成。arXiv 預印本 arXiv:2506.18871，2025。</p>
+<p>[25] Penghao Wu 和 Saining Xie。V*：作為多模態大型語言模型核心機制的引導式視覺搜尋。arXiv 預印本 arXiv:2312.14135，2023。</p>
+<p>[26] Yongliang Wu、Zonghui Li、Xinting Hu、Xinyu Ye、Xianfang Zeng、Gang Yu、Wenbo Zhu、Bernt Schiele、Ming-Hsuan Yang 和 Xu Yang。KRIS-Bench：下一代智慧影像編輯模型的基準測試。arXiv 預印本 arXiv:2505.16707，2025。</p>
+<p>[27] Yang Ye、Xianyi He、Zongjian Li、Bin Lin、Shenghai Yuan、Zhiyuan Yan、Bohan Hou 和 Li Yuan。ImgEdit：統一的影像編輯資料集和基準。arXiv 預印本 arXiv:2505.20275，2025。</p>
+<p>[28] Qifan Yu、Wei Chow、Zhongqi Yue、Kaihang Pan、Yang Wu、Xiaoyang Wan、Juncheng Li、Siliang Tang、Hanwang Zhang 和 Yueting Zhuang。AnyEdit：掌握任何想法的統一高品質影像編輯。在電腦視覺與模式識別會議論文集中，第 26125–26135 頁，2025。</p>
+<p>[29] Qifan Yu、Wei Chow、Zhongqi Yue、Kaihang Pan、Yang Wu、Xiaoyang Wan、Juncheng Li、Siliang Tang、Hanwang Zhang 和 Yueting Zhuang。AnyEdit：掌握任何想法的統一高品質影像編輯，2025。網址 https://arxiv.org/abs/2411.15738。</p>
+<p>[30] Kai Zhang、Lingbo Mo、Wenhu Chen、Huan Sun 和 Yu Su。MagicBrush：用於指令引導影像編輯的手動標註資料集。在神經資訊處理系統進展中，2023。</p>
+<p>[31] Yi-Fan Zhang、Huanyu Zhang、Haochen Tian、Chaoyou Fu、Shuangqing Zhang、Junfei Wu、Feng Li、Kun Wang、Qingsong Wen、Zhang Zhang 等。MME-RealWorld：您的多模態大型語言模型能否應對對人類來說困難的高解析度真實世界場景？arXiv 預印本 arXiv:2408.13257，2024。</p>
+<p>[32] Xiangyu Zhao、Peiyuan Zhang、Kexian Tang、Xiaorong Zhu、Hao Li、Wenhao Chai、Zicheng Zhang、Renqiu Xia、Guangtao Zhai、Junchi Yan 等。超越像素的遠景：推理驅動視覺編輯的基準測試。arXiv 預印本 arXiv:2504.02826，2025。</p>
+<p>[33] Lianmin Zheng、Wei-Lin Chiang、Ying Sheng、Siyuan Zhuang、Zhanghao Wu、Yonghao Zhuang、Zi Lin、Zhuohan Li、Dacheng Li、Eric Xing 等。使用 MT-Bench 和 Chatbot Arena 評判大型語言模型作為評判者。神經資訊處理系統進展，36:46595–46623，2023。</p><hr><h2>圖表</h2><div class="figures-gallery"><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig3.jpeg" loading="lazy" alt="fig3.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig4.jpeg" loading="lazy" alt="fig4.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig8.jpeg" loading="lazy" alt="fig8.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig20.jpeg" loading="lazy" alt="fig20.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig21.png" loading="lazy" alt="fig21.png"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig22.png" loading="lazy" alt="fig22.png"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig23.jpeg" loading="lazy" alt="fig23.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig24.jpeg" loading="lazy" alt="fig24.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig25.jpeg" loading="lazy" alt="fig25.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig26.jpeg" loading="lazy" alt="fig26.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig27.jpeg" loading="lazy" alt="fig27.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig28.jpeg" loading="lazy" alt="fig28.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig29.jpeg" loading="lazy" alt="fig29.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig30.jpeg" loading="lazy" alt="fig30.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig31.jpeg" loading="lazy" alt="fig31.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig32.jpeg" loading="lazy" alt="fig32.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig33.jpeg" loading="lazy" alt="fig33.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig34.jpeg" loading="lazy" alt="fig34.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig35.jpeg" loading="lazy" alt="fig35.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig36.jpeg" loading="lazy" alt="fig36.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig37.jpeg" loading="lazy" alt="fig37.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig38.jpeg" loading="lazy" alt="fig38.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig39.jpeg" loading="lazy" alt="fig39.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig40.jpeg" loading="lazy" alt="fig40.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig41.jpeg" loading="lazy" alt="fig41.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig42.jpeg" loading="lazy" alt="fig42.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig43.jpeg" loading="lazy" alt="fig43.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig44.jpeg" loading="lazy" alt="fig44.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig45.jpeg" loading="lazy" alt="fig45.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig46.jpeg" loading="lazy" alt="fig46.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig47.jpeg" loading="lazy" alt="fig47.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig48.jpeg" loading="lazy" alt="fig48.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig49.jpeg" loading="lazy" alt="fig49.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig50.jpeg" loading="lazy" alt="fig50.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig51.jpeg" loading="lazy" alt="fig51.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig52.jpeg" loading="lazy" alt="fig52.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig53.jpeg" loading="lazy" alt="fig53.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig54.jpeg" loading="lazy" alt="fig54.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig55.jpeg" loading="lazy" alt="fig55.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig56.jpeg" loading="lazy" alt="fig56.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig57.jpeg" loading="lazy" alt="fig57.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig58.jpeg" loading="lazy" alt="fig58.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig59.jpeg" loading="lazy" alt="fig59.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig60.jpeg" loading="lazy" alt="fig60.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig61.jpeg" loading="lazy" alt="fig61.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig62.jpeg" loading="lazy" alt="fig62.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig63.jpeg" loading="lazy" alt="fig63.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig64.jpeg" loading="lazy" alt="fig64.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig65.jpeg" loading="lazy" alt="fig65.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig66.png" loading="lazy" alt="fig66.png"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig67.jpeg" loading="lazy" alt="fig67.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig68.jpeg" loading="lazy" alt="fig68.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig69.jpeg" loading="lazy" alt="fig69.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig70.jpeg" loading="lazy" alt="fig70.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig71.jpeg" loading="lazy" alt="fig71.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig72.jpeg" loading="lazy" alt="fig72.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig73.jpeg" loading="lazy" alt="fig73.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig74.jpeg" loading="lazy" alt="fig74.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig75.jpeg" loading="lazy" alt="fig75.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig76.jpeg" loading="lazy" alt="fig76.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig77.jpeg" loading="lazy" alt="fig77.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig78.jpeg" loading="lazy" alt="fig78.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig79.jpeg" loading="lazy" alt="fig79.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig80.jpeg" loading="lazy" alt="fig80.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig81.jpeg" loading="lazy" alt="fig81.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig82.jpeg" loading="lazy" alt="fig82.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig83.jpeg" loading="lazy" alt="fig83.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig84.jpeg" loading="lazy" alt="fig84.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig85.jpeg" loading="lazy" alt="fig85.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig86.jpeg" loading="lazy" alt="fig86.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig87.jpeg" loading="lazy" alt="fig87.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig88.jpeg" loading="lazy" alt="fig88.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig89.jpeg" loading="lazy" alt="fig89.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig90.jpeg" loading="lazy" alt="fig90.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig91.jpeg" loading="lazy" alt="fig91.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig92.jpeg" loading="lazy" alt="fig92.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig93.jpeg" loading="lazy" alt="fig93.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig94.jpeg" loading="lazy" alt="fig94.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig95.jpeg" loading="lazy" alt="fig95.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig96.jpeg" loading="lazy" alt="fig96.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig97.jpeg" loading="lazy" alt="fig97.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig98.jpeg" loading="lazy" alt="fig98.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig99.jpeg" loading="lazy" alt="fig99.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig100.jpeg" loading="lazy" alt="fig100.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig101.jpeg" loading="lazy" alt="fig101.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig102.jpeg" loading="lazy" alt="fig102.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig103.jpeg" loading="lazy" alt="fig103.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig104.jpeg" loading="lazy" alt="fig104.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig105.jpeg" loading="lazy" alt="fig105.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig106.jpeg" loading="lazy" alt="fig106.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig107.jpeg" loading="lazy" alt="fig107.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig108.jpeg" loading="lazy" alt="fig108.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig109.jpeg" loading="lazy" alt="fig109.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig110.jpeg" loading="lazy" alt="fig110.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig111.jpeg" loading="lazy" alt="fig111.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig112.jpeg" loading="lazy" alt="fig112.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig113.jpeg" loading="lazy" alt="fig113.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig114.jpeg" loading="lazy" alt="fig114.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig115.jpeg" loading="lazy" alt="fig115.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig116.jpeg" loading="lazy" alt="fig116.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig117.jpeg" loading="lazy" alt="fig117.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig118.jpeg" loading="lazy" alt="fig118.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig119.jpeg" loading="lazy" alt="fig119.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig120.jpeg" loading="lazy" alt="fig120.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig121.jpeg" loading="lazy" alt="fig121.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig122.jpeg" loading="lazy" alt="fig122.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig123.jpeg" loading="lazy" alt="fig123.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig124.jpeg" loading="lazy" alt="fig124.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig125.jpeg" loading="lazy" alt="fig125.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig126.jpeg" loading="lazy" alt="fig126.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig127.jpeg" loading="lazy" alt="fig127.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig128.jpeg" loading="lazy" alt="fig128.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig129.jpeg" loading="lazy" alt="fig129.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig130.jpeg" loading="lazy" alt="fig130.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig131.jpeg" loading="lazy" alt="fig131.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig132.jpeg" loading="lazy" alt="fig132.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig133.jpeg" loading="lazy" alt="fig133.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig134.jpeg" loading="lazy" alt="fig134.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig135.jpeg" loading="lazy" alt="fig135.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig136.jpeg" loading="lazy" alt="fig136.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig137.jpeg" loading="lazy" alt="fig137.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig138.jpeg" loading="lazy" alt="fig138.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig139.jpeg" loading="lazy" alt="fig139.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig140.jpeg" loading="lazy" alt="fig140.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig141.jpeg" loading="lazy" alt="fig141.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig142.jpeg" loading="lazy" alt="fig142.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig143.jpeg" loading="lazy" alt="fig143.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig144.jpeg" loading="lazy" alt="fig144.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig145.jpeg" loading="lazy" alt="fig145.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig146.jpeg" loading="lazy" alt="fig146.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig147.jpeg" loading="lazy" alt="fig147.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig148.jpeg" loading="lazy" alt="fig148.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig149.jpeg" loading="lazy" alt="fig149.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig150.jpeg" loading="lazy" alt="fig150.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig151.jpeg" loading="lazy" alt="fig151.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig152.jpeg" loading="lazy" alt="fig152.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig153.jpeg" loading="lazy" alt="fig153.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig154.jpeg" loading="lazy" alt="fig154.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig155.jpeg" loading="lazy" alt="fig155.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig156.jpeg" loading="lazy" alt="fig156.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig157.jpeg" loading="lazy" alt="fig157.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig158.jpeg" loading="lazy" alt="fig158.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig159.jpeg" loading="lazy" alt="fig159.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig160.jpeg" loading="lazy" alt="fig160.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig161.jpeg" loading="lazy" alt="fig161.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig162.jpeg" loading="lazy" alt="fig162.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig163.jpeg" loading="lazy" alt="fig163.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig164.jpeg" loading="lazy" alt="fig164.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig165.jpeg" loading="lazy" alt="fig165.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig166.jpeg" loading="lazy" alt="fig166.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig167.jpeg" loading="lazy" alt="fig167.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig168.jpeg" loading="lazy" alt="fig168.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig169.jpeg" loading="lazy" alt="fig169.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig170.jpeg" loading="lazy" alt="fig170.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig171.jpeg" loading="lazy" alt="fig171.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig172.jpeg" loading="lazy" alt="fig172.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig173.jpeg" loading="lazy" alt="fig173.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig174.jpeg" loading="lazy" alt="fig174.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig175.jpeg" loading="lazy" alt="fig175.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig176.jpeg" loading="lazy" alt="fig176.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig177.jpeg" loading="lazy" alt="fig177.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig178.jpeg" loading="lazy" alt="fig178.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig179.jpeg" loading="lazy" alt="fig179.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig180.jpeg" loading="lazy" alt="fig180.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig181.jpeg" loading="lazy" alt="fig181.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig182.jpeg" loading="lazy" alt="fig182.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig183.jpeg" loading="lazy" alt="fig183.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig184.jpeg" loading="lazy" alt="fig184.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig185.jpeg" loading="lazy" alt="fig185.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig186.jpeg" loading="lazy" alt="fig186.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig187.jpeg" loading="lazy" alt="fig187.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig188.jpeg" loading="lazy" alt="fig188.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig189.jpeg" loading="lazy" alt="fig189.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig190.jpeg" loading="lazy" alt="fig190.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig191.jpeg" loading="lazy" alt="fig191.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig192.jpeg" loading="lazy" alt="fig192.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig193.jpeg" loading="lazy" alt="fig193.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig194.jpeg" loading="lazy" alt="fig194.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig195.jpeg" loading="lazy" alt="fig195.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig196.jpeg" loading="lazy" alt="fig196.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig197.jpeg" loading="lazy" alt="fig197.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig198.jpeg" loading="lazy" alt="fig198.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig199.jpeg" loading="lazy" alt="fig199.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig200.jpeg" loading="lazy" alt="fig200.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig201.jpeg" loading="lazy" alt="fig201.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig202.jpeg" loading="lazy" alt="fig202.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig203.jpeg" loading="lazy" alt="fig203.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig204.jpeg" loading="lazy" alt="fig204.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig205.jpeg" loading="lazy" alt="fig205.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig206.jpeg" loading="lazy" alt="fig206.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig207.jpeg" loading="lazy" alt="fig207.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig208.jpeg" loading="lazy" alt="fig208.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig209.jpeg" loading="lazy" alt="fig209.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig210.jpeg" loading="lazy" alt="fig210.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig211.jpeg" loading="lazy" alt="fig211.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig212.jpeg" loading="lazy" alt="fig212.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig213.jpeg" loading="lazy" alt="fig213.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig214.jpeg" loading="lazy" alt="fig214.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig215.jpeg" loading="lazy" alt="fig215.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig216.jpeg" loading="lazy" alt="fig216.jpeg"></figure><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23622/fig217.jpeg" loading="lazy" alt="fig217.jpeg"></figure></div>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

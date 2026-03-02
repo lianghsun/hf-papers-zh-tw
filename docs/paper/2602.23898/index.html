@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ref-Adv：探索 MLLM 在指涉表達任務中的視覺推理 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-02/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-02 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">Ref-Adv：探索 MLLM 在指涉表達任務中的視覺推理</h1>
+  
+  <div class="en-title">Ref-Adv: Exploring MLLM Visual Reasoning in Referring Expression Tasks</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Qihua Dong, Kuo Yang, Lin Ju, Handong Zhao, Yitian Zhang, Yizhou Wang, Huimin Zeng, Jianglin Lu, Yun Fu</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.23898" target="_blank">2602.23898</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.23898" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.23898" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.23898" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">NLP</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Multimodal LLM</span>
+    <span class="tag task">Referring Expression Comprehension</span><span class="tag task">Visual Grounding</span><span class="tag task">Visual Reasoning</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 指涉表達理解（REC）：一個現代基準測試的引入
+
+指涉表達理解（Referring Expression Comprehension, REC）將語言與區域級視覺感知相連結。標準基準（RefCOCO、RefCOCO+、RefCOCOg）在多模態大語言模型推動下已有快速進展，但仍是視覺推理和定位能力的薄弱測試：（i）許多表達式極為簡短，推理需求有限；（ii）圖像通常包含少數干擾物體，使目標易於發現；以及（iii）冗餘的描述符使得快捷解決方案成為可能，繞過真正的文本理解和視覺推理。我們引入 Ref-Adv，一個現代 REC 基準測試，通過將語言上非平凡的表達式與僅識別目標所需的信息配對來抑制快捷方案。該數據集包含真實圖像上的指涉表達式，經過精心策劃包含難的干擾物體，並用推理面向（包括否定）進行標註。我們進行全面的消融研究（詞序擾動和描述符刪除充分性），以展示解決 Ref-Adv 需要超越簡單線索的推理，並在 Ref-Adv 上評估廣泛的當代多模態大語言模型。儘管在 RefCOCO、RefCOCO+ 和 RefCOCOg 上有很強的表現，模型在 Ref-Adv 上明顯下降，揭示了對快捷方案的依賴以及視覺推理和定位的不足。我們提供深入的失敗分析，並目標是讓 Ref-Adv 指導多模態大語言模型中視覺推理和定位的未來工作。</p>
+  
+  <div class="abstract-en">Referring Expression Comprehension (REC) links language to region level visual perception. Standard benchmarks (RefCOCO, RefCOCO+, RefCOCOg) have progressed rapidly with multimodal LLMs but remain weak tests of visual reasoning and grounding: (i) many expressions are very short, leaving little reasoning demand; (ii) images often contain few distractors, making the target easy to find; and (iii) redundant descriptors enable shortcut solutions that bypass genuine text understanding and visual reasoning. We introduce Ref-Adv, a modern REC benchmark that suppresses shortcuts by pairing linguistically nontrivial expressions with only the information necessary to uniquely identify the target. The dataset contains referring expressions on real images, curated with hard distractors and annotated with reasoning facets including negation. We conduct comprehensive ablations (word order perturbations and descriptor deletion sufficiency) to show that solving Ref-Adv requires reasoning beyond simple cues, and we evaluate a broad suite of contemporary multimodal LLMs on Ref-Adv. Despite strong results on RefCOCO, RefCOCO+, and RefCOCOg, models drop markedly on Ref-Adv, revealing reliance on shortcuts and gaps in visual reasoning and grounding. We provide an in depth failure analysis and aim for Ref-Adv to guide future work on visual reasoning and grounding in MLLMs.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="ref-adv-mllm">Ref-Adv：探索 MLLM 在指稱表達任務中的視覺推理</h1>
+<p>指稱表達理解（Referring Expression Comprehension, REC）將語言與區域級別的視覺感知相連結。標準基準（RefCOCO、RefCOCO+、RefCOCOg）在多模態大語言模型的推動下進展迅速，但仍然是視覺推理和視覺接地能力的薄弱測試：(i) 許多表達式極為簡短，留下的推理需求很少；(ii) 圖像通常包含很少的干擾物，使得目標容易被找到；(iii) 冗餘的描述詞使得捷徑解決方案得以繞過真正的文本理解和視覺推理。</p>
+<p>我們引入 Ref-Adv，一個現代的 REC 基準，通過將語言上非平凡的表達式與僅包含唯一標識目標所需的資訊相配對來抑制捷徑。該資料集包含真實圖像上的指稱表達，由困難的干擾物精心策劃，並標註了推理層面，包括否定。</p>
+<p>我們進行了全面的消融實驗（詞序擾動和描述詞刪除充分性），以證明求解 Ref-Adv 需要超越簡單線索的推理，並在 Ref-Adv 上評估了廣泛的當代多模態大語言模型。</p>
+<p>儘管在 RefCOCO、RefCOCO+ 和 RefCOCOg 上表現強勁，模型在 Ref-Adv 上的表現明顯下降，揭示了對捷徑的依賴以及視覺推理和視覺接地能力的差距。我們提供了深入的失敗分析，並希望 Ref-Adv 能夠指導未來關於 MLLM 中視覺推理和視覺接地的研究工作。</p>
+<h2 id="1">1 介紹</h2>
+<p>參考表達理解（REC）是將自然語言表達式映射到圖像中特定區域的任務（Mao et al., 2016；Kazemzadeh et al., 2014；Yu et al., 2016）。它在現實世界系統和下遊任務中具有重要應用，並已成為評估多模態大型語言模型（MLLMs）的關鍵基準，因為它探測語言和視覺之間的細粒度對應關係。最近的 MLLMs（Google, 2025a；Bai et al., 2025；Zhu et al., 2025），包括閉源和開源模型，取得了顯著進展，在經典 REC 基準上達到了超過 90% 的準確率，即 RefCOCO(+/g)（Kazemzadeh et al., 2014；Yu et al., 2016；Mao et al., 2016）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23898/x1.png" loading="lazy"></figure> 圖 1：經典參考表達基準的常見限制，這些限制降低了推理的挑戰性。這些包括極短的表達式、極少的視覺干擾項，以及過度指定的描述符，使得可以通過快捷方式匹配而不需要真正的推理。青色框突出顯示了真值區域。</p>
+<p>儘管有接近飽和的性能，我們識別出經典 REC 基準的關鍵限制，這些限制促使建立一個現代基準，能夠對 MLLMs 進行更具挑戰性和全面的評估。</p>
+<p>我們將現代 MLLMs 的 REC 視為一個多步推理任務，包含兩個耦合的組件：（1）文本推理——理解參考表達式、識別目標和識別其描述符；（2）視覺推理——搜索候選項和建立描述符與圖像區域之間的對應關係。這些步驟的順序可能因模型而異，但有意義的基準應該需要文本和視覺推理。從這個角度來看，我們強調了 RefCOCO(+/g) 的以下限制。</p>
+<p>首先，大多數參考表達式極其簡短，如圖 1 所示。對於 RefCOCO 和 RefCOCO+，平均表達式長度約為 3 個單詞。這樣的簡短表達式導致兩個問題：（1）需要最小的語言努力，以及（2）它們通常需要較少的視覺推理，因為需要在圖像中驗證的描述符較少。</p>
+<p>其次，RefCOCO(+/g) 中的圖像干擾項很少，如圖 2（b）所示，大多數情況只有 1 個干擾項。這裡我們將干擾項定義為與目標相同類別但不同實例的物件。當干擾項很少時，該任務需要的文本和視覺推理要少得多：模型只需推斷目標類別並從一小組候選項中選擇。圖 2（b）揭示了干擾項數量和模型性能之間的負相關關係。</p>
+<p>值得注意的是，對於推理評估，任務難度不會隨著參考表達式長度單調增加，這是由於「定位快捷方式」。這些快捷方式在長的、描述性的表達式與少量干擾項配對時出現，使許多描述符變得冗餘。因此，模型可以通過僅匹配描述符的子集來定位目標，這可能會矛盾地導致較長表達式的準確率更高，如圖 2（a）所示。這突出了現代 REC 基準需要通過設計簡潔且與可用干擾項仔細平衡的表達式來減輕此類快捷方式的必要性。</p>
+<p>同時，先前的工作已經認可了這些限制的某些方面：Wei et al.（2024）；Chen et al.（2024）指出了 RefCOCO(+/g) 的長度限制，而 Chen et al.（2020）強調了干擾項的缺乏。然而，提出的資料集也引發了新的問題。前者引入了平均長度 $\geq 90$ 個單詞的 REC 資料，這可能不自然，更重要的是，由於描述符和干擾項的數量嚴重不平衡，會導致許多快捷方式。後者提出的設置包括從一組圖像中進行參考，這偏離了經典 REC 設置，並且參考表達式是從具有固定模板的 GQA（Hudson and Manning, 2019）場景圖中採樣的，降低了自然性。</p>
+<p>因此，我們的目標是建立一個 REC 基準，該基準保留經典 REC 設置和自然表達式，同時實質性地增加與現代 LLMs 能力相符的推理挑戰。為此，我們引入 Ref-Adv，這是一個現代 REC 基準，避免了簡短的推理路徑，並對當代 MLLMs 施加了推理和定位挑戰。</p>
+<p>為了驗證基準的品質，我們在第 2 節進行了全面的消融研究，檢查什麼構成了嚴格的現代 REC 基準，並將其推理和定位難度與 RefCOCO(+/g) 進行了比較。在第 3 節，我們在 Ref-Adv 上評估了 13 個當代 MLLMs，涵蓋閉源和開源模型。我們報告性能變化並提供詳細分析。我們公開發布了 Ref-Adv-s，一個由 1,142 個案例組成的精選子集，以實現可重複的基準測試。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23898/x2.png" loading="lazy"></figure> 圖 2：Qwen 在 RefCOCO/+/g 驗證集上的 Accuracy@0.5（IoU $\geq 0.5$）。標記大小與每個箱中的樣本數成正比。（a）是表達式中單詞數量的 Acc@0.5，（b）是干擾項計數上的 Acc@0.5。我們可以看到大多數情況具有簡短的表達式和極少的干擾項。</p>
+<h2 id="2-ref-adv">2 Ref-Adv 資料集</h2>
+<p>表 1：RefCOCO、RefCOCO+、RefCOCOg 和 Ref-Adv（本研究）驗證集和測試集的基本統計數據。實例大小用其平方根表示。平均長度：註釋的平均長度。詞彙量：詞彙表大小。平均干擾項：每張影像中相同類別干擾項的平均數量。否定比率：使用明確否定的表達式的百分比。</p>
+<h3 id="21">2.1 資料來源</h3>
+<p>我們從 COCO（Lin et al., 2014）和 OpenImages v7（Kuznetsova et al., 2020）的驗證集和測試集中採樣。我們篩選影像，只使用具有全景實例註釋的影像，因為這對我們後續的管線至關重要。對於邊界框註釋，我們將所有註釋轉換為使用 [x1, y1, x2, y2] 格式的絕對座標。我們資料管線的輸入是影像、邊界框註釋和每個實例的類別名稱，我們將輸出與目標實例配對的指稱表達式。</p>
+<h3 id="22">2.2 蒐集準則</h3>
+<p>如圖 1 所示，我們的目標是蒐集需要視覺推理、避免捷徑解法，並對模型構成挑戰的指稱資料。基於這些觀察，我們提出下列準則以緩解這些限制，並產生需要進階推理的案例。</p>
+<p><strong>干擾物壓力</strong></p>
+<p>干擾物是與目標物相同類別但不同實例的物體。為了避免僅基於目標物類別的簡單接地，我們根據每個資料集的實例註解，選擇至少具有 3 個與目標物相同類別的候選實例的影像。</p>
+<p><strong>語言複雜性</strong></p>
+<p>RefCOCO(+/g) 的平均表達長度約為 3 個詞，這限制了語言複雜性，需要的視覺推理也少得多。
+同時，從場景圖中提取指稱資訊的固定範本限制了指稱表達的多樣性。
+因此，我們採用 LLM（例如 GPT-4o）搭配精心設計的管線，以生成更自然和多樣化的指稱表達，同時保持語言複雜性。</p>
+<p><strong>困難干擾物</strong></p>
+<p>單純增加干擾物的數量和指稱表達的長度不一定會使任務更具挑戰性，因為存在圖 1 (c) 所示的「接地捷徑」。
+為了減少此類捷徑（即對冗餘描述符的依賴），我們確保影像中存在「困難干擾物」，其定義為部分符合但不完全滿足指稱表達的干擾物。識別這類配對並根據它們構成表達是我們資料蒐集流程的核心。</p>
+<p><strong>人工檢查</strong></p>
+<p>手動選擇具有困難干擾物的影像並生成指稱表達是勞力密集且耗時的，因此我們使用 LLM 來協助生成。
+然而，LLM 可能會犯錯或產生幻覺。
+為了確保準確性，我們執行人工驗證過程，以確認困難干擾物的存在以及指稱表達的正確性和明確性。</p>
+<h3 id="23">2.3 指涉表達式生成流程</h3>
+<p>如圖 3 所示，整個生成流程分為四個階段。我們使用的提示詞提供於 Ref-Adv: Exploring MLLM Visual Reasoning in Referring Expression Tasks 小節。</p>
+<p>輸入準備 我們首先過濾圖像，只保留至少有 3 個候選實例的圖像。然後我們在每個實例上放置一個數字標籤，類似於 Set-of-Marks（Yang et al., 2023），但由於我們已經有實例註解，我們只需要將數字標籤添加到候選實例上。</p>
+<h4 id="231-llm">2.3.1 LLM 編寫的流程</h4>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23898/x3.png" loading="lazy"></figure> 圖 3：Ref-Adv 的 LLM 編寫資料策劃流程。(a) 準備圖像：過濾圖像，確保 ≥ \geq 3 個干擾項，並將數字標籤添加到候選實例。(b) 相似性判斷：使用 GPT-4o 識別最相似的一對，並引出組級和實例級的判別符。(c) 表達式生成：使用判別符和可選的否定來組成最少充分的指涉表達式。(d) 人工驗證：在包含前驗證表達式的準確性，並確認存在困難干擾項。</p>
+<p>在詳細介紹流程之前，我們注意到一個重要的設計選擇。我們最初嘗試對 GPT-4o 進行單步提示，直接從圖像和候選實例生成完整的指涉表達式。在實踐中，GPT-4o 經常生成過度指定的描述，包含許多冗餘描述符，這使得捷徑定位成為可能，並削弱了理解整個表達式的必要性。為了避免這種行為，我們採用兩階段程序：我們首先引出判別性屬性（在 A 組和 B 組之間以及 A 組內部），然後從這些屬性的最少但充分的子集組成最終表達式。</p>
+<p>相似性判斷 如果存在困難干擾項和目標實例，它們在某些方面會有相似之處。為了鼓勵 LLM 識別圖像中任何這樣的相似對，我們定義了兩個組，A 組包含困難干擾項和目標實例，B 組包含其他干擾項。然後我們提示 LLM 識別這兩個組，並描述 (1) 區分兩個組的屬性和 (2) 區分 A 組內兩個實例的屬性。我們要求為每個區分提供多個替代描述。這可以幫助我們為一個圖像生成多個多樣化的指涉表達式，並允許我們選擇高品質的表達式。</p>
+<p>指涉表達式生成 在相似性判斷之後，我們獲得了區分 (1) A 組和 B 組以及 (2) A 組內兩個實例的配對描述符列表。為了確保措辭的自然性和多樣性，我們提示 LLM 從這些描述符的組合中組成指涉表達式。具體來說，我們使用兩種替代策略：(1) 採用目標的描述符和 (2) 使用困難干擾項描述符的否定。這促進了更多樣化和自然的表達式。我們也明確指示 LLM 不要包含與數字標籤相關的描述。儘管引出的描述符本身足以用於生成，但我們發現在此階段包含圖像輸入會產生更多樣化和準確的表達式，因此我們包含了圖像。在此階段之後，我們為每個目標實例獲得多個候選指涉表達式。</p>
+<h4 id="232">2.3.2 人工編寫的流程</h4>
+<p>我們也收集了人工編寫指涉表達式的子集。對於每個過濾後的圖像，註解者首先確認是否存在困難干擾項對，如果存在，則為其寫出一個指涉表達式。註解者被指示要生成多樣化且自然的措辭。</p>
+<h4 id="233">2.3.3 驗證協議</h4>
+<p>我們驗證每個圖像-文本對。三名註解者回答兩個問題：(1) 表達式是否正確且無歧義，以及 (2) 圖像中是否存在困難干擾項。註解者首先嘗試使用 LLM 生成的表達式在原始圖像（沒有數字標籤）上進行定位。然後我們在圖像上顯示真實邊界框作為參考，如果初始定位不正確，允許他們進行反思。之後，註解者記錄他們對正確性/無歧義性和困難干擾項存在的最終決定。每個註解者的圖像-文本對以隨機順序呈現，只有在三名註解者都同意的情況下，該對才會被保留。LLM 編寫表達式的保留率為 18.7%。</p>
+<h3 id="24">2.4 品質分析</h3>
+<p>儘管進行了驗證以確保正確性，REC 基準測試仍存在可能影響公平性和推理技能評估的潛在問題。
+為了進一步評估我們數據的品質，我們進行了以下分析。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23898/x4.png" loading="lazy"></figure> 圖 4：REC 基準測試的數據集統計。(a) 表達式長度比較。(b) 干擾物數量的分佈。(c) 對數面積尺度上的實例大小。</p>
+<p><strong>統計</strong> 如圖 4 和表 1 所示，Ref-Adv 在表達式長度、詞彙量、干擾物數量和否定比率方面表現出明顯優勢。</p>
+<p><strong>模型偏差測試</strong> 受 Cirik et al. ( 2018 )；Chen et al. ( 2020 ) 啟發，我們對現代 MLLM（Qwen2.5-VL-72B 和 InternVL-3）在 RefCOCO(+/g) 和 Ref-Adv 上進行了偏差測試。
+此處，偏差是指如果訓練數據來自與評估基準相同來源時可能出現的統計規律性，這可能有利於性能提升。
+我們的測試設計如下：我們將指稱表達式替換為固定提示語（「the one」），保持相同的圖像，並提示模型輸出邊界框。
+此測試揭示了模型偏差是否有助於定位目標。
+結果如表 2 所示。它們表明 Ref-Adv 受此偏差的影響比其他基準測試更少。</p>
+<p>表 2：將原始指稱表達式替換為固定「the one」提示語後的 Accuracy@0.5。Δ 是 Fixed@0.5 減去 Ref-Adv Fixed@0.5（以藍色顯示）。使用固定提示語，模型在 RefCOCO、RefCOCO+ 和 RefCOCOg 上的準確度高於 Ref-Adv。</p>
+<p>表 3：RefCOCO、RefCOCO+、RefCOCOg 和 Ref-Adv 上的詞袋消融。使用原始表達式 vs 詞袋（去除詞序）的 Acc@0.5。Δ 表示（BoW − 原始）。</p>
+<p><strong>文本推理必要性測試</strong> 先前的研究（Akula et al.，2020）表明，打亂 RefCOCOg 中的詞序通常會使性能基本保持不變，這表明先前 REC 基準測試中文本推理的必要性較弱。
+這種無性能下降可能源於兩個因素：(1) 只提及目標（或其部分）而不參考干擾物的表達式，以及 (2) 沒有或很少有干擾物的圖像。
+這兩個因素都降低了 REC 中的推理需求。
+為了驗證 Ref-Adv 需要推理，我們將測試擴展到 RefCOCO(+/g) 和 Ref-Adv 進行比較。
+我們提出了一個更簡單的測試，而不是在保持意義的情況下打亂詞序：我們將表達式轉換為詞袋並在提示語中隨機化其順序（例如，「a red ball with yellow stripes」變為「with yellow red ball stripes a」）。
+我們在此設置下評估了 Qwen2.5-VL-72B 和 InternVL-3。
+結果如表 3 所示，表明 Ref-Adv 確實需要文本理解和推理以精確遵循指稱表達式。</p>
+<p><strong>避免「定位捷徑」</strong> 如圖 1 所示，RefCOCO(+/g) 存在「定位捷徑」，其中模型可以通過檢查描述符的一小部分來定位目標，而無需對整個表達式進行推理。
+為了驗證 Ref-Adv 避免了此捷徑，我們進行了描述符刪除充分性測試。
+對於給定的指稱表達式，我們首先使用 Qwen2.5-72B（Yang et al.，2024）提取所有描述符，隨機刪除一個，並要求 Qwen2.5-72B 重寫刪除該描述符的表達式。
+然後我們在修改的圖像-文本對上評估 MLLM。
+如果刪除描述符不影響性能，則該描述符是不必要的，這表明存在無需理解完整表達式即可成功的捷徑。
+此類捷徑在描述符和干擾物數量不平衡的數據集中會更加明顯。
+結果如表 4 所示，表明 Ref-Adv 的定位捷徑遠少於其他基準測試。</p>
+<p>表 4：RefCOCO、RefCOCO+、RefCOCOg 和 Ref-Adv 上的單個描述符刪除消融。使用原始表達式 vs 單個描述符刪除（刪除表達式中的單個描述符）的 Acc@0.5。Δ 表示（1-Desc − 原始）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23898/image.png" loading="lazy"></figure> 表 5：Ref-Adv 的示例。第 1 到 3 列由 LLM 生成；第 4 列由人工編寫。</p>
+<h2 id="3">3 實驗</h2>
+<p>表格 6：在 Ref-Adv-s 上的結果，這是包含 1,142 個案例的公開發佈子集，涵蓋 Qwen2.5-VL、Qwen3-VL 和 Qwen3.5 模型族系。列顯示 IoU 閾值 0.5、0.75 和 0.9 處的準確度。對於干擾項組別（2–3、4–6 和 $\geq 7$），我們報告 Acc0.5 和相對於整體 Acc0.5 的差值。CoT 表示思維鏈提示（通過思維模式、先思考提示或 Qwen3.5 中的原生方式）。</p>
+<p>表格 7：Ref-Adv 上的主要結果。行列出模型；列報告 IoU 閾值 0.5、0.75 和 0.9 處的準確度以及平均準確度（mAcc）。對於干擾項組別（4–6 和 $\geq 7$），我們報告 Acc0.5 和相對於整體 Acc0.5 的差值。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23898/x5.png" loading="lazy"></figure> 圖 5：代表性多模態 LLM 在 Ref-Adv 上的效能。我們為 Gemini 2.5-Flash 和 Qwen2.5-VL-72B 包含了有無 CoT 的定性範例。CoT 答案顯示在灰色框中。Ref-Adv 中的困難干擾項挑戰了當前的 MLLM。</p>
+<h3 id="31">3.1 評估設定</h3>
+<p><strong>評估模型</strong> 我們在 Ref-Adv 上評估當代最先進的 MLLM，包括閉源和開源模型。該套件包括 Qwen2.5-VL 系列（Bai et al.，2025）、InternVL-3 系列（Zhu et al.，2025）、Gemini 2.5-Flash（Google，2025a）、Gemini 2.5-Pro（Google，2025b）、CogVLM-Grounding（Hong et al.，2024）、GLM-4.5V（Team et al.，2025b）、GPT-4o（OpenAI，2024）和 Claude-3.5 Sonnet（Anthropic，2024）。</p>
+<p><strong>評估方法</strong> Set-of-Marks (SoM) 在影像中的候選物體上疊加編號標記，並利用專門的分割器提供細粒度定位，避免 MLLM 需要自行執行接地。由於 GPT-4o 和 Claude-3.5 的接地能力有限，我們使用 SoM（Yang et al.，2023）搭配 Semantic-SAM（Li et al.，2023）評估它們。我們使用 Semantic-SAM 是因為它在 COCO 影像上的表現強勁，而 COCO 是 Ref-Adv 的來源之一。</p>
+<p>對於每個模型（除了不支援 CoT 的 CogVLM-Grounding 外），我們評估有無思維鏈（CoT）的情況。雖然 CoT 在經典 REC 基準評估中並不常見，但 Ref-Adv 需要更多推理，因此我們在設定中包含了 CoT。表格 6 和表格 7 報告了 Ref-Adv 上有無 CoT 的結果。</p>
+<p><strong>評估提示</strong> 模型在提示格式和輸出慣例上有所不同。例如，Qwen2.5-VL-72B 使用絕對坐標，而其他模型使用歸一化坐標；CogVLM-Grounding 要求問題嚴格遵循「Where is the 'referring expression'?」的形式才能輸出邊界框。為了確保公平性，我們為每個模型採用最佳實踐提示。</p>
+<h3 id="32-evaluation-metrics">3.2 Evaluation Metrics</h3>
+<p>Accuracy serves as a widely adopted metric for evaluating existing REC models. A referring expression instance is deemed successfully grounded when the Intersection over Union (IoU) between the predicted bounding box and the ground truth annotation surpasses 0.5. This conventional evaluation metric is designated as Acc0.5. Here, we implement multiple evaluation protocols, i.e., Accuracy computed under different IoU thresholds such as Acc0.5, Acc0.75, Acc0.9, and mean Accuracy (mAcc) across different IoU criteria, to thoroughly evaluate the precision and robustness.</p>
+<h3 id="33">3.3 分析</h3>
+<p><strong>干擾物數量的影響</strong> 在 Ref-Adv 中，每個表達式至少與 2 個相同類別的干擾物配對，圖像平均包含約 4 個干擾物。相比整體 Acc0.5，大多數模型在 4–6 組中顯示適度變化，但在 ≥ $\geq$ 7 組中下降幅度較大（例如，Qwen2.5-VL-72B+CoT：− $-0.2$ 和 − $-2.7$）。此趨勢表明，處理大量相似干擾物仍然是當前多模態大型語言模型（MLLM）的關鍵挑戰。</p>
+<p><strong>CoT 的影響</strong> 表 6 和表 7 顯示 CoT 通常改善了 Ref-Adv 的性能。我們將 Ref-Adv 上的改善歸因於其更高的推理需求；對於 RefCOCO(+/g)，其中定位通常可以不經過廣泛推理而成功，CoT 可能會引入不必要的冗長或錯誤。</p>
+<p>值得注意的是，雖然 Argus（Man et al., 2025）報告了在 RefCOCO 上的可觀 CoT 收益，但其 CoT 消融實驗是在 VQA 風格基準上進行的，通過使用額外的 CoT 資料增強訓練，而我們的研究使用現成的檢查點，並直接在 RefCOCO(+/g) 和 Ref-Adv 上進行評估，無需額外訓練。RefCOCO(+/g) 也包含許多簡短表達式，干擾物很少，因此 CoT 通常是不必要的，甚至可能損害性能。此外，標準多模態評估工具包如 open compass 和 VLMEvalKit 不對 RefCOCO(+/g) 啟用 CoT，這與我們的發現一致，即 CoT 在此設定中帶來的好處有限，但在推理需求更高的 Ref-Adv 上更有幫助。這個觀察與最近的研究「To Think or Not To Think: A Study of Thinking in Rule-Based Visual Reinforcement Fine-Tuning」（Li et al., 2025）一致，該研究也報告了在 RefCOCO(+/g) 上 CoT 好處有限。</p>
+<p><strong>Ref-Adv-s</strong> 為了便於可重現評估，我們公開發佈了 Ref-Adv-s，這是從 Ref-Adv 中精心挑選的 1,142 個案例的子集，以及評估代碼。表 6 報告了 Qwen2.5-VL、Qwen3-VL 和 Qwen3.5 模型系列在 Ref-Adv-s 上的結果，涵蓋從 2B 到 397B 參數的模型大小。在 Ref-Adv-s 上觀察到的趨勢與完整基準一致：精度隨著干擾物數量增加而下降，且思考模式變體在相同模型大小下的表現明顯優於指令變體。</p>
+<p><strong>主要結果</strong> 表 7 總結了 Ref-Adv 上的結果。使用 SoM，GPT-4o 在 CoT 下在 Ref-Adv 上達到了最佳性能，表明其具有強大的推理和視覺感知能力。雖然其他模型在 RefCOCO(+/g) 上表現良好，但它們在 Ref-Adv 上的精度下降明顯，揭示了視覺推理和感知方面的差距。</p>
+<p><strong>定性分析</strong> 圖 5 顯示了 Qwen2.5-VL-72B 和 Gemini 2.5-Flash 的定性示例，包括有無 CoT 的情況。通過明確推理，模型通常遵循預期的推理鏈，但在較難的情況下，由於視覺感知不正確或對指稱表達式的誤解，它們會在中途失敗。值得注意的是，模型經常選擇困難的干擾物作為答案，這表明 Ref-Adv 要求模型既要深刻理解指稱表達式，也要進行準確的視覺感知。這表明 Ref-Adv 強調高級推理和視覺感知，而當前最先進的多模態大型語言模型仍然存在明顯的差距。</p>
+<h2 id="4">4 文獻回顧</h2>
+<p>指稱表達式基準。基於分割的基準構成了電腦視覺中的一個基礎類別，涵蓋眾多跨越不同領域和應用的資料集（Kuznetsova et al. , 2020 ; Lin et al. , 2014 ; Wang et al. , 2022 ; Du et al. , 2023 ; 2025）。該領域的基礎基準，包括 ReferItGame（Kazemzadeh et al. , 2014）和事實上的標準 RefCOCO 套件（RefCOCO/+/g）（Yu et al. , 2016 ; Mao et al. , 2016），在推進研究方面發揮了關鍵作用。然而，隨後的分析表明，在這些資料集上的高分數可能誇大了真正的理解能力。例如，即使在打亂單詞順序的情況下，RefCOCOg 上的效能往往仍然很高，表明模型依賴於表面線索而非穩健的組合理解（Akula et al. , 2020）。為了解決這些基礎問題——即表達式過於簡單和缺乏困難的同類干擾項——新一波的基準應運而生。為了直接針對推理，Cops-Ref（Chen et al. , 2020）及其後繼者 FineCops-Ref（Liu et al. , 2024）引入了更具組合性的表達式，包含明確的干擾項和負例，而合成的 CLEVR-Ref+（Liu et al. , 2019）提供了一個完全可控的診斷分析環境。與此同時，其他工作擴展了 REC 任務的範疇。gRefCOCO（Liu et al. , 2023）引入了多目標和無目標表達式，PhraseCut（Wu et al. , 2020）將短語級分割擴展到更多類別，而 HC-RefLoCo（Wei et al. , 2024）和 Ref-L4（Chen et al. , 2024）等最近的工作推動了更長、更自然的描述以及原始基準中標籤雜訊的修正。</p>
+<p>多模態大型語言模型（MLLM）的快速進展進一步加劇了對這些具有挑戰性基準的需求。</p>
+<p>多模態大型語言模型。視覺語言人工智慧的最近進展由大型多模態語言模型（MLLM）驅動，這些模型將強大的 LLM 主幹與視覺編碼器和對齐調優結合起來，以實現指令遵循。越來越多的工作探索了 LLM 中的視覺理解，其中理解能力成為了重要焦點（Bai et al. , 2025 ; Hong et al. , 2024 ; Team et al. , 2025b ; Lu et al. , 2025b ; a ; 2026）。OpenAI 的 GPT-4 Vision 和 Google 的 Gemini 等專有模型體現了這一趨勢，而 Alibaba 的 Qwen-VL 和 Shanghai AI Lab 的 InternVL 等開源對應物提供了類似的功能（OpenAI, 2024 ; Google, 2025a ; Bai et al. , 2025 ; Zhu et al. , 2025）。這些系統在大規模圖像文本語料庫上進行訓練，現在在經典指稱表達式基準上達到了接近天花板的準確度（通常 &gt; &gt; 90%）（Kazemzadeh et al. , 2014 ; Yu et al. , 2016 ; Mao et al. , 2016）。然而，隨著 MLLM 的推理能力快速進步，已經清楚地看到這些高分數不足以衡量真正的多步推理，因此需要 REC 任務本身的演進（Wei et al. , 2022 ; 2024 ; Chen et al. , 2024 ; Dong et al. , 2025）。這推動了更具挑戰性的基準和推理增強模型的開發。例如，Moonshot 的 Kimi-VL（Thinking）應用了思維鏈微調和強化學習來加強逐步視覺推理（Team et al. , 2025a），而 ZhipuAI 的 GLM-4.5V 明確執行逐步理解以輸出精確的物體邊界框（Team et al. , 2025b）。類似地，新的對齐視覺語言模型如 CogVLM 和 DeepSeek-VL2 融合了混合專家或獎勵最佳化以改進視覺理解和連貫性，甚至商業聊天機器人（例如 Anthropic 的 Claude 3.5、xAI 的 Grok）也開始整合高級多模態推理。我們的工作建立在這些努力的基礎上，通過在一個新穎的 REC 基準上評估廣泛的最先進的 MLLM 套件——包括通用和推理中心的——以對其視覺理解和推理能力進行壓力測試（Hong et al. , 2024 ; Team et al. , 2025b ; a ; Wu et al. , 2024 ; Anthropic, 2024 ; xAI, 2025）。</p>
+<h2 id="5">5 結論</h2>
+<p>在本研究中，我們介紹了 Ref-Adv，一個現代 REC 基準，旨在通過要求真正的多步驟推理來解決現有數據集對視覺捷徑的依賴。
+我們通過一個兩階段的管道構建 Ref-Adv，該管道使用 LLM 來組成最小充分的指代表達式。
+我們的全面消融研究（第 2 節）證實了 Ref-Adv 能有效探測複雜的文本和視覺接地能力。令人驚訝的是，我們對當代 MLLM 的評估（第 3 節）揭示了與它們在 RefCOCO(+/g) 上接近飽和分數相比的顯著性能下降，暴露了對其視覺推理能力的嚴重高估。這些發現強調了迫切需要能反映現實世界視覺複雜性的基準，並為開發更強大且更有能力的 MLLM 提供了清晰的前進道路。</p>
+<h2 id="_1">倫理聲明</h2>
+<p>我們遵循 ICLR 倫理準則（https://iclr.cc/public/CodeOfEthics）。
+我們使用大型語言模型來起草候選表達式，然後應用由三位標註員進行的人工驗證步驟，以確保正確性並移除模糊或不安全的內容（第 2 節）。標註員僅處理公開圖像，並可跳過任何範例。我們的基準旨在評估接地和視覺推理，而非用於監視或生物特徵識別。我們僅發布表達式、目標區域和數據集識別符，並提供使用指南，勸阻涉及身份推斷或敏感屬性預測的應用。我們不知道有任何利益衝突。</p>
+<h2 id="_2">可重現性聲明</h2>
+<p>第 2 節描述了完整的數據管道，包括圖像來源、用相同類別乾擾項進行的過濾、描述符引出、表達式組成和三標註員驗證協議，以及第 3 圖中的分步圖示。我們將發布確切的圖像識別符、最終指代表達式、目標區域和我們標註的 JSON 模式，以及用於加載和評估數據的腳本。評估協議和指標（Acc0.5/Acc0.75/Acc0.9 和平均精度）在第 3 節中指定。
+為了便於精確複現，我們提供以下產物：(i) Ref-Adv-s，Ref-Adv 的公開發布子集，包含 1,142 個案例和評估代碼，能立即進行可重現的基準測試；(ii) 計算 IoU 和精度的評估腳本；以及 (iii) 每個評估模型的提示和配置文件。這些產物總體上能實現我們表格和圖示的端到端複現。</p>
+<h2 id="_3">參考文獻</h2>
+<ul>
+<li>A. R. Akula, S. Gella, Y. Al-Onaizan, S. Zhu, and S. Reddy (2020) Words aren't enough, their order matters: on the robustness of grounding visual referring expressions . In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics , Online , pp. 6555–6565 . External Links: Document , Link Cited by: §2.4 , §4 .</li>
+<li>Anthropic (2024) Claude 3.5 sonnet . Note: https://www.anthropic.com/news/claude-3-5-sonnet Cited by: §3.1 , Table 7 , Table 7 , §4 .</li>
+<li>S. Bai, K. Chen, X. Liu, J. Wang, W. Ge, S. Song, K. Dang, P. Wang, S. Wang, J. Tang, H. Zhong, Y. Zhu, M. Yang, Z. Li, J. Wan, P. Wang, W. Ding, Z. Fu, Y. Xu, J. Ye, X. Zhang, T. Xie, Z. Cheng, H. Zhang, Z. Yang, H. Xu, and J. Lin (2025) Qwen2.5-vl technical report . arXiv preprint arXiv:2502.13923 . Cited by: §1 , §3.1 , Table 7 , Table 7 , Table 7 , Table 7 , Table 7 , Table 7 , §4 .</li>
+<li>J. Chen, F. Wei, J. Zhao, S. Song, B. Wu, Z. Peng, S.-H. G. Chan, and H. Zhang (2024) Revisiting referring expression comprehension evaluation in the era of large multimodal models . arXiv preprint arXiv:2406.16866 . External Links: Link Cited by: §1 , §4 , §4 .</li>
+<li>Z. Chen, P. Wang, L. Ma, K. K. Wong, and Q. Wu (2020) Cops-ref: a new dataset and task on compositional referring expression comprehension . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 10086–10095 . External Links: Link Cited by: §1 , §2.4 , §4 .</li>
+<li>V. Cirik, L. Morency, and T. Berg-Kirkpatrick (2018) Visual referring expression recognition: what do systems actually learn? . arXiv preprint arXiv:1805.11818 . Cited by: §2.4 .</li>
+<li>Q. Dong, L. Figueroa, H. Zhao, K. Kafle, J. Kuen, Z. Ding, S. Cohen, and Y. Fu (2025) CoT referring: improving referring expression tasks with grounded reasoning . External Links: 2510.06243 , Link Cited by: §4 .</li>
+<li>H. Du, Q. Dong, Y. Xu, and J. Liao (2023) Weakly-supervised 3d medical image segmentation using geometric prior and contrastive similarity . IEEE Transactions on Medical Imaging 42 ( 10 ), pp. 2936–2947 . Cited by: §4 .</li>
+<li>H. Du, Q. Dong, Y. Xu, and J. Liao (2025) Tdformer: top-down token generation for 3d medical image segmentation . IEEE Journal of Biomedical and Health Informatics . Cited by: §4 .</li>
+<li>Google (2025a) Gemini 2.5 flash . Note: https://deepmind.google/technologies/gemini/flash/ Cited by: §1 , §3.1 , Table 7 , Table 7 , §4 .</li>
+<li>Google (2025b) Gemini 2.5 pro . Note: https://deepmind.google/technologies/gemini/pro/ Cited by: §3.1 , Table 7 , Table 7 .</li>
+<li>W. Hong, W. Wang, M. Ding, W. Yu, Q. Lv, Y. Wang, Y. Cheng, S. Huang, J. Ji, Z. Xue, et al. (2024) CogVLM2: visual language models for image and video understanding . arXiv preprint arXiv:2408.16500 . Cited by: §3.1 , Table 7 , §4 .</li>
+<li>D. A. Hudson and C. D. Manning (2019) Gqa: a new dataset for real-world visual reasoning and compositional question answering . In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 6700–6709 . Cited by: §1 .</li>
+<li>S. Kazemzadeh, V. Ordonez, M. Matten, and T. Berg (2014) Referitgame: referring to objects in photographs of natural scenes . In Proceedings of the 2014 conference on empirical methods in natural language processing (EMNLP) , pp. 787–798 . Cited by: §1 , Table 1 , §4 , §4 .</li>
+<li>A. Kuznetsova, H. Rom, N. Alldrin, J. Uijlings, I. Krasin, J. Pont-Tuset, S. Kamali, S. Popov, M. Malloci, A. Kolesnikov, et al. (2020) The open images dataset v4: unified image classification, object detection, and visual relationship detection at scale . International Journal of Computer Vision 128 ( 7 ), pp. 1956–1981 . Cited by: §2.1 , §4 .</li>
+<li>F. Li, H. Zhang, P. Sun, X. Zou, S. Liu, J. Yang, C. Li, L. Zhang, and J. Gao (2023) Semantic-sam: segment and recognize anything at any granularity . arXiv preprint arXiv:2307.04767 . External Links: Link Cited by: §3.1 .</li>
+<li>M. Li, J. Zhong, S. Zhao, Y. Lai, H. Zhang, W. B. Zhu, and K. Zhang (2025) Think or not think: a study of explicit thinking in rule-based visual reinforcement fine-tuning . arXiv preprint arXiv:2503.16188 . Cited by: §3.3 .</li>
+<li>T. Lin, M. Maire, S. Belongie, J. Hays, P. Perona, D. Ramanan, P. Dollár, and C. L. Zitnick (2014) Microsoft coco: common objects in context . In European conference on computer vision , pp. 740–755 . Cited by: §2.1 , §4 .</li>
+<li>C. Liu, H. Ding, and X. Jiang (2023) GRES: generalized referring expression segmentation . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 23592–23601 . External Links: Link Cited by: §4 .</li>
+<li>J. Liu, X. Yang, W. Li, and P. Wang (2024) FineCops-ref: a new dataset and task for fine-grained compositional referring expression comprehension . In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing , Miami, Florida, USA , pp. 15440–15457 . External Links: Document , Link Cited by: §4 .</li>
+<li>R. Liu, C. Liu, Y. Bai, and A. Yuille (2019) CLEVR-ref+: diagnosing visual reasoning with referring expressions . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 4185–4194 . External Links: Link Cited by: §4 .</li>
+<li>J. Lu, S. Jenni, K. Kafle, J. Shi, H. Zhao, and Y. Fu (2026) Seeing through words: controlling visual retrieval quality with language models . In The Fourteenth International Conference on Learning Representations , Cited by: §4 .</li>
+<li>J. Lu, H. Wang, Y. Xu, Y. Wang, K. Yang, and Y. Fu (2025a) Representation potentials of foundation models for multimodal alignment: a survey . In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , pp. 16669–16684 . Cited by: §4 .</li>
+<li>J. Lu, H. Wang, K. Yang, Y. Zhang, S. Jenni, and Y. Fu (2025b) The indra representation hypothesis . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , Cited by: §4 .</li>
+<li>Y. Man, D. Huang, G. Liu, S. Sheng, S. Liu, L. Gui, J. Kautz, Y. Wang, and Z. Yu (2025) Argus: vision-centric reasoning with grounded chain-of-thought . In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 14268–14280 . Cited by: §3.3 .</li>
+<li>J. Mao, J. Huang, A. Toshev, O. Camburu, A. Yuille, and K. Murphy (2016) Generation and comprehension of unambiguous object descriptions . In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , External Links: Link Cited by: §1 , Table 1 , §4 , §4 .</li>
+<li>OpenAI (2024) GPT-4o . Note: https://openai.com/index/gpt-4o/ Cited by: §3.1 , Table 7 , Table 7 , §4 .</li>
+<li>K. Team, A. Du, B. Yin, B. Xing, B. Qu, B. Wang, C. Chen, C. Zhang, C. Du, C. Wei, C. Wang, D. Zhang, D. Du, D. Wang, E. Yuan, E. Lu, F. Li, F. Sung, G. Wei, G. Lai, H. Zhu, H. Ding, H. Hu, H. Yang, H. Zhang, H. Wu, H. Yao, H. Lu, H. Wang, H. Gao, H. Zheng, J. Li, J. Su, J. Wang, J. Deng, J. Qiu, J. Xie, J. Wang, J. Liu, J. Yan, K. Ouyang, L. Chen, L. Sui, L. Yu, M. Dong, M. Dong, N. Xu, P. Cheng, Q. Gu, R. Zhou, S. Liu, S. Cao, T. Yu, T. Song, T. Bai, W. Song, W. He, W. Huang, W. Xu, X. Yuan, X. Yao, X. Wu, X. Li, X. Zu, X. Zhou, X. Wang, Y. Charles, Y. Zhong, Y. Li, Y. Hu, Y. Chen, Y. Wang, Y. Liu, Y. Miao, Y. Qin, Y. Chen, Y. Bao, Y. Wang, Y. Kang, Y. Liu, Y. Dong, Y. Du, Y. Wu, Y. Wang, Y. Yan, Z. Zhou, Z. Li, Z. Jiang, Z. Zhang, Z. Yang, Z. Huang, Z. Huang, Z. Zhao, Z. Chen, and Z. Lin (2025a) Kimi-VL technical report . External Links: 2504.07491 , Link Cited by: §4 .</li>
+<li>V. Team, W. Hong, W. Yu, X. Gu, G. Wang, G. Gan, H. Tang, J. Cheng, J. Qi, J. Ji, L. Pan, S. Duan, W. Wang, Y. Wang, Y. Cheng, Z. He, Z. Su, Z. Yang, Z. Pan, A. Zeng, B. Wang, B. Chen, B. Shi, C. Pang, C. Zhang, D. Yin, F. Yang, G. Chen, H. Li, J. Zhu, J. Chen, J. Xu, J. Xu, J. Chen, J. Lin, J. Chen, J. Wang, J. Chen, L. Lei, L. Gong, L. Pan, M. Liu, M. Xu, M. Zhang, Q. Zheng, R. Lyu, S. Tu, S. Yang, S. Meng, S. Zhong, S. Huang, S. Zhao, S. Xue, T. Zhang, T. Luo, T. Hao, T. Tong, W. Jia, W. Li, X. Liu, X. Zhang, X. Lyu, X. Zhang, X. Fan, X. Huang, Y. Xue, Y. Wang, Y. Wang, Y. Wang, Y. An, Y. Du, Y. Huang, Y. Niu, Y. Shi, Y. Wang, Y. Wang, Y. Yue, Y. Li, Y. Liu, Y. Zhang, Y. Wang, Y. Zhang, Z. Xue, Z. Du, Z. Hou, Z. Wang, P. Zhang, D. Liu, B. Xu, J. Li, M. Huang, Y. Dong, J. Tang, V. Team, W. Hong, W. Yu, X. Gu, G. Wang, G. Gan, H. Tang, J. Cheng, J. Qi, J. Ji, L. Pan, S. Duan, W. Wang, Y. Wang, Y. Cheng, Z. He, Z. Su, Z. Yang, Z. Pan, A. Zeng, B. Wang, B. Chen, B. Shi, C. Pang, C. Zhang, D. Yin, F. Yang, G. Chen, H. Li, J. Zhu, J. Chen, J. Xu, J. Xu, J. Chen, J. Lin, J. Chen, J. Wang, J. Chen, L. Lei, L. Gong, L. Pan, M. Liu, M. Xu, M. Zhang, Q. Zheng, R. Lyu, S. Tu, S. Yang, S. Meng, S. Zhong, S. Huang, S. Zhao, S. Xue, T. Zhang, T. Luo, T. Hao, T. Tong, W. Jia, W. Li, X. Liu, X. Zhang, X. Lyu, X. Zhang, X. Fan, X. Huang, Y. Xue, Y. Wang, Y. Wang, Y. Wang, Y. An, Y. Du, Y. Huang, Y. Niu, Y. Shi, Y. Wang, Y. Wang, Y. Yue, Y. Li, Y. Liu, Y. Zhang, Y. Wang, Y. Zhang, Z. Xue, Z. Du, Z. Hou, Z. Wang, P. Zhang, D. Liu, B. Xu, J. Li, M. Huang, Y. Dong, and J. Tang (2025b) GLM-4.5v and glm-4.1v-thinking: towards versatile multimodal reasoning with scalable reinforcement learning . External Links: 2507.01006 , Link Cited by: §3.1 , Table 7 , Table 7 , §4 .</li>
+<li>T. Wang, J. Lu, Z. Lai, J. Wen, and H. Kong (2022) Uncertainty-guided pixel contrastive learning for semi-supervised medical image segmentation . In Proceedings of the Thirty-First International Joint Conference on Artificial Intelligence, IJCAI-22 , pp. 1444–1450 . Cited by: §4 .</li>
+<li>F. Wei, J. Zhao, K. Yan, H. Zhang, and C. Xu (2024) A large-scale human-centric benchmark for referring expression comprehension in the lmm era . In NeurIPS Datasets and Benchmarks Track , External Links: Link Cited by: §1 , §4 , §4 .</li>
+<li>J. Wei, X. Wang, D. Schuurmans, M. Bosma, B. Ichter, F. Xia, E. H. Chi, Q. V. Le, and D. Zhou (2022) Chain-of-thought prompting elicits reasoning in large language models . arXiv preprint arXiv:2201.11903 . External Links: Link Cited by: §4 .</li>
+<li>C. Wu, Z. Lin, S. Cohen, T. Bui, and S. Maji (2020) PhraseCut: language-based image segmentation in the wild . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 10216–10225 . External Links: Link Cited by: §4 .</li>
+<li>Z. Wu, X. Chen, Z. Pan, X. Liu, W. Liu, D. Dai, H. Gao, Y. Ma, C. Wu, B. Wang, Z. Xie, Y. Wu, K. Hu, J. Wang, Y. Sun, Y. Li, Y. Piao, K. Guan, A. Liu, X. Xie, Y. You, K. Dong, X. Yu, H. Zhang, L. Zhao, Y. Wang, and C. Ruan (2024) DeepSeek-vl2: mixture-of-experts vision-language models for advanced multimodal understanding . External Links: 2412.10302 , Link Cited by: §4 .</li>
+<li>xAI (2025) Grok-4 fast . Note: https://x.ai Cited by: §4 .</li>
+<li>A. Yang, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Li, D. Liu, F. Huang, H. Wei, H. Lin, J. Yang, J. Tu, J. Zhang, J. Yang, J. Yang, J. Zhou, J. Lin, K. Dang, K. Lu, K. Bao, K. Yang, L. Yu, M. Li, M. Xue, P. Zhang, Q. Zhu, R. Men, R. Lin, T. Li, T. Tang, T. Xia, X. Ren, X. Ren, Y. Fan, Y. Su, Y. Zhang, Y. Wan, Y. Liu, Z. Cui, Z. Zhang, and Z. Qiu (2024) Qwen2.5 technical report . arXiv preprint arXiv:2412.15115 . Cited by: §2.4 .</li>
+<li>J. Yang, H. Zhang, F. Li, X. Zou, C. Li, and J. Gao (2023) Set-of-mark prompting unleashes extraordinary visual grounding in gpt-4v . arXiv preprint arXiv:2310.11441 . External Links: Link Cited by: §2.3 , §3.1 .</li>
+<li>L. Yu, P. Poirson, S. Yang, A. C. Berg, and T. L. Berg (2016) Modeling context in referring expressions . In Computer Vision – ECCV 2016 , pp. 69–85 . External Links: Document , Link Cited by: §1 , Table 1 , §4 , §4 .</li>
+<li>J. Zhu, W. Wang, Z. Chen, Z. Liu, S. Ye, L. Gu, H. Tian, Y. Duan, W. Su, J. Shao, et al. (2025) Internvl3: exploring advanced training and test-time recipes for open-source multimodal models . arXiv preprint arXiv:2504.10479 . Cited by: §1 , §3.1 , Table 7 , Table 7 , Table 7 , Table 7 , Table 7 , Table 7 , Table 7 , Table 7 , §4 .</li>
+</ul>
+<h2 id="a-llm">附錄 A LLM 在寫作中的使用</h2>
+<p>我們利用大型語言模型（LLM）來協助潤飾本論文中的文本，包括改進措辭、提高清晰度以及確保語法正確性。</p>
+<h2 id="b">附錄 B 資料集類別分佈</h2>
+<p>圖 6 視覺化了 RefCOCO、RefCOCO+、RefCOCOg 和 Ref-Adv 在對數尺度上的類別級頻率比例（在每個資料集內排序類別後），並顯示 Ref-Adv 遵循更長尾分佈。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23898/category_distribution.png" loading="lazy"></figure> 圖 6：RefCOCO、RefCOCO+、RefCOCOg 和 Ref-Adv 的類別分佈比例曲線。頻率比例在對數尺度上繪製，在每個資料集內排序類別後進行。</p>
+<h2 id="c">附錄 C 資料收集中的提示詞</h2>
+<p>我們包含了第 2 節中所述的兩階段 LLM 生成管道使用的核心提示詞範本。Query 1 啟發群組級別和配對內判別特徵；Query 2 從這些判別特徵構成最少充分的指稱表達式。{num_objects} 和 {target_class} 等佔位符在運行時填充。</p>
+<p>我們使用 JSON 格式的結構化輸出，以確保 LLM 的輸出格式正確。</p>
+<p>清單 1：Query 1：相似性判斷與判別特徵啟發</p>
+<p>清單 2：Query 2：指稱表達式構成</p>
+<h2 id="d-llm-api">附錄 D 資料收集的 LLM API 成本</h2>
+<p>LLM 生成表達式的保留率為 18.7%，每個表達式約花費 2300 個輸入令牌和 120 個輸出令牌。根據 GPT-4o 的定價（輸入令牌為每百萬 2.5 美元，輸出令牌為每百萬 10 美元），一個 LLM 生成表達式的成本為 $(2300\times 2.5+120\times 10)/1,000,000=\$0.00695$。鑑於我們需要產生約 $1/0.187=5.35$ 個表達式以獲得一個保留的表達式，每個保留表達式的有效成本為 $5.35\times\$0.00695=\$0.0372$。對於我們的資料集中的 4,000 個 LLM 生成表達式（其他為人工生成），總成本約為 $4000\times 0.0372=\$148.8$。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

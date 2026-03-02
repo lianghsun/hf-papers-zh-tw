@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CUDA Agent：用於高效能 CUDA 核心生成的大規模代理強化學習 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-02/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-02 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">CUDA Agent：用於高效能 CUDA 核心生成的大規模代理強化學習</h1>
+  
+  <div class="en-title">CUDA Agent: Large-Scale Agentic RL for High-Performance CUDA Kernel Generation</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Weinan Dai, Hanlin Wu, Qiying Yu, Huan-ang Gao, Jiahao Li, Chengquan Jiang, Weiqiang Lou, Yufan Song, Hongli Yu, Jiaze Chen, Wei-Ying Ma, Ya-Qin Zhang, Jingjing Liu, Mingxuan Wang, Xin Liu, Hao Zhou</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.24286" target="_blank">2602.24286</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.24286" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.24286" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.24286" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">Code</span><span class="tag domain">RL</span>
+    <span class="tag method">Reinforcement Learning</span><span class="tag method">LLM</span><span class="tag method">Agentic RL</span>
+    <span class="tag task">CUDA Kernel Generation</span><span class="tag task">Code Optimization</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># GPU 核心優化是現代深度學習的基礎，但仍然是一項高度專業化的任務，需要深厚的硬體專業知識。儘管大型語言模型（LLM）在通用程式設計中表現強勁，但在 CUDA 核心生成方面仍然不如 torch.compile 等編譯器基系統具有競爭力。現有的 CUDA 程式碼生成方法要麼依賴於無訓練精化，要麼在固定的多回合執行回饋迴圈內微調模型，但這兩種範式都未能從根本上改善模型本身的 CUDA 優化能力，導致效能提升有限。我們提出 CUDA Agent，一個大規模代理強化學習系統，通過三個組件開發 CUDA 核心專業知識：一個可擴展的資料合成管線、一個具有自動化驗證和分析的技能增強 CUDA 開發環境以提供可靠的獎勵信號，以及支持穩定訓練的強化學習演算法技術。CUDA Agent 在 KernelBench 上取得最先進的結果，在 KernelBench Level-1、Level-2 和 Level-3 拆分上的速度分別比 torch.compile 快 100%、100% 和 92%，在最具挑戰性的 Level-3 設置上的性能超過 Claude Opus 4.5 和 Gemini 3 Pro 等最強專有模型約 40%。</p>
+  
+  <div class="abstract-en">GPU kernel optimization is fundamental to modern deep learning but remains a highly specialized task requiring deep hardware expertise. Despite strong performance in general programming, large language models (LLMs) remain uncompetitive with compiler-based systems such as torch.compile for CUDA kernel generation. Existing CUDA code generation approaches either rely on training-free refinement or fine-tune models within fixed multi-turn execution-feedback loops, but both paradigms fail to fundamentally improve the model&#39;s intrinsic CUDA optimization ability, resulting in limited performance gains. We present CUDA Agent, a large-scale agentic reinforcement learning system that develops CUDA kernel expertise through three components: a scalable data synthesis pipeline, a skill-augmented CUDA development environment with automated verification and profiling to provide reliable reward signals, and reinforcement learning algorithmic techniques enabling stable training. CUDA Agent achieves state-of-the-art results on KernelBench, delivering 100\%, 100\%, and 92\% faster rate over torch.compile on KernelBench Level-1, Level-2, and Level-3 splits, outperforming the strongest proprietary models such as Claude Opus 4.5 and Gemini 3 Pro by about 40\% on the hardest Level-3 setting.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <p>[1]ByteDance Seed
+[2]清華大學人工智慧產業研究院 (AIR)
+[3]清華 AIR 與 ByteDance Seed 的 SIA-Lab</p>
+<p>\contribution [*]平等貢獻
+\contribution [†]通訊作者
+\correspondence
+\checkdata [專案頁面] https://cuda-agent.github.io/</p>
+<h1 id="cuda-agent-cuda-agent-cuda">CUDA Agent CUDA Agent：用於高效能 CUDA 核心生成的大規模代理強化學習</h1>
+<p>GPU 核心最佳化是現代深度學習的基礎，但仍然是一項需要深厚硬體專業知識的高度專業化任務。儘管大語言模型 (LLM) 在通用程式設計中表現出色，但在 CUDA 核心生成方面仍不如 torch.compile 等編譯器系統具競爭力。現有的 CUDA 程式碼生成方法要麼依賴無訓練的精煉，要麼在固定的多轉向執行-回饋迴圈中微調模型，這兩種範式都未能從根本上改善模型的內在 CUDA 最佳化能力，導致效能提升有限。我們提出 CUDA Agent，一個大規模代理強化學習系統，通過三個元件開發 CUDA 核心專業知識：可擴充的資料合成管線、具有自動驗證和分析的技能增強型 CUDA 開發環境，以提供可靠的獎勵訊號，以及支持穩定訓練的強化學習演算法技術。CUDA Agent 在 KernelBench 上取得最先進的結果，在 KernelBench Level-1、Level-2 和 Level-3 分割上分別提供相比 torch.compile 快 100%、100% 和 92% 的速率，在最難的 Level-3 設定上超越最強的專有模型（例如 Claude Opus 4.5 和 Gemini 3 Pro）約 40%。</p>
+<h2 id="1">1 介紹</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/x1.png" loading="lazy"></figure></p>
+<p>GPU kernels 是現代深度學習基礎設施的基礎組件 [ 17 , 12 ] ，NVIDIA 的 CUDA 架構目前主導著 AI 硬體生態系統。儘管採用廣泛，高效能 CUDA kernels 的開發和最佳化仍然極具挑戰性，需要深入理解 GPU 微架構特性 [ 16 ] 和複雜的分析工具包 [ 4 ] 。</p>
+<p>雖然大型語言模型（LLMs）在通用軟體開發任務中已展示出人類可比的能力 [ 23 ] ，但現有的 CUDA kernel 生成方法 [ 4 , 12 ] 在 CUDA kernel 程式碼生成方面仍然不具競爭力，即使與 torch.compile 等自動最佳化工具相比 [ 17 ] ，更不用說與人類專家相比。</p>
+<p>先前關於 CUDA 程式碼生成的一類工作著重於設計無訓練的工作流程 [ 5 , 6 , 8 ] ，其依賴於由執行回饋導向的手工設計的精煉啟發式方法。然而，這些方法無法彌補基礎模型在 CUDA 編碼能力方面的根本缺陷，導致效能收益受到模型內在能力的顯著限制。另一類研究 [ 4 , 14 , 11 , 1 ] 嘗試在由程式碼執行回饋驅動的固定多輪精煉迴圈內微調基礎模型。然而，這類方法浪費了上下文長度，因為包含了所有先前的解決方案，並限制了 agent 自主學習除錯、搜尋和分析策略的能力。</p>
+<p>為了克服這些限制，我們引入 CUDA Agent，一個大規模 CUDA agent 訓練系統，透過在三個互補的維度上做出貢獻，系統性地增強基礎模型的 CUDA kernel 編碼能力：資料、agent 環境和強化學習（RL）演算技術。</p>
+<p>為了支援大規模強化學習，我們設計了可擴展的資料合成管道，生成涵蓋廣泛難度級別的訓練問題，使能夠進行基於課程的 RL 訓練。
+對於 agent 環境，我們採用 agent skills 典範 [ 2 ] ，為模型配備結構化規範，形式化了編寫、驗證和最佳化 CUDA kernels 的標準工作流程，以及用於執行回饋的自動化測試和分析指令碼。值得注意的是，我們實現了嚴格的正確性和效能測試，以及系統層級的權限隔離，以防止獎勵駭客攻擊並確保準確的獎勵訊號。
+對於 RL 演算改進，我們分析了 RL 最佳化中不穩定性的來源，並為 actor 和 critic 模型提出了多階段預熱策略，使得能夠穩定訓練大型語言模型達 150 步。</p>
+<p>整合這些元件，CUDA Agent 成功擴展到 128k token 的上下文長度，並支援最多 200 個互動輪次，達到最先進的效能。具體而言，CUDA Agent 在 KernelBench [ 17 ] 的 Level-1、Level-2 和 Level-3 分割上相較於 torch.compile 達到 100%、100% 和 92% 的加速，在 Level-3 分割上超越進階專有模型（如 Claude Opus 4.5 和 Gemini 3 Pro）約 40% 1 1 1 我們發現 ChatGPT-5 系列中的模型（5、5.1 和 5.2）不適合在此任務上進行評估，因為它們一貫地拒絕回應與 CUDA 相關的提示。</p>
+<p>我們的貢獻可以總結如下：</p>
+<ul>
+<li>• 我們引入 CUDA Agent，一個用於自動 CUDA kernel 生成的大規模 agent 強化學習系統，透過可擴展的資料合成、技能增強的 CUDA kernel 開發環境以及為穩定的長上下文、多輪 agent 訓練而設計的 RL 技術，系統性地改進基礎模型的 CUDA 編碼和最佳化能力。</li>
+<li>• CUDA Agent 在 KernelBench 上達到最先進的效能，在大多數測試案例中超越 torch.compile，並在多個難度級別上提供最大的加速。這些結果將基於 LLM 的 kernel 生成確立為傳統編譯器驅動 kernel 最佳化的競爭性且通常優越的替代方案。</li>
+</ul>
+<p>我們引入 CUDA Agent，一個用於自動 CUDA kernel 生成的大規模 agent 強化學習系統，透過可擴展的資料合成、技能增強的 CUDA kernel 開發環境以及為穩定的長上下文、多輪 agent 訓練而設計的 RL 技術，系統性地改進基礎模型的 CUDA 編碼和最佳化能力。</p>
+<p>CUDA Agent 在 KernelBench 上達到最先進的效能，在大多數測試案例中超越 torch.compile，並在多個難度級別上提供最大的加速。這些結果將基於 LLM 的 kernel 生成確立為傳統編譯器驅動 kernel 最佳化的競爭性且通常優越的替代方案。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/x2.png" loading="lazy"></figure> 圖 1：三階段資料收集管道的概述。我們首先從 PyTorch 和 Transformer 函式庫爬取種子運算子，以建立基本計算原始數據的儲存庫。接著，LLM 執行組合合成以生成融合的多運算子任務。最後，基於標準的篩選階段只保留可執行的、確定性的、非平凡的問題，具有合理的工作量，以確保資料品質和可靠的評估。</p>
+<h2 id="2">2 相關研究</h2>
+<h3 id="21">2.1 核心生成的無訓練系統</h3>
+<p>近期的多項研究探索使用明確搜尋來設計，以解決核心最佳化的不規則景觀。
+STARK [ 5 ] 採用一支策略性的代理團隊，具備規劃、編碼和除錯角色，在 KernelBench 上探索樹狀結構搜尋空間，使用編譯、正確性檢查和計時反饋反覆改進核心。
+ReGraphT [ 6 ] 提出無訓練的檢索增強框架，將大語言模型的 CUDA 最佳化軌跡蒸餾成推理圖，並透過蒙地卡羅圖搜尋進行搜尋，以引導較小模型達到具競爭力的性能。
+EvoEngineer [ 8 ] 將 CUDA 核心最佳化制訂為受限程式碼演化問題，並應用由 LLM 驅動的演化迴圈，反覆編輯和驗證核心以改進性能，同時保持正確性。
+CudaForge [ 26 ] 引入無訓練的雙代理系統，其中判斷代理使用 Nsight Compute 分析和硬體規格來診斷瓶頸，並向編碼器代理提供有針對性的最佳化反饋，在各 GPU 上實現持續的加速。</p>
+<p>雖然這些工作展示了相當可觀的性能提升，但它們大量依賴基礎模型的 CUDA 編碼能力。此外，那些測試時間縮放方法也是正交的，可應用於我們的模型。</p>
+<h3 id="22-llm">2.2 用於核心生成的 LLM 微調</h3>
+<p>同時，另一系列研究尋求透過監督微調或強化學習來訓練基礎模型，進而改進 CUDA 核心生成。
+Kevin [ 4 ] 引入用於 CUDA 核心的多輪強化學習框架，模擬反覆開發者工作流程，在 KernelBench 上實現相較於其 QwQ-32B 基礎模型的正確性和性能的顯著提升。
+CUDA-L1 [ 14 ] 提出對比強化學習框架，使用執行基礎的獎勵評估多個 CUDA 核心變體。然而，他們的訓練和評估在同一個 KernelBench 資料集上進行，沒有適當的訓練測試分割。此資料洩漏導致所報告的結果與我們的結果不具直接可比性。
+ConCuR [ 11 ] 使用推理軌跡綜合和策劃 CUDA 核心，並使用所得資料集微調 QwQ-32B 成為 KernelCoder，在開源模型中實現性能改進。</p>
+<p>總體來說，這些方法在根本上受到高品質訓練資料稀缺、訓練規模有限和手工設計最佳化迴圈的限制，這些因素共同限制了性能改進。這些相關工作的更詳細分析和比較可在附錄 8 中找到。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/x3.png" loading="lazy"></figure> 圖 2：代理迴圈概述。</p>
+<h2 id="3">3 方法</h2>
+<p>我們的大規模智能體強化學習系統 CUDA Agent 建立在三個關鍵組件之上：1) 可擴展的數據收集管道；2) 整合技能且防作弊的訓練環境，具有強大的獎勵調度設計；以及 3) 用於穩定訓練的強化學習演算法技術。
+每個組件在實現最終的強大實證結果中都發揮了至關重要的作用。</p>
+<h3 id="31">3.1 可擴展的訓練資料合成管道</h3>
+<p>高效能 CUDA 核心的稀缺性為監督式微調創造了重大瓶頸，因為手動實現專家級參考程式碼的成本高得令人望而卻步。為克服此問題，我們採用強化學習（RL）來訓練 CUDA Agent。RL 需要大量且多樣化的 PyTorch 實現參考算子語料庫作為訓練任務。由於現有公開資料集缺乏必要的多樣性和規模，我們開發了一個可擴展的資料收集管道，透過種子問題爬蟲、基於 LLM 的組合式合成和嚴格的執行基礎篩選來系統地擴展任務空間（圖 1）。</p>
+<p>我們組合式資料合成的關鍵觀察是將多個算子組合成融合任務會產生有價值的新 CUDA Agent 訓練問題。這是因為組合問題通常不等於分別微不足道地優化每個算子，然後將它們鏈接起來。融合透過避免中間全局記憶體具體化、透過共享暫存器/SMEM/佔用率約束耦合階段，以及要求可能有利於下游使用的統一並行映射和資料配置來重塑優化景觀。</p>
+<p><strong>種子問題爬蟲</strong> 首先，我們從 torch 和 transformers 庫中挖掘以 PyTorch 實現的參考算子，建立全面的種子問題集。每個算子被表示為具有初始化和前向方法的 Python 類別。這些算子類別被廣泛使用且維護良好。因此，我們排除了缺乏足夠程式碼品質的個別維護倉庫。</p>
+<p><strong>組合問題構建</strong> 接下來，為了擴展資料集並引入更高的複雜性，我們利用 LLM 來合成聚合算子。具體來說，LLM 被提示從 torch 庫中抽樣不超過 5 個算子類別。抽樣的算子類別透過將它們堆疊成單一計算層來按順序組合。我們不從 transformers 庫中抽樣算子類別，因為這些算子通常是已經封裝了多個基本操作的更高級模組。</p>
+<p><strong>問題篩選</strong> 最後，我們實施嚴格的資料選擇過程，根據執行回饋篩選出過於簡單或過於困難的問題。我們根據四項標準驗證每個算子：(1) 算子必須在 Eager 和 Compile 模式中成功執行。
+(2) 為確保可重現性，我們排除具有固有隨機性的算子。
+(3) 為了防止作弊，我們驗證不同輸入的輸出既不是常數值，也不是數值上無法區分。
+(4) 為了篩選出平凡或過度繁重的任務，我們將急切模式下的執行時間限制在 1 毫秒至 100 毫秒的範圍內。此外，我們排除表現出與 KernelBench 測試案例高相似性的算子；相似性分佈在第 ～ 6 節中提供。</p>
+<p>總計，篩選後的合成訓練資料集包含 6,000 個樣本，構成 CUDA-Agent-Ops-6K ²² https://huggingface.co/datasets/BytedTsinghua-SIA/CUDA-Agent-Ops-6K，一個用於訓練支援 CUDA 的代理的策展算子級資料集。有關資料格式、污染分析和資料集組成的其他細節在第 ～ 6 節中提供。</p>
+<h3 id="32-agent">3.2 技能整合的 Agent 迴圈</h3>
+<p>Agent 迴圈 由於 CUDA 核心程式碼編寫自然而然地出現作為編寫 Agent 的子任務，我們設計了 Agent 迴圈以與廣泛採用的 OpenHands 框架 [ 22 ] 相一致，以確保通用性。LLM 配備了標準的 shell 工具套件 — BashTool、GlobTool、MultiEditTool 和 TodoWriteTool — 以全面支援 CUDA 編碼開發（詳見第 7 節的完整列表）。在此基礎上，我們的 Agent 迴圈（如圖 2 所示）遵循 ReAct 風格的範例 [ 24 ]，交織推理、動作執行和觀察，以啟用迭代編碼、除錯和效能最佳化。</p>
+<p>CUDA 編碼技能 受到 Agent Skills [ 2 ] 想法的啟發，我們有意將 CUDA 編碼特定的指令和工具（例如用於將生成的核心與 torch.compile 進行效能比較的分析工具）置於 Agent Skills 格式中。我們還設計了 CUDA 核心編碼特定的指令 SKILL.md，其中制定了最佳化 CUDA 核心的標準流程（原始文本可在第 7 節中找到）：</p>
+<ul>
+<li>
+<ol>
+<li>使用提供的 profile.py 指令碼分析原生 PyTorch 實現的效能。此步驟可識別效能瓶頸和最佳化機會，例如過度的核心啟動和次優的記憶體存取模式。</li>
+</ol>
+</li>
+<li>
+<ol>
+<li>通過在 model_new.py 中重寫模型並開發對應的 CUDA 核心源檔案和綁定程式碼來實現自訂 CUDA 運算子，目標是針對分析階段中識別的效能關鍵運算子。</li>
+</ol>
+</li>
+<li>
+<ol>
+<li>在提供的 GPU 沙箱環境中編譯和評估最佳化的模型，並反覆精進 CUDA 核心實現，直到滿足數值正確性和效能要求。</li>
+</ol>
+</li>
+<li>
+<ol>
+<li>從步驟 2 開始重複最佳化過程，直到最終實現相比 torch.compile 基線至少達到 5% 的加速，同時通過所有數值正確性檢查。</li>
+</ol>
+</li>
+</ul>
+<p>分析使用提供的 profile.py 指令碼的原生 PyTorch 實現的效能。此步驟可識別效能瓶頸和最佳化機會，例如過度的核心啟動和次優的記憶體存取模式。</p>
+<p>通過在 model_new.py 中重寫模型並開發對應的 CUDA 核心源檔案和綁定程式碼來實現自訂 CUDA 運算子，目標是針對分析階段中識別的效能關鍵運算子。</p>
+<p>在提供的 GPU 沙箱環境中編譯和評估最佳化的模型，並反覆精進 CUDA 核心實現，直到滿足數值正確性和效能要求。</p>
+<p>從步驟 2 開始重複最佳化過程，直到最終實現相比 torch.compile 基線至少達到 5% 的加速，同時通過所有數值正確性檢查。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/x4.png" loading="lazy"></figure> 圖 3：訓練管線概述。在單轉 RL 預熱階段之後，採樣的軌跡用於在代理 RL 階段之前初始化 actor 模型和 critic 模型。</p>
+<p>穩健的獎勵排程 現有的 CUDA 生成 RL 方法 [ 4、14、1 ] 使用相對於基線的加速作為獎勵信號。然而，我們觀察到這種方法受到離群值和對簡單核心的偏見的困擾。這是因為運算子在最佳化難度上差異很大，使得原始加速成為程式碼品質的不可靠代理。為了解決這個問題，我們提出了一個標準化的、穩健的獎勵方案來解決這個問題，並聯合最佳化正確性和執行延遲。</p>
+<p>我們根據正確性和效能分配獎勵分數 $r \in {-1, 1, 2, 3}$：</p>
+<p>|  | $r=\begin{cases}-1&amp;\text{if correctness check fails}\
+3&amp;\text{if }b(t,t_{\text{eager}})\land b(t,t_{\text{compile}})\
+2&amp;\text{if }b(t,t_{\text{eager}})\
+1&amp;\text{otherwise}\end{cases}$ |  | (1) |
+| --- | --- | --- | --- |</p>
+<p>其中 $t$ 是生成的核心的執行時間，$t_{\text{native}}$ 和 $t_{\text{compile}}$ 分別是 PyTorch 的 eager 實現和 torch.compile 版本的執行時間，而 $b(t, t_0) = \mathbb{I}\left[(t_0 - t)/t_0 &gt; 5\%\right]$ 表示相比於基線 $t_0$ 的顯著加速。我們在第 4.3.2 節中驗證了這項設計大幅超越常用的加速獎勵。</p>
+<p>避免獎勵駭客的努力 我們注意到先前的工作 Lange 等人 [ 12 ] 遭受駭客問題 [ 9 ] 的困擾。具體來說，我們的系統實施以下限制來避免獎勵駭客：
+1) 用於正確性驗證和效能分析的提供 Python 指令碼通過檔案權限控制進行保護，防止 Agent 修改或干擾評估邏輯；
+2) 為了避免平凡的後備方案，我們使用上下文管理器強制執行執行時間限制，明確禁止從 torch.nn.functional 調用後備實現，確保效能收益僅源自生成的 CUDA 核心；
+3) 對於每個問題，我們針對五個隨機採樣的輸入驗證核心輸出，嚴格遵循 KernelBench 評估協議以確保功能正確性；
+4) 分析管線經過精心設計，具有適當的裝置同步、預熱反覆運算和重複測量並求平均，大幅降低測量雜訊和指標波動；以及
+5) Agent 未獲得任何網路搜尋或外部資訊檢索工具，確保所有解決方案純粹源自本地執行環境。</p>
+<h3 id="33-rl">3.3 穩定 RL 訓練的演算法改進</h3>
+<p>我們觀察到初始 RL 試驗只能穩定訓練 17 步，之後模型性能就會崩潰。我們找出了這種不穩定性的根本原因，並提出同時預熱 actor 和 critic 模型以適應模型的分佈。
+透過這項修改，我們的 RL 試驗可以穩定訓練 200 步，並且獎勵持續增長。</p>
+<p>訓練不穩定性的根本原因源於嚴重的域分佈不匹配，其中基礎模型學習到的先驗與 CUDA 核心程式碼所需的資料分佈明顯偏離。這是因為 CUDA 程式碼資料佔預訓練資料的不到 0.01%[13, 10]。這種分佈差距導致大量採樣的低概率 CUDA 核心程式碼標記。此外，當訓練和推論引擎使用不同的數值精度（例如 BF16 與 FP16）時，這些低概率標記會導致龐大的重要性採樣比率方差，因為在計算標記概率 $\pi_{\theta}(y_{t})$ 時的微小數值誤差接近精度下限（例如 $\pi_{\theta}(a_{t}\mid s_{t})\approx 10^{-9}$）會導致重要性比率 $\rho_{t}(\theta)=\frac{\pi_{\theta}(a_{t}\mid s_{t})}{\pi_{\theta_{\text{old}}}(a_{t}\mid s_{t})}$ 劇烈波動或爆炸（類似於 Liu 等人 [15] 中的討論）。</p>
+<p>為了實現穩定的強化學習，我們提出了一個簡單而有效的預熱策略：使用基礎模型在單輪 RL 後生成的代理軌跡來初始化 actor 和 critic 模型，如圖 3 所示。</p>
+<p><strong>單輪預熱</strong> 我們首先在基礎模型上執行單輪 RL，以增強其 CUDA 核心生成的能力。我們使用 PPO 進行最佳化，其中基礎模型作為策略和價值網路。</p>
+<p><strong>Actor 初始化</strong> 我們隨後對代理軌跡執行 Rejection Fine-Tuning (RFT) 階段來初始化 actor 模型 $\pi_{\theta}$。單輪 RL 產生的模型用於透過執行第 3.2 節中代理迴圈內的代理來收集 CUDA 代理軌跡。接下來，我們在收集的 CUDA 代理軌跡上應用 RFT。執行拒絕採樣以根據以下標準僅保留高品質的軌跡：
+(1) 結果篩選：我們只保留達到正獎勵（$R&gt;0$）的軌跡。
+(2) 模式篩選：我們丟棄展示低效或無效行為的軌跡，例如冗餘的多輪迴圈或違反預定義工具呼叫模式的幻覺。</p>
+<p>篩選後的軌跡隨後用於透過具有下列目標的標準監督微調來最佳化 actor：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{RFT}}(\theta)=-\mathbb{E}</em>{\tau\sim\mathcal{D^{\prime}}}\left[\sum_{t=1}^{T}\log\pi_{\theta}(a_{t}\mid s_{t},a_{&lt;t})\right]$</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\tau=(s_{0},s_{1},\ldots,s_{T-1})$ 表示篩選後的 CUDA 代理軌跡，$\pi_{\theta}$ 是由 $\theta$ 參數化的策略，$\mathcal{D^{\prime}}$ 表示拒絕採樣後的資料集。</p>
+<p>表 1：KernelBench 上的主要結果。我們報告通過率、更快率（核心快於基線的百分比）和幾何平均加速比。指標相對於 PyTorch Eager 和 PyTorch Compile 基線進行報告。整體指標按每個級別的問題數量加權（級別 1：100、級別 2：100、級別 3：50）。粗體表示最佳性能。</p>
+<p><strong>Critic 初始化</strong> 我們執行價值預訓練來初始化 critic，具體來說，我們利用由狀態序列及其對應結果獎勵組成的採樣軌跡資料來預訓練 critic 網路。令 $\tau=(s_{0},s_{1},\ldots,s_{T-1})$ 表示一個軌跡，其中 $s_{t}$ 表示標記位置 $t$ 處的狀態，令 $r$ 表示在最終標記處指定的結果獎勵（即 $r_{t}=0$，當 $t&lt;T-1$，以及 $r_{T-1}=r$）。我們使用廣義優勢估計 [19] 計算目標值：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$V_{t}^{\text{targ}}=V_{\phi}(s_{t})+\hat{A}<em>{t},\quad\text{其中}\quad\hat{A}</em>{t}=\sum_{l=0}^{T-1-t}(\gamma\lambda)^{l}\delta_{t+l}$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>而 $\delta_{t}=r_{t}+\gamma V_{\phi}(s_{t+1})-V_{\phi}(s_{t})$ 是時間差分誤差，其中 $V_{\phi}(s_{T})=0$。我們在實驗中設定 $\gamma=1$ 和 $\lambda=0.95$。我們透過最小化均方誤差來最佳化 critic 參數 $\phi$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{VP}}(\phi)=\frac{1}{2}\mathbb{E}</em>{\tau\sim\mathcal{D}}\left[\frac{1}{T}\sum_{t=0}^{T-1}\left(V_{\phi}(s_{t})-V_{t}^{\text{targ}}\right)^{2}\right]$</th>
+<th></th>
+<th>(4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathcal{D}$ 表示代理軌跡的集合。我們在第 4.3.3 節進行所提議初始化階段的消融研究。</p>
+<p><strong>RL 演算法</strong> 我們採用 PPO [18] 來最佳化 actor 模型 $\pi_{\theta}$。
+令 $\pi_{\theta}$ 表示要最佳化的策略，$\pi_{\theta_{\text{old}}}$ 表示用於軌跡採樣的策略。我們使用裁剪代理目標最大化預期回報：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle\mathcal{L}^{\text{CLIP}}(\theta)=\mathbb{E}_{\tau\sim\mathcal{D}}$</th>
+<th>$\displaystyle\bigg[\frac{1}{T}\sum_{t=0}^{T-1}\min\big(\rho_{t}(\theta)\hat{A}_{t},$</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>$\displaystyle\text{clip}(\rho_{t}(\theta),1-\epsilon_{\text{lower}},1+\epsilon_{\text{higher}})\hat{A}_{t}\big)\bigg]$</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\rho_{t}(\theta)=\frac{\pi_{\theta}(a_{t}\mid s_{t})}{\pi_{\theta_{\text{old}}}(a_{t}\mid s_{t})}$ 是當前策略和舊策略之間的重要性採樣比率，$a_{t}$ 表示在位置 $t$ 處採取的動作（即標記），$\epsilon_{\text{lower}}=0.2, \epsilon_{\text{higher}}=0.28$ 遵循 Yu 等人 [25]。</p>
+<h2 id="4">4 實驗</h2>
+<p>表 2：消融研究。在代理迴圈評估下，完整模型與逐一移除變體之間的比較。我們分析了 (1) 代理迴圈、(2) 穩健獎勵設計、(3) RFT 和 (4) Value Pretraining 的貢獻。對於沒有 RFT 或 Value Pretraining 的變體，我們報告訓練崩潰前最終驗證步驟的結果。</p>
+<h3 id="41">4.1 實驗設定</h3>
+<p><strong>強化學習訓練設定</strong>。我們使用 Seed1.6 [20] 作為基礎模型，這是一個混合專家模型 (Mixture-of-Experts, MoE)，具有 23B 個活躍參數和 230B 個總參數。
+我們將全局批次大小設定為 1024，與線上 PPO 更新的小批次大小相匹配。演員和評論家的學習率分別為 $3 \times 10^{-6}$ 和 $6 \times 10^{-6}$。這些超參數在單回合強化學習和代理強化學習之間共享。上下文窗口長度在單回合強化學習中為 32768，在代理強化學習中為 131072。我們在訓練推導期間限制最多 150 個代理回合，在評估期間放寬至 200 個代理回合。模型經過 150 個訓練步驟進行訓練。</p>
+<p><strong>沙箱環境</strong>。為了確保可靠獎勵信號的準確速度提升測量和有效的 GPU 利用率，我們設計了一個 CPU-GPU 資源解耦的沙箱架構。基於 Docker 的終端沙箱處理以 CPU 為中心的任務（例如，核心編譯），而代理利用預定義的 CUDA Agent 技能指令碼將驗證和性能分析工作分派到專用 GPU 沙箱池（128 個 NVIDIA H20 GPU）。此程序級隔離和專有資源分配消除了程序間干擾，確保穩定的延遲測量和保證的 HBM 容量。</p>
+<p><strong>基準測試</strong>。我們在 KernelBench [17] 上進行評估，使用第 1 級到第 3 級子集，共包含 250 個不同的運算子任務。為了確保公平比較，我們將這些任務從原始的單檔案格式改編為我們的多檔案開發環境（第 3.2 節）。</p>
+<p><strong>基準模型</strong>。我們將我們的方法與前沿的專有編碼模型進行比較：Claude Opus 4.5 [3] 和 Gemini 3 Pro [7]，以及兩個強大的開源編碼模型：GLM 4.6 [27] 和 Kimi K2 [21]。這些模型目前在主要的編碼代理排行榜上處於領先地位，並作為通用推理和編碼能力的強基準。為了公平比較，基準模型在第 3.2 節所述的相同代理循環下進行評估。</p>
+<p><strong>評估指標</strong>。我們使用三個關鍵指標來評估性能：(1) <strong>Pass Rate（通過率）</strong>，代理生成的核心成功編譯並通過功能正確性檢查的任務百分比；(2) <strong>Faster Rate（加速率）</strong>，生成的核心正確且執行時間比基準（eager 和 compile 模式）更快的任務百分比；以及 (3) <strong>Speed-up（速度提升）</strong>，相對於基準執行速度提升比率的幾何平均值，僅針對正確的解決方案計算。
+為了確定每個任務的最終指標，我們從代理的交互軌跡中提取性能最佳的解決方案，特別是相對於 torch.compile 達到最大速度提升的解決方案。</p>
+<h3 id="42">4.2 主要結果</h3>
+<p>表 1 總結了 CUDA Agent 在 KernelBench 上相對於強大的專有模型基線的性能。我們的分析得出了三個關於代理 RL 在 CUDA 核心優化中有效性的主要見解。</p>
+<p>首先，與強大的專有模型相比，CUDA Agent 提供了明顯更強的 CUDA 核心程式碼編寫性能。儘管 Claude Opus 4.5 和 Gemini 3 Pro 達到了令人滿意的通過率（91.2%–95.2%），但它們的更快率仍然較低，在 66%–69% 之間，表明通用 LLM 經常產生幼稚的核心，無法超越 torch.compile。相比之下，CUDA Agent 達到了 98.8% 的通過率和 96.8% 的更快率，證明了專門的 RL 訓練能夠實現持續正確且高度優化的 CUDA 實現。</p>
+<p>其次，與靜態 torch.compile 相比，CUDA Agent 證明了所學的優化策略可以持續優於靜態編譯器啟發式方法，特別是在運算子融合等複雜情景中。這在第 2 級任務（運算子序列）中最為明顯，其中 CUDA Agent 達到了完美的 100% 更快率，並相對於 torch.compile 實現了大規模的 2.80 × \times 加速。傳統編譯器依賴於預定義的基於規則的核心融合模式，這些模式在非平凡的運算子組合中往往會遇到困難。相比之下，CUDA Agent 通過其迭代代理迴圈探索了一個更大的設計空間，發現了硬體特定的記憶體存取模式和並行分割策略，這些對靜態後端仍然是無法存取的。</p>
+<h3 id="43">4.3 消融研究</h3>
+<h4 id="431">4.3.1 技能整合代理迴圈的影響</h4>
+<p>為了評估互動式環境在策略學習中的關鍵作用，我們在不同的協議下訓練兩個獨立的模型：
+(1) 單輪模型，使用標準代碼生成目標進行訓練，其中模型在單輪中預測最終kernel和繫結，不含執行反饋，作為訓練管道的預熱階段，以及
+(2) CUDA Agent，按照完整訓練管道進行訓練，允許策略在多輪互動中看到編譯錯誤和分析器反饋。</p>
+<p>表 2 強調了單輪代碼生成的局限性，並凸顯了我們技能整合代理迴圈的必要性。移除代理迴圈導致正確性和最佳化品質都大幅下降。更重要的是，所得的 kernel 不僅優化程度較低，而且常常出現效能退化。通過接收編譯錯誤、運行時失敗和分析器反饋，代理可以逐步診斷錯誤，並在多輪中細化變換。</p>
+<h4 id="432">4.3.2 獎勵設計的影響</h4>
+<p>為了確定 kernel 優化獎勵的最優形成方式，我們評估了兩種不同的獎勵公式：(1) 速度提升獎勵，一種連續獎勵信號，定義為 $r_s = t_{\text{compile}}/t_{\text{gen}}$（對於正確解）和 $-1$（對於不正確的解），以及 (2) 我們的穩健獎勵排程（圖 3），為達成特定效能里程碑分配離散值。</p>
+<p>如表 2 所示，獎勵設計對優化結果有顯著影響。將我們的穩健獎勵排程替換為原始速度提升獎勵（w/o 穩健獎勵）會產生相當的功能正確性，但優化效能明顯更弱。</p>
+<p>這些結果表明，一個經過正規化的里程碑式獎勵更好地與產生持續更快 kernel 的目標相一致。通過向明確的效能目標分配獎勵，而不是直接對嘈雜的運行時比率進行迴歸，策略可以更可靠地發現相對於熱切執行和編譯器基線都能實現實際速度提升的變換。</p>
+<h4 id="433">4.3.3 多階段訓練的影響</h4>
+<p>如表 2 所示，移除 RFT 或 Value Pretraining 都會導致優化效能的大幅下降，儘管通過率基本保持。
+更重要的是，兩種消融都表現出訓練不穩定性和最終崩潰，促使我們對以下兩個階段進行更仔細的分析。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/x5.png" loading="lazy"></figure> (a) 訓練獎勵。</p>
+<p>拒絕採樣微調（RFT）提供了防止策略崩潰的關鍵先驗。如圖 4(a) 所示，移除 RFT 階段導致訓練獎勵的快速和災難性崩潰。
+為了診斷根本原因，我們檢查了圖 4(b) 中的策略熵，其揭示了與獎勵崩潰同時發生的尖銳增加。
+這種熵增加表明策略分佈變得越來越分散，產生不一致且結構不良的輸出。通過用強行為先驗初始化策略，RFT 限制了強化學習期間的熵增長，並將優化軌跡保持在結構良好的輸出分佈內。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/x7.png" loading="lazy"></figure> (a) 價值函數的解釋方差。</p>
+<p>Value Pretraining 對於提供可靠的優勢估計和防止病態搜尋行為是不可或缺的。在沒有初始化批評家的情況下，模型無法捕捉多輪互動狀態的價值景觀（圖 5(a)）。這種差劣的估計導致軌跡長度爆炸（圖 5(b)），因為未初始化的批評家無法對無用或冗餘的搜尋路徑進行懲罰。Value Pretraining 確保批評家能夠立即提供準確的反饋，引導代理朝著高效優化路徑發展，並避免近乎無限互動迴圈的計算不穩定性。</p>
+<h2 id="5-conclusion">5 Conclusion</h2>
+<p>We introduced CUDA Agent, a large-scale agentic reinforcement learning system that endows large language models with the ability to generate and optimize CUDA kernels under realistic, execution-driven development workflows. By jointly scaling data synthesis, agent environments, and stability-oriented RL training, CUDA Agent moves LLMs beyond syntactic code generation toward hardware-aware performance optimization, achieving consistent gains over torch.compile and strong proprietary models on KernelBench. These results suggest a broader consequence: equipping foundation models with structured environments and reliable execution-based rewards can transform them from passive code generators into active systems optimizers, opening a path toward automating performance-critical software development in GPU computing.</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Anonymous [2026] Anonymous. Mastering sparse CUDA generation through pretrained models and deep reinforcement learning. In The Fourteenth International Conference on Learning Representations , 2026. URL https://openreview.net/forum?id=VdLEaGPYWT .</li>
+<li>Anthropic [2025] Anthropic. Equipping agents for the real world with agent skills, 2025. URL https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills . Accessed: 2026-01-26.</li>
+<li>Anthropic [2025] Anthropic. Claude Opus 4.5: System Card. https://www.anthropic.com/claude-opus-4-5-system-card , November 2025. Accessed: 2026-01-28.</li>
+<li>Baronio et al. [2025] Carlo Baronio, Pietro Marsella, Ben Pan, Simon Guo, and Silas Alberti. Kevin: Multi-turn rl for generating cuda kernels. arXiv preprint arXiv:2507.11948 , 2025. URL https://arxiv.org/abs/2507.11948 .</li>
+<li>Dong et al. [2025] Juncheng Dong, Yang Yang, Tao Liu, Yang Wang, Feng Qi, Vahid Tarokh, Kaushik Rangadurai, and Shuang Yang. Stark: Strategic team of agents for refining kernels. arXiv preprint arXiv:2510.16996 , 2025. URL https://arxiv.org/abs/2510.16996 .</li>
+<li>Gong et al. [2025] Junfeng Gong, Zhiyi Wei, Junying Chen, Cheng Liu, and Huawei Li. From large to small: Transferring cuda optimization expertise via reasoning graph, 2025. URL https://arxiv.org/abs/2510.19873 .</li>
+<li>Google DeepMind [2025] Google DeepMind. Gemini 3 Pro: Model Card. https://storage.googleapis.com/deepmind-media/Model-Cards/Gemini-3-Pro-Model-Card.pdf , November 2025. Accessed: 2026-01-28.</li>
+<li>Guo et al. [2025] Ping Guo, Chenyu Zhu, Siyuan Chen, Fei Liu, Xi Lin, Zhichao Lu, and Qingfu Zhang. Evoengineer: Mastering automated cuda kernel code evolution with large language models, 2025. URL https://arxiv.org/abs/2510.03760 .</li>
+<li>Horse [2025] Horse. This example from their paper, which is claimed to have 150x speedup, is actually 3x slower if you bench it. X (formerly Twitter), February 2025. URL https://x.com/main_horse/status/1892473238036631908 . Accessed: 2025-01-27.</li>
+<li>Kocetkov et al. [2022] Denis Kocetkov, Raymond Li, Loubna Ben Allal, Jia Li, Chenghao Mou, Carlos Muñoz Ferrandis, Yacine Jernite, Margaret Mitchell, Sean Hughes, Thomas Wolf, et al. The stack: 3 tb of permissively licensed source code. arXiv preprint arXiv:2211.15533 , 2022.</li>
+<li>Kong et al. [2025] Lingcheng Kong, Jiateng Wei, Hanzhang Shen, and Huan Wang. Concur: Conciseness makes state-of-the-art kernel generation, 2025. URL https://arxiv.org/abs/2510.07356 .</li>
+<li>Lange et al. [2025] Robert Tjarko Lange, Aaditya Prasad, Qi Sun, Maxence Faldor, Yujin Tang, and David Ha. The ai cuda engineer: Agentic cuda kernel discovery, optimization and composition. Technical report, Technical report, Sakana AI, 02 2025, 2025.</li>
+<li>Li et al. [2023] Raymond Li, Loubna Ben Allal, Yangtian Zi, Niklas Muennighoff, Denis Kocetkov, Chenghao Mou, Marc Marone, Christopher Akiki, Jia Li, Jenny Chim, et al. Starcoder: may the source be with you! arXiv preprint arXiv:2305.06161 , 2023.</li>
+<li>Li et al. [2025] Xiaoya Li, Xiaofei Sun, Albert Wang, Jiwei Li, and Chris Shum. Cuda-l1: Improving cuda optimization via contrastive reinforcement learning. arXiv preprint arXiv:2507.14111 , 2025. URL https://arxiv.org/abs/2507.14111 .</li>
+<li>Liu et al. [2025] Jiacai Liu, Yingru Li, Yuqian Fu, Jiawei Wang, Qian Liu, and Zhuo Jiang. When speed kills stability: Demystifying RL collapse from the training-inference mismatch, September 2025. URL https://richardli.xyz/rl-collapse .</li>
+<li>NVIDIA [2022] NVIDIA. Nvidia h100 tensor core gpu architecture, 2022. URL https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c .</li>
+<li>Ouyang et al. [2025] Anne Ouyang, Simon Guo, Simran Arora, Alex L. Zhang, William Hu, Christopher Ré, and Azalia Mirhoseini. Kernelbench: Can llms write efficient gpu kernels? arXiv preprint arXiv:2502.10517 , 2025. URL https://arxiv.org/abs/2502.10517 .</li>
+<li>Schulman et al. [2017] John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347 , 2017.</li>
+<li>Schulman et al. [2018] John Schulman, Philipp Moritz, Sergey Levine, Michael Jordan, and Pieter Abbeel. High-dimensional continuous control using generalized advantage estimation, 2018. URL https://arxiv.org/abs/1506.02438 .</li>
+<li>[20] Bytedance Seed. Seed 1.6 tech introduction. URL https://seed.bytedance.com/en/seed1_6 .</li>
+<li>Team et al. [2025] Kimi Team, Yifan Bai, Yiping Bao, Guanduo Chen, Jiahao Chen, Ningxin Chen, Ruijue Chen, Yanru Chen, Yuankun Chen, Yutian Chen, Zhuofu Chen, Jialei Cui, Hao Ding, Mengnan Dong, Angang Du, Chenzhuang Du, Dikang Du, Yulun Du, Yu Fan, Yichen Feng, Kelin Fu, Bofei Gao, Hongcheng Gao, Peizhong Gao, Tong Gao, Xinran Gu, Longyu Guan, Haiqing Guo, Jianhang Guo, Hao Hu, Xiaoru Hao, Tianhong He, Weiran He, Wenyang He, Chao Hong, Yangyang Hu, Zhenxing Hu, Weixiao Huang, Zhiqi Huang, Zihao Huang, Tao Jiang, Zhejun Jiang, Xinyi Jin, Yongsheng Kang, Guokun Lai, Cheng Li, Fang Li, Haoyang Li, Ming Li, Wentao Li, Yanhao Li, Yiwei Li, Zhaowei Li, Zheming Li, Hongzhan Lin, Xiaohan Lin, Zongyu Lin, Chengyin Liu, Chenyu Liu, Hongzhang Liu, Jingyuan Liu, Junqi Liu, Liang Liu, Shaowei Liu, T. Y. Liu, Tianwei Liu, Weizhou Liu, Yangyang Liu, Yibo Liu, Yiping Liu, Yue Liu, Zhengying Liu, Enzhe Lu, Lijun Lu, Shengling Ma, Xinyu Ma, Yingwei Ma, Shaoguang Mao, Jie Mei, Xin Men, Yibo Miao, Siyuan Pan, Yebo Peng, Ruoyu Qin, Bowen Qu, Zeyu
+Shang, Lidong Shi, Shengyuan Shi, Feifan Song, Jianlin Su, Zhengyuan Su, Xinjie Sun, Flood Sung, Heyi Tang, Jiawen Tao, Qifeng Teng, Chensi Wang, Dinglu Wang, Feng Wang, Haiming Wang, Jianzhou Wang, Jiaxing Wang, Jinhong Wang, Shengjie Wang, Shuyi Wang, Yao Wang, Yejie Wang, Yiqin Wang, Yuxin Wang, Yuzhi Wang, Zhaoji Wang, Zhengtao Wang, Zhexu Wang, Chu Wei, Qianqian Wei, Wenhao Wu, Xingzhe Wu, Yuxin Wu, Chenjun Xiao, Xiaotong Xie, Weimin Xiong, Boyu Xu, Jing Xu, Jinjing Xu, L. H. Xu, Lin Xu, Suting Xu, Weixin Xu, Xinran Xu, Yangchuan Xu, Ziyao Xu, Junjie Yan, Yuzi Yan, Xiaofei Yang, Ying Yang, Zhen Yang, Zhilin Yang, Zonghan Yang, Haotian Yao, Xingcheng Yao, Wenjie Ye, Zhuorui Ye, Bohong Yin, Longhui Yu, Enming Yuan, Hongbang Yuan, Mengjie Yuan, Haobing Zhan, Dehao Zhang, Hao Zhang, Wanlu Zhang, Xiaobin Zhang, Yangkun Zhang, Yizhi Zhang, Yongting Zhang, Yu Zhang, Yutao Zhang, Yutong Zhang, Zheng Zhang, Haotian Zhao, Yikai Zhao, Huabin Zheng, Shaojie Zheng, Jianren Zhou, Xinyu Zhou, Zaida Zhou, Zhen Zhu,
+Weiyu Zhuang, and Xinxing Zu. Kimi k2: Open agentic intelligence, 2025. URL https://arxiv.org/abs/2507.20534 .</li>
+<li>Wang et al. [2024] Xingyao Wang, Boxuan Li, Yufan Song, Frank F Xu, Xiangru Tang, Mingchen Zhuge, Jiayi Pan, Yueqi Song, Bowen Li, Jaskirat Singh, et al. Openhands: An open platform for ai software developers as generalist agents. arXiv preprint arXiv:2407.16741 , 2024.</li>
+<li>Yang et al. [2024] John Yang, Carlos E. Jimenez, Alexander Wettig, Kilian Lieret, Shunyu Yao, Karthik Narasimhan, and Ofir Press. Swe-agent: Agent-computer interfaces enable automated software engineering, 2024. URL https://arxiv.org/abs/2405.15793 .</li>
+<li>Yao et al. [2022] Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik R Narasimhan, and Yuan Cao. React: Synergizing reasoning and acting in language models. In The eleventh international conference on learning representations , 2022.</li>
+<li>Yu et al. [2025] Qiying Yu, Zheng Zhang, Ruofei Zhu, Yufeng Yuan, Xiaochen Zuo, Yu Yue, Weinan Dai, Tiantian Fan, Gaohong Liu, Lingjun Liu, et al. Dapo: An open-source llm reinforcement learning system at scale. arXiv preprint arXiv:2503.14476 , 2025.</li>
+<li>Zhang et al. [2025] Zijian Zhang, Rong Wang, Shiyang Li, Yuebo Luo, Mingyi Hong, and Caiwen Ding. Cudaforge: An agent framework with hardware feedback for cuda kernel optimization. arXiv preprint arXiv:2511.01884 , 2025. URL https://arxiv.org/abs/2511.01884 .</li>
+<li>Zhipu AI [2025] Zhipu AI. Glm-4.6: Advanced agentic, reasoning and coding capabilities. https://z.ai/blog/glm-4.6 , 2025. Official blog post introducing the GLM-4.6 model.</li>
+</ul>
+<h2 id="6">6 收集的訓練資料詳細資訊</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/transformers_op_v2.png" loading="lazy"></figure> (a) transformers 運算子類別</p>
+<p>運算子格式。每個訓練樣本都表示為 PyTorch 中實現的 Python 類別。具體而言，每個運算子定義為 torch.nn.Module 的子類別，具有用於參數初始化的 <strong>init</strong> 方法和指定計算的 forward 方法。
+除了運算子類別外，每個樣本還包括兩個輔助函數：get_init_inputs()，用於構造實例化運算子類別所需的輸入；以及 get_inputs()，用於為 forward 方法生成運行時輸入。運算子類別和這些輔助輸入生成函數一起形成了一個自包含且可執行的訓練任務。圖 6 展示了訓練資料中使用的運算子類別的代表性範例。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/x9.png" loading="lazy"></figure> 圖 7：每個訓練樣本與所有評估樣本之間的最大 AST 相似度分佈。</p>
+<p>資料污染檢查。</p>
+<p>為了防止訓練資料與評估基準之間的重疊，我們使用現成的基於 AST 的程式碼相似度工具執行了明確的去污染步驟。具體而言，我們從每個程式中提取 Model 類別，並使用 PythonASTSimilarity 計算訓練和評估樣本之間的成對結構相似度。如果訓練樣本與任何評估程式的最大相似度超過 0.9，則將其移除。經過此篩選後，我們確認沒有訓練樣本與評估集顯示高 AST 層級相似度。圖 7 展示了每個訓練樣本與所有評估樣本之間的最大 AST 相似度分佈。大多數訓練樣本表現出低相似度分數，且經過篩選後，沒有樣本超過去污染閾值。</p>
+<p>表 3：最終訓練資料集的組成</p>
+<p>最終資料集組成。</p>
+<p>表 3 總結了資料合成和篩選後的最終訓練資料集的組成。大多數訓練樣本是合成運算子類別，通過依序堆疊來自 torch 程式庫的一個到五個運算子類別構造而成。我們按組成深度報告合成運算子的分佈，其中 $k$ 運算子組成表示由 $k$ 個原始運算子類別組成的運算子類別。
+此外，資料集還包括直接從 transformers 程式庫取得的一組運算子類別，這些類別作為獨立運算子包含在內，不涉及合成構造。此分佈反映了簡單運算子、中等複雜性組成和較高層級 transformers 模組之間的刻意平衡。</p>
+<h2 id="7">7 代理迴圈詳細資訊</h2>
+<h3 id="71">7.1 完整工具列表</h3>
+<p>我們為代理配置了一套結構化的工具集，將常見的開發人員操作抽象化為可呼叫的介面。這些工具定義了代理的動作空間，並且是它與系統和外部世界互動的唯一機制。</p>
+<p>代理被提供了一套用於控制本地執行環境互動的工具：</p>
+<p>Bash。在嚴格的安全約束（例如命令引號規則和目錄驗證）下，在持久化會話中執行殼層命令。它支援編譯、依賴管理和程式執行。</p>
+<p>Read / Write。提供對本地檔案的唯讀和寫入存取。寫入操作受到讀後寫入原則的保護，以防止盲目覆寫。</p>
+<p>Edit / MultiEdit。支援確定性的字串級程式碼修改。Edit 執行單一替換，而 MultiEdit 在一個檔案內執行多個原子編輯，確保跨相依程式碼變更的一致性。</p>
+<p>Glob。使用 Glob 模式（例如 *<em>/</em>.py）執行快速檔案探索，使代理能夠有效地瀏覽大型程式碼庫。</p>
+<p>Grep。基於 ripgrep 的結構化程式碼搜尋介面，支援正規表達式搜尋、檔案類型篩選和上下文行檢索。</p>
+<p>NotebookEdit。啟用 Jupyter notebook 儲存格的結構化修改，使代理能夠在混合程式碼-分析環境中運作。</p>
+<p>這些工具一起使代理能夠執行典型的軟體工程操作，包括程式碼檢查、重構、編譯和除錯。</p>
+<p>BashOutput。從背景殼層程序串流遞增式輸出，使代理能夠監控長時間執行的工作（例如訓練或編譯）。</p>
+<p>KillBash。當工作掛起或必須回收資源時，終止背景殼層會話。</p>
+<h3 id="72-skillmd">7.2 原始 SKILL.md 內容</h3>
+<h2 id="8-discussion-of-concurrent-works">8 Discussion of Concurrent Works</h2>
+<p>In this appendix, we provide a more detailed discussion of concurrent and closely related works, clarifying differences in problem settings, evaluation protocols, and training assumptions that make direct comparison with our method either inappropriate or non-informative.</p>
+<p>STARK.</p>
+<p>STARK adopts Claude Sonnet 4 as its base model and builds a structured multi-agent system consisting of specialized roles for planning, coding, and debugging. These agents follow a fixed execution program to explore a tree-structured search space. In contrast, our method employs a single agent that autonomously invokes tools, gathers feedback, and performs iterative kernel correction and optimization.
+Although both methods are evaluated on KernelBench, the substantial difference between a fixed multi-agent pipeline and a single, autonomous agent makes direct comparison less meaningful. In addition, STARK does not explicitly specify the GPU hardware used for runtime evaluation, which further complicates precise performance comparison.</p>
+<p>ReGraphT.</p>
+<p>ReGraphT focuses on a distinct research question: transferring the optimization capabilities of large language models to smaller models via retrieval-augmented reasoning graphs and Monte Carlo Graph Search. As its primary goal is model compression and capability distillation rather than maximizing absolute kernel generation performance, we do not include direct performance comparisons with ReGraphT.</p>
+<p>EvoEngineer.</p>
+<p>EvoEngineer formulates kernel optimization as an evolutionary code editing process driven by LLM feedback. However, its evaluation is conducted on only 91 problems selected from the 250 tasks in KernelBench, rather than the full benchmark. This partial coverage introduces selection bias and limits the representativeness of the reported results, making direct comparison with our full-benchmark evaluation inappropriate.</p>
+<p>CudaForge.</p>
+<p>CudaForge adopts a two-agent workflow built on OpenAI-o3, where a Judge agent leverages Nsight Compute profiling signals and hardware specifications to diagnose performance bottlenecks and provide targeted optimization feedback to a Coder agent that applies code edits. Similar to STARK, this approach relies on predefined agent roles and a fixed interaction protocol. In contrast, our method employs a single agent that autonomously decides when to invoke tools, interprets feedback, and iteratively revises kernels in a self-directed manner.</p>
+<p>Kevin.</p>
+<p>Kevin introduces a multi-turn reinforcement learning framework that explicitly models the iterative CUDA development workflow. However, this approach partitions KernelBench into subsets for training and evaluation, effectively training on benchmark-derived tasks. As a result, the reported gains may partially reflect benchmark-specific adaptation rather than generalizable kernel generation capability, which limits the fairness of direct comparison with methods trained without access to KernelBench data.</p>
+<p>CUDA-L1.</p>
+<p>CUDA-L1 directly constructs supervised fine-tuning data from KernelBench reference implementations and further applies reinforcement learning using execution-based rewards on the same benchmark tasks. This practice results in significant data leakage between training and evaluation, rendering the reported performance not directly comparable to approaches, such as ours, that strictly avoid using KernelBench for training.</p>
+<p>ConCuR.</p>
+<p>ConCuR synthesizes CUDA kernels with reasoning traces generated by a Kevin-32B model and uses the resulting dataset to fine-tune KernelCoder. As previous mentioned,
+Kevin-32B is trained on a KernelBench subset, so the performance of KernelCoder do not reflect training from independently curated or real-world kernel optimization data.</p>
+<h2 id="9">9 案例研究</h2>
+<p>我們在 KernelBench 的第 1 級到第 3 級上對 CUDA Agent 的優化軌跡進行了深入的案例研究。對於每個級別，我們分析了一個代表性示例，並提煉出 CUDA Agent 應用的關鍵優化。</p>
+<h3 id="91">9.1 常見的最佳化模式</h3>
+<p>在 KernelBench 的所有三個難度級別中，我們觀察到 CUDA Agent 生成的軌跡中存在幾種反覆出現的最佳化模式。</p>
+<p>代數簡化和算子化簡。</p>
+<p>一個主導模式是使用代數推理來簡化高階張量表達式並降低計算複雜度。在案例 9.2 中，顯式對角矩陣乘法被化簡為按行縮放，消除了整個矩陣構造和 GEMM。在案例 9.3 中，矩陣乘法後跟化簡被轉換為對權重的化簡，然後進行點積。此類轉換用更簡單的計算取代了通用的高成本算子，這些簡單計算與底層數學結構的對齊程度更好。</p>
+<p>核心融合。</p>
+<p>另一個反覆出現的模式是用於消除中間張量的核心融合。邏輯相關的操作序列被合併到單個核心中，以避免中間張量實現並減少核心啟動開銷。例子包括在案例 9.3 中將多個算術階段（求和、點積、除法和縮放）折疊到單個核心中，以及在案例 9.4 中將元素級殘差加法與啟動函數融合。融合改善了資料局部性並減少了全域記憶體流量。</p>
+<p>記憶體存取最佳化。</p>
+<p>高效的記憶體使用在各個案例中都成為了關鍵主題。生成的核心強調合併的全域記憶體存取、通過避免大型中間張量來減少記憶體佔用，以及對共享記憶體的合理使用以實現區塊內化簡。向量化載入（例如 float4）在有利時採用，以最大化記憶體頻寬使用率。</p>
+<p>硬體感知最佳化。</p>
+<p>對於複雜模型，CUDA Agent 展示了對 GPU 硬體功能的明確認知，並相應地調整生成的實現。在案例 9.4 中，系統為矩陣乘法和卷積操作啟用 TF32 計算，允許執行利用現代 GPU 上的 Tensor Cores。通過在性能關鍵但數值上可接受的地方選擇性地採用較低精度算術，CUDA Agent 實現了實質性的加速，而無需手動干預。</p>
+<p>程式庫感知最佳化。</p>
+<p>除了自訂核心生成，CUDA Agent 在適當時有效地利用高度最佳化的廠商程式庫。在案例 9.4 中，系統識別出調用融合 cuDNN API 的機會，例如卷積與偏差和啟動，以取代多個單獨的算子。通過將高階模型語義映射到最佳化的程式庫基元，CUDA Agent 減少了核心啟動開銷，並受益於 cuDNN 提供的成熟的硬體調整實現。</p>
+<p>總體而言，這些常見模式說明了 CUDA Agent 如何系統性地在算法洞察和低階效能工程之間架起橋樑，以最佳化範圍從簡單線性代數到完整神經網路構建塊的各種工作負載。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/0_3_model.png" loading="lazy"></figure> 圖 8：對角 matmul 的參考算子（案例 9.2）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/0_3_diagonal_multiply.png" loading="lazy"></figure> 圖 9：對角 matmul 核心實現（案例 9.2）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/0_3_model_new.png" loading="lazy"></figure> 圖 10：對角 matmul 的自訂算子（案例 9.2）。</p>
+<h3 id="92-1">9.2 第 1 級範例：執行對角矩陣與另一矩陣相乘的模型</h3>
+<p>在此情況下，參考模型計算從向量構造的對角矩陣與稠密矩陣的乘積。儘管在數學上很簡單，但這個公式透過明確地實現對角矩陣並調用通用矩陣乘法 (GEMM) 而產生不必要的計算和記憶體開銷。圖 8、9 和 10 說明了參考運算子、優化的 CUDA 核心以及此範例的自訂運算子。為簡潔起見，省略了 Python/C++ 綁定。此自訂運算子相比於 Torch Compile 達到了 73.31 × 的加速。</p>
+<p>CUDA Agent 利用對角矩陣乘法的代數結構。具體而言，用由向量 A 定義的對角矩陣左乘矩陣 B 等價於將 B 的每一行 i 乘以標量 A[i]。這一觀察將計算從矩陣-矩陣乘法簡化為元素級廣播乘法，將時間複雜度從 O(N²M) 降低至 O(NM)。</p>
+<p>基於這個簡化，CUDA Agent 實現了一個自訂 CUDA 核心，直接執行逐行縮放而不構造中間對角矩陣。該核心使用網格步長迴圈來有效地覆蓋輸出矩陣的所有元素，每個執行緒獨立地將 B 的一個元素乘以 A 中的對應對角項。此方法將對角構造和矩陣乘法融合到單個核心中，顯著減少了核心啟動開銷和全域記憶體流量。</p>
+<p>總體而言，此情況說明了 CUDA Agent 識別的一個常見優化模式：認識高級張量表達式中的隱含結構，並用直接實現底層數學運算的專門核心替代通用運算子。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/3_105_model.png" loading="lazy"></figure> 圖 11：矩陣乘法、除法、求和與縮放的參考運算子 (案例 9.3)。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/3_105_fused_sum_dot.png" loading="lazy"></figure> 圖 12：融合求和-然後-點積核心實現 (案例 9.3)。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/3_105_model_new.png" loading="lazy"></figure> 圖 13：矩陣乘法、除法、求和與縮放的自訂運算子 (案例 9.3)。</p>
+<h3 id="93-2">9.3 第 2 級範例：執行矩陣乘法、除法、求和與縮放的模型</h3>
+<p>第二種情況涉及由一系列操作組成的模型，包括矩陣乘法、除法、求和與縮放。若以樸素方式執行，此管線會具體化大型中間張量並執行冗餘計算。圖 11、12 和 13 分別展示參考運算子、融合的 CUDA 核心，以及 CUDA Agent 產生的最終自訂運算子。為簡潔起見，Python/C++ 繫結已省略。此自訂運算子相較於 Torch Compile 達成了 24.04 × 倍的加速。</p>
+<p>CUDA Agent 從計算的代數重排開始。透過利用求和與矩陣乘法的線性性，該運算可以重寫為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>∑ j x i ⋅ w j T 2 = x i ⋅ ( ∑ j w j T ) / 2 , \sum_{j}\frac{x_{i}\cdot w_{j}^{T}}{2}=x_{i}\cdot\left(\sum_{j}w_{j}^{T}\right)/2,</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>將矩陣–矩陣乘法後跟縮減轉換為權重矩陣的欄式縮減，其後是點積。這大幅減少了浮點運算次數與記憶體存取次數。</p>
+<p>CUDA Agent 使用兩個自訂 CUDA 核心實現此轉換。第一個核心計算權重矩陣的欄式求和，具有完全合併的記憶體存取。第二個核心執行輸入向量與縮減權重向量之間的點積，同時應用除法與縮放。這些運算融合為單一核心以避免中間寫入至全域記憶體。</p>
+<p>為進一步改善效能，點積核心利用使用 float4 載入的向量化記憶體存取，最大化記憶體頻寬利用率。在每個執行緒區塊內使用共用記憶體樹狀縮減，以高效地累積部分和，降低同步化開銷並避免昂貴的全域原子操作。</p>
+<p>此案例展示 CUDA Agent 如何系統性地結合演算法簡化與核心融合和低階 CUDA 最佳化，將多運算子計算圖折疊為少數高效率的核心。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/1_248_model.png" loading="lazy"></figure> 圖 14：Resnet BasicBlock 的參考運算子（案例 9.4）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/1_248_conv_cuda_part1.png" loading="lazy"></figure> 圖 15：cuDNN 卷積實現，第 1 部分（案例 9.4）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/1_248_conv_cuda_part2.png" loading="lazy"></figure> 圖 16：cuDNN 卷積實現，第 2 部分（案例 9.4）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/1_248_fused_add_relu.png" loading="lazy"></figure> 圖 17：融合的 add-relu 核心實現（案例 9.4）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24286/1_248_model_new.png" loading="lazy"></figure> 圖 18：Resnet BasicBlock 的自訂運算子（案例 9.4）。</p>
+<h3 id="94-resnet-basicblock">9.4 第三級範例：ResNet BasicBlock</h3>
+<p>第三個案例研究了 ResNet BasicBlock，代表由卷積、正規化、非線性以及殘差連接組成的實際深度學習工作負載。參考實現遵循標準 PyTorch 執行路徑，導致卷積、批次正規化、偏差加法、啟動函數和殘差加法產生多次核心啟動。圖表 14、15、16、17 和 18 呈現參考 ResNet BasicBlock、最佳化的 cuDNN 卷積、融合加法-ReLU 核心以及所產生的自訂運算子。Python/C++ 繫結因篇幅考量而省略。此自訂運算子相比 Torch Compile 達到 3.59 × 倍速的加速。</p>
+<p>CUDA Agent 應用了多種互補的技術。首先，它在 Python 模型中手動將 BatchNorm 參數折疊到先前的卷積權重和偏差中，在推論時完全消除 BatchNorm 運算子。這減少了核心啟動和記憶體存取，同時保持數值等價性。</p>
+<p>其次，透過使用 cudnnConvolutionBiasActivationForward，CUDA Agent 修改了自訂 cuDNN 卷積包裝器，以便卷積、偏差加法和 ReLU 啟動函數能在單一 cuDNN 核心內執行。這進一步減少了核心啟動負擔並改善了資料區域性。我們明確為 cuDNN 和矩陣乘法運算啟用 TF32 計算，使實現能夠在 Hopper GPU 上發揮 Tensor Cores 的優勢。</p>
+<p>CUDA Agent 也探索了將資料配置從 NCHW 切換到 NHWC，以更好地對齊 Tensor Core 需求。不過，所需的配置轉換引入了顯著的負擔，抵消了潛在的收益。因此，最終實現保留了 NCHW 配置，同時使用 NCHW 相容的 cuDNN API。</p>
+<p>最後，CUDA Agent 將殘差加法和最終 ReLU 啟動函數融合到單一自訂 CUDA 核心中，取代了兩個獨立的逐元素運算子。此核心計算主分支和殘差分支的逐元素和，並立即應用 ReLU 函數。</p>
+<p>綜合這些最佳化措施，能夠減少核心啟動次數、改善算術強度並更好地發揮硬體加速功能。此案例凸顯了 CUDA Agent 在複雜、真實世界神經網路區塊中整合高階圖形轉換與函式庫級融合以及自訂核心設計的能力。</p>
+<h2 id="10-limitations">10 Limitations</h2>
+<p>Our study has two main limitations. First, we do not compare CUDA Agent against more sophisticated compiler frameworks such as TVM. While these systems can potentially provide stronger baselines, they are difficult to integrate into a large-scale RL training loop with thousands of rollouts due to their substantial tuning overhead and complex deployment requirements; we therefore focus on torch.compile as a widely adopted, training-friendly baseline. Second, our training pipeline relies on a large GPU pool with process-level isolation, which incurs considerable computational and engineering cost. This reliance on massive GPU resources may limit accessibility for broader research community, and we leave exploring more resource-efficient training strategies as important directions for future work.</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

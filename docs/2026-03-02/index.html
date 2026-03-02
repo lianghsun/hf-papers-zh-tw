@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026-03-02 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="date-nav">
+  
+  <span class="current">2026-03-02</span>
+  
+</div>
+
+<h1 class="page-title">2026-03-02</h1>
+<p class="page-subtitle">8 篇論文</p>
+
+<div class="paper-list">
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.24233</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.24233/index.html" style="color:inherit;">
+        通過獎勵建模增強圖像生成中的空間理解
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Enhancing Spatial Understanding in Image Generation via Reward Modeling</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+近年來文字轉圖像生成技術在視覺逼真度和創意性方面取得了顯著進展，但同時也對提示詞的複雜性提出了更高的要求——特別是在編碼複雜的空間關係時。在這些情況下，獲得令人滿意的結果往往需要多次採樣嘗試。為了解決這一挑戰，我們提出了一種新方法，增強了當前圖像生成模型對空間的理解能力。我們首先構建了 SpatialReward-Dataset，包含超過 8 萬個偏好對。基於此數據集，我們構建了 SpatialScore，這是一個獎勵模型，旨在評估文字轉圖像生成中空間關係的準確性，其性能甚至超過了領先的專有模型在空間評估上的表現。我們進一步證明了這個獎勵模型能夠有效地為複雜空間生成任務啟用在線強化學習。在多個基準上進行的廣泛實驗表明，我們的專門獎勵模型為圖像生成的空間理解帶來了顯著且一致的提升。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">RL</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Reward Modeling</span><span class="tag method">Reinforcement Learning</span><span class="tag method">Diffusion Models</span>
+        <span class="tag task">Text-to-Image Generation</span><span class="tag task">Spatial Relationship Evaluation</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.24233/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.24233" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.23996</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.23996/index.html" style="color:inherit;">
+        通過學習潛在受控動態來加速遮罩圖像生成
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Accelerating Masked Image Generation by Learning Latent Controlled Dynamics</div>
+    
+    <div class="paper-card-abstract">遮蔽影像生成模型（Masked Image Generation Models, MIGMs）已取得顯著成功，但其效率受到多步驟雙向注意力的限制。事實上，其計算中存在明顯的冗餘：在採樣離散令牌時，連續特徵中所含的豐富語義會遺失。一些現有研究嘗試快取特徵以近似未來的特徵。然而，在激進加速率下，它們表現出相當大的近似誤差。我們將此歸因於它們的表達能力有限，以及未能考慮採樣資訊。為了填補這一空缺，我們提出學習一個輕量級模型，該模型同時納入先前特徵和採樣令牌，並迴歸特徵演化的平均速度場。該模型的複雜度適中，足以捕捉微妙的動態特性，同時相對於原始基礎模型保持輕量級。我們將我們的方法 MIGM-Shortcut 應用於兩個代表性的 MIGM 架構和任務。特別是，在最先進的 Lumina-DiMOO 上，它實現了文本到影像生成超過 4 倍的加速，同時保持品質，顯著推進了遮蔽影像生成的帕雷托前沿。程式碼和模型權重可在 https://github.com/Kaiwen-Zhu/MIGM-Shortcut 取得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Masked Image Generation</span><span class="tag method">Attention</span><span class="tag method">Feature Dynamics</span><span class="tag method">Velocity Field Regression</span>
+        <span class="tag task">Text-to-Image Generation</span><span class="tag task">Image Generation</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.23996/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.23996" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.24286</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.24286/index.html" style="color:inherit;">
+        CUDA Agent：用於高效能 CUDA 核心生成的大規模代理強化學習
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">CUDA Agent: Large-Scale Agentic RL for High-Performance CUDA Kernel Generation</div>
+    
+    <div class="paper-card-abstract"># GPU 核心優化是現代深度學習的基礎，但仍然是一項高度專業化的任務，需要深厚的硬體專業知識。儘管大型語言模型（LLM）在通用程式設計中表現強勁，但在 CUDA 核心生成方面仍然不如 torch.compile 等編譯器基系統具有競爭力。現有的 CUDA 程式碼生成方法要麼依賴於無訓練精化，要麼在固定的多回合執行回饋迴圈內微調模型，但這兩種範式都未能從根本上改善模型本身的 CUDA 優化能力，導致效能提升有限。我們提出 CUDA Agent，一個大規模代理強化學習系統，通過三個組件開發 CUDA 核心專業知識：一個可擴展的資料合成管線、一個具有自動化驗證和分析的技能增強 CUDA 開發環境以提供可靠的獎勵信號，以及支持穩定訓練的強化學習演算法技術。CUDA Agent 在 KernelBench 上取得最先進的結果，在 KernelBench Level-1、Level-2 和 Level-3 拆分上的速度分別比 torch.compile 快 100%、100% 和 92%，在最具挑戰性的 Level-3 設置上的性能超過 Claude Opus 4.5 和 Gemini 3 Pro 等最強專有模型約 40%。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">Code</span><span class="tag domain">RL</span>
+        <span class="tag method">Reinforcement Learning</span><span class="tag method">LLM</span><span class="tag method">Agentic RL</span>
+        <span class="tag task">CUDA Kernel Generation</span><span class="tag task">Code Optimization</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.24286/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.24286" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.24281</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.24281/index.html" style="color:inherit;">
+        記憶體快取：具有增長記憶體的 RNN
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Memory Caching: RNNs with Growing Memory</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+Transformers 已成為序列建模最近進展的事實上標準骨幹網絡，主要是因為它們的記憶容量隨著上下文長度而增長。雖然對檢索任務而言是可行的，但這導致了二次方複雜度，因此促使最近的研究探索可行的次二次方循環替代方案。儘管在不同領域展示了令人期待的初步成果，但這些循環架構在召回密集型任務中的表現不如 Transformers，通常歸因於它們固定大小的記憶。在本論文中，我們引入了記憶快取（Memory Caching, MC），一種簡單但有效的技術，通過快取它們記憶狀態（亦稱隱藏狀態）的檢查點來增強循環模型。記憶快取允許 RNN 的有效記憶容量隨序列長度增長，提供了一種靈活的權衡，在 RNN 的固定記憶（即 O(L) 複雜度）和 Transformers 的增長記憶（即 O(L²) 複雜度）之間進行插值。我們提出了 MC 的四個變體，包括門控聚合和稀疏選擇機制，並討論它們對線性和深度記憶模組的影響。我們在語言建模和長上下文理解任務上的實驗結果表明，MC 增強了循環模型的性能，支持其有效性。上下文召回任務的結果顯示，雖然 Transformers 達到了最佳準確度，但我們的 MC 變體展示了具競爭力的性能，縮小了與 Transformers 的差距，並優於最先進的循環模型。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">RNN</span><span class="tag method">Memory Caching</span><span class="tag method">Transformer</span>
+        <span class="tag task">Language Modeling</span><span class="tag task">Long-context Understanding</span><span class="tag task">In-context Recall</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.24281/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.24281" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.23898</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.23898/index.html" style="color:inherit;">
+        Ref-Adv：探索 MLLM 在指涉表達任務中的視覺推理
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Ref-Adv: Exploring MLLM Visual Reasoning in Referring Expression Tasks</div>
+    
+    <div class="paper-card-abstract"># 指涉表達理解（REC）：一個現代基準測試的引入
+
+指涉表達理解（Referring Expression Comprehension, REC）將語言與區域級視覺感知相連結。標準基準（RefCOCO、RefCOCO+、RefCOCOg）在多模態大語言模型推動下已有快速進展，但仍是視覺推理和定位能力的薄弱測試：（i）許多表達式極為簡短，推理需求有限；（ii）圖像通常包含少數干擾物體，使目標易於發現；以及（iii）冗餘的描述符使得快捷解決方案成為可能，繞過真正的文本理解和視覺推理。我們引入 Ref-Adv，一個現代 REC 基準測試，通過將語言上非平凡的表達式與僅識別目標所需的信息配對來抑制快捷方案。該數據集包含真實圖像上的指涉表達式，經過精心策劃包含難的干擾物體，並用推理面向（包括否定）進行標註。我們進行全面的消融研究（詞序擾動和描述符刪除充分性），以展示解決 Ref-Adv 需要超越簡單線索的推理，並在 Ref-Adv 上評估廣泛的當代多模態大語言模型。儘管在 RefCOCO、RefCOCO+ 和 RefCOCOg 上有很強的表現，模型在 Ref-Adv 上明顯下降，揭示了對快捷方案的依賴以及視覺推理和定位的不足。我們提供深入的失敗分析，並目標是讓 Ref-Adv 指導多模態大語言模型中視覺推理和定位的未來工作。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">NLP</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Multimodal LLM</span>
+        <span class="tag task">Referring Expression Comprehension</span><span class="tag task">Visual Grounding</span><span class="tag task">Visual Reasoning</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.23898/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.23898" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.24208</span>
+      
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.24208/index.html" style="color:inherit;">
+        SenCache：通過敏感性感知緩存加速擴散模型推理
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">SenCache: Accelerating Diffusion Model Inference via Sensitivity-Aware Caching</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+Diffusion models 在視頻生成質量上達到了最先進的水準，但由於需要進行大量連續的去噪步驟，其推理計算仍然昂貴。這促進了一系列關於加速 diffusion 推理的研究工作。在無訓練加速方法中，快取通過在時間步之間重複使用先前計算的模型輸出來降低計算量。現有的快取方法依賴於啟發式準則來選擇快取/重複使用時間步，並且需要進行大量調整。我們通過一個原則性的敏感性感知快取框架來解決這一限制。具體來說，我們通過分析模型輸出對去噪輸入（即帶噪聲的潛在表徵和時間步）的擾動的敏感性來形式化快取誤差，並展示這種敏感性是快取誤差的關鍵預測因子。基於此分析，我們提出了敏感性感知快取（Sensitivity-Aware Caching, SenCache），這是一種動態快取策略，可以在逐個樣本的基礎上自適應地選擇快取時間步。我們的框架為自適應快取提供了理論基礎，解釋了為什麼先前的經驗啟發式方法可以部分有效，並將其擴展到動態的、樣本特定的方法。在 Wan 2.1、CogVideoX 和 LTX-Video 上的實驗表明，在相似的計算預算下，SenCache 相比現有快取方法實現了更好的視覺質量。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion</span><span class="tag method">Caching</span><span class="tag method">Sensitivity Analysis</span>
+        <span class="tag task">Video Generation</span><span class="tag task">Model Acceleration</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.24208/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.24208" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.23622</span>
+      
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.23622/index.html" style="color:inherit;">
+        DLEBench：評估基於指令的圖像編輯模型的小規模物體編輯能力
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">DLEBench: Evaluating Small-scale Object Editing Ability for Instruction-based Image Editing Model</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+基於指令的影像編輯模型（Instruction-based Image Editing Models, IIEMs）在該領域取得了重大進展。然而，儘管這些模型在當前基準上展現出合理的指令遵循能力和強大的推理能力，但它們在編輯小物體方面的能力仍未被充分探討，儘管這對於實際和生成影像中的精確局部編輯和細節優化至關重要。本論文介紹了 DeepLookEditBench（DLEBench），這是首個專門用於評估 IIEMs 在編輯小規模物體能力的基準。具體而言，我們構建了一個涵蓋七種指令類型、包含 1889 個樣本的具有挑戰性的測試集。在這些樣本中，目標物體僅佔影像面積的 1%-10%，涵蓋了部分遮擋和多物體編輯等複雜場景。為了確保在此基準上的穩健評估，我們提出了一個評估協議，包含經過精化的評分標準，以最小化兩個評估標準上的主觀性和歧義：指令遵循（Instruction Following）和視覺一致性（Visual Consistency）。該協議還引入了雙模式評估框架（工具驅動模式和 Oracle 引導模式），以解決 LMM-as-a-Judge 與人類判斷在 DLEBench 上的不對齊問題。對 10 個 IIEMs 的實證結果揭示了小規模物體編輯中存在的顯著性能差距，突出了開發專門化基準以推進此能力的必要性。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion</span><span class="tag method">LMM</span>
+        <span class="tag task">Image Editing</span><span class="tag task">Instruction Following</span><span class="tag task">Benchmark Evaluation</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.23622/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.23622" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.22647</span>
+      
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.22647/index.html" style="color:inherit;">
+        向量化 Trie：LLM 加速器上高效的受限解碼生成檢索
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Vectorizing the Trie: Efficient Constrained Decoding for LLM-based Generative Retrieval on Accelerators</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+生成式檢索已成為基於 LLM 的推薦系統的強大範式。然而，工業推薦系統通常受益於根據業務邏輯將輸出空間限制在受限的項目子集（例如強制內容新鮮度或產品類別），這是標準自迴歸解碼無法原生支持的。此外，現有使用前綴樹 (Tries) 的受約束解碼方法在硬體加速器 (TPU/GPU) 上會產生嚴重的延遲成本。在這項工作中，我們引入 STATIC（稀疏轉移矩陣加速前綴樹索引用於受約束解碼），一種專為在 TPU/GPU 上進行高吞吐量 LLM 基礎生成式檢索而設計的高效且可擴展的受約束解碼技術。通過將前綴樹展平為靜態壓縮稀疏行 (CSR) 矩陣，我們將不規則的樹遍歷轉化為完全向量化的稀疏矩陣運算，在硬體加速器上釋放了巨大的效率收益。我們在一個大規模工業影片推薦平台上部署了 STATIC，該平台服務數十億用戶。STATIC 以最小的延遲開銷（每步 0.033 毫秒和推論時間的 0.25%）產生了顯著的產品指標影響，實現了相對於 CPU trie 實現的 948 倍加速以及相對於硬體加速二元搜尋基線的 47-1033 倍加速。此外，STATIC 的運行時開銷在廣泛的實際配置中保持極低。據我們所知，STATIC 實現了第一次嚴格受約束生成式檢索的生產規模部署。此外，在學術基準上的評估表明 STATIC 可以顯著改善生成式檢索的冷啟動性能。我們的程式碼可在 https://github.com/youtube/static-constraint-decoding 獲取。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Trie</span><span class="tag method">Constrained Decoding</span><span class="tag method">Sparse Matrix Operations</span><span class="tag method">CSR Matrix</span>
+        <span class="tag task">Generative Retrieval</span><span class="tag task">Recommendation</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.22647/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.22647" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>向量化 Trie：LLM 加速器上高效的受限解碼生成檢索 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-02/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-02 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">向量化 Trie：LLM 加速器上高效的受限解碼生成檢索</h1>
+  
+  <div class="en-title">Vectorizing the Trie: Efficient Constrained Decoding for LLM-based Generative Retrieval on Accelerators</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Zhengyang Su, Isay Katsman, Yueqi Wang, Ruining He, Lukasz Heldt, Raghunandan Keshavan, Shao-Chuan Wang, Xinyang Yi, Mingyan Gao, Onkar Dalal, Lichan Hong, Ed Chi, Ningren Han</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.22647" target="_blank">2602.22647</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.22647" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.22647" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.22647" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">Trie</span><span class="tag method">Constrained Decoding</span><span class="tag method">Sparse Matrix Operations</span><span class="tag method">CSR Matrix</span>
+    <span class="tag task">Generative Retrieval</span><span class="tag task">Recommendation</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+生成式檢索已成為基於 LLM 的推薦系統的強大範式。然而，工業推薦系統通常受益於根據業務邏輯將輸出空間限制在受限的項目子集（例如強制內容新鮮度或產品類別），這是標準自迴歸解碼無法原生支持的。此外，現有使用前綴樹 (Tries) 的受約束解碼方法在硬體加速器 (TPU/GPU) 上會產生嚴重的延遲成本。在這項工作中，我們引入 STATIC（稀疏轉移矩陣加速前綴樹索引用於受約束解碼），一種專為在 TPU/GPU 上進行高吞吐量 LLM 基礎生成式檢索而設計的高效且可擴展的受約束解碼技術。通過將前綴樹展平為靜態壓縮稀疏行 (CSR) 矩陣，我們將不規則的樹遍歷轉化為完全向量化的稀疏矩陣運算，在硬體加速器上釋放了巨大的效率收益。我們在一個大規模工業影片推薦平台上部署了 STATIC，該平台服務數十億用戶。STATIC 以最小的延遲開銷（每步 0.033 毫秒和推論時間的 0.25%）產生了顯著的產品指標影響，實現了相對於 CPU trie 實現的 948 倍加速以及相對於硬體加速二元搜尋基線的 47-1033 倍加速。此外，STATIC 的運行時開銷在廣泛的實際配置中保持極低。據我們所知，STATIC 實現了第一次嚴格受約束生成式檢索的生產規模部署。此外，在學術基準上的評估表明 STATIC 可以顯著改善生成式檢索的冷啟動性能。我們的程式碼可在 https://github.com/youtube/static-constraint-decoding 獲取。</p>
+  
+  <div class="abstract-en">Generative retrieval has emerged as a powerful paradigm for LLM-based recommendation. However, industrial recommender systems often benefit from restricting the output space to a constrained subset of items based on business logic (e.g. enforcing content freshness or product category), which standard autoregressive decoding cannot natively support. Moreover, existing constrained decoding methods that make use of prefix trees (Tries) incur severe latency penalties on hardware accelerators (TPUs/GPUs). In this work, we introduce STATIC (Sparse Transition Matrix-Accelerated Trie Index for Constrained Decoding), an efficient and scalable constrained decoding technique designed specifically for high-throughput LLM-based generative retrieval on TPUs/GPUs. By flattening the prefix tree into a static Compressed Sparse Row (CSR) matrix, we transform irregular tree traversals into fully vectorized sparse matrix operations, unlocking massive efficiency gains on hardware accelerators. We deploy STATIC on a large-scale industrial video recommendation platform serving billions of users. STATIC produces significant product metric impact with minimal latency overhead (0.033 ms per step and 0.25% of inference time), achieving a 948x speedup over a CPU trie implementation and a 47-1033x speedup over a hardware-accelerated binary-search baseline. Furthermore, the runtime overhead of STATIC remains extremely low across a wide range of practical configurations. To the best of our knowledge, STATIC enables the first production-scale deployment of strictly constrained generative retrieval. In addition, evaluation on academic benchmarks demonstrates that STATIC can considerably improve cold-start performance for generative retrieval. Our code is available at https://github.com/youtube/static-constraint-decoding.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="trie-llm">向量化 Trie：加速器上基於 LLM 生成式檢索的高效約束解碼</h1>
+<p>生成式檢索已成為基於 LLM 的推薦系統的強大範例。然而，工業推薦系統通常受益於根據業務邏輯（例如強制內容新鮮度或產品類別）將輸出空間限制在受限項目子集，而標準自迴歸解碼無法原生支持此功能。此外，現有利用前綴樹（Trie）的約束解碼方法在硬體加速器（TPU/GPU）上會產生嚴重的延遲開銷。在本項工作中，我們引入 STATIC（稀疏轉移矩陣加速 Trie 索引約束解碼，Sparse Transition Matrix-Accelerated Trie Index for Constrained Decoding），一種專為 TPU/GPU 上高吞吐量基於 LLM 的生成式檢索而設計的高效可擴展約束解碼技術。通過將前綴樹展平為靜態壓縮稀疏行（CSR）矩陣，我們將不規則的樹遍歷轉變為完全向量化的稀疏矩陣運算，在硬體加速器上釋放了大量的效率增益。</p>
+<p>我們在為數十億用戶服務的大規模工業影片推薦平台上部署了 STATIC。STATIC 以最小的延遲開銷（0.033 ms 每步，佔推理時間的 0.25%）產生了顯著的產品度量影響，相比 CPU trie 實現實現了 948 × 的加速，相比硬體加速的二分搜尋基準實現了 47 – 1033 × 的加速。此外，STATIC 的執行時間開銷在廣泛的實際配置範圍內保持極低。據我們所知，STATIC 實現了首次生產規模部署的嚴格約束生成式檢索。此外，在學術基準測試上的評估表明 STATIC 能夠顯著改善生成式檢索的冷啟動效能。我們的程式碼可在 https://github.com/youtube/static-constraint-decoding 取得。</p>
+<h2 id="1">1. 介紹</h2>
+<p>推薦系統長期以來一直是支撐 YouTube 和 Amazon 等大規模線上平台的核心發現引擎（Linden et al., 2003；Covington et al., 2016）。雖然神經網路技術不斷改進這些引擎，但該領域正經歷範式轉變，透過近似最近鄰搜尋推薦候選項目的基於嵌入的神經檢索模型，如 ScaNN（Guo et al., 2019；Sun et al., 2024），正被基於 LLM 的生成式檢索所取代（Rajput et al., 2023；He et al., 2025；Deng et al., 2025；Yang et al., 2024；Si et al., 2023；Zhou et al., 2026）。透過將每個項目表示為離散權杖序列（稱為 Semantic IDs 或 SIDs）並訓練 Transformers（Vaswani et al., 2017）來自迴歸解碼目標項目的 Semantic ID 權杖（Rajput et al., 2023），生成式檢索繞過了傳統雙編碼器（user, item）的關鍵限制（Weller et al., 2026），以捕捉更深層的語義關係。此外，它消除了對外部最近鄰索引基礎設施的需求（Rajput et al., 2023），並允許人們為推薦任務調整預訓練的 LLM（He et al., 2025；Liu et al., 2025；Zhou et al., 2026）。</p>
+<p>然而，原始設計的生成式檢索模型缺少一個關鍵特性：對生成輸出空間的控制，這是在各種業界應用中強制執行業務邏輯所必需的。缺少此特性並未阻止這些下一代推薦模型在大規模業界環境中廣泛應用（He et al., 2025；Deng et al., 2025；Zhou et al., 2025a、b），但更細粒度的輸出空間控制將使實踐者能夠基於業務邏輯限制輸出空間，例如強制執行新鮮度約束（例如「在過去一天內上傳」）、位置性（例如地區性推薦）、產品類別（例如「推薦夏季衣服」）或庫存可用性（例如「僅現貨」）。這使得可以訓練單一大型模型並將其部署到多個使用案例中。</p>
+<p>在傳統推薦設定中，業務邏輯透過檢索後篩選或先驗約束搜尋空間來強制執行（例如透過執行受限的 ScaNN 搜尋（Guo et al., 2019））。如果系統要求項目「有貨」或「在過去 7 天內上傳」，布林篩選器只需從檢索集合或 ScaNN 索引中刪除無效候選項目。然而，在生成式檢索中，「檢索器」是合成 Semantic IDs 的概率性自迴歸模型（Rajput et al., 2023）。在沒有干預的情況下，LLM 會有信心地為缺貨、過期或受法律限制的項目生成 SIDs。依賴檢索後篩選在計算上是浪費的；模型可能會耗盡其整個推論預算來生成無效項目，導致零有效推薦。</p>
+<p>為了解決此問題，必須在 LLM 解碼過程中強制執行約束。標準的演算法解決方案是使用前綴樹（trie）實現受限解碼，它在每一步遮蔽無效的權杖（Ye et al., 2025）。雖然概念上是合理的，但我們觀察到樸素的指標追蹤 trie 約束從根本上對硬體加速器不利，原因有兩個：</p>
+<ul>
+<li>(1) 記憶體延遲 基於指標的結構導致非連續的隨機記憶體存取模式。這阻止了記憶體合併，無法利用現代 TPU/GPU 的高頻寬記憶體（HBM）突發能力（Jouppi et al., 2017）。此外，這些不規則的模式會使為線性流設計的硬體預取器無效，導致嚴重的記憶體瓶頸延遲和停滯的執行單元。</li>
+<li>(2) 編譯不相容性 現代加速器架構（例如依賴 Google XLA 的（Sabne, 2020）TPU）需要用於 ML 編譯的靜態計算圖（Li et al., 2020）。樸素的 trie 實現依賴於資料相關的控制流和不規則的連結結構，這從根本上與此範式不相容。雖然加速器支援對固定大小緩衝區的動態索引（例如向量化蒐集），但指標追蹤的不規則記憶體存取和遞迴分支阻止了端到端 ML 編譯。</li>
+</ul>
+<p>記憶體延遲 基於指標的結構導致非連續的隨機記憶體存取模式。這阻止了記憶體合併，無法利用現代 TPU/GPU 的高頻寬記憶體（HBM）突發能力（Jouppi et al., 2017）。此外，這些不規則的模式會使為線性流設計的硬體預取器無效，導致嚴重的記憶體瓶頸延遲和停滯的執行單元。</p>
+<p>編譯不相容性 現代加速器架構（例如依賴 Google XLA 的（Sabne, 2020）TPU）需要用於 ML 編譯的靜態計算圖（Li et al., 2020）。樸素的 trie 實現依賴於資料相關的控制流和不規則的連結結構，這從根本上與此範式不相容。雖然加速器支援對固定大小緩衝區的動態索引（例如向量化蒐集），但指標追蹤的不規則記憶體存取和遞迴分支阻止了端到端 ML 編譯。</p>
+<p>在我們的初步實驗中，CPU 卸載的 trie 實現將推論時間增加了 $2 \times$，使其對於我們的目標每解碼步驟延遲 $\leq 10$ ms 無法使用。利用二進制搜尋的更複雜的現有方法也表現出顯著的延遲問題（Ye et al., 2025）。雖然有限狀態轉換器（FST）等替代方法在自然語言處理中是標準的，但當應用於生產規模的 SID 詞彙表（例如數百萬項目的數量級）時，它們會遭受狀態爆炸，並且缺乏原生的 TPU 支援（Koo et al., 2024）。</p>
+<p>在本研究中，我們介紹 STATIC（<strong>S</strong>parse <strong>T</strong>ransition Matrix-<strong>A</strong>ccelerated <strong>T</strong>rie <strong>I</strong>ndex for <strong>C</strong>onstrained Decoding），一個將受限解碼從圖遍歷問題重新轉換為一系列向量化稀疏矩陣運算的框架。STATIC 的設計目的是解決上述問題，並為生成式檢索實現極快且可擴展的受限解碼。值得注意的是，我們的 I/O 複雜度$^{1}$ 為 $O(1)$，相對於約束集合大小，與現有二進制搜尋方法的對數縮放形成對比。</p>
+<p>我們的貢獻如下：</p>
+<ul>
+<li>(i) 我們提出一種方法將前綴樹指定的約束展平為靜態壓縮稀疏行（CSR）矩陣，透過合併讀取啟用 $O(1)$ 記憶體存取開銷以進行快速解碼約束提取。</li>
+<li>(ii) 我們使用動態切片和遮蔽算術設計無分支解碼演算法。這使受限解碼完全加速器原生，並消除主機-設備往返，從而實現巨大的效率提升。</li>
+<li>(iii) 我們在超大規模視訊推薦平台（YouTube）上針對多個產品使用案例部署該系統。我們呈現一個特定設定，其中我們將生成式檢索 LLM 限制在 20 百萬個新鮮項目的預指定詞彙表中，相比基線方法以最小延遲開銷改進關鍵線上指標。</li>
+<li>(iv) 我們評估 STATIC 的可擴展性，發現其延遲在約束集合和 Semantic ID 詞彙表大小的寬泛範圍內保持極低。</li>
+<li>(v) 我們展示如何在使用 Amazon Reviews（He and McAuley, 2016）資料集的原則性設定中使用受限解碼來改進冷啟動推薦效能。</li>
+</ul>
+<p>我們提出一種方法將前綴樹指定的約束展平為靜態壓縮稀疏行（CSR）矩陣，透過合併讀取啟用 $O(1)$ 記憶體存取開銷以進行快速解碼約束提取。</p>
+<p>我們使用動態切片和遮蔽算術設計無分支解碼演算法。這使受限解碼完全加速器原生，並消除主機-設備往返，從而實現巨大的效率提升。</p>
+<p>我們在超大規模視訊推薦平台（YouTube）上針對多個產品使用案例部署該系統。我們呈現一個特定設定，其中我們將生成式檢索 LLM 限制在 20 百萬個新鮮項目的預指定詞彙表中，相比基線方法以最小延遲開銷改進關鍵線上指標。</p>
+<p>我們評估 STATIC 的可擴展性，發現其延遲在約束集合和 Semantic ID 詞彙表大小的寬泛範圍內保持極低。</p>
+<p>我們展示如何在使用 Amazon Reviews（He and McAuley, 2016）資料集的原則性設定中使用受限解碼來改進冷啟動推薦效能。</p>
+<hr />
+<p>$^{1}$ 不同於傳統時間或空間複雜度，TPU 上的 I/O 複雜度（Hong and Kung, 1981）透過計算離晶片高頻寬記憶體（HBM）和晶片上 SRAM 之間昂貴的資料塊傳輸次數來評估演算法效率。</p>
+<h2 id="2">2. 相關工作</h2>
+<p>在推薦系統領域，從基於嵌入的檢索（Guo et al. , 2019）轉向生成式檢索（Rajput et al. , 2023）的轉變，促使了新型 Transformer 解碼策略的設計。我們的工作位於大規模生成式推薦（Rajput et al. , 2023）、受約束的標記生成和硬體感知系統最佳化的交匯點。</p>
+<h3 id="21">2.1. 生成式檢索和語義索引</h3>
+<p>生成式檢索（GR）代表一種典範轉變，其中項目語料庫被內化在模型參數中，用直接序列生成任務替代了傳統的大規模嵌入和最近鄰搜尋管線（Tay et al. , 2022）。</p>
+<p>該領域的最近方法，特別是 TIGER（Rajput et al. , 2023）、SEATER（Si et al. , 2023）和 LIGER（Yang et al. , 2024），利用語義 ID——階層式的、基於離散標記的項目表示，其中語義上相似的項目被最佳化為共享相同的前綴。這些生成式檢索技術產生了改進的結果，並已在多個線上推薦平台中部署，如 PLUM（He et al. , 2025）和 OneRec（Deng et al. , 2025；Zhou et al. , 2025a , b；Liu et al. , 2025）中所見。然而，這些自回歸檢索模型的一個關鍵限制是「有效性差距」。與輸出空間開放式的自然語言生成不同，檢索要求生成的字符串完美對應到有效的項目索引。如 Rajput et al.（2023）所指出，沒有約束，模型實際上會「幻覺化」不存在的庫存，導致檢索失敗。這個問題在業界設定中尤其相關，實踐者在多個產品環境中部署相同的預訓練模型，每個環境都有自己的有效語料庫，有些要求候選項必須落在特定的地區內或滿足某些「新鮮度」要求。雖然以前的工作側重於改進召回率指標（He et al. , 2025；Si et al. , 2023；Zhou et al. , 2025a；Deng et al. , 2025；Ju et al. , 2025），但它在很大程度上忽視了在高吞吐量生產環境中強制執行有效性約束的延遲成本；我們在本論文中明確解決這個問題。</p>
+<p>此外，現有的生成式檢索論文（Yang et al. , 2024）已指出生成式檢索模型在冷啟動項目推薦方面存在困難：即模型必須推薦在訓練期間從未見過的項目的設定。我們在第 6 節中展示，通過使用冷啟動項目集實施受約束的解碼，可以顯著改進冷啟動效能。</p>
+<h3 id="22-nlp">2.2. NLP 中的受限解碼</h3>
+<p>受限解碼（CD）在 NLP 中有著豐富的歷史。
+例如，NeuroLogic（Lu et al.，2021）使用基於搜尋的啟發式方法來滿足複雜的邏輯謂詞，而 Synchromesh（Poesia et al.，2022）強制使用上下文無關文法（CFGs）以確保程式碼生成中的句法正確性。與我們使用情況相關的一種方法是有限狀態轉錄機（FSTs），它長期以來一直是受限語音辨識的標準（Koo et al.，2024）。然而，當應用於推薦系統中出現的非結構化、高基數詞彙時，FST 會遭受狀態爆炸的問題（通常為 $10^{7}+$ 項）。正如 Koo et al.（2024）所觀察到的，雖然 FST 功能強大，但其不規則性使其相比於基於密集矩陣運算方法的方式難以在 TPU/GPU 上並行化。</p>
+<h3 id="23">2.3. 硬體感知推理與加速</h3>
+<p>「記憶體牆」仍然是大型語言模型推理的主要瓶頸。由於自回歸解碼受記憶體頻寬限制，性能由資料移動到晶片算術單元的速度決定（Dao et al.，2022）。</p>
+<p>指標追蹤 vs. 聚合存取。各種受限解碼方法中使用的標準 trie 實現依賴於指標追蹤（Liao et al.，2025）。在現代加速器（TPU/GPU）上，指標追蹤會引起隨機記憶體存取模式，導致未聚合的載入和快取抖動。這與加速器的設計原理相悖，加速器受益於靜態、連續的記憶體存取（如 FlashAttention 中的最佳化所示（Dao et al.，2022））。</p>
+<p>加速器相容的解碼。最近的論文 DISC-PPV（Ye et al.，2025）代表了將受限解碼適應硬體加速器的最新技術。作者使用扁平化排序陣列和並行化二元搜尋實現晶片上有效性檢查，這種方法稱為平行首碼驗證（PPV）。雖然 PPV 消除了 CPU-GPU 通訊開銷，但其對二元搜尋的依賴引入了相對於受限項目集大小 $|\mathcal{C}|$ 的 $O(\log|\mathcal{C}|)$ 輸入輸出複雜度縮放因子。在超大詞彙表中（例如 2000 萬項），即使是對數縮放也成為輸入輸出瓶頸。我們引入的 STATIC 方法推進了這一研究方向，通過用 $O(1)$ 向量化稀疏矩陣運算替代 PPV 的 $O(\log|\mathcal{C}|)$ 相依區塊傳輸，在單一聚合階段中擷取所有必需的工作集。</p>
+<h3 id="24">2.4. 線性化樹狀結構</h3>
+<p>將樹狀結構扁平化為基於陣列的表示法的概念可以追溯到雙陣列 Trie（Double-Array Trie）（Aoe, 1989），最初是為了提高字串比對的記憶體效率而設計的。類似地，GraphBLAS 標準（Kepner et al., 2016）主張圖演算法可以表示為稀疏半環上的線性代數運算。</p>
+<p>雖然這些概念在理論電腦科學中已經確立，但它們在 LLM 受限解碼中的應用是新穎的。我們連接了這些古典資料結構與現代深度學習編譯器（XLA/Inductor）之間的差距。通過用稀疏矩陣運算重新表述 trie 遍歷，我們能夠利用高效能、ML 編譯器加速的核心，同時維持大規模即時推薦所需的平行性。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.22647/x1.png" loading="lazy"></figure> 圖 1. 此圖展示完整的 STATIC 管道。圖 1a 和 1b 呈現了在 $\mathcal{V}={1,2,3}$、$L=3$ 和受限詞彙 $\mathcal{C}={(1,2,1),(3,1,2),(3,1,3)}$ 的情況下的前置樹構建。我們在語意權標前附加字母 A、B、C 以分別表示第一、第二和第三層級。相應的轉移矩陣如圖 1c 所示，並包含明確的標籤和色彩編碼。圖 1d 呈現了完整轉移矩陣的稀疏矩陣（CSR）表示。圖 1e 顯示了在解碼時如何應用稀疏矩陣來限制詞彙。</p>
+<h2 id="3">3. 背景</h2>
+<p>在本節中，我們提供理解本論文所需的背景知識，並定義了生成式檢索和受限解碼中的核心技術術語。</p>
+<h3 id="31-id">3.1. 生成式檢索和語義 ID</h3>
+<p>生成式檢索是一種推薦範式，其中模型直接逐個 token 預測目標候選識別符，而不是通過在嵌入空間中進行最近鄰搜索。這種方法的核心是語義 ID 的概念：一個離散的、基於 token 的識別符，用於捕捉項目的語義屬性。</p>
+<p>在 TIGER 框架（Rajput et al., 2023）中，語義 ID 是使用殘差量化變分自編碼器（RQ-VAE）建立的。RQ-VAE 首先將項目特徵編碼為潛在向量 $\mathbf{z}$，然後在 $L$ 個層級上進行迭代量化。第一層級的殘差定義為：$\mathbf{r}<em>{1}:=\mathbf{z}$。在每個層級 $d$，殘差 $\mathbf{r}</em>{d}$ 與層級特定碼本 $\mathcal{E}<em>{d}$ 中最近的嵌入 $\mathbf{e}</em>{y_{d}}$ 相關聯。索引 $y_{d}$ 成為語義 ID 中的第 $d$ 個碼字。下一層級的殘差計算如下：$\mathbf{r}<em>{d+1}:=\mathbf{r}</em>{d}-\mathbf{e}<em>{y</em>{d}}$。</p>
+<p>這種遞迴方法使語義相似的項目能夠共享前綴 token，使模型能夠有效地在項目空間上進行泛化。最終生成的語義 ID 只是由嵌入索引組成的元組，即 $(y_{1},\ldots,y_{L})$。</p>
+<h3 id="32-beam-search">3.2. 透過 Beam Search 的自回歸解碼</h3>
+<p>在推論期間，檢索模型對語義 ID 的令牌序列進行自回歸解碼。為了生成目標項目，我們通常在語義 ID 空間上採用 beam search（Freitag and Al-Onaizan, 2017），儘管我們的方法也相容於其他解碼方法。</p>
+<p>設 $\mathcal{V}$ 為語義令牌的詞彙表，設 $L$ 為語義 ID 的固定長度。在每個步驟 $t$，演算法維持一個 beam search 狀態 $\mathbf{S}<em>{t}$，其追蹤大小為 $B$ 的一批中最可能的 $M$ 個序列。我們正式定義 $\mathbf{S}</em>{t}$ 為具有以下成員和存取器的結構：</p>
+<ul>
+<li>• $\mathbf{S}_{t}.\text{tokens}\in\mathcal{V}^{B\times M\times t}$：包含每個 beam 已解碼前綴的令牌緩衝區。</li>
+<li>• $\mathbf{S}_{t}.\text{scores}\in\mathbb{R}^{B\times M}$：序列的累積對數機率分數。</li>
+</ul>
+<p>$\mathbf{S}_{t}.\text{tokens}\in\mathcal{V}^{B\times M\times t}$：包含每個 beam 已解碼前綴的令牌緩衝區。</p>
+<p>$\mathbf{S}_{t}.\text{scores}\in\mathbb{R}^{B\times M}$：序列的累積對數機率分數。</p>
+<p>在步驟 $t$，模型生成邏輯值 $\mathbf{L}_{t}\in\mathbb{R}^{B\times M\times|\mathcal{V}|}$，這些邏輯值在選擇下一組候選項目之前被正規化為對數機率。累積對數機率分數透過將模型對下一個令牌的預測對數機率加到當前前綴分數來更新。保留得分最高的前 $M$ 個候選項目，其他的則被剪枝。</p>
+<h3 id="33">3.3. 前綴樹和受限解碼</h3>
+<p>標準生成模型可能「幻想」出（1）不對應語料庫中有效項目的識別碼，或（2）不對應所需項目的識別碼（例如，在新近性背景下，過於陳舊的項目）。為了防止這種情況，受限解碼將輸出限制在受限詞彙表集合 $\mathcal{C}$ 中，其只包含所需的語義 ID。</p>
+<p>由於語義 ID 被結構化為序列，受限詞彙表本質上形成一個前綴樹（即 trie）。約束條件在每個步驟 $t$ 被強制執行，即，如果將當前令牌附加到前綴會導致 trie 中的無效路徑，該路徑會被剪枝。在實踐中，無效令牌的對數機率被設置為 $-\infty$，確保 beam search 只選擇有效序列。此工作所解決的挑戰是，trie 約束的天真指標追蹤實現在 TPU/GPU 等硬體加速器上會造成嚴重的延遲懲罰，使其在實踐中不可行。</p>
+<h2 id="4">4. 方法論</h2>
+<p>我們提出了一種加速器原生的受約束解碼技術，設計用於基於LLM的生成式檢索。我們的方法將動態指標追蹤CPU型前綴樹遍歷替換為靜態稀疏矩陣查詢，實現純粹的裝置上執行（TPU/GPU），相容於XLA/Inductor編譯。</p>
+<h3 id="41">4.1. 問題表述</h3>
+<p>回顧 $\mathcal{V}$ 代表我們的上下文中語義令牌（即索引）的集合，$L$ 是語義ID的固定長度。注意所有語義ID的空間只是乘積空間 $\mathcal{V}^{L}$。儘管索引的詞彙在所有級別中相同，但碼字是不同的，每一級別都訓練了一個不同的碼簿 $\mathcal{E}_{d}$。</p>
+<p>檢索模型自迴歸地生成一個序列（即語義ID）$\mathbf{y}=(y_{1},\dots,y_{L})$，其中 $y_{i}\in\mathcal{V}$。在標準光束搜尋中，序列的有效性完全由模型學習的概率分佈 $P_{\theta}$ 決定。然而，在受約束解碼中，我們要求生成的輸出屬於一個嚴格定義的子集 $\mathcal{C}\subset\mathcal{V}^{L}$（例如「新鮮度」語料庫或「庫存」列表）。圖1a給出了受限子集的一個例子。</p>
+<p>我們正式定義約束函數 $F_{t}:\mathcal{V}^{t-1}\times\mathcal{V}\rightarrow{0,1}$，其中 $1\leq t&lt;L$ 為：</p>
+<p>$$F_{t}(y_{&lt;t},y_{t})=\mathbb{I}(\exists&gt;c\in\mathcal{C}&gt;\text{s.t.}&gt;(y_{&lt;t},y_{t})\sqsubseteq c)$$</p>
+<p>其中 $\mathbb{I}(\cdot)$ 是指示函數，$\sqsubseteq$ 表示前綴包含。$F_{t}(y_{&lt;t},y_{t})$ 是一個指示函數，當且僅當將 $y_{t}$ 附加到前綴 $y_{&lt;t}$ 會產生 $\mathcal{C}$ 中的有效前綴時，該函數傳回1。我們的目標是在推論期間僅強制執行此約束，使得當 $F_{t}(y_{&lt;t},y_{t})=0$ 時，$P(y_{t}|y_{&lt;t})=0$，並且延遲開銷最小。</p>
+<h3 id="42-stm-trie">4.2. 稀疏轉移矩陣 (STM) 為基礎的 Trie 轉換</h3>
+<p>前綴樹的標準實現依賴於指標追蹤操作，該操作存在巨大的 CPU 回調瓶頸，且在加速器上的支援很差。為了解決這個問題，我們將前綴樹展平為壓縮稀疏行 (CSR) 轉移矩陣。</p>
+<p>設 trie 中前綴節點的總數為 $S$。我們將樹中的每個唯一前綴節點映射到狀態整數 $s\in[S]$。我們接著定義一個稀疏矩陣 $\mathbf{T}\in\mathbb{Z}^{S\times|\mathcal{V}|}$，其中：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{T}<em>{s,v}=\begin{cases}s</em>{\text{next}}&amp;s\xrightarrow{v}s_{next}&gt;\text{exists}\0&amp;\text{otherwise}\\end{cases}$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>概念上，0 表示一個終端狀態，其中不能進行任何進一步的轉移（可以將其視為「沉淀節點」）。為了更好地說明這個想法，我們在圖 1c 中給出了來自圖 1a 的受限詞彙表的概念性轉移矩陣（對應於圖 1b 中的 trie）。</p>
+<h4 id="421">4.2.1. 矩陣構造</h4>
+<p>$\mathbf{T}$ 的構造是離線進行的。由於詞彙約束的高度稀疏性（通常 $\leq 0.01\%$ 的有效路徑），CSR 表示在記憶體效率上非常高。在我們的情況下，我們填充 CSR 表示的三個部分如下：</p>
+<ul>
+<li>• 行指標 ($\mathbf{P}$)：儲存當前狀態 $s$ 的允許轉移的索引，即這些實際上是節點指標。</li>
+<li>• 列索引 ($\mathbf{C}$)：儲存觸發轉移的有效令牌 ID ($v$)。</li>
+<li>• 值陣列 ($\mathbf{V}$)：儲存目標狀態節點 ID ($s_{next}$)。</li>
+</ul>
+<p>行指標 ($\mathbf{P}$)：儲存當前狀態 $s$ 的允許轉移的索引，即這些實際上是節點指標。</p>
+<p>列索引 ($\mathbf{C}$)：儲存觸發轉移的有效令牌 ID ($v$)。</p>
+<p>值陣列 ($\mathbf{V}$)：儲存目標狀態節點 ID ($s_{next}$)。</p>
+<p>這種靜態結構使我們能夠利用硬體優化的稀疏矩陣運算，而不是動態控制流。為了說明，對於圖 1c 中的轉移矩陣，我們在圖 1d 中提供了 CSR 陣列。例如注意，要提取圖 1c 中節點 4 的轉移，我們首先會提取 $\texttt{row_start}=\mathbf{P}[4]=5$ 和 $\texttt{row_end}=\mathbf{P}[4+1]=7$。接著我們形成切片：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle\mathbf{C}[\texttt{row_start}!:!\texttt{row_end}]=\mathbf{C}[5!:!7]=[2,3]$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>$\displaystyle\mathbf{V}[\texttt{row_start}!:!\texttt{row_end}]=\mathbf{V}[5!:!7]=[6,7]$</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>來觀察從節點 4 取得「令牌 2」導向節點 6，以及從節點 4 取得「令牌 3」導向節點 7。通過注意圖 1c 中存在的轉移，可以確認這確實是正確的。</p>
+<p>演算法 1 硬體加速的受限解碼步驟</p>
+<h3 id="43">4.3. 加速器原生解碼演算法</h3>
+<p>為了在硬體加速器上達到高吞吐量，我們將有效性檢查重新表述為向量化查找。關鍵是，我們維護一個轉移狀態向量 $\mathbf{n}_{t}\in\mathbb{Z}^{B\times M}$，為每個光束追蹤前綴樹中的目前節點索引。此外，我們採用以下最佳化方法。對於層數 $0\leq d&lt;L$，我們維護一個密集張量遮罩 $\mathbf{D}\in\mathbb{R}^{\overbrace{|\mathcal{V}|\times\cdots\times|\mathcal{V}|}^{d&gt;\text{times}}}$，精確指示限制詞表 $\mathcal{C}$ 中存在的 $d$ 長度前綴。此張量中的查找速度非常快，且 $\mathbf{D}$ 的構建是一次性固定成本；然而，由於 $|\mathcal{V}|^{d}$ 在 $d$ 中呈指數增長，在大多數情況下，$d\geq 3$ 時 $\mathbf{D}$ 的構建變得過於昂貴。因此，對於大多數實際使用情況，我們有 $d\leq 2$，並為較深層依賴稀疏 CSR 轉移矩陣。完整的順序受限解碼過程在演算法 1 中給出。我們的方法依賴多個硬體加速的操作：</p>
+<ul>
+<li>• $\textbf{LogSoftmax}(\mathbf{x})$：根據下列變換將原始邏輯轉換為正規化的對數概率：$\text{LogSoftmax}(\mathbf{x})<em>{i}=x</em>{i}-\log\sum_{j=1}^{|\mathcal{V}|}\exp(x_{j})$。</li>
+<li>• $\textbf{DenseLookup}(\mathbf{n}_{t-1},\mathbf{D},t-1)$：此原始操作在密集張量遮罩 $\mathbf{D}$ 上執行高效能查找，以識別每個光束的有效語義延伸。</li>
+<li>• $\textbf{VNTK}(\mathbf{n}<em>{t-1},\mathbf{T},t-1)$：向量化節點轉移核心（演算法 2）。它在稀疏轉移矩陣 $\mathbf{T}$ 上執行高效能查找，以識別每個光束的有效語義延伸。它將單個向量化傳遞中返回下一個節點 ID $\mathbf{n}</em>{next}$ 和密集對數概率遮罩 $\mathbf{m}$ 所需的推測切片和投影邏輯封裝在一起。詳見第 4.4 節。</li>
+<li>• $\textbf{Where}(\text{mask},\mathbf{x},\text{value})$：此條件運算符在對數概率空間中強制有效性約束。當遮罩 $\mathbf{m}$ 為假時，它通過將無效路徑的分數設為 $-\infty$ 來修剪無效路徑。</li>
+<li>• $\textbf{BeamSearch}(\mathbf{P}^{\prime}<em>{t},\mathbf{S}</em>{scores},M)$：一個選擇框架，在批次中識別 $M$ 個最可能的有效序列。它通過將新的遮罩對數概率 $\mathbf{P}^{\prime}<em>{t}$ 與現有前綴分數 $\mathbf{S}</em>{scores}$ 相結合來計算累積分數，並保留下一步的最佳候選。</li>
+<li>• $\textbf{Gather}(\mathbf{x},\text{indices})$：在狀態更新階段（第 4 階段）中使用的向量化選擇運算符。它從對應於表現最佳光束（$\mathbf{I}_{best}$）的候選池中提取特定的符號、分數和約束狀態。</li>
+</ul>
+<p>$\textbf{LogSoftmax}(\mathbf{x})$：根據下列變換將原始邏輯轉換為正規化的對數概率：$\text{LogSoftmax}(\mathbf{x})<em>{i}=x</em>{i}-\log\sum_{j=1}^{|\mathcal{V}|}\exp(x_{j})$。</p>
+<p>$\textbf{DenseLookup}(\mathbf{n}_{t-1},\mathbf{D},t-1)$：此原始操作在密集張量遮罩 $\mathbf{D}$ 上執行高效能查找，以識別每個光束的有效語義延伸。</p>
+<p>$\textbf{VNTK}(\mathbf{n}<em>{t-1},\mathbf{T},t-1)$：向量化節點轉移核心（演算法 2）。它在稀疏轉移矩陣 $\mathbf{T}$ 上執行高效能查找，以識別每個光束的有效語義延伸。它將單個向量化傳遞中返回下一個節點 ID $\mathbf{n}</em>{next}$ 和密集對數概率遮罩 $\mathbf{m}$ 所需的推測切片和投影邏輯封裝在一起。詳見第 4.4 節。</p>
+<p>$\textbf{Where}(\text{mask},\mathbf{x},\text{value})$：此條件運算符在對數概率空間中強制有效性約束。當遮罩 $\mathbf{m}$ 為假時，它通過將無效路徑的分數設為 $-\infty$ 來修剪無效路徑。</p>
+<p>$\textbf{BeamSearch}(\mathbf{P}^{\prime}<em>{t},\mathbf{S}</em>{scores},M)$：一個選擇框架，在批次中識別 $M$ 個最可能的有效序列。它通過將新的遮罩對數概率 $\mathbf{P}^{\prime}<em>{t}$ 與現有前綴分數 $\mathbf{S}</em>{scores}$ 相結合來計算累積分數，並保留下一步的最佳候選。</p>
+<p>$\textbf{Gather}(\mathbf{x},\text{indices})$：在狀態更新階段（第 4 階段）中使用的向量化選擇運算符。它從對應於表現最佳光束（$\mathbf{I}_{best}$）的候選池中提取特定的符號、分數和約束狀態。</p>
+<h3 id="44">4.4. 實現和硬體最佳化</h3>
+<p>雖然 STATIC 的理論表述保證正確性，但在現代加速器上達到可忽略不計的延遲開銷需要與底層硬體特性的嚴格對齐。在本節中，我們詳細說明向量化核心設計，該設計使我們的方法能夠跨越 TPU 和 GPU 進行移植。</p>
+<p>演算法 2 向量化節點轉換核心（VNTK）</p>
+<p>受限解碼中的核心工程挑戰是在硬體加速器的靜態執行模型中處理前綴樹的動態性質（其中節點具有不同數量的子節點）。標準的指標追蹤遍歷效率低下：在 TPU（XLA）上，動態分支會觸發昂貴的圖重新編譯或強制使用串行「while」迴圈，這會阻止硬體流水線；在 GPU 上，處理子節點數量不匹配的束會導致 GPU 執行緒發散，其中執行緒必須等待最長路徑完成，從而破壞 SIMT 平行性。</p>
+<p>為克服這些瓶頸，我們實現了無分支轉換核心（演算法 2）。對於高效切片，引入一些新定義變得至關重要。考慮對應於稀疏轉移矩陣 $\mathbf{T}$ 的前綴樹。對於樹在級別 $\ell$ 處的節點 $n$，讓子節點的數量為 $b^{\ell}<em>{n}$。鑑於樹有 $L$ 個級別，設 $\ell\in[L]$ 處所有節點的集合為 $N</em>{\ell}$，並定義向量 $\mathbf{B}\in\mathbb{R}^{L}$，使得 $\mathbf{B}<em>{\ell}=\max</em>{n\in N_{\ell}}b^{\ell}_{n}$。也就是說，$\mathbf{B}$ 是樹所展現的最大分支因子的級別索引向量。注意計算此向量是每個轉移矩陣 $\mathbf{T}$ 的一次性固定成本。我們的演算法將此向量作為輸入。此外，演算法 2 依賴於以下向量化原始操作：</p>
+<ul>
+<li>
+<p><strong>DynamicSlice</strong> $(\mathbf{M},\text{start},\text{len})$：從資料矩陣 $\mathbf{M}$ 從動態偏移量（$\text{start}$）開始提取固定長度 $\text{len}=\mathbf{B}_{t}$ 的連續子張量。回想解碼步驟 $t$ 與底層前綴樹中的級別 $\ell$ 是同義的。</p>
+</li>
+<li>
+<p><strong>Range</strong> $(\text{c})$：生成常數序列向量 $[0,\dots,c-1]$，用於對推測切片的子節點進行索引式遮罩和淨化。</p>
+</li>
+<li>
+<p><strong>Scatter</strong> $(\text{indices},\text{values})$：一個投影運算子，將有效標記的稀疏列表轉換為大小為 $|\mathcal{V}|$ 的稠密布林遮罩 $\mathbf{m}$。此遮罩直接應用於主解碼步驟中模型的對數機率，以強制執行前綴樹約束。</p>
+</li>
+</ul>
+<p>如第 2 階段所示，核心總是為任何給定的級別 $t$ 切片固定數量的項目 $\mathbf{B}<em>{t}$，無論實際的子節點計數如何。如果節點的子節點數少於 $\mathbf{B}</em>{t}$，我們使用 Range 生成的向量來建立布林遮罩 $\mathbf{m}_{\text{valid}}$ 並使用 Where 運算子來淨化結果。這確保 GPU/TPU 的算術單元保持完全飽和，並且整個解碼步驟保持單個靜態計算圖。我們在附錄 A 中討論我們方法的其他相關硬體考慮事項。我們也在附錄 D 中針對高最大分支因子對我們的方法進行基準測試，並展示沿此軸的線性擴展。重要的是，我們注意到對於足夠大的 $|\mathcal{V}|$ 和實際範圍的 $|\mathcal{C}|$，最大分支因子實際上將在後期層保持相當低，因為子節點的數量 $|\mathcal{V}|^{\ell}$ 隨級別 $\ell$ 呈指數增長，並快速超過約束集大小 $|\mathcal{C}|$。</p>
+<h2 id="5-youtube">5. YouTube 的大規模部署</h2>
+<p>通過在 YouTube 規模上測試 STATIC，我們尋求沿著對工業部署至關重要的三個維度評估 STATIC 演算法：</p>
+<ul>
+<li>(1) 系統效率：我們測量 TPU 加速器上的延遲和吞吐量，與基準線比較。</li>
+<li>(2) 可擴展性：我們分析儲存足跡和執行時間，當約束集合大小和詞彙表大小增加時。</li>
+<li>(3) 線上產品影響：我們量化在即時生產環境中應用受約束解碼所帶來的推薦品質和使用者滿意度的改進。</li>
+</ul>
+<p>系統效率：我們測量 TPU 加速器上的延遲和吞吐量，與基準線比較。</p>
+<p>可擴展性：我們分析儲存足跡和執行時間，當約束集合大小和詞彙表大小增加時。</p>
+<p>線上產品影響：我們量化在即時生產環境中應用受約束解碼所帶來的推薦品質和使用者滿意度的改進。</p>
+<h3 id="51">5.1. 實驗設置</h3>
+<p>我們在來自 YouTube 的大規模影片推薦語料庫上進行評估。影片被分詞為語義識別碼（SID）(Rajput et al., 2023)，具有 $L = 8$ 個離散標記和標記基數 $|\mathcal{V}| = 2048$。可推薦的總語料庫數量級約為 100 百萬到 1 十億項，未受約束的模型可以從該集合推薦任何項。我們將 $d = 2$ 固定為演算法 1 的輸入，並維護稠密張量遮罩 $\mathbf{D}\in\mathbb{R}^{2048\times 2048}$ 以進行早期查詢；我們對後續層級使用 CSR 稀疏矩陣表示。</p>
+<p>該模型是基於 Gemini 的生成檢索模型，類似於 PLUM (He et al., 2025)，批次大小為 2（每晶片）和波束大小為 $M = 70$。該模型基於非混合專家(MoE)架構，具有 30 億個稠密參數。所有基準測試實驗都在 Google TPU v6e 加速器上進行。</p>
+<p>表 1. 在擁有 $\mathbf{20}$ 百萬受約束詞彙表項的大規模影片推薦語料庫上每個解碼步驟的延遲開銷。STATIC（我們的方法）相對於基準線實現最少的延遲開銷。</p>
+<h3 id="52">5.2. 系統效率分析</h3>
+<p>我們限制注意力集中在受限詞彙（目標集合）上，其中包含約 20 百萬個高品質項目的「新鮮影片」子集，這些項目在實驗日期前的最後 7 天內上傳。此設置代表受限解碼的受限環境：有效子集稀疏，但足夠大（20 百萬項目），使得天真列舉不可行。</p>
+<p>我們將 STATIC 方法與學術文獻和生產系統中常見的幾種不同實現進行比較：</p>
+<ul>
+<li>(1) 無約束：標準 beam search，無有效性檢查。這代表延遲的下界。</li>
+<li>(2) CPU Trie：使用 JAX 的 PyTree 資料結構（Python 字典）儲存在 CPU 記憶體中的標準前綴樹。在每個解碼步驟，TPU 暫停、將部分 beam 發送到 CPU、等待有效性遮罩，然後繼續。</li>
+<li>(3) PPV Exact (Ye et al. , 2025 ) ：遵循 Ye et al. ( 2025 ) ，我們在 TPU 上將有效 SID 儲存在排序的扁平陣列中，並執行二進位搜尋以驗證每個候選擴展。在原始論文中，作者在每個解碼步驟僅考慮詞彙的前 50 個 logit。對於具有較大展開度的 beam search，這不是最優的，因為受約束集合項目經常落在前 50 個 logit 之外。因此，在此基線中，我們使用所有 2048 個 logit 的 PPV 方法。這產生精確解，但由於 PPV 關於 logit 數量的線性擴展，顯著慢於下面的 PPV Approximate。</li>
+<li>(4) PPV Approximate (Ye et al. , 2025 ) ：如上所述，我們對排序的扁平 SID 陣列執行二進位搜尋以進行每個候選擴展；但是，如原始論文所述，此基線在每個解碼步驟僅驗證前 50 個 logit。由於上述原因，這僅產生近似解，且無法直接與 STATIC 比較。</li>
+<li>(5) Hash Bitmap：一種 Bloom-filter (Bloom, 1970 ) 風格的方法，其中對有效前綴進行雜湊。此方法引入假正（在我們的表 1 評估中具有不可忽視的 2.1% 假正率），因此無法直接與 STATIC 比較，但可用作參考。</li>
+</ul>
+<p>無約束：標準 beam search，無有效性檢查。這代表延遲的下界。</p>
+<p>CPU Trie：使用 JAX 的 PyTree 資料結構（Python 字典）儲存在 CPU 記憶體中的標準前綴樹。在每個解碼步驟，TPU 暫停、將部分 beam 發送到 CPU、等待有效性遮罩，然後繼續。</p>
+<p>PPV Exact (Ye et al. , 2025 ) ：遵循 Ye et al. ( 2025 ) ，我們在 TPU 上將有效 SID 儲存在排序的扁平陣列中，並執行二進位搜尋以驗證每個候選擴展。在原始論文中，作者在每個解碼步驟僅考慮詞彙的前 50 個 logit。對於具有較大展開度的 beam search，這不是最優的，因為受約束集合項目經常落在前 50 個 logit 之外。因此，在此基線中，我們使用所有 2048 個 logit 的 PPV 方法。這產生精確解，但由於 PPV 關於 logit 數量的線性擴展，顯著慢於下面的 PPV Approximate。</p>
+<p>PPV Approximate (Ye et al. , 2025 ) ：如上所述，我們對排序的扁平 SID 陣列執行二進位搜尋以進行每個候選擴展；但是，如原始論文所述，此基線在每個解碼步驟僅驗證前 50 個 logit。由於上述原因，這僅產生近似解，且無法直接與 STATIC 比較。</p>
+<p>Hash Bitmap：一種 Bloom-filter (Bloom, 1970 ) 風格的方法，其中對有效前綴進行雜湊。此方法引入假正（在我們的表 1 評估中具有不可忽視的 2.1% 假正率），因此無法直接與 STATIC 比較，但可用作參考。</p>
+<p>我們測量了每個解碼步驟的約束強制邏輯的延遲，並在表 1 中總結了結果，其中我們給出了 100 次試驗的平均值。我們的 STATIC 方法實現了每個解碼步驟 + 0.033 ms 的延遲開銷，僅佔 30 億參數模型推論時間的 0.25 %。相比之下，「CPU Trie」方法由於 PCIe 傳輸開銷和 TPU 與 CPU 之間的同步鎖而產生大量損失（31.3 ms，比 STATIC 高 948 ×）。至關重要的是，我們超越「PPV Exact」基線 1033 × 倍（34.1 ms vs. 0.033 ms），甚至「PPV Approximate」基線 47 × 倍（1.56 ms vs. 0.033 ms）。雖然 PPV 的二進位搜尋在技術上是「裝置上」且向量化的，但它在關於約束集合大小 $|\mathcal{C}|$ 的 I/O 複雜度上受到對數擴展（以及關於考慮的 logit 數量的線性擴展），而 STATIC 使用單遍 VNTK 核心（演算法 2）將 I/O 複雜度降低至 $O(1)$。</p>
+<h3 id="53">5.3. 可擴展性</h3>
+<p>雖然對整個 Semantic ID 空間進行天真的布林遮罩會達到 PB 級別的大小，但我們的 STATIC 方法在此設定下每 100 萬個受限詞彙項目僅需要約 90 90 MB 的記憶體。也就是說，對於我們測試的 2000 2000 萬項目的受限詞彙，我們預期最大 HBM 使用量約為 ≈ 1.8 \approx 1.8 GB，通過附錄 B 中的分析，我們可以進一步將其緊化至 ≈ 1.5 \approx 1.5 GB。在實踐中，所需的記憶體通常 ≤ 75 % \leq 75\% 不超過此上限。我們在附錄 B 中詳細闡述了推導過程以及為什麼會如此。關鍵要點是記憶體使用量直接與密集張量遮罩 𝐃 \mathbf{D} 的儲存以及稀疏 CSR 矩陣有關，而這又與底層 trie 中的節點數量相關。給定詞彙表大小 | 𝒱 | |\mathcal{V}| 、Semantic ID 長度 L L 、密集層數 d d 、約束條件數量 | 𝒞 | |\mathcal{C}| 、每個節點的儲存成本 K 1 K_{1} 位元組，以及每個密集狀態的儲存成本 K 2 K_{2} 位元組，記憶體使用量的上界（以位元組計）由下式給出：</p>
+<p>|  | U max ​ ( K 1 , K 2 , | 𝒱 | , | 𝒞 | , L , d ) = ( 1 8 + K 2 ) ​ | 𝒱 | d + K 1 ⋅ ∑ ℓ = d + 1 L min ⁡ ( | 𝒱 | ℓ , | 𝒞 | ) U_{\text{max}}(K_{1},K_{2},|\mathcal{V}|,|\mathcal{C}|,L,d)=\left(\frac{1}{8}+K_{2}\right)|\mathcal{V}|^{d}+K_{1}\cdot\sum_{\ell=d+1}^{L}\min(|\mathcal{V}|^{\ell},|\mathcal{C}|) |  |
+| --- | --- | --- |</p>
+<p>此外，STATIC 的時間複雜度相對於約束條件集合大小呈對數規律縮放，並在測量的所有基準線中相對於全範圍的 | 𝒞 | |\mathcal{C}| 保持低延遲。圖 2 給出了與表 1 基準線的直接比較，其中我們均勻隨機生成約束條件集合，固定 | 𝒱 | = 2048 |\mathcal{V}|=2048 、L = 8 L=8，並僅改變 | 𝒞 | |\mathcal{C}| 從 10 5 10^{5} 到 10 8 10^{8}。100 100 次試驗的平均值已繪製，陰影區域表示高於和低於平均值一個標準差的範圍 2 2 2 由於記憶體不足錯誤，| 𝒞 | = 10 8 |\mathcal{C}|=10^{8} 時 CPU Trie 的數據點遺失。 。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.22647/x2.png" loading="lazy"></figure> 圖 2. 不同約束條件解碼方法相對於約束條件集合大小的縮放情況（對數-對數規律），固定 | 𝒱 | = 2048 |\mathcal{V}|=2048。STATIC 明顯優於現有方法。</p>
+<p>此外，STATIC 相對於 SID 詞彙表大小 | 𝒱 | |\mathcal{V}| 展現出幾乎恆定的延遲，如圖 3 所示，其中我們如上所述均勻隨機生成約束條件集合，固定 | 𝒞 | = 10 7 |\mathcal{C}|=10^{7} 、L = 8 L=8，並僅改變 | 𝒱 | |\mathcal{V}| 從 256 到 32k。從理論上講，純稀疏矩陣查詢的縮放與最大分支因子有關（如演算法 2 所示），其在溫和假設下的平均值與 | 𝒱 | |\mathcal{V}| 呈線性關係。然而，由於我們在高度飽和的前 d = 2 d=2 層採用密集遮罩且 O ​ ( 1 ) O(1) 查詢複雜度，稀疏查詢僅發生在具有小常數最大分支因子的後續層中。因此，STATIC 相對於 | 𝒱 | |\mathcal{V}| 展現出幾乎恆定的縮放。在截至 2025 2025 年的幾乎所有生產系統中（He et al. , 2025 ; Zhou et al. , 2025a），| 𝒱 | ≤ 8192 |\mathcal{V}|\leq 8192，這意味著 STATIC 在所有當前實際應用設定中都展現出一致的低延遲。圖 2 和圖 3 的確切數字見附錄 C。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.22647/x3.png" loading="lazy"></figure> 圖 3. 不同約束條件解碼方法相對於 SID 詞彙表大小 | 𝒱 | |\mathcal{V}| 的縮放情況（對數-對數規律），在 | 𝒞 | = 10 7 |\mathcal{C}|=10^{7} 時。STATIC 在所有測試的 SID 詞彙表大小上都表現優異。</p>
+<h3 id="54-ab">5.4. 線上 A/B 測試</h3>
+<p>我們在 YouTube 生態系中的多個使用案例部署了支援 STATIC 的基於 PLUM 的生成式檢索模型。在一個設定中，我們將其用作短影片產品「首頁推薦」的額外候選來源，並帶有「最近 7 天」新鮮度約束，並進行 A/B 實驗來衡量影響。結果如表 2 所示。</p>
+<p>如預期所示，STATIC 達到 100% 遵守指定約束。不具備此約束的標準生成式檢索模型會頻繁生成較舊影片的 SID，而 STATIC 模型則嚴格產生有效的 7 天新鮮影片。</p>
+<p>我們觀察到新鮮內容消費的顯著增加：如表 2 所示，7 天新鮮影片觀看次數增加 +5.1% 且 3 天新鮮影片觀看次數增加 +2.9%。</p>
+<p>此外，我們觀察到用戶體驗指標的正面影響：點擊率（CTR）增加 +0.15%，策略性用戶區段的用戶滿意度增加 +0.15。這是一項顯著改進，並展示了推薦更多高品質新鮮影片的正面影響。</p>
+<p>表 2. 帶有「最近 7 天」新鮮度約束的「首頁推薦」影響的線上 A/B 測試結果。</p>
+<h2 id="6-amazon">6. Amazon 評論資料集上的冷啟動檢索</h2>
+<p>生成式檢索的一個長期缺點是其無法泛化至冷啟動項目（Yang et al., 2024）。在此，我們展示如何在冷啟動項目集上使用受約束解碼來大幅改進冷啟動效能。我們使用 Amazon Reviews（He and McAuley, 2016）資料集來展示一個可行的設定及相關的優勢。</p>
+<h3 id="61">6.1. 實驗設定</h3>
+<p>Amazon 項目透過訓練單獨的 RQ-VAE（Rajput et al., 2023）模型被量化為語義 ID（SID），以分別量化每個 Amazon Reviews 子資料集的項目，使用 $L = 4$ 個離散符號和符號基數 $|\mathcal{V}| = 256$。每個子資料集的有效項目語料庫包含從 10 到 20 千個項目，而無約束模型可以推薦此語料庫中的任何項目。</p>
+<p>我們基於 Gemma（Kamath et al., 2025）架構在來自每個 Amazon 子資料集的序列上訓練單獨的生成式檢索模型，具有 10 億個稠密參數，以批次大小 16 和光束大小 $M = 20$ 提供。所有實驗都在 Google TPU v6e 上進行。</p>
+<h3 id="62">6.2. 冷啟動結果</h3>
+<p>我們以下列方式進行冷啟動實驗。對於給定的 Amazon 商品，我們通過其最舊評論的年齡來定義其「年齡」。隨後，對於每個 Amazon 子資料集，我們將最新的 2% 2\% （以及分別地，5% 5\% ）的商品隔離到冷啟動集合中。我們過濾掉所有不包含此集合中任何商品的商品序列，並在這些「無冷啟動訓練序列」上訓練模型。我們在「冷啟動測試序列」集合上評估模型，該集合包含以冷啟動商品為目標的序列。我們測試了以下檢索方法：</p>
+<ul>
+<li>(1) 無約束：沒有有效性檢查的波束搜尋。</li>
+<li>(2) 約束隨機猜測：一種基準方法，從約束集合中均勻隨機地猜測商品。</li>
+<li>(3) STATIC（我們的方法）：我們提出的方法，其中模型從 Transformer 解碼，同時在每一步都限制在冷啟動商品集合內。</li>
+</ul>
+<p>無約束：沒有有效性檢查的波束搜尋。</p>
+<p>約束隨機猜測：一種基準方法，從約束集合中均勻隨機地猜測商品。</p>
+<p>STATIC（我們的方法）：我們提出的方法，其中模型從 Transformer 解碼，同時在每一步都限制在冷啟動商品集合內。</p>
+<p>表 3 顯示了「冷啟動測試序列」的 Recall@1 指標。在 2% 2\% 和 5% 5\% 冷啟動設定中，STATIC 都大幅改進了無約束和約束隨機猜測方法，表明僅使用約束解碼就可以通過生成式檢索實現非平凡的冷啟動性能。</p>
+<p>表 3. Amazon 冷啟動商品的無約束和約束解碼性能比較。所有給定的值均為 Recall@1 百分比。</p>
+<h2 id="7">7. 結論</h2>
+<p>生成式檢索承諾利用 LLM 在眾多真實場景中提供下一代推薦服務，但其在業界的採用受到了缺乏可控輸出空間的阻礙。在本研究中，我們橋接了前綴樹基礎約束與向量型硬體（TPU/GPU）之間的差距。關於 trie 約束解碼，Ye et al.（2025）的作者聲稱：「是否存在高效的 GPU trie 演算法仍待[確認]」。我們通過本論文的貢獻以肯定的答案回應了這個假設。STATIC 框架將指標追蹤 trie 查詢轉換為向量化稀疏矩陣運算，相比其他裝置上的替代方法達到了 47–1033 × 的加速倍數。我們在為數十億用戶提供服務的生產環境中展示了該方法的有效性，證明嚴格的約束可以在規模上得以施行而不會損害服務延遲。此外，我們在 Amazon Reviews（He and McAuley, 2016）資料集上展示了單靠約束解碼改善冷啟動效能的可行性。</p>
+<p><strong>未來工作</strong>。目前稀疏轉移矩陣的構造是一個離線程序。一個重要的未來擴展方向是開發動態稀疏更新，這將允許實時庫存變化而無需完整的模型重新編譯。</p>
+<h2 id="_1">參考文獻</h2>
+<ul>
+<li>J. Aoe (1989) 使用雙陣列結構的高效數位搜尋演算法。IEEE Trans. Software Eng. 15，頁 1066–1077。External Links: Link Cited by: §2.4。</li>
+<li>B. H. Bloom (1970) 雜湊編碼中的空間/時間權衡與允許誤差。Commun. ACM 13，頁 422–426。External Links: Link Cited by: item 5。</li>
+<li>J. Bradbury, R. Frostig, P. Hawkins, M. J. Johnson, C. Leary, D. Maclaurin, G. Necula, A. Paszke, J. VanderPlas, S. Wanderman-Milne, and Q. Zhang (2018) JAX: composable transformations of Python+NumPy programs。External Links: Link Cited by: Appendix E。</li>
+<li>P. Covington, J. K. Adams, and E. Sargin (2016) YouTube 推薦的深度神經網路。第 10 屆 ACM 推薦系統會議論文集。External Links: Link Cited by: §1。</li>
+<li>T. Dao, D. Y. Fu, S. Ermon, A. Rudra, and C. Ré (2022) FlashAttention: 具有 IO 感知能力的快速且記憶體高效的精確注意機制。ArXiv abs/2205.14135。External Links: Link Cited by: §2.3、§2.3。</li>
+<li>J. Deng, S. Wang, K. Cai, L. Ren, Q. Hu, W. Ding, Q. Luo, and G. Zhou (2025) OneRec: 統一檢索和排名與生成式推薦和迭代偏好對齊。ArXiv abs/2502.18965。External Links: Link Cited by: §1、§1、§2.1。</li>
+<li>M. Freitag and Y. Al-Onaizan (2017) 神經機器翻譯的光束搜尋策略。In NMT@ACL。External Links: Link Cited by: §3.2。</li>
+<li>R. Guo, P. Sun, E. M. Lindgren, Q. Geng, D. Simcha, F. Chern, and S. Kumar (2019) 利用異向向量量化加速大規模推理。In International Conference on Machine Learning。External Links: Link Cited by: §1、§1、§2。</li>
+<li>R. He, L. Heldt, L. Hong, R. Keshavan, S. Mao, N. Mehta, Z. Su, A. Y. Tsai, Y. Wang, S. Wang, X. Yi, L. Baugher, B. Cakici, E. H. Chi, C. Goodrow, N. Han, H. Ma, R. Rosales, A. V. Soest, D. Tandon, S. Wu, W. Yang, and Y. Zheng (2025) PLUM: 調適工業規模生成式推薦的預訓練語言模型。ArXiv abs/2510.07784。External Links: Link Cited by: §B.2、§1、§1、§2.1、§5.1、§5.3。</li>
+<li>R. He and J. McAuley (2016) 上升和下降: 使用單分類協同過濾對時尚趨勢視覺演變的建模。第 25 屆國際萬維網會議論文集。External Links: Link Cited by: item (v)、§6、§7。</li>
+<li>J. Heek, A. Levskaya, A. Oliver, M. Ritter, B. Rondepierre, A. Steiner, and M. van Zee (2024) Flax: 用於 JAX 的神經網路程式庫和生態系統。External Links: Link Cited by: Appendix E。</li>
+<li>J. Hong and H. T. Kung (1981) 輸入輸出複雜度: 紅藍鵝卵石遊戲。In Symposium on the Theory of Computing。External Links: Link Cited by: footnote 1。</li>
+<li>N. P. Jouppi, C. Young, N. Patil, D. A. Patterson, G. Agrawal, R. Bajwa, S. Bates, S. Bhatia, N. Boden, A. Borchers, R. Boyle, P. Cantin, C. Chao, C. Clark, J. Coriell, M. Daley, M. Dau, J. Dean, B. Gelb, T. Ghaemmaghami, R. Gottipati, W. Gulland, R. Hagmann, C. R. Ho, D. Hogberg, J. Hu, R. Hundt, D. Hurt, J. Ibarz, A. Jaffey, A. Jaworski, A. Kaplan, H. Khaitan, D. Killebrew, A. Koch, N. Kumar, S. Lacy, J. Laudon, J. Law, D. Le, C. Leary, Z. Liu, K. Lucke, A. Lundin, G. MacKean, A. Maggiore, M. Mahony, K. Miller, R. Nagarajan, R. Narayanaswami, R. Ni, K. Nix, T. Norrie, M. Omernick, N. Penukonda, A. Phelps, J. Ross, M. Ross, A. Salek, E. Samadiani, C. Severn, G. Sizikov, M. Snelham, J. Souter, D. Steinberg, A. Swing, M. Tan, G. Thorson, B. Tian, H. Toma, E. Tuttle, V. Vasudevan, R. Walter, W. Wang, E. Wilcox, and D. H. Yoon (2017) 張量處理單元的資料中心性能分析。2017 ACM/IEEE 第 44 屆年度國際計算機架構研討會論文集 (ISCA)，頁 1–12。External Links: Link Cited by: item 1。</li>
+<li>C. M. Ju, L. Collins, L. Neves, B. Kumar, L. Y. Wang, T. Zhao, and N. Shah (2025) 使用語義識別碼的生成式推薦: 實踐者手冊。In Proceedings of the 34th ACM International Conference on Information and Knowledge Management，CIKM '25，頁 6420–6425。External Links: ISBN 9798400720406，Link，Document Cited by: §2.1。</li>
+<li>G. T. A. Kamath, J. Ferret, S. Pathak, N. Vieillard, R. Merhej, S. Perrin, T. Matejovicova, A. Ram'e, M. Rivière, L. Rouillard, T. Mesnard, G. Cideron, J. Grill, S. Ramos, E. Yvinec, M. Casbon, E. Pot, I. Penchev, G. Liu, F. Visin, K. Kenealy, L. Beyer, X. Zhai, A. Tsitsulin, R. I. Busa-Fekete, A. Feng, N. Sachdeva, B. Coleman, Y. Gao, B. Mustafa, I. Barr, E. Parisotto, D. Tian, M. Eyal, C. Cherry, J. Peter, D. Sinopalnikov, S. Bhupatiraju, R. Agarwal, M. Kazemi, D. Malkin, R. Kumar, D. Vilar, I. Brusilovsky, J. Luo, A. Steiner, A. Friesen, A. Sharma, A. Sharma, A. M. Gilady, A. Goedeckemeyer, A. Saade, A. Kolesnikov, A. Bendebury, A. Abdagic, A. Vadi, A. Gyorgy, A. S. Pinto, A. Das, A. Bapna, A. Miech, A. Yang, A. Paterson, A. Shenoy, A. Chakrabarti, B. Piot, B. Wu, B. Shahriari, B. Petrini, C. Chen, C. L. Lan, C. A. Choquette-Choo, C. Carey, C. Brick, D. Deutsch, D. Eisenbud, D. Cattle, D. Cheng, D. Paparas, D. S. Sreepathihalli, D. Reid, D. Tran, D. Zelle, E. Noland, E. Huizenga, E. Kharitonov, F. Liu, G. Amirkhanyan, G. Cameron, H. Hashemi, H. Klimczak-Pluci'nska, H. Singh, H. Mehta, H. T. Lehri, H. Hazimeh, I. Ballantyne, I. Szpektor, I. Nardini, J. Pouget-Abadie, J. Chan, J. Stanton, J. M. Wieting, J. Lai, J. Orbay, J. Fernandez, J. Newlan, J. Ji, J. Singh, K. Black, K. Yu, K. Hui, K. Vodrahalli, K. Greff, L. Qiu, M. Valentine, M. Coelho, M. Ritter, M. Hoffman, M. Watson, M. Chaturvedi, M. Moynihan, M. Ma, N. Babar, N. Noy, N. Byrd, N. Roy, N. Momchev, N. Chauhan, O. Bunyan, P. Botarda, P. Caron, P. K. Rubenstein, P. Culliton, P. Schmid, P. G. Sessa, P. Xu, P. Stańczyk, P. D. Tafti, R. Shivanna, R. Wu, R. Pan, R. A. Rokni, R. Willoughby, R. Vallu, R. Mullins, S. Jerome, S. Smoot, S. Girgin, S. Iqbal, S. Reddy, S. Sheth, S. Põder, S. Bhatnagar, S. R. Panyam, S. Eiger, S. Zhang, T. Liu, T. Yacovone, T. Liechty, U. Kalra, U. Evci, V. Misra, V. Roseberry, V. Feinberg, V. Kolesnikov, W. Han, W. Kwon, X. Chen, Y. Chow, Y. Zhu, Z. Wei, Z. Egyed, V. Cotruta, M. Giang, P. Kirk, A. Rao, J. Lo, E. Moreira, L. G. Martins, O. Sanseviero, L. Gonzalez, Z. Gleicher, T. Warkentin, V. S. Mirrokni, E. Senter, E. Collins, J. Barral, Z. Ghahramani, R. Hadsell, Y. Matias, D. Sculley, S. Petrov, N. Fiedel, N. Shazeer, O. Vinyals, J. Dean, D. Hassabis, K. Kavukcuoglu, C. Farabet, E. Buchatskaya, J. Alayrac, R. Anil, D. Lepikhin, S. Borgeaud, O. Bachem, A. Joulin, A. Andreev, C. Hardin, R. Dadashi, and L. Hussenot (2025) Gemma 3 技術報告。ArXiv abs/2503.19786。External Links: Link Cited by: §6.1。</li>
+<li>J. Kepner, P. Aaltonen, D. A. Bader, A. Buluç, F. Franchetti, J. R. Gilbert, D. Hutchison, M. Kumar, A. Lumsdaine, H. Meyerhenke, S. McMillan, C. Yang, J. D. Owens, M. Zalewski, T. G. Mattson, and J. E. Moreira (2016) GraphBLAS 的數學基礎。2016 IEEE 高效能極限計算會議論文集 (HPEC)，頁 1–9。External Links: Link Cited by: §2.4。</li>
+<li>T. Koo, F. Liu, and L. He (2024) 基於自動機的語言模型解碼約束。ArXiv abs/2407.08103。External Links: Link Cited by: §1、§2.2。</li>
+<li>M. Li, Y. Liu, X. Liu, Q. Sun, X. You, H. Yang, Z. Luan, and D. Qian (2020) 深度學習編譯器: 全面調查。IEEE Transactions on Parallel and Distributed Systems 32，頁 708–727。External Links: Link Cited by: item 2。</li>
+<li>H. Liao, J. Zhang, J. Lian, W. Lu, M. Wu, S. Wang, Y. Zhang, Y. Huang, M. Zhou, and R. Mao (2025) 消除基於 LLM 的推薦系統中的域外推薦: 統一視角。External Links: Link Cited by: §2.3。</li>
+<li>G. Linden, B. Smith, and J. York (2003) Amazon.com 推薦: 項目到項目協同過濾。IEEE Internet Comput. 7，頁 76–80。External Links: Link Cited by: §1。</li>
+<li>Z. Liu, S. Wang, X. Wang, R. Zhang, J. Deng, H. Bao, J. Zhang, W. Li, P. Zheng, X. Wu, Y. Hu, Q. Hu, X. Luo, L. Ren, Z. Zhang, Q. Wang, K. Cai, Y. Wu, H. Cheng, Z. Cheng, L. Ren, H. Wang, Y. Su, R. Tang, K. Gai, and G. Zhou (2025) OneRec-think: 生成式推薦的文本內推理。ArXiv abs/2510.11639。External Links: Link Cited by: §1、§2.1。</li>
+<li>X. Lu, S. Welleck, P. West, L. Jiang, J. Kasai, D. Khashabi, R. L. Bras, L. Qin, Y. Yu, R. Zellers, N. A. Smith, and Y. Choi (2021) NeuroLogic A* 式解碼: 具有前瞻啟發式的受約束文本生成。In North American Chapter of the Association for Computational Linguistics。External Links: Link Cited by: §2.2。</li>
+<li>G. Poesia, O. Polozov, V. Le, A. Tiwari, G. Soares, C. Meek, and S. Gulwani (2022) Synchromesh: 來自預訓練語言模型的可靠程式碼生成。ArXiv abs/2201.11227。External Links: Link Cited by: §2.2。</li>
+<li>S. Rajput, N. Mehta, A. Singh, R. H. Keshavan, T. H. Vu, L. Heldt, L. Hong, Y. Tay, V. Q. Tran, J. Samost, M. Kula, E. H. Chi, and M. Sathiamoorthy (2023) 具有生成式檢索的推薦系統。ArXiv abs/2305.05065。External Links: Link Cited by: §1、§1、§2.1、§2、§3.1、§5.1、§6.1。</li>
+<li>A. Sabne (2020) XLA: 為最優效能編譯機器學習。Cited by: item 2。</li>
+<li>Z. Si, Z. Sun, J. Chen, G. Chen, X. Zang, K. Zheng, Y. Song, X. Zhang, and J. Xu (2023) 具有語義樹狀結構識別碼和對比學習的生成式檢索。2024 年亞太地區資訊檢索年度國際 ACM SIGIR 會議論文集。External Links: Link Cited by: §1、§2.1。</li>
+<li>P. Sun, D. Simcha, D. Dopson, R. Guo, and S. Kumar (2024) SOAR: 改進的近似最近鄰搜尋索引。ArXiv abs/2404.00774。External Links: Link Cited by: §1。</li>
+<li>Y. Tay, V. Q. Tran, M. Dehghani, J. Ni, D. Bahri, H. Mehta, Z. Qin, K. Hui, Z. Zhao, J. Gupta, T. Schuster, W. W. Cohen, and D. Metzler (2022) Transformer 記憶體作為可微分搜尋索引。ArXiv abs/2202.06991。External Links: Link Cited by: §2.1。</li>
+<li>A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, L. Kaiser, and I. Polosukhin (2017) Attention is all you need。In Neural Information Processing Systems。External Links: Link Cited by: §1。</li>
+<li>O. Weller, M. Boratko, I. Naim, and J. Lee (2026) 關於基於嵌入檢索的理論限制。In The Fourteenth International Conference on Learning Representations。External Links: Link Cited by: §1。</li>
+<li>L. Yang, F. Paischer, K. Hassani, J. Li, S. Shao, Z. G. Li, Y. He, X. Feng, N. Noorshams, S. Park, B. Long, R. Nowak, X. Gao, and H. Eghbalzadeh (2024) 統一生成式和密集檢索用於序列推薦。Trans. Mach. Learn. Res. 2025。External Links: Link Cited by: §1、§2.1、§2.1、§6。</li>
+<li>H. Ye, H. Jain, C. You, A. T. Suresh, H. Lin, J. Zou, and F. X. Yu (2025) 大型語言模型的高效且漸近無偏約束解碼。ArXiv abs/2504.09135。External Links: Link Cited by: §1、§1、§2.3、item 3、item 3、item 4、Table 1、Table 1、§7。</li>
+<li>G. Zhou, H. Bao, J. Huang, J. Deng, J. Zhang, J. She, K. Cai, L. Ren, L. Ren, Q. Luo, Q. Wang, Q. Hu, R. Zhang, R. Tang, S. Wang, W. Li, X. Wu, X. Luo, X. Wang, Y. Hu, Y. Wu, Z. Liu, Z. Zhang, Z. Zhang, B. Chen, B. Wen, C. Ma, C. Song, C. Chu, D. Lian, F. Yang, F. Jiang, H. Cheng, H. Wang, K. Gai, P. Zheng, Q. Wang, R. Huang, S. Mao, T. Gao, W. Yuan, Y. Wang, Y. Zhou, Y. Su, Z. Cheng, Z. Ling, and Z. Li (2026) OpenOneRec 技術報告。External Links: 2512.24762，Link Cited by: §1。</li>
+<li>G. Zhou, J. Deng, J. Zhang, K. Cai, L. Ren, Q. Luo, Q. Wang, Q. Hu, R. Huang, S. Wang, W. Ding, W. Li, X. Luo, X. Wang, Z. Cheng, Z. Zhang, B. Zhang, B. Wang, C. Ma, C. Song, C. Wang, D. Wang, D. Meng, F. Yang, F. Zhang, F. Jiang, F. Zhang, G. Wang, G. Zhang, H. Li, H. Hu, H. Lin, H. Cheng, H. Cao, H. Wang, J. Huang, J. Chen, J. Liu, J. Jia, K. Gai, L. Hu, L. Zeng, L. Yu, Q. Wang, Q. Zhou, S. Wang, S. He, S. Yang, S. Yang, S. Huang, T. Wu, T. He, T. Gao, W. Yuan, X. Liang, X. Xu, X. Liu, Y. Wang, Y. Wang, Y. Liu, Y. Song, Y. Zhang, Y. Wu, Y. Zhao, and Z. Liu (2025a) OneRec 技術報告。ArXiv abs/2506.13695。External Links: Link Cited by: §1、§2.1、§5.3。</li>
+<li>G. Zhou, H. Hu, H. Cheng, H. Wang, J. Deng, J. Zhang, K. Cai, L. Ren, L. Ren, L. Yu, P. Zheng, Q. Luo, Q. Wang, Q. Hu, R. Huang, R. Tang, S. Wang, S. Yang, T. Wu, W. Li, X. LuO, X. Wang, Y. Su, Y. Wu, Z. Cheng, Z. Liu, Z. Zhang, B. Zhang, B. Wang, C. Ma, C. Song, C. Wang, C. Chu, D. Wang, D. Meng, D. Zang, F. Yang, F. Zhang, F. Jiang, F. Zhang, G. Wang, G. Zhang, H. Li, H. Bao, H. Cao, J. Huang, J. Chen, J. Liu, J. Jia, K. Gai, L. Hu, L. Zeng, Q. Wang, Q. Zhou, R. Zhang, S. Wang, S. He, S. Yang, S. Mao, S. Huang, T. He, T. Gao, W. Yuan, X. Liang, X. Xu, X. Liu, Y. Wang, Y. Zhou, Y. Wang, Y. Liu, Y. Song, Y. Zhang, Y. Zhao, Z. Ling, and Z. Li (2025b) OneRec-v2 技術報告。ArXiv abs/2508.20900。External Links: Link Cited by: §1、§2.1。</li>
+</ul>
+<p>附錄</p>
+<h2 id="appendix-a-hardware-optimization-a-detailed-discussion">Appendix A Hardware Optimization: A Detailed Discussion</h2>
+<p>We shall now discuss some of the additional hardware-related details of our constrained decoding implementation.</p>
+<h3 id="a1-jit">A.1. JIT 編譯挑戰與資料結構</h3>
+<p>XLA（加速線性代數）編譯器（用於 TPU）的一個獨特限制是張量的靜態形狀要求。編譯器必須在編譯時知道所有張量的確切維度，才能生成最佳化的融合核心。標準的 trie 遍歷本質上是動態的：節點 A A 可能有 2 2 個子節點，而節點 B B 可能有 1000 1000 個。在 CPU 環境中，人們會簡單地配置動態向量。在 XLA 中使用動態向量追蹤指標會觸發編譯錯誤「ConcretizationTypeError」，表示遇到了抽象追蹤器值而預期是具體值。</p>
+<p>我們的向量化節點轉移核心（VNTK）（Algorithm 2）透過將動態遍歷轉換為靜態蒐集操作來解決此問題。與其處理可變數量的子節點，我們精確處理 B ℓ B_{\ell}，其中此值是第 ℓ \ell 層的最大分支因子（如第 4 節所定義）。然後我們使用向量化的 Gather 操作（例如，具有 mode='fill' 的 jnp.take）為每個光束並行地準確取得 𝐁 ℓ \mathbf{B}_{\ell} 個潛在轉移。</p>
+<p>為了處理具有 N c ​ h ​ i ​ l ​ d &lt; 𝐁 ℓ N_{child}&lt;\mathbf{B}_{\ell} 個子節點的節點，我們動態計算一個有效性遮罩：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>m v ​ a ​ l ​ i ​ d = Range ​ ( 𝐁 ℓ ) &lt; N c ​ h ​ i ​ l ​ d m_{valid}=\text{Range}(\mathbf{B}<em>{\ell})&lt;N</em>{child}</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>然後我們使用此布林遮罩在分數計算中清除無效項目。此轉換將動態控制流問題（「迴圈 N N 次」）轉換為靜態資料流問題（「蒐集固定 𝐁 ℓ \mathbf{B}_{\ell} 個元素並遮罩」）。這確保整個解碼步驟保持為單一、靜態的 XLA 圖，在 TPU 脈動陣列上啟用完整迴圈展開和管線化。</p>
+<h4 id="a11-csr">A.1.1. 堆疊 CSR 配置</h4>
+<p>為了進一步最小化 VNTK 內的記憶體存取延遲，我們採用堆疊 CSR 記憶體配置。在標準的壓縮稀疏列（CSR）格式中，欄位索引和資料值（下一狀態指標）儲存在不同的陣列中，通常每次轉移需要兩次不同的記憶體提取。在 STATIC 中，我們將這些交錯到單一的 ( N e ​ d ​ g ​ e ​ s , 2 ) (N_{edges},2) 張量中。此對齊允許加速器合併讀取，在單一記憶體事務中同時檢索候選令牌 ID 和指向下一個節點的指標。此最佳化有效地將隨機記憶體存取次數減半。</p>
+<h4 id="a12">A.1.2. 稠密遮罩最佳化</h4>
+<p>雖然稀疏遍歷對 trie 的深層有效率，但初始層由於常見前綴的擁塞而表現出極高的分支因子。如記憶體使用量模型（附錄 B）所分析，淺層 ℓ \ell 的唯一節點數量增長為 | 𝒱 | ℓ |\mathcal{V}|^{\ell}，使得稀疏蒐集在計算上效率低下。</p>
+<p>為了解決此問題，我們引入稠密層截止參數 d d。在前 d d 個解碼步驟中（其中 0 ≤ d &lt; L 0\leq d&lt;L），我們繞過 VNTK 並利用稠密張量遮罩最佳化。我們預先計算形狀為 \overbrace{|\mathcal{V}|\times\cdots\times|\mathcal{V}|}^{d&gt;\text{times}} 的稠密布林張量（為儲存效率進行位元封裝），代表所有長度為 d d 的有效前綴。在前 d d 步驟中，有效性透過直接索引查詢此稠密張量來檢查。此混合方法允許我們用少量靜態記憶體（對於 d ≤ 2 d\leq 2）交換檢索過程中計算成本最高層的顯著吞吐量增益。在第 5 節對 YouTube 的實驗中，我們設定 d = 2 d=2，有效地對 trie 的前兩層進行稠密化。</p>
+<h3 id="a2-jax-pytorch">A.2. 跨平台可攜性（JAX 與 PyTorch）</h3>
+<p>雖然我們的主要實現使用 JAX 進行 XLA 編譯，但 STATIC 設計本質上可移植到 PyTorch 和 CUDA 環境。轉向基於 Gather 的核心統一了跨框架的實現策略：</p>
+<ul>
+<li>• JAX/XLA：核心依賴於 jnp.take（Gather）。此操作完美地與硬體的散聚（scatter-gather）能力相匹配，並允許 XLA 編譯器將索引計算和記憶體擷取融合為單一優化的核心。</li>
+<li>• PyTorch/Inductor：邏輯直接轉換為 torch.gather。在 GPU 上，我們堆疊的 CSR 佈局確保了內聚的記憶體存取。當 32 個執行緒的 GPU 束為 32 個不同的波束擷取轉移時，轉移矩陣的連續儲存最小化了所擷取的快取行數。這與基於指標的 Trie 形成鮮明對比，後者導致隨機記憶體存取模式（非內聚載入），從而導致執行單元停滯。</li>
+</ul>
+<p>JAX/XLA：核心依賴於 jnp.take（Gather）。此操作完美地與硬體的散聚（scatter-gather）能力相匹配，並允許 XLA 編譯器將索引計算和記憶體擷取融合為單一優化的核心。</p>
+<p>PyTorch/Inductor：邏輯直接轉換為 torch.gather。在 GPU 上，我們堆疊的 CSR 佈局確保了內聚的記憶體存取。當 32 個執行緒的 GPU 束為 32 個不同的波束擷取轉移時，轉移矩陣的連續儲存最小化了所擷取的快取行數。這與基於指標的 Trie 形成鮮明對比，後者導致隨機記憶體存取模式（非內聚載入），從而導致執行單元停滯。</p>
+<h3 id="a3">A.3. 記憶體用量</h3>
+<p>在大規模服務設置中（例如 TPU v6e Pods 或 H100 Clusters），LLM 參數通常在設備之間進行分片。然而，稀疏轉移矩陣（代表約束條件）相對緊湊。對於第 5 節背景下 20 20 百萬項目的受限詞彙表，稀疏表示僅需約 1.5 1.5 GB 的記憶體。因此，我們採用複製策略：稀疏轉移矩陣在每個設備的 HBM（高頻寬記憶體）上進行複製。這消除了在約束檢查期間跨晶片通信（All-Gather 或 All-Reduce）的需求。每個晶片獨立計算其本地波束批次的有效性遮罩，保持服務系統的線性可擴展性。</p>
+<p>隨著項目語料庫擴展到數十億，未來研究應探討分層儲存或分片策略，以在不飽和設備記憶體的情況下維持此線性可擴展性。</p>
+<h2 id="b-static">附錄 B STATIC 記憶體用量分析</h2>
+<p>我們提供 STATIC 方法的 HBM 記憶體用量分析。</p>
+<h3 id="b1">B.1. 絕對上界</h3>
+<p>鑑於 STATIC 的核心記憶體使用量主要在於相關聯的 trie 結構（代表受限詞彙表）和密集張量遮罩 $\mathbf{D}$ 的儲存，我們將分析重點放在這個方向。請注意，密集張量遮罩框架相關的儲存成本僅為儲存 $|\mathcal{V}|^{d}$ 位元和 $|\mathcal{V}|^{d}$ 狀態 ID 的成本。CSR 格式中 trie 的總儲存成本是樹的每個層級 $\ell$ 的唯一前綴節點數量的函數。對於 $|\mathcal{C}|$ 個項目的受限詞彙表，其中每個項目是長度為 $L$ 的語義 ID（SID），且每個令牌具有詞彙大小 $|\mathcal{V}|$，層級 $\ell$ 的唯一節點數量 $N_{\ell}$ 受到兩個因素的嚴格限制：</p>
+<ul>
+<li>(1) 層級容量：長度為 $\ell$ 的最大可能唯一序列數量，即 $|\mathcal{V}|^{\ell}$。</li>
+<li>(2) 總體約束：唯一約束項目的總數 $|\mathcal{C}|$，因為沒有任何層級的唯一前綴數量會超過詞彙表中的總項目數。</li>
+</ul>
+<p><strong>層級容量</strong>：長度為 $\ell$ 的最大可能唯一序列數量，即 $|\mathcal{V}|^{\ell}$。</p>
+<p><strong>總體約束</strong>：唯一約束項目的總數 $|\mathcal{C}|$，因為沒有任何層級的唯一前綴數量會超過詞彙表中的總項目數。</p>
+<p>因此，層級 $\ell$ 節點數量的絕對上界為：</p>
+<p>|  | $N_{\ell}\leq\min(|\mathcal{V}|^{\ell},|\mathcal{C}|)$ |  |
+| --- | --- | --- |</p>
+<p>以位元組為單位的總儲存上界 $U_{\text{max}}(K_{1},K_{2},|\mathcal{V}|,|\mathcal{C}|,L,d)$ 由密集張量遮罩的 $\left(\frac{1}{8}+K_{2}\right)|\mathcal{V}|^{d}$ 貢獻組成（$1$ 位元用於遮罩，$K_{2}$ 位元組每狀態，其中 $K_{2}=4$ 為典型值），以及將後續層級的每層前綴節點上界之和乘以每個節點的儲存成本 $K_{1}$（通常為 $12$ 位元組，由於 CSR 稀疏矩陣格式的三個陣列）：</p>
+<p>|  | $U_{\text{max}}(K_{1},K_{2},|\mathcal{V}|,|\mathcal{C}|,L,d)=\left(\frac{1}{8}+K_{2}\right)|\mathcal{V}|^{d}+K_{1}\cdot\sum_{\ell=d+1}^{L}\min(|\mathcal{V}|^{\ell},|\mathcal{C}|)$ |  |
+| --- | --- | --- |</p>
+<h3 id="b2-youtube">B.2. YouTube 的計算</h3>
+<p>我們在第 5 節計算 YouTube 設置的上界。我們的主要配置變數固定為 $|\mathcal{V}|=2048$、$L=8$、$K_{1}=12$、$K_{2}=4$ 和 $d=2$。注意由於我們在受限詞彙表中有 $20$ 百萬個約束，我們也有 $|\mathcal{C}|=20\cdot 10^{6}$。現在我們計算總記憶體使用量</p>
+<ul>
+<li>(1) 密集遮罩階段（$\ell=1,2$）：</li>
+<li>我們需要存儲密集遮罩的位元組數簡單地是 $\left(\frac{1}{8}+4\right)\cdot 2048^{2}=17301504$ 位元組，或 $\approx 17.3$ MB。</li>
+<li>
+<p>我們需要存儲密集遮罩的位元組數簡單地是 $\left(\frac{1}{8}+4\right)\cdot 2048^{2}=17301504$ 位元組，或 $\approx 17.3$ MB。</p>
+</li>
+<li>
+<p>(2) 約束階段（$\ell\geq 3$）：</p>
+</li>
+<li>對於 $3\leq\ell\leq 8$，容量 $|V|^{n}$ 顯著大於 $|\mathcal{C}|$（例如，$|V|^{3}\approx 8.5$ 十億）。因此，這 $6$ 個層級中的每一個都貢獻 $|\mathcal{C}|\cdot 12$ 位元組。</li>
+<li>貢獻：$(L-2)\cdot|\mathcal{C}|\cdot 12=6\cdot 20\cdot 10^{6}\cdot 12=1.44$ GB。</li>
+<li>對於 $3\leq\ell\leq 8$，容量 $|V|^{n}$ 顯著大於 $|\mathcal{C}|$（例如，$|V|^{3}\approx 8.5$ 十億）。因此，這 $6$ 個層級中的每一個都貢獻 $|\mathcal{C}|\cdot 12$ 位元組。</li>
+<li>貢獻：$(L-2)\cdot|\mathcal{C}|\cdot 12=6\cdot 20\cdot 10^{6}\cdot 12=1.44$ GB。</li>
+</ul>
+<p>密集遮罩階段（$\ell=1,2$）：</p>
+<ul>
+<li>我們需要存儲密集遮罩的位元組數簡單地是 $\left(\frac{1}{8}+4\right)\cdot 2048^{2}=17301504$ 位元組，或 $\approx 17.3$ MB。</li>
+</ul>
+<p>我們需要存儲密集遮罩的位元組數簡單地是 $\left(\frac{1}{8}+4\right)\cdot 2048^{2}=17301504$ 位元組，或 $\approx 17.3$ MB。</p>
+<p>約束階段（$\ell\geq 3$）：</p>
+<ul>
+<li>對於 $3\leq\ell\leq 8$，容量 $|V|^{n}$ 顯著大於 $|\mathcal{C}|$（例如，$|V|^{3}\approx 8.5$ 十億）。因此，這 $6$ 個層級中的每一個都貢獻 $|\mathcal{C}|\cdot 12$ 位元組。</li>
+<li>貢獻：$(L-2)\cdot|\mathcal{C}|\cdot 12=6\cdot 20\cdot 10^{6}\cdot 12=1.44$ GB。</li>
+</ul>
+<p>對於 $3\leq\ell\leq 8$，容量 $|V|^{n}$ 顯著大於 $|\mathcal{C}|$（例如，$|V|^{3}\approx 8.5$ 十億）。因此，這 $6$ 個層級中的每一個都貢獻 $|\mathcal{C}|\cdot 12$ 位元組。</p>
+<p>貢獻：$(L-2)\cdot|\mathcal{C}|\cdot 12=6\cdot 20\cdot 10^{6}\cdot 12=1.44$ GB。</p>
+<p>我們的每晶片最大使用量因此為 $\approx!1.46&gt;\text{GB}$，驗證了我們關於 $20$ 百萬個約束的 HBM 使用量約為 $1.5$ GB 的聲明。由於 YouTube 視訊分佈高度不均勻且表現出顯著的聚類（He et al., 2025），語義 ID 分佈也將如此，這在前綴空間中產生了大量的碰撞。因此，對於大多數受限詞彙表，實際 HBM 使用量將遠少於此上界。在實踐中，我們注意到我們的利用率 $\leq!75\%$ 的此金額。</p>
+<h3 id="b3-capacity-planning">B.3. Capacity Planning</h3>
+<p>In the context of our YouTube setting (Section 5 ), we use the rule of thumb that every 1 million constraints introduce an additional ≈ 90 \approx 90 MB of HBM usage. This approximation is valid because the storage cost is dominated by the constraint phase described in the previous section.</p>
+<p>As shown above, the dense mask phase (early levels) contribution remains constant (for fixed d d ), while each additional level in the constraint phase adds exactly | 𝒞 | × K 1 |\mathcal{C}|\times K_{1} bytes to the storage cost.</p>
+<p>When 𝒞 \mathcal{C} is 1 million:</p>
+<ul>
+<li>• Dense Mask Phase Contribution : Only ( 1 8 + 4 ) ⋅ 2048 2 = 17301504 \left(\frac{1}{8}+4\right)\cdot 2048^{2}=17301504 bytes, or ≈ 17.3 \approx 17.3 MB.</li>
+<li>• Constraint Phase Contribution : For | 𝒞 | = 10 6 |\mathcal{C}|=10^{6} , we see the total contribution is 6 ⋅ 10 6 ⋅ 12 ​ bytes = 72 6\cdot 10^{6}\cdot 12&gt;\text{bytes}=72 MB.</li>
+<li>• Total : 17.3 ​ MB + 72 ​ MB ≈ 90 ​ MB 17.3&gt;\text{MB}+72&gt;\text{MB}\approx 90&gt;\text{MB} per million items.</li>
+</ul>
+<p>Dense Mask Phase Contribution : Only ( 1 8 + 4 ) ⋅ 2048 2 = 17301504 \left(\frac{1}{8}+4\right)\cdot 2048^{2}=17301504 bytes, or ≈ 17.3 \approx 17.3 MB.</p>
+<p>Constraint Phase Contribution : For | 𝒞 | = 10 6 |\mathcal{C}|=10^{6} , we see the total contribution is 6 ⋅ 10 6 ⋅ 12 ​ bytes = 72 6\cdot 10^{6}\cdot 12&gt;\text{bytes}=72 MB.</p>
+<p>Total : 17.3 ​ MB + 72 ​ MB ≈ 90 ​ MB 17.3&gt;\text{MB}+72&gt;\text{MB}\approx 90&gt;\text{MB} per million items.</p>
+<p>For the production-scale restrict corpus in Appendix B.2 of 20 20 million items, we saw the transition to the constraint phase happen later, resulting in an average of ≈ 𝟕𝟑 ​ MB \approx!\mathbf{73&gt;\text{MB}} per 1 million items, making 90 90 MB a highly reliable linear upper bound approximation for capacity planning. A similar rule-of-thumb can be computed for different values of L L , | 𝒱 | |\mathcal{V}| , and | 𝒞 | |\mathcal{C}| using the principles laid out in this appendix section.</p>
+<h2 id="appendix-c-detailed-latency-analysis">Appendix C Detailed Latency Analysis</h2>
+<p>In this section, we present a fine-grained latency overhead analysis of our STATIC method in the setting of Section 5 compared to the baselines in Table 1 . All numbers given represent the per-step latency throughout the full decoding (over L = 8 L=8 decoding steps). All values represent the additional latency (in milliseconds) incurred by the constraint enforcement logic relative to the unconstrained baseline (which performs no masking), calculated over 100 100 trials.</p>
+<p>The precise numbers (means and standard deviations) for Figure 2 are given in Table 4 a, with the exclusion of the N = 2 ⋅ 10 7 N=2\cdot 10^{7} row, which gives the precise means and standard deviations for Table 1 .</p>
+<p>The precise numbers (means and standard deviations) for Figure 3 are given in Table 4 b.</p>
+<p>Table 4. Per-Step Latency Overhead (ms) over the Unconstrained Baseline. We report mean and standard deviation over 100 100 trials.</p>
+<h2 id="d">附錄 D 高分支因子的硬體擴展</h2>
+<p>為了隔離 STATIC 遮蔽核心的硬體級擴展效率，我們設計了一個基準測試，在極端稀疏性和高基數條件下對向量化突發讀取機制施加壓力。具體來說，我們評估了核心向量化節點轉換核心（VNTK，即演算法 2）的執行時間，隨著最大分支因子的增加。</p>
+<p>對於每個測試的最大分支因子 $B\in{2^{1},2^{2},\dots,2^{18}}$，我們動態設定權杖詞彙表大小，使得 $|\mathcal{V}|=B$。在此配置下，我們合成了一個新的約束集，包含 $|\mathcal{C}|=10^{6}$ 個均勻隨機生成的語義 ID。之後，我們將這個新生成的前綴樹平坦化為 VNTK 演算法的壓縮稀疏行（CSR）矩陣。</p>
+<p>在定時試驗期間，我們執行 JIT 編譯的遮蔽核心，該核心從高頻寬記憶體（HBM）執行 $B$ 個連續元素的合併讀取，並應用有效性遮蔽。為確保穩健的測量，我們在多次迭代上進行同步掛鐘計時，捕捉每個操作的平均化純硬體計算時間，同時積極清除加速器記憶體以防止記憶體不足（OOM）錯誤。擴展結果如圖 4 所示。最關鍵的是，該基準測試表明 STATIC 解碼框架相對於最大分支因子 $B$ 表現出嚴格的漸進線性擴展 $O(B)$。我們注意到 STATIC 在達到 TPU VMEM 頻寬之前表現出恆定的執行時間，之後線性區域開始。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.22647/x4.png" loading="lazy"></figure> 圖 4. STATIC 遮蔽核心相對於最大分支因子的擴展（對數-對數尺度）。我們繪製了 100 次試驗的平均值和標準差（陰影區域）。對於每次試驗，權杖詞彙表大小設定為分支因子，而約束數量固定為 $|\mathcal{C}|=10^{6}$。STATIC 方法表現出漸進線性的 $\mathcal{O}(B)$ 擴展。</p>
+<h2 id="e-static-jax">附錄 E STATIC 代碼：JAX 實現</h2>
+<p>在本節中，我們提供代碼片段以演示使用 JAX（Bradbury et al., 2018）和 Flax（Heek et al., 2024）框架對演算法 1 和 2 進行的顯式實現範例。請注意，該代碼在 TPU 和 GPU 上均可運作，延遲開銷幾乎相同。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

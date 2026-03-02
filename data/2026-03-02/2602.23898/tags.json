@@ -1,0 +1,22 @@
+{
+  "domain": [
+    "CV",
+    "NLP",
+    "Multimodal"
+  ],
+  "method": [
+    "Multimodal LLM"
+  ],
+  "task": [
+    "Referring Expression Comprehension",
+    "Visual Grounding",
+    "Visual Reasoning"
+  ],
+  "dataset": [
+    "Ref-Adv",
+    "RefCOCO",
+    "RefCOCO+",
+    "RefCOCOg"
+  ],
+  "open_source": false
+}

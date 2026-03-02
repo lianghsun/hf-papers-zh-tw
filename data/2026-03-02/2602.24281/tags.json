@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "RNN",
+    "Memory Caching",
+    "Transformer"
+  ],
+  "task": [
+    "Language Modeling",
+    "Long-context Understanding",
+    "In-context Recall"
+  ],
+  "dataset": [],
+  "open_source": false
+}

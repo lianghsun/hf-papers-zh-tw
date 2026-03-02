@@ -1,0 +1,18 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Masked Image Generation",
+    "Attention",
+    "Feature Dynamics",
+    "Velocity Field Regression"
+  ],
+  "task": [
+    "Text-to-Image Generation",
+    "Image Generation"
+  ],
+  "dataset": [],
+  "open_source": true
+}

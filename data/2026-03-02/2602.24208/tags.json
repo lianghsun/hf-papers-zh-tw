@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion",
+    "Caching",
+    "Sensitivity Analysis"
+  ],
+  "task": [
+    "Video Generation",
+    "Model Acceleration"
+  ],
+  "dataset": [],
+  "open_source": false
+}

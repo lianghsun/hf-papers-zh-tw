@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通過學習潛在受控動態來加速遮罩圖像生成 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-02/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-02 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">通過學習潛在受控動態來加速遮罩圖像生成</h1>
+  
+  <div class="en-title">Accelerating Masked Image Generation by Learning Latent Controlled Dynamics</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Kaiwen Zhu, Quansheng Zeng, Yuandong Pu, Shuo Cao, Xiaohui Li, Yi Xin, Qi Qin, Jiayang Li, Yu Qiao, Jinjin Gu, Yihao Liu</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.23996" target="_blank">2602.23996</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.23996" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.23996" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.23996" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Masked Image Generation</span><span class="tag method">Attention</span><span class="tag method">Feature Dynamics</span><span class="tag method">Velocity Field Regression</span>
+    <span class="tag task">Text-to-Image Generation</span><span class="tag task">Image Generation</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p>遮蔽影像生成模型（Masked Image Generation Models, MIGMs）已取得顯著成功，但其效率受到多步驟雙向注意力的限制。事實上，其計算中存在明顯的冗餘：在採樣離散令牌時，連續特徵中所含的豐富語義會遺失。一些現有研究嘗試快取特徵以近似未來的特徵。然而，在激進加速率下，它們表現出相當大的近似誤差。我們將此歸因於它們的表達能力有限，以及未能考慮採樣資訊。為了填補這一空缺，我們提出學習一個輕量級模型，該模型同時納入先前特徵和採樣令牌，並迴歸特徵演化的平均速度場。該模型的複雜度適中，足以捕捉微妙的動態特性，同時相對於原始基礎模型保持輕量級。我們將我們的方法 MIGM-Shortcut 應用於兩個代表性的 MIGM 架構和任務。特別是，在最先進的 Lumina-DiMOO 上，它實現了文本到影像生成超過 4 倍的加速，同時保持品質，顯著推進了遮蔽影像生成的帕雷托前沿。程式碼和模型權重可在 https://github.com/Kaiwen-Zhu/MIGM-Shortcut 取得。</p>
+  
+  <div class="abstract-en">Masked Image Generation Models (MIGMs) have achieved great success, yet their efficiency is hampered by the multiple steps of bi-directional attention. In fact, there exists notable redundancy in their computation: when sampling discrete tokens, the rich semantics contained in the continuous features are lost. Some existing works attempt to cache the features to approximate future features. However, they exhibit considerable approximation error under aggressive acceleration rates. We attribute this to their limited expressivity and the failure to account for sampling information. To fill this gap, we propose to learn a lightweight model that incorporates both previous features and sampled tokens, and regresses the average velocity field of feature evolution. The model has moderate complexity that suffices to capture the subtle dynamics while keeping lightweight compared to the original base model. We apply our method, MIGM-Shortcut, to two representative MIGM architectures and tasks. In particular, on the state-of-the-art Lumina-DiMOO, it achieves over 4x acceleration of text-to-image generation while maintaining quality, significantly pushing the Pareto frontier of masked image generation. The code and model weights are available at https://github.com/Kaiwen-Zhu/MIGM-Shortcut.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="_1">加速遮罩影像生成透過學習潛在受控動力學</h1>
+<p>遮罩影像生成模型（MIGMs）已取得巨大成功，但其效率受到多步驟雙向注意力的限制。
+實際上，其計算中存在顯著的冗餘：當取樣離散符號時，連續特徵中包含的豐富語義被遺失。
+某些現有工作嘗試快取特徵以近似未來特徵。然而，在激進的加速率下，它們表現出相當大的近似誤差。
+我們將此歸因於它們的表達能力有限以及未能考慮取樣資訊。
+為了填補這一空白，我們提出學習一個輕量級模型，該模型結合了先前的特徵和取樣符號，並迴歸特徵演化的平均速度場。
+該模型具有適度的複雜度，足以捕捉微妙的動力學，同時相比原始基礎模型保持輕量。
+我們將我們的方法 MIGM-Shortcut 應用於兩個代表性的 MIGM 架構和任務。特別是，在最先進的 Lumina-DiMOO 上，它在保持品質的同時實現了文字轉影像生成超過 4 × 4\times 的加速，顯著推動了遮罩影像生成的帕累托邊界。
+程式碼和模型權重可在此處取得。</p>
+<h2 id="1">1 介紹</h2>
+<p>遮罩影像生成模型（Masked Image Generation Models, MIGMs）呈現出視覺生成的突出範式。它們通常將影像建模為離散令牌的序列，並從「遮罩」狀態逐步預測它們以生成影像。
+當進行大規模擴展時，它們已達到與最先進的連續擴散模型相媲美的強大性能（Xie et al. , 2023 ; You et al. , 2025）。
+此外，它們的表述可以與其他模態的生成無縫統一。認識到這一點，最近出現的多模態遮罩擴散模型已納入 MIGMs 的範式，以展示多功能的生成能力（Yang et al. , 2025 ; Xin et al. , 2025）。</p>
+<p>隨著 MIGMs 日益整合到大規模基礎模型中，迫切的需求是改善其效率。一種方式是減少生成步驟的數量。然而，實現這一點受到多模態性問題（Gu et al. , 2018）的阻礙，即標準 MIGMs 難以在單一步驟中對多個令牌的聯合分佈進行建模。
+另一種方式是降低每個步驟的成本。受到自迴歸模型中 KV-cache 機制的啟發，許多工作提議在考慮令牌特徵通常保持穩定的情況下重複使用先前步驟中的特徵（Liu et al. , 2025d , e ; Xin et al. , 2025）。儘管取得了一些成功，但它們主要基於直觀的手工制定規則，加速效果仍然有限。</p>
+<p>快取基礎的方法對於連續擴散模型也得到很好的發展，一個趨勢是從重複使用轉向預測（Liu et al. , 2025b）。
+一些工作將跨步驟的特徵視為一個演變的軌跡。他們主張這個軌跡是平滑的，因此可以通過簡單計算進行預測。例如，TaylorSeer（Liu et al. , 2025c）和 HiCache（Feng et al. , 2025）通過多項式展開預測下一個特徵，假設特徵軌跡的行為足夠良好。</p>
+<p>沿著這個研究方向，我們調查平滑性是否也適用於 MIGMs。
+使用 Lumina-DiMOO（Xin et al. , 2025）生成樣本，我們調查模型最後一層中的特徵 $^{1}$ $^{1}$ 在本論文的其餘部分，術語「特徵」總是指最後一層的特徵。有關基本原理，請參考附錄 A。。我們計算時間自相似性並使用 t-SNE（van der Maaten and Hinton, 2008）視覺化軌跡。
+圖 1 展示了一個例子。連續步驟中的特徵極其相似，視覺化的軌跡呈現規律的模式。
+這表明，當模型試圖學習令牌生成的軌跡時，它也在其內部特徵空間中學習了一個潛在軌跡，該軌跡是生成過程的基礎。這個潛在空間可能結構更好，因此更有利於建模。</p>
+<p>儘管有相似的觀察，我們無法將連續擴散的現有方法直接應用於 MIGMs。
+這些方法要求特徵動力學是自洽的，即整個軌跡由其自身歷史唯一決定，不接收任何外生輸入。這在連續擴散模型的 ODE 採樣下是有效的。
+然而，MIGMs 並非如此。由於起始點總是一個完全遮罩的序列，沒有隨機性，多樣性必須依賴於生成過程中的採樣。令牌採樣中的隨機性將軌跡引導到各種樣本。
+如圖 2a 所示，如果我們在生成的中間階段改變隨機種子，從同一起點開始，軌跡將分叉，生成多樣化的樣本。
+因此，從過去特徵單獨預測未來特徵是病態的，這正是現有連續擴散方法所做的。我們必須對由觀察到的採樣結果控制的動力學進行建模（Kidger et al. , 2020）。</p>
+<p>這項工作旨在應對這一挑戰。
+考慮採樣的令牌大大增加了建模的複雜性，所以簡單的無訓練方法（Liu et al. , 2025c ; Feng et al. , 2025 ; Zheng et al. , 2025b）不是最優的。我們提議用神經網路學習這個潛在的控制動力學。
+基於軌跡在某種程度上是平滑的觀察，這個網路可能不需要特別高的複雜性。
+因此，我們選擇使用輕量級模型來學習特徵動力學。該模型將前一步的特徵和採樣令牌作為輸入，並預測到下一個特徵的方向。
+一旦特徵動力學被學習，在推論時我們可以在許多步驟中用這個輕量級模型替換原始的重模型，節省計算並加速生成。
+我們將此模型稱為捷徑，因為它在潛在特徵空間中採取更平滑的路徑。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/dynamics_feature.png" loading="lazy"></figure> 圖 1：軌跡平滑性的視覺化。軌跡中的一個點是一個步驟中所有令牌上的平均特徵。左：成對餘弦相似性的熱圖；右：t-SNE 視覺化。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/fork.png" loading="lazy"></figure> (a) MIGM 的特徵軌跡。</p>
+<p>我們在兩個代表性的模型上實例化我們的方法 MIGM-Shortcut，即開創性的工作 MaskGIT（Chang et al. , 2022）和最近的最先進模型 Lumina-DiMOO（Xin et al. , 2025）。
+廣泛的實驗驗證了我們方法的基本原理和有效性。例如，我們為 Lumina-DiMOO 實現了超過 $4 \times$ 的加速，在文本到影像任務上性能下降可忽略不計。
+MIGM-Shortcut 不僅提供了實際的加速優勢，還帶來了學習潛在動力學的視角，我們證明這是簡單而有效的。
+除了加速效果外，我們希望 MIGM-Shortcut 能為遮罩生成模型提供更多洞見，並推進該領域的發展。</p>
+<h2 id="2">2 相關工作</h2>
+<h3 id="21">2.1 遮罩影像生成</h3>
+<p>離散影像生成最初由自迴歸模型主導，這些模型按照特定順序（通常為光柵掃描）預測下一個像素或向量量化代幣（van den Oord et al., 2016；Parmar et al., 2018；Ramesh et al., 2021；Esser et al., 2021）。
+它們存在兩個局限性。首先，網絡評估的次數等於像素或代幣的數量，需要高昂的計算成本。其次，因果注意力限制模型無法關注未來的代幣，從而限制了資訊交互，但很難預先定義一個合適的生成順序來緩解這一限制。
+鑑於此，MaskGIT（Chang et al., 2022）提出了受 BERT（Devlin et al., 2019）啟發的遮罩影像生成範例。它以隨機遮罩的代幣序列作為輸入，並在單次網絡評估中預測多個代幣，從而克服了效率低下和剛性生成順序的問題。
+此外，由於對遮罩位置的調理具有靈活性，遮罩影像生成模型（MIGMs）可以在不進行微調的情況下應用於影像編輯（Chang et al., 2022、2023）。
+研究也顯示遮罩影像建模可以幫助表示學習（He et al., 2022；Li et al., 2023；Xie et al., 2022、2023）。
+為了進一步提升 MIGMs 的性能，許多研究在各個組件上進行了改進，包括採樣器（Besnier et al., 2025）、遮罩計畫表（Shao et al., 2024）、超參數最佳化（Ni et al., 2024a）和模型架構（Ni et al., 2024b；Bai et al., 2025），達到了與影像生成最先進模型相當的性能（You et al., 2025）。
+值得注意的是，MIGMs 可以與遮罩擴散相連接，後者在類別資料上執行擴散過程（Austin et al., 2021；You et al., 2025）。
+這個範例使得處理不同模態的統一成為可能。認識到這一點，MMaDA（Yang et al., 2025）和 Lumina-DiMOO（Xin et al., 2025）將各種任務表述為建模文字和影像交錯的序列，在多模態生成方面展現了多才多藝的能力。</p>
+<h3 id="22">2.2 圖像生成加速</h3>
+<p>高品質圖像生成通常需要多個步驟，導致顯著的延遲。
+為了緩解這一問題，許多研究提出減少步驟數量，為連續擴散模型實現少步驟甚至一步生成（Salimans and Ho, 2022；Lu et al., 2022；Song et al., 2023；Yin et al., 2024；Frans et al., 2025；Geng et al., 2025）。
+也有一些研究為離散擴散模型做出類似努力（Zhu et al., 2025；Kim et al., 2025）。儘管取得了某種程度的成功，但這些方法在充分解決多模態問題上仍有困難（Gu et al., 2018）。
+其他研究試圖降低每個生成步驟的成本。典型方法包括剪枝（Fang et al., 2023）、量化（Shang et al., 2023）和快取（Liu et al., 2025b）。我們的工作與基於快取的方法最相關。
+這些方法觀察到在連續步驟中學習的 token 特徵通常高度相似，因此可以使用之前步驟中的特徵來近似這些特徵（Ma et al., 2024；Selvaraju et al., 2024；Chen et al., 2025a）。為了減少近似誤差，已開發了許多方法來自適應地識別可重複使用的特徵（Chen et al., 2024；Yan et al., 2025；Xin et al., 2025）或改進刷新排程（Qiu et al., 2025；Wimbauer et al., 2024；Liu et al., 2025a）。
+除了直接用快取特徵替換目標特徵外，一些研究對其進行廉價的變換。例如，FoCa（Zheng et al., 2025b）、TaylorSeer（Liu et al., 2025c）和 HiCache（Feng et al., 2025）將特徵視為時間的函數，因此可以使用 ODE 求解器或多項式展開來預測未來特徵。然而，這些方法通常要求特徵相對於時間可微，這對於離散擴散不成立。
+TeaCache（Liu et al., 2025a）和 Block Caching（Wimbauer et al., 2024）將目標特徵表示為快取特徵的多項式並學習係數，作為改進快取的一種技巧。
+與這些工作相比，我們的方法專注於學習一個具有適度複雜性的可行特徵動力學模型，可以輕鬆應用於各種現有的預訓練基礎模型。</p>
+<h2 id="3">3 方法</h2>
+<p>我們首先定義記號並制定快捷模型（Sec. 3.1）。接下來，我們為我們的假設提供直覺和經驗證據（Sec. 3.2）。然後我們概述神經網路的具體實現（Sec. 3.3）。最後，我們描述模型的訓練（Sec. 3.4）和使用（Sec. 3.5）。</p>
+<h3 id="31">3.1 公式化</h3>
+<h4 id="_2">預備知識與記號。</h4>
+<p>我們採用離散遮罩影像生成的典型框架（Chang et al., 2022; Li et al., 2023; Bai et al., 2025）。令 $\mathcal{V}$ 表示由離散分詞器產生的詞彙表。引入特殊標記 $\mathtt{[mask]}$ 以形成擴增詞彙表 $\widetilde{\mathcal{V}}=\mathcal{V}\cup{\mathtt{[mask]}}$。</p>
+<p>生成過程表示為 ${\boldsymbol{x}<em>{t}}</em>{t\in[0,1]}$，其中 $\boldsymbol{x}<em>{t}\in\widetilde{\mathcal{V}}^{L}$，$L$ 是影像中的標記數量。從完全遮罩的 $\boldsymbol{x}</em>{0}=(\mathtt{[mask]},\mathtt{[mask]},\cdots,\mathtt{[mask]})$ 開始，遮罩標記的數量逐步減少，導向完全未遮罩的影像 $\boldsymbol{x}_{1}\in\mathcal{V}^{L}$。</p>
+<p>正式地，定義排程函數 $\gamma:[0,1]\rightarrow[0,1]$，使得 $\gamma(0)=1$、$\gamma(1)=0$，且 $\gamma$ 單調遞減。$\gamma(t)$ 表示時間 $t$ 時的遮罩比例。</p>
+<p>在實踐中，生成過程被離散化為 $N$ 步 ${t_{i}=i/N}<em>{i=0}^{N}$。在第 $i$ 步，解遮罩模型 $M$ 預測每個標記在 $\mathcal{V}$ 上的分佈 $\boldsymbol{p}</em>{t_{i}}=M(\boldsymbol{x}<em>{t</em>{i-1}})$。</p>
+<p>從 $\boldsymbol{p}<em>{t</em>{i}}$ 採樣得到 $\hat{\boldsymbol{x}}\in\mathcal{V}^{L}$。使用某種策略，$\lceil L\cdot\gamma(t_{i-1})\rceil-\lceil L\cdot\gamma(t_{i})\rceil$ 個在 $\boldsymbol{x}<em>{t</em>{i-1}}$ 中的遮罩位置被選中，並用 $\hat{\boldsymbol{x}}$ 中的對應標記填充，得到 $\boldsymbol{x}<em>{t</em>{i}}$。典型的選擇策略是基於信心度的採樣器（Chang et al., 2022）。</p>
+<p>將此採樣過程記為 $\boldsymbol{x}<em>{t</em>{i}}\sim K(\cdot|\boldsymbol{x}<em>{t</em>{i-1}},\boldsymbol{p}<em>{t</em>{i}},\gamma,t_{i-1},t_{i})$。</p>
+<p>上述過程針對 $i=1,2,\cdots,N$ 重複執行，以生成最終樣本 $\boldsymbol{x}_{1}$。</p>
+<h4 id="_3">模型。</h4>
+<p>令 $\boldsymbol{f}<em>{t</em>{i}}=M_{f}(\boldsymbol{x}<em>{t</em>{i-1}})\in\mathbb{R}^{L\times D}$ 表示解遮罩模型 $M$ 的最後隱藏狀態，即 $\boldsymbol{p}<em>{t</em>{i}}=\text{softmax}(H(\boldsymbol{f}<em>{t</em>{i}}))$，其中 $H$ 是分類頭。</p>
+<p>我們將 ${\boldsymbol{f}<em>{t</em>{i}}}_{i=1}^{N}$ 視為生成過程基礎的潛在控制軌跡，並提議通過學習來捕捉其動態。</p>
+<p>將 ${\boldsymbol{x}<em>{t}}$ 視為觀察，${\boldsymbol{f}</em>{t}}$ 視為狀態，我們將生成過程重新表述為狀態空間模型：狀態轉移</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\boldsymbol{f}<em>{t</em>{i+1}}=\boldsymbol{f}<em>{t</em>{i}}+S_{\theta}(\boldsymbol{f}<em>{t</em>{i}},\boldsymbol{x}<em>{t</em>{i}},t_{i})+\boldsymbol{\epsilon}$,</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>觀察</p>
+<p>|  | $\boldsymbol{x}<em>{t</em>{i+1}}\sim K(\cdot|\boldsymbol{x}<em>{t</em>{i}},\text{softmax}(H(\boldsymbol{f}<em>{t</em>{i+1}})),\gamma,t_{i},t_{i+1})$. |  | (2) |
+| --- | --- | --- | --- |</p>
+<p>此處，$S_{\theta}$ 是具有可學習參數 $\theta$ 的輕量級神經網路，$\boldsymbol{\epsilon}$ 是遵循零均值常態分佈的誤差項。</p>
+<p>我們將 $S_{\theta}$ 稱為捷徑模型，強調它通過從 $\boldsymbol{f}<em>{t</em>{i}}$ 直接通往 $\boldsymbol{f}<em>{t</em>{i+1}}$ 的捷徑繞過了繁瑣的基礎模型 $M$。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/scatter.png" loading="lazy"></figure> (a) 輸入/目標差異範數的散點圖。</p>
+<h3 id="32">3.2 基本原理</h3>
+<p>在本節中，我們討論為什麼映射 2 2 2 時間 $t_i$ 在輸入中被省略以簡化起見。實際上，它更像是一個輔助項，可以由 $\boldsymbol{f}_{t_i}$ 隱式地捕捉（Zheng et al., 2025a）。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$(\boldsymbol{f}<em>{t</em>{i}},\boldsymbol{x}<em>{t</em>{i}})\mapsto\boldsymbol{f}<em>{t</em>{i+1}}-\boldsymbol{f}<em>{t</em>{i}}$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在快捷模型 $S_{\theta}$ 中的複雜度可能遠低於原始基礎模型 $M$ 中的映射 $\boldsymbol{x}<em>{t_i}\mapsto\boldsymbol{f}</em>{t_{i+1}}$。
+如圖 1 所示，$\boldsymbol{f}<em>{t</em>{i}}$ 和 $\boldsymbol{f}<em>{t</em>{i+1}}$ 非常接近，餘弦相似度通常大於 0.95。
+需要注意的是，這種高相似度並不僅僅是因為它們共享相同的空間。實際上，在取樣過程（2）中，許多 token 會坍縮為 $\mathtt{[mask]}$，丟棄了連續特徵中包含的豐富資訊。這種資訊損失是不可逆的。
+因此，要僅從 $\boldsymbol{x}<em>{t_i}$ 獲得 $\boldsymbol{f}</em>{t_{i+1}}$，基礎模型 $M$ 必須從零開始計算遮罩 token 的特徵，而這些特徵已經在很大程度上包含在 $\boldsymbol{f}<em>{t_i}$ 中。因此，將 $\boldsymbol{f}</em>{t_i}$ 作為輸入來補充資訊將大大減輕計算負擔。
+然而，僅使用 $\boldsymbol{f}<em>{t_i}$ 也是不夠的，因為取樣過程（2）本身也包含關鍵資訊。取樣的 $\boldsymbol{x}</em>{t_i}$ 直接指出了從 $\boldsymbol{f}<em>{t</em>{i}}=M_f(\boldsymbol{x}<em>{t</em>{i-1}})$ 到 $\boldsymbol{f}<em>{t</em>{i+1}}=M_f(\boldsymbol{x}<em>{t</em>{i}})$ 的方向。
+沒有 $\boldsymbol{x}_{t_i}$，該映射將是隨機的，因此當以監督學習方式訓練時，模型不可避免地會輸出模糊的期望（Isola et al., 2017）。
+總體而言，結合方程 1 中的殘差連接（He et al., 2016），映射（3）描述了潛在狀態如何在新取樣的觀察驅動下演化。
+總之，該映射的計算是自洽且高效的，這要歸功於潛在動態的光滑性。</p>
+<p>為了支持映射（3）的簡潔性，我們在觀測資料上檢查局部規律性。
+我們使用 Lumina-DiMOO（Xin et al., 2025）收集 100 條軌跡 ${(\boldsymbol{x}<em>{t</em>{i}}^{(k)},\boldsymbol{f}<em>{t</em>{i}}^{(k)}),i=1,\cdots,T}<em>{k=1}^{100}$。令 $\boldsymbol{u}</em>{i}^{(k)}$ 表示 $E(\boldsymbol{x}<em>{t</em>{i}}^{(k)})$ 和 $\boldsymbol{f}<em>{t</em>{i}}^{(k)}$ 的串聯，其中 $E$ 是 token 嵌入，令 $\boldsymbol{\Delta}<em>{i}^{(k)}$ 表示 $\boldsymbol{f}</em>{t_{i+1}}^{(k)}-\boldsymbol{f}<em>{t</em>{i}}^{(k)}$。也就是說，$\boldsymbol{u}<em>{i}^{(k)}$ 和 $\boldsymbol{\Delta}</em>{i}^{(k)}$ 分別代表映射（3）的輸入和目標。
+我們計算其有限差分 $\lVert\boldsymbol{u}<em>{i+1}^{(k)}-\boldsymbol{u}</em>{i}^{(k)}\rVert_{F}$ 和 $\lVert\boldsymbol{\Delta}<em>{i+1}^{(k)}-\boldsymbol{\Delta}</em>{i}^{(k)}\rVert_{F}$ 的 Frobenius 範數，並在圖 3 中呈現其比率的散點圖和頻率直方圖。
+觀察到點 $(\lVert\boldsymbol{u}<em>{i+1}^{(k)}-\boldsymbol{u}</em>{i}^{(k)}\rVert_{F},\lVert\boldsymbol{\Delta}<em>{i+1}^{(k)}-\boldsymbol{\Delta}</em>{i}^{(k)}\rVert_{F})$ 大多位於通過原點的直線附近；換句話說，比率 $\lVert\boldsymbol{\Delta}<em>{i+1}^{(k)}-\boldsymbol{\Delta}</em>{i}^{(k)}\rVert_{F}/\lVert\boldsymbol{u}<em>{i+1}^{(k)}-\boldsymbol{u}</em>{i}^{(k)}\rVert_{F}$ 集中在一個常數周圍。
+這一觀察表明存在近似均勻的局部 Lipschitz 行為，而不是高度可變的局部放大。在這一假設下，我們可以預期模型 $S_{\theta}$ 不一定需要具有很高的高頻表示能力。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/pipeline.png" loading="lazy"></figure> 圖 4：MIGM-Shortcut 的推理工作流程。彩色塊和實線表示已激活的計算，灰色塊和虛線表示被抑制的計算。在完整步驟中，推理與原始過程相同，將 $\boldsymbol{x}<em>{t</em>{i-1}}$ 作為輸入，使用基礎模型計算 $\boldsymbol{f}<em>{t_i}$。在快捷步驟中，快捷模型將 $\boldsymbol{x}</em>{t_{i-1}}$ 和 $\boldsymbol{f}<em>{t</em>{i-1}}$ 作為輸入來計算 $\boldsymbol{f}_{t_i}$，將沉重的基礎模型跳過。</p>
+<h3 id="33">3.3 捷徑模型</h3>
+<p>設計捷徑模型的指導方針是保持簡單和輕量級。
+骨幹網路僅由一個交叉注意力層（cross-attention layer）後接自注意力層（Vaswani et al., 2017）組成。交叉注意力負責吸收來自取樣代幣的資訊，而自注意力可以將收集到的資訊轉換成演化方向。
+在實踐中，除了先前的特徵外，輸入到模型中的是在前一步新解碼的代幣，攜帶位置嵌入（position embeddings），而不是完整的代幣序列。在交叉注意力中，鍵（key）和值（value）來自這些代幣。這突出強調了特徵的演化主要由新解碼的代幣驅動，同時也具有效率方面的實際益處。
+為了進一步節省計算成本，我們在模型上加入了瓶頸層。輸入通過線性層投影到較低維度空間，然後在模型結束時投影回去。
+這是合理的，基於以下假設：隱變數軌跡的演化由少數新解碼的代幣驅動，因此是相對低秩的。
+在我們的預設設定中，瓶頸比（bottleneck ratio）為 2。</p>
+<p>此外，我們還包括時間作為條件輸入。時間標量被轉換為正弦嵌入（Ho et al., 2020），然後通過自適應層歸一化（adaptive layer normalization）（Peebles and Xie, 2023）調製特徵。
+我們的實驗發現這可以加速收斂。這可能是因為動態具有明顯的時變特性，所以時間條件幫助模型意識到當前階段並相應地調整其預測（Bai et al., 2025）。</p>
+<h3 id="34">3.4 訓練</h3>
+<p>shortcut 模型的訓練很直接。我們收集一個資料集，包含 ( 𝒇 t i , 𝒙 t i , t i , 𝒇 t i + 1 ) (\boldsymbol{f}<em>{t</em>{i}},\boldsymbol{x}<em>{t</em>{i}},t_{i},\boldsymbol{f}<em>{t</em>{i+1}}) 作為訓練樣本，並最小化均方誤差（MSE）損失</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝔼 ​ [ ‖ 𝒇 t i + 1 − ( 𝒇 t i + S θ ​ ( 𝒇 t i , 𝒙 t i , t i ) ) ‖ 2 2 ] . \mathbb{E}\left[\left|\boldsymbol{f}<em>{t</em>{i+1}}-\left(\boldsymbol{f}<em>{t</em>{i}}+S_{\theta}\left(\boldsymbol{f}<em>{t</em>{i}},\boldsymbol{x}<em>{t</em>{i}},t_{i}\right)\right)\right|_{2}^{2}\right].</th>
+<th></th>
+<th>(4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>只有 shortcut 模型的參數 θ \theta 可訓練，而基礎模型 M M 保持凍結。</p>
+<p>該目標的形式類似於特徵蒸餾中的形式（Romero et al.，2015；Zhang et al.，2022）。細微的差異在於，要迴歸的特徵不是輔助隱性知識，而是唯一的顯性目標，且輸入不同於教師的輸入，而是由我們針對遮蔽生成的洞察推導出的前一步特徵。</p>
+<p>我們也探索過更複雜的訓練策略。我們嘗試用 Kullback-Leibler 散度等分布匹配項作為正則化器來補充損失。我們也嘗試過將 shortcut 模型暴露於其自身預測作為輸入（Zhou et al.，2024；Huang et al.，2025）。</p>
+<p>然而，結果表明簡單的 MSE 損失（4）單獨工作效果與這些修改一樣好。這在某種程度上支持了我們的假設，即動態學習起來足夠簡單，可以通過簡單的方法學習，而複雜的設計只會帶來邊際改進。</p>
+<p>更多細節見附錄 B。</p>
+<h3 id="35-inference">3.5 Inference</h3>
+<p>At inference time, we first compute 𝒇 t 1 \boldsymbol{f}<em>{t</em>{1}} using the base model M M from the masked sequence 𝒙 0 \boldsymbol{x}<em>{0} , and in subsequent steps, we can replace the heavy 𝒇 t i + 1 = M f ​ ( 𝒙 t i ) \boldsymbol{f}</em>{t_{i+1}}=M_{f}(\boldsymbol{x}<em>{t</em>{i}}) with the light</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝒇 ^ t i + 1 = 𝒇 t i + S θ ​ ( 𝒇 t i , 𝒙 t i , t i ) . \hat{\boldsymbol{f}}<em>{t</em>{i+1}}=\boldsymbol{f}<em>{t</em>{i}}+S_{\theta}(\boldsymbol{f}<em>{t</em>{i}},\boldsymbol{x}<em>{t</em>{i}},t_{i}).</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>However, in fact 𝒇 ^ t i + 1 \hat{\boldsymbol{f}}<em>{t</em>{i+1}} does not equal 𝒇 t i + 1 \boldsymbol{f}<em>{t</em>{i+1}} due to the error term in ( 1 ) and the optimization error, so continuously applying the shortcut model will cause distribution shift and keep amplifying the error.
+To suppress error accumulation, we regularly apply the base model to obtain the feature that follows the correct distribution.
+Specifically, suppose we generate the image in N N steps and have a budget to invoke the base model for B B times, then at step 1 + ⌊ j ​ N / B ⌋ , j = 0 , 1 , ⋯ , B − 1 1+\lfloor jN/B\rfloor,j=0,1,\cdots,B-1 , we invoke the base model to slowly but accurately compute the feature (full step), and at other steps we invoke the shortcut model to approximately but rapidly compute the feature (shortcut step). Fig. 4 provides an overview of this procedure.</p>
+<h2 id="4">4 實驗</h2>
+<p>表 1：MaskGIT 有無捷徑的性能比較。加速是相對於 15 步的原始版本，這是 Besnier 和 Chen（2023）推薦的設定。最佳和次佳的性能分別用粗體和下劃線標記。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/maskgit.png" loading="lazy"></figure></p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x1.png" loading="lazy"></figure> 圖 5：加速方法的定性比較。DiMOO-Shortcut 以 4.9 × 4.9\times 加速實現了不錯的品質。</p>
+<p>表 2：使用 Lumina-DiMOO 加速文字到圖像生成的不同方法的性能，以及單步模型 Di [ 𝙼 ] \mathtt{[M]} O。除了加速前的性能（Vanilla 64 步）外，對於每個指標，最佳和次佳的項目分別用粗體和下劃線標記。對於 ML-Cache，w、r、c w,r,c 分別代表他們論文中的 warmup_ratio、refresh_interval 和 cache_ratio。* 表示我們在 Lumina-DiMOO 上重新實現的方法。</p>
+<p>在本節中，我們通過廣泛的實驗結果驗證了 MIGM-Shortcut 的合理性。
+作為概念驗證，我們首先將我們的方法應用於開創性的 MIGM MaskGIT（Chang et al.，2022）以探測其有效性（第 4.1 節）。
+然後我們在 Lumina-DiMOO（Xin et al.，2025）上進行實驗，這是一個多模態遮罩擴散語言模型，實現了最先進的文字到圖像能力。我們將展示使用 MIGM-Shortcut 對其進行改進，生成可以大幅加速同時保持圖像品質（第 4.2 節）。
+我們還對 MIGM-Shortcut 的關鍵設計進行消融，以進一步支持我們的動機（第 4.3 節）。
+所有的訓練和推論都在 NVIDIA H200 GPU 上進行。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x2.png" loading="lazy"></figure></p>
+<h3 id="41-maskgit">4.1 使用 MaskGIT 進行類別到圖像生成</h3>
+<p>我們使用的 MaskGIT 模型來自 Besnier 和 Chen（2023）。在此基礎上，我們構建了 MaskGIT-Shortcut，擁有 8.6M 個參數，約為基礎模型的 $1/20$。單次調用的延遲降低了 $24\times$。</p>
+<p>我們使用 MaskGIT 從 ImageNet（Deng 等人，2009）的類別標籤在 15 個步驟中生成 50,000 張分辨率為 $512\times 512$ 的圖像。我們還使用了無分類器引導，因此每張圖像貢獻 $(15-1)\times 2=28$ 個訓練樣本，總共 1.4M 個。</p>
+<p>我們使用 4 個 H200 GPU 訓練 MaskGIT-Shortcut 5 小時。</p>
+<p>我們通過 FID（Heusel 等人，2017）在 ImageNet-512 上評估生成質量。MaskGIT 在有無快捷方式、不同配置下的性能如表 1 和第 4 節所示。</p>
+<p>我們可以看到 MaskGIT-Shortcut 能夠以更快的速度持續生成更好的圖像，甚至超越了原始版本的最優性能。</p>
+<p>這個現象有些奇怪。直覺上，MaskGIT-Shortcut 性能的上界應該是相同步驟數的原始 MaskGIT。然而，在我們的實驗中，具有 32 個步驟和預算 8/9/12 的 MaskGIT-Shortcut 都超越了具有 32 個步驟的原始 MaskGIT。</p>
+<p>我們提供以下可能的解釋。已有觀察表明增加步驟數可能會降低性能（Chang 等人，2022）。例如，Besnier 和 Chen（2023）報告最優步驟數為 15。</p>
+<p>也就是說，15 個步驟下的特徵軌跡比 32 個步驟下的特徵軌跡更好。我們的 MaskGIT-Shortcut 是在由 MaskGIT 使用 15 個步驟生成的特徵軌跡上訓練的。如果訓練得當，它將沿著這條黃金軌跡演進，該軌跡比 32 步軌跡更準確地指向目標數據分佈，因此實現更低的 FID。</p>
+<p>此外，與原始 MaskGIT 的 15 個步驟相比，MaskGIT-Shortcut 的 32 個步驟採用相同的軌跡但以更細的步長移動，因此也能夠實現更好的性能。</p>
+<p>這個假設突出了當 MIGM-Shortcut 學習潛在動力學時，它可能不僅改進效率，還改進性能。</p>
+<h3 id="42-lumina-dimoo">4.2 使用 Lumina-DiMOO 進行文本到影像生成</h3>
+<h4 id="_4">設置。</h4>
+<p>應用於 Lumina-DiMOO 的捷徑模型稱為 DiMOO-Shortcut。它擁有 220M 個參數，僅為原始 Lumina-DiMOO 的 1 / 37 1/37。單次調用的延遲約為基礎模型的 1 / 30 1/30。
+我們使用 Chen et al. ( 2025b ) 的提示詞來促使 Lumina-DiMOO 在 64 步內生成 2000 張解析度為 1024 × 1024 1024\times 1024 的影像。每張影像對應 ( 64 − 1 ) × 2 = 126 (64-1)\times 2=126 個訓練樣本，總共 252K。
+我們使用 4 個 H200 GPU 訓練 DiMOO-Shortcut 12 小時，這也是一個適度的成本。</p>
+<h4 id="_5">評估協議。</h4>
+<p>遵循常見做法（Zheng et al. , 2025b；Liu et al. , 2025c；Feng et al. , 2025），我們通過 ImageReward（Xu et al. , 2023）和 CLIPScore（Hessel et al. , 2021）評估生成影像的質量。我們也報告 UniPercept-IQA（Cao et al. , 2025），一個基於多模態大型語言模型的最近先進度量。提示詞來自 Hu et al. ( 2024 )，解析度為 1024 × 1024 1024\times 1024。</p>
+<h4 id="_6">對比方法。</h4>
+<p>我們將 DiMOO-Shortcut 與各種加速方法進行比較。最直接的基準是減少 Lumina-DiMOO 的步驟。它還具有一種獨特的無訓練加速技術 ML-Cache，報告了 2 × 2\times 的加速比。
+其他對比方法包括 ReCAP（Liu et al. , 2025d）、dLLM-Cache（Liu et al. , 2025e）和 TaylorSeer（Liu et al. , 2025c）。它們都是無訓練的，但在 Lumina-DiMOO 上沒有官方實現，因此我們將它們適配到 Lumina-DiMOO。
+ReCAP（Liu et al. , 2025d）是用於 MIGM 的通用加速方法。dLLM-Cache（Liu et al. , 2025e）是為擴散語言模型設計的，但開源代碼庫也使用 MMaDA（Yang et al. , 2025）在文本到影像任務上實現了它，MMaDA 與 Lumina-DiMOO 共享相似的架構。TaylorSeer（Liu et al. , 2025c）是連續擴散的最先進方法，從先前的特徵預測下一個特徵。
+除了這些普遍應用的即插即用加速技術外，我們也包含了一個單步 MIGM Di [ 𝙼 ] \mathtt{[M]} O 進行比較，它由 Meissonic（Bai et al. , 2025）蒸餾而來，達到了極快的速度。</p>
+<h4 id="_7">加速效果。</h4>
+<p>除了 Di [ 𝙼 ] \mathtt{[M]} O 外，所有方法都有多個可配置的超參數，以允許靈活的質量-速度權衡。我們仔細調整了它們，並報告了每種方法的帕累托最優配置。
+對於每種方法，我們報告兩種配置：一種在最大化速度的同時勉強維持質量，另一種速度稍快但質量大幅下降。
+加速是相對於使用 64 步的 Lumina-DiMOO。表 2 列出了結果，第 4 節提供了更清晰的視覺化。
+我們可以看到 DiMOO-Shortcut 的所有三種配置都接近原始模型的性能，同時達到 4.0 ∼ 5.8 4.0\sim 5.8 的加速率。
+值得注意的是，在預算 B = 14 B=14 下，DiMOO-Shortcut 達到了最高的 ImageReward 和 UniPercept-IQA，以及第二高的 CLIPScore，並具有 4 倍的高加速率。儘管 ReCAP 可以達到略高的 CLIPScore，但其其他兩個度量非常低，加速率也較低。
+一些定性示例顯示在圖 5 中，也支持了 DiMOO-Shortcut 的優越性。更多示例請參閱附錄 D。
+為了進一步驗證 DiMOO-Shortcut 結果保持的感知質量，我們在 Rapidata 平台上進行了人類研究 3 3 3 https://www.rapidata.ai/。更多詳情見附錄 C。，要求人類比較 DiMOO-Shortcut 加速前後影像的質量。第 4 節顯示了 DiMOO-Shortcut 的勝率。在近一半的情況下，B = 14 B=14 且 4.0 × 4.0\times 加速的 DiMOO-Shortcut 被認為更好。即使 B = 9 B=9 且 5.8 × 5.8\times 加速，勝率仍接近 40%。
+這些結果表明 DiMOO-Shortcut 確實能以最小質量損失的代價大幅加速生成。</p>
+<p>值得注意的是，儘管單步模型 Di [ 𝙼 ] \mathtt{[M]} O 極其迅速，但在許多情況下影像質量是不可接受的。
+這是由於多模態問題（Gu et al. , 2018）。MIGM 只能對每個令牌的邊際分佈進行建模，而不是多個令牌的聯合分佈。
+如果模型試圖在單一步驟中取消掩碼過多令牌，這將導致嚴重的性能下降。圖 6 展示了一些示例。
+在第一行中，當提示生成單個物件時，Di [ 𝙼 ] \mathtt{[M]} O 生成重複；在第二行中，它在不同位置生成物件的相同部分，造成偽影。
+因此，目前減少 MIGM 的生成步驟特別困難，而 MIGM-Shortcut 可以減少數量眾多的完整步驟，表現得像偽少步生成。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x3.png" loading="lazy"></figure> 圖 6：Di [ 𝙼 ] \mathtt{[M]} O 中多模態問題的示例。在單一步驟中，MIGM 無法聯合建模多個令牌的分佈，導致重複甚至偽影。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x4.png" loading="lazy"></figure> 圖 7：DiMOO-Shortcut 是否納入採樣資訊的比較。右邊兩張影像過度平滑。</p>
+<h3 id="43-ablation-study">4.3 Ablation Study</h3>
+<p>We ablate the model design on DiMOO-Shortcut to validate our two assumptions discussed in Sec. 1 . All variants are trained for over 12 hours using 4 H200 GPUs. More details are in Appendix E .</p>
+<h4 id="importance-of-incorporating-sampling-information">Importance of incorporating sampling information.</h4>
+<p>The feature dynamics are controlled by the sampling, hence it is a must to incorporate this information to predict features. We implement this via the cross-attention module.
+To investigate its influence, we replace the cross attention with self attention so that the model cannot attend to sampled tokens.
+As Sec. 4 shows, removing the cross attention drastically degrades the performance. Fig. 7 presents two examples. The shortcut model without cross attention tends to output over-smoothed images, as it is forced to predict the expectation over all possible sampling results.</p>
+<h4 id="model-complexity">Model complexity.</h4>
+<p>The complexity of the shortcut model should strike a balance. Too low complexity cannot accurately model feature dynamics, like existing caching-based methods, while too high complexity wastes computation, like the base model itself.
+To investigate this, we modify the model size by altering the bottleneck ratio R R and the number of cross attention and self attention layers D D (the setting adopted in the experiments in Sec. 4.1 and 4.2 is R = 2 , D = 1 R=2,D=1 ). The variants’ performance is shown in Sec. 4 , with the configurations and parameter numbers indicated in the legend.
+Although the heavier variants sometimes surpass the default under the same budget, the performance gain cannot compensate for the increased latency.
+On the other hand, making the model lighter compromises performance, which cannot be remedied by increasing the budget.
+Therefore, among these variants, our default setting is still Pareto optimal, at a sweet spot of model complexity.</p>
+<h2 id="5-conclusion">5 Conclusion</h2>
+<p>This paper presents MIGM-Shortcut, which achieves remarkable acceleration with minimal performance drop.
+We identify that the sampling process of MIGMs wastes much information in the continuous features, hence leveraging this information may reduce the computational complexity.
+For existing related methods that use previous features to approximate future ones, we point out that they suffer from limited expressivity and the fatal neglect of sampling information.
+Accordingly, we propose to learn a lightweight model that incorporates both previous features and sampled tokens to learn the dynamics of latent feature evolution.
+The learned model takes a shortcut that skips the heavy base model to improve efficiency.
+Experiments on MaskGIT and Lumina-DiMOO demonstrate the effectiveness and rationale of MIGM-Shortcut.
+We hope this paper could provide more insights into the computation paradigm of MIGMs, especially about its inherent redundancy.</p>
+<h2 id="acknowledgements">Acknowledgements</h2>
+<p>This work is supported by Shanghai Artificial Intelligence Laboratory.</p>
+<h2 id="impact-statement">Impact Statement</h2>
+<p>This paper presents work whose goal is to advance the field of Machine
+Learning. There are many potential societal consequences of our work, none
+which we feel must be specifically highlighted here.</p>
+<h2 id="_8">參考文獻</h2>
+<ul>
+<li>J. Austin, D. D. Johnson, J. Ho, D. Tarlow, and R. van den Berg (2021) Structured denoising diffusion models in discrete state-spaces . In Advances in Neural Information Processing Systems , Vol. 34 , pp. 17981–17993 . Cited by: §2.1 .</li>
+<li>J. Bai, T. Ye, W. Chow, E. Song, Q. Chen, X. Li, Z. Dong, L. Zhu, and S. Yan (2025) Meissonic: revitalizing masked generative transformers for efficient high-resolution text-to-image synthesis . In The Thirteenth International Conference on Learning Representations , Cited by: §2.1 , §3.1 , §3.3 , §4.2 .</li>
+<li>V. Besnier, M. Chen, D. Hurych, E. Valle, and M. Cord (2025) Halton scheduler for masked generative image transformer . In The Thirteenth International Conference on Learning Representations , Cited by: §2.1 .</li>
+<li>V. Besnier and M. Chen (2023) A pytorch reproduction of masked generative image transformer . arXiv preprint arXiv:2310.14400 . Cited by: §4.1 , §4.1 , Table 1 .</li>
+<li>S. Cao, J. Li, X. Li, Y. Pu, K. Zhu, Y. Gao, S. Luo, Y. Xin, Q. Qin, Y. Zhou, et al. (2025) UniPercept: towards unified perceptual-level image understanding across aesthetics, quality, structure, and texture . arXiv preprint arXiv:2512.21675 . Cited by: §4.2 .</li>
+<li>H. Chang, H. Zhang, J. Barber, A. Maschinot, J. Lezama, L. Jiang, M. Yang, K. P. Murphy, W. T. Freeman, M. Rubinstein, Y. Li, and D. Krishnan (2023) Muse: text-to-image generation via masked generative transformers . In Proceedings of the 40th International Conference on Machine Learning , Vol. 202 , pp. 4055–4075 . Cited by: §2.1 .</li>
+<li>H. Chang, H. Zhang, L. Jiang, C. Liu, and W. T. Freeman (2022) MaskGIT: masked generative image transformer . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 11315–11325 . Cited by: §1 , §2.1 , §3.1 , §4.1 , §4 .</li>
+<li>G. Chen, X. Zhao, Y. Zhou, X. Qu, T. Chen, and Y. Cheng (2025a) Towards stabilized and efficient diffusion transformers through long-skip-connections with spectral constraints . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , pp. 17708–17718 . Cited by: §2.2 .</li>
+<li>J. Chen, Z. Xu, X. Pan, Y. Hu, C. Qin, T. Goldstein, L. Huang, T. Zhou, S. Xie, S. Savarese, et al. (2025b) BLIP3-o: a family of fully open unified multimodal models-architecture, training and dataset . arXiv preprint arXiv:2505.09568 . Cited by: §4.2 .</li>
+<li>P. Chen, M. Shen, P. Ye, J. Cao, C. Tu, C. Bouganis, Y. Zhao, and T. Chen (2024) Δ \Delta -DiT: a training-free acceleration method tailored for diffusion transformers . arXiv preprint arXiv:2406.01125 . Cited by: §2.2 .</li>
+<li>J. Deng, W. Dong, R. Socher, L. Li, K. Li, and L. Fei-Fei (2009) ImageNet: a large-scale hierarchical image database . In 2009 IEEE Conference on Computer Vision and Pattern Recognition , Vol. , pp. 248–255 . Cited by: §4.1 .</li>
+<li>J. Devlin, M. Chang, K. Lee, and K. Toutanova (2019) BERT: pre-training of deep bidirectional transformers for language understanding . In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers) , pp. 4171–4186 . Cited by: §2.1 .</li>
+<li>P. Esser, R. Rombach, and B. Ommer (2021) Taming transformers for high-resolution image synthesis . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 12873–12883 . Cited by: §2.1 .</li>
+<li>G. Fang, X. Ma, and X. Wang (2023) Structural pruning for diffusion models . In Advances in Neural Information Processing Systems , Vol. 36 , pp. 16716–16728 . Cited by: §2.2 .</li>
+<li>L. Feng, S. Zheng, J. Liu, Y. Lin, Q. Zhou, P. Cai, X. Wang, J. Chen, C. Zou, Y. Ma, et al. (2025) HiCache: training-free acceleration of diffusion models via Hermite polynomial-based feature caching . arXiv preprint arXiv:2508.16984 . Cited by: §1 , §1 , §2.2 , §4.2 .</li>
+<li>K. Frans, D. Hafner, S. Levine, and P. Abbeel (2025) One step diffusion via shortcut models . In The Thirteenth International Conference on Learning Representations , Cited by: §2.2 .</li>
+<li>Z. Geng, M. Deng, X. Bai, J. Z. Kolter, and K. He (2025) Mean flows for one-step generative modeling . In Advances in Neural Information Processing Systems , Cited by: §2.2 .</li>
+<li>J. Gu, J. Bradbury, C. Xiong, V. O.K. Li, and R. Socher (2018) Non-autoregressive neural machine translation . In International Conference on Learning Representations , Cited by: §1 , §2.2 , §4.2 .</li>
+<li>K. He, X. Chen, S. Xie, Y. Li, P. Dollár, and R. Girshick (2022) Masked autoencoders are scalable vision learners . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 16000–16009 . Cited by: §2.1 .</li>
+<li>K. He, X. Zhang, S. Ren, and J. Sun (2016) Deep residual learning for image recognition . In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , Cited by: §3.2 .</li>
+<li>J. Hessel, A. Holtzman, M. Forbes, R. Le Bras, and Y. Choi (2021) CLIPScore: a reference-free evaluation metric for image captioning . In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing , pp. 7514–7528 . Cited by: §4.2 .</li>
+<li>M. Heusel, H. Ramsauer, T. Unterthiner, B. Nessler, and S. Hochreiter (2017) GANs trained by a two time-scale update rule converge to a local nash equilibrium . In Advances in Neural Information Processing Systems , Vol. 30 , pp. . Cited by: §4.1 .</li>
+<li>J. Ho, A. Jain, and P. Abbeel (2020) Denoising diffusion probabilistic models . In Advances in Neural Information Processing Systems , Vol. 33 , pp. 6840–6851 . Cited by: §3.3 .</li>
+<li>X. Hu, R. Wang, Y. Fang, B. Fu, P. Cheng, and G. Yu (2024) ELLA: equip diffusion models with LLM for enhanced semantic alignment . arXiv preprint arXiv:2403.05135 . Cited by: §4.2 .</li>
+<li>X. Huang, Z. Li, G. He, M. Zhou, and E. Shechtman (2025) Self forcing: bridging the train-test gap in autoregressive video diffusion . In Advances in Neural Information Processing Systems , Cited by: §3.4 .</li>
+<li>P. Isola, J. Zhu, T. Zhou, and A. A. Efros (2017) Image-to-image translation with conditional adversarial networks . In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , Cited by: §3.2 .</li>
+<li>P. Kidger, J. Morrill, J. Foster, and T. Lyons (2020) Neural controlled differential equations for irregular time series . In Advances in Neural Information Processing Systems , Vol. 33 , pp. 6696–6707 . Cited by: §1 .</li>
+<li>S. H. Kim, S. Hong, H. Jung, Y. Park, and S. Yun (2025) KLASS: KL-guided fast inference in masked diffusion models . In Advances in Neural Information Processing Systems , Cited by: §2.2 .</li>
+<li>T. Li, H. Chang, S. Mishra, H. Zhang, D. Katabi, and D. Krishnan (2023) MAGE: masked generative encoder to unify representation learning and image synthesis . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 2142–2152 . Cited by: §2.1 , §3.1 .</li>
+<li>F. Liu, S. Zhang, X. Wang, Y. Wei, H. Qiu, Y. Zhao, Y. Zhang, Q. Ye, and F. Wan (2025a) Timestep embedding tells: it's time to cache for video diffusion model . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 7353–7363 . Cited by: §2.2 .</li>
+<li>J. Liu, X. Wang, Y. Lin, Z. Wang, P. Wang, P. Cai, Q. Zhou, Z. Yan, Z. Yan, Z. Shi, et al. (2025b) A survey on cache methods in diffusion models: toward efficient multi-modal generation . arXiv preprint arXiv:2510.19755 . Cited by: §1 , §2.2 .</li>
+<li>J. Liu, C. Zou, Y. Lyu, J. Chen, and L. Zhang (2025c) From reusing to forecasting: accelerating diffusion models with taylorseers . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , pp. 15853–15863 . Cited by: §1 , §1 , §2.2 , §4.2 , §4.2 .</li>
+<li>X. Liu, A. Liu, G. V. den Broeck, and Y. Liang (2025d) Plug-and-play context feature reuse for efficient masked generation . In Advances in Neural Information Processing Systems , Cited by: §1 , §4.2 .</li>
+<li>Z. Liu, Y. Yang, Y. Zhang, J. Chen, C. Zou, Q. Wei, S. Wang, and L. Zhang (2025e) dLLM-Cache: accelerating diffusion large language models with adaptive caching . arXiv preprint arXiv:2506.06295 . Cited by: §1 , §4.2 .</li>
+<li>C. Lu, Y. Zhou, F. Bao, J. Chen, C. LI, and J. Zhu (2022) DPM-Solver: a fast ODE solver for diffusion probabilistic model sampling in around 10 steps . In Advances in Neural Information Processing Systems , Vol. 35 , pp. 5775–5787 . Cited by: §2.2 .</li>
+<li>X. Ma, G. Fang, and X. Wang (2024) DeepCache: accelerating diffusion models for free . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 15762–15772 . Cited by: §2.2 .</li>
+<li>Z. Ni, Y. Wang, R. Zhou, J. Guo, J. Hu, Z. Liu, S. Song, Y. Yao, and G. Huang (2024a) Revisiting non-autoregressive transformers for efficient image synthesis . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 7007–7016 . Cited by: §2.1 .</li>
+<li>Z. Ni, Y. Wang, R. Zhou, Y. Han, J. Guo, Z. Liu, Y. Yao, and G. Huang (2024b) ENAT: rethinking spatial-temporal interactions in token-based image synthesis . In Advances in Neural Information Processing Systems , Vol. 37 , pp. 90431–90455 . Cited by: §2.1 .</li>
+<li>N. Parmar, A. Vaswani, J. Uszkoreit, L. Kaiser, N. Shazeer, A. Ku, and D. Tran (2018) Image transformer . In Proceedings of the 35th International Conference on Machine Learning , Vol. 80 , pp. 4055–4064 . Cited by: §2.1 .</li>
+<li>W. Peebles and S. Xie (2023) Scalable diffusion models with transformers . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , pp. 4195–4205 . Cited by: §3.3 .</li>
+<li>J. Qiu, S. Wang, J. Lu, L. Liu, H. Jiang, X. Zhu, and Y. Hao (2025) Accelerating diffusion transformer via error-optimized cache . In Proceedings of the 33rd ACM International Conference on Multimedia , MM '25 , pp. 9588–9597 . Cited by: §2.2 .</li>
+<li>A. Ramesh, M. Pavlov, G. Goh, S. Gray, C. Voss, A. Radford, M. Chen, and I. Sutskever (2021) Zero-shot text-to-image generation . In Proceedings of the 38th International Conference on Machine Learning , Vol. 139 , pp. 8821–8831 . Cited by: §2.1 .</li>
+<li>A. Romero, N. Ballas, S. E. Kahou, A. Chassang, C. Gatta, and Y. Bengio (2015) FitNets: hints for thin deep nets . In International Conference on Learning Representations , Cited by: §3.4 .</li>
+<li>T. Salimans and J. Ho (2022) Progressive distillation for fast sampling of diffusion models . In International Conference on Learning Representations , Cited by: §2.2 .</li>
+<li>P. Selvaraju, T. Ding, T. Chen, I. Zharkov, and L. Liang (2024) FORA: fast-forward caching in diffusion transformer acceleration . arXiv preprint arXiv:2407.01425 . Cited by: §2.2 .</li>
+<li>Y. Shang, Z. Yuan, B. Xie, B. Wu, and Y. Yan (2023) Post-training quantization on diffusion models . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 1972–1981 . Cited by: §2.2 .</li>
+<li>S. Shao, Z. Zhou, T. Ye, L. Bai, Z. Xu, and Z. Xie (2024) Bag of design choices for inference of high-resolution masked generative transformer . arXiv preprint arXiv:2411.10781 . Cited by: §2.1 .</li>
+<li>Y. Song, P. Dhariwal, M. Chen, and I. Sutskever (2023) Consistency models . In Proceedings of the 40th International Conference on Machine Learning , Vol. 202 , pp. 32211–32252 . Cited by: §2.2 .</li>
+<li>A. van den Oord, N. Kalchbrenner, and K. Kavukcuoglu (2016) Pixel recurrent neural networks . In Proceedings of The 33rd International Conference on Machine Learning , Vol. 48 , pp. 1747–1756 . Cited by: §2.1 .</li>
+<li>L. van der Maaten and G. Hinton (2008) Visualizing data using t-SNE . Journal of Machine Learning Research 9 ( 86 ), pp. 2579–2605 . Cited by: §1 .</li>
+<li>A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, and I. Polosukhin (2017) Attention is all you need . In Advances in Neural Information Processing Systems , Vol. 30 , pp. . Cited by: §3.3 .</li>
+<li>F. Wimbauer, B. Wu, E. Schoenfeld, X. Dai, J. Hou, Z. He, A. Sanakoyeu, P. Zhang, S. Tsai, J. Kohler, C. Rupprecht, D. Cremers, P. Vajda, and J. Wang (2024) Cache me if you can: accelerating diffusion models through block caching . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 6211–6220 . Cited by: §2.2 .</li>
+<li>Z. Xie, Z. Zhang, Y. Cao, Y. Lin, J. Bao, Z. Yao, Q. Dai, and H. Hu (2022) SimMIM: a simple framework for masked image modeling . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 9653–9663 . Cited by: §2.1 .</li>
+<li>Z. Xie, Z. Zhang, Y. Cao, Y. Lin, Y. Wei, Q. Dai, and H. Hu (2023) On data scaling in masked image modeling . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 10365–10374 . Cited by: §1 , §2.1 .</li>
+<li>Y. Xin, Q. Qin, S. Luo, K. Zhu, J. Yan, Y. Tai, J. Lei, Y. Cao, K. Wang, Y. Wang, et al. (2025) Lumina-DiMOO: an omni diffusion large language model for multi-modal generation and understanding . arXiv preprint arXiv:2510.06308 . Cited by: §1 , §1 , §1 , §1 , §2.1 , §2.2 , §3.2 , §4 .</li>
+<li>J. Xu, X. Liu, Y. Wu, Y. Tong, Q. Li, M. Ding, J. Tang, and Y. Dong (2023) ImageReward: learning and evaluating human preferences for text-to-image generation . In Advances in Neural Information Processing Systems , Vol. 36 , pp. 15903–15935 . Cited by: §4.2 .</li>
+<li>F. Yan, Q. Wei, J. Tang, J. Li, Y. Wang, X. Hu, H. Li, and L. Zhang (2025) LazyMAR: accelerating masked autoregressive models via feature caching . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , pp. 15552–15561 . Cited by: §2.2 .</li>
+<li>L. Yang, Y. Tian, B. Li, X. Zhang, K. Shen, Y. Tong, and M. Wang (2025) MMaDA: multimodal large diffusion language models . In Advances in Neural Information Processing Systems , Cited by: §1 , §2.1 , §4.2 .</li>
+<li>T. Yin, M. Gharbi, R. Zhang, E. Shechtman, F. Durand, W. T. Freeman, and T. Park (2024) One-step diffusion with distribution matching distillation . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp. 6613–6623 . Cited by: §2.2 .</li>
+<li>Z. You, J. Ou, X. Zhang, J. Hu, J. Zhou, and C. Li (2025) Effective and efficient masked image generation models . In Proceedings of the 42nd International Conference on Machine Learning , Vol. 267 , pp. 72730–72746 . Cited by: §1 , §2.1 .</li>
+<li>L. Zhang, C. Bao, and K. Ma (2022) Self-distillation: towards efficient and compact neural networks . IEEE Transactions on Pattern Analysis and Machine Intelligence 44 ( 8 ), pp. 4388–4403 . Cited by: §3.4 .</li>
+<li>K. Zheng, Y. Chen, H. Mao, M. Liu, J. Zhu, and Q. Zhang (2025a) Masked diffusion models are secretly time-agnostic masked models and exploit inaccurate categorical sampling . In The Thirteenth International Conference on Learning Representations , Cited by: footnote 2 .</li>
+<li>S. Zheng, L. Feng, X. Wang, Q. Zhou, P. Cai, C. Zou, J. Liu, Y. Lin, J. Chen, Y. Ma, et al. (2025b) Forecast then calibrate: feature caching as ODE for efficient diffusion transformers . arXiv preprint arXiv:2508.16211 . Cited by: §1 , §2.2 , §4.2 .</li>
+<li>Z. Zhou, D. Chen, C. Wang, C. Chen, and S. Lyu (2024) Simple and fast distillation of diffusion models . In Advances in Neural Information Processing Systems , Vol. 37 , pp. 40831–40860 . Cited by: §3.4 .</li>
+<li>Y. Zhu, X. Wang, S. Lathuilière, and V. Kalogeiton (2025) Di[M]O: distilling masked diffusion models into one-step generator . In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , pp. 18606–18618 . Cited by: §2.2 .</li>
+</ul>
+<h2 id="a">附錄 A 選擇要調查的層特徵</h2>
+<p>我們檢查哪一層的特徵最適合由我們的 MIGM-Shortcut 進行建模。
+為了使 MIGM-Shortcut 達到更高的加速率，我們希望使用最後一層的特徵。
+為了使動態易於學習，我們希望相鄰步驟之間的餘弦相似度最高。附錄 A 為由 Lumina-DiMOO 生成的示例樣本繪製了相似度與層深度的關係。
+事實證明，兩個條件同時滿足：最後一層的特徵表現出最穩定的動態。
+因此，我們將使用此特徵作為 MIGM-Shortcut 的建模目標。
+我們假設原因可能是，在神經網路的末端，由於特徵直接支配生成的分佈，它必須接近訓練目標，因此在不同步驟中收斂到相似的空間。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/layer_selection.png" loading="lazy"></figure></p>
+<h2 id="b">附錄 B 訓練策略的進一步探索</h2>
+<p>除了簡單的 MSE 損失之外，我們還嘗試了其他訓練 MIGM-Shortcut 的策略。</p>
+<ul>
+<li>• 在損失中添加分佈匹配項。我們添加捷徑模型特徵的 logits 與基礎模型特徵的 logits 之間的 KL 散度：$D_{\text{KL}}(\text{softmax}(H(\hat{\boldsymbol{f}}))\ |\ \text{softmax}(H(\boldsymbol{f})))$，其中 $H$ 是基礎模型的凍結分類頭。</li>
+<li>• 將捷徑模型暴露於其預測。在推理時，捷徑模型的輸入可能是其自身的特徵預測，而不是來自基礎模型的真實特徵。這帶來了曝光偏差的風險。因此，我們建議在訓練中，讓捷徑模型展開若干步，然後將結果特徵輸入模型。</li>
+</ul>
+<p>在損失中添加分佈匹配項。我們添加捷徑模型特徵的 logits 與基礎模型特徵的 logits 之間的 KL 散度：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$D_{\text{KL}}(\text{softmax}(H(\hat{\boldsymbol{f}}))\ |\ \text{softmax}(H(\boldsymbol{f})))$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $H$ 是基礎模型的凍結分類頭。</p>
+<p>將捷徑模型暴露於其預測。在推理時，捷徑模型的輸入可能是其自身的特徵預測，而不是來自基礎模型的真實特徵。這帶來了曝光偏差的風險。因此，我們建議在訓練中，讓捷徑模型展開若干步，然後將結果特徵輸入模型。</p>
+<p>雖然這些方法似乎有道理，但如附錄 A 所示，它們並未帶來顯著的益處。
+原因可能是動態足夠平順，因此目標容易被 MSE 損失學習，這與我們的核心假設相符。</p>
+<h2 id="appendix-c-details-of-human-study">Appendix C Details of Human Study</h2>
+<p>We use the Rapidata 4 4 4 https://www.rapidata.ai/ platform to conduct pairwise human preference comparisons for evaluating image quality. Each trial presents various method outputs against vanilla output (A/B) under a fixed unified instruction:</p>
+<p>Which image has better overall visual quality?</p>
+<p>Annotators are vetted beforehand and participate on a voluntary basis.</p>
+<p>For this study run, each acceleration method was evaluated on all paired datapoints, and each datapoint was annotated by three independent raters. We report, for each method M M , the win rate against the vanilla defined as</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>WinRate ( M vs . Vanilla ) = W M W M + W Vanilla , \mathrm{WinRate}(M\;\mathrm{vs.}\;\mathrm{Vanilla})\,=\,\frac{W_{M}}{W_{M}+W_{\mathrm{Vanilla}}},</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>where W M W_{M} and W V ​ a ​ n ​ i ​ l ​ l ​ a W_{Vanilla} denote the total numbers of pairwise wins for the method and the vanilla, respectively, aggregated over all collected comparisons.</p>
+<h2 id="d">附錄 D 更多視覺化</h2>
+<p>圖 8 - 16 展示了 DiMOO-Shortcut 和其他比較方法生成的圖像的更多示例，證明我們的方法能夠持續生成高品質的圖像且速度很快。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x5.png" loading="lazy"></figure> 圖 8：提示詞：兩隻多彩蝴蝶，擁有精緻的脈絡狀翅膀，輕輕地平衡在一個鮮豔的橙色橘子上，橘子位於繁忙的花園中。這個橘子具有光澤感和凹陷紋理，放置在木質桌子上，與周圍植被和花卉的綠色相對比。蝴蝶相對而言顯得很小，為場景增添了優雅的氣息，與翠綠背景的自然色彩相輔相成。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x6.png" loading="lazy"></figure> 圖 9：提示詞：在暮光時刻，可以看到一個人伸出手臂指向天空，指著三隻野鳥在早晨的深藍色天空中翱翔。鳥類的輪廓在褪去的光線中清晰地突出，翅膀展開寬闊地翱翔。這個人在昏暗的天空映襯下呈現出剪影，營造出一個寧靜的人類與自然連接的場景。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x7.png" loading="lazy"></figure> 圖 10：提示詞：在一個優雅簡潔的房間裡，兩雙涼鞋——一雙藍色，一雙紅色——整齊地放在一個古樸的方形木製邊桌下方，該邊桌具有風化飾面，暗示著質樸的魅力。這個邊桌投射出柔和的陰影到其後方紋理化的鮭魚粉紅色牆壁上，為鮮豔的鞋類提供了和諧的平衡。桌子下的地板是拋光的淺色硬木，反射出進入房間自然光的微弱光線。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x8.png" loading="lazy"></figure> 圖 11：提示詞：在一個昏暗的房間內，低亮度光線來自床邊燈投射在床頭櫃上的柔和光線。床頭櫃上放著一本旅遊雜誌，其頁面打開到一幅生動的汽車在風景優美的景觀中行駛的插圖。放在圖像上的是一把淺粉紅色的牙刷，其刷毛在環境光下閃閃發光。在雜誌旁邊，床單的紋理織物隱約可見，為這個整潔而安靜的場景增添了貢獻。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x9.png" loading="lazy"></figure> 圖 12：提示詞：一枚精緻的銀戒指，其光滑的戒圈優雅地放在一個龐大的深色皮革錢包旁邊，錢包似乎堆滿了卡片和收據。兩件物品都放在拋光的木製床頭櫃上，其紋理微妙地彌補了戒指的金屬光澤。錢包的龐大外觀強調了戒指的精細簡潔，突出了它們在尺寸和設計上的巨大差異。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x10.png" loading="lazy"></figure> 圖 13：提示詞：一對閃閃發光的金色鈸與整齊排列在架子上的一系列圓形靜止盥洗用品瓶形成鮮明對比。鈸的金屬光澤因周圍洗髮精和乳液容器的沉著色調而得到強調。它們所放置的浴室架子由拋光的橡木製成，為設置增添了溫暖的氣息。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x11.png" loading="lazy"></figure> 圖 14：提示詞：在一個寂靜的房間裡，輕輕演奏的豎笛的旋律節奏輕輕地回蕩在整個空間中。一盞帶有六邊形框架和複雜金屬工藝的單盞燈籠坐在附近，發出柔和溫暖的光線，微微閃爍，照亮了周圍的區域。牆壁塗有沉著的奶油色，被燈籠的光線映照，在音樂家周圍營造出舒適的氛圍。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x12.png" loading="lazy"></figure> 圖 15：提示詞：一張質樸的復古木製書桌坐在古董店的角落裡，其表面老化為溫暖的蜂蜜色。書桌上放著一支銀色長笛，其拋光的表面輕輕反射著從附近窗戶透過來的柔和的金色午後陽光。在長笛後面，各種各樣的古怪清潔產品被精心排列著，從老式的羽毛撢子到復古玻璃瓶，為這個場景增添了魅力。這些物品以一種投射出細微陰影和亮點的方式捕捉陽光，跨越書桌的表面。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.23996/x13.png" loading="lazy"></figure> 圖 16：提示詞：一台老式的金屬製風扇，具有圓形底座和生鏽的葉片，站在一把裝飾華麗的古董刀旁邊，該刀具有風化的骨製手柄。兩件物品都靠在一面歷經滄桑的木牆上，該木牆留下了歲月的印記，以及從附近窗戶透過來的溫暖金色午後陽光。空氣中的灰塵顆粒捕捉光線，突出了場景的復古氛圍。</p>
+<h2 id="e">附錄 E 消融研究的完整結果</h2>
+<p>表 3 列出了 DiMOO-Shortcut 不同變體的度量值。其中，預設設定 $N=1, R=2$ 搭配 cross attention 達到了最佳的品質-速度折衷。</p>
+<p>表 3：DiMOO-Shortcut 不同變體的效能。$N$ 是 cross-attention 和 self-attention 層的數量。$R$ 是瓶頸比率。「No cross attention」表示將 cross-attention 層替換為 self-attention 層。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

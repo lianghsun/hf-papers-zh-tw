@@ -1,0 +1,448 @@
+# Memory Caching：具有增長式記憶的 RNNs
+
+Transformers 已成為序列建模最近進展的實際標準骨幹網路，主要是因為它們的記憶容量隨著上下文長度而增長。雖然對於檢索任務而言是可行的，但它導致二次方複雜度，因此促使最近的研究探索可行的次二次方遞迴替代方案。儘管在不同領域展現了有前景的初步結果，但這類遞迴架構在回憶密集型任務中的表現不如 Transformers，這通常歸因於它們的固定大小記憶。在本論文中，我們介紹 Memory Caching（MC），一種簡單但有效的技術，通過快取其記憶狀態（又稱隱藏狀態）的檢查點來增強遞迴模型。MC 允許 RNNs 的有效記憶容量隨序列長度增長，提供一種靈活的權衡，在 RNNs 的固定記憶（即 $\mathcal{O}(L)$ 複雜度）和 Transformers 的增長式記憶（即 $\mathcal{O}(L^{2})$ 複雜度）之間進行插值。我們提出了 MC 的四個變體，包括門控聚合和稀疏選擇機制，並討論它們對線性和深度記憶模組的影響。
+
+我們在語言建模和長上下文理解任務上的實驗結果表明，MC 增強了遞迴模型的性能，證實了其有效性。在上下文回憶任務的結果表明，雖然 Transformers 達到最佳準確度，但我們的 MC 變體展現了競爭性的性能，縮小了與 Transformers 的差距，並優於最先進的遞迴模型。
+
+## 1 Introduction
+
+Transformers (Vaswani et al. , 2017 ) are the foundation of recent advances in machine learning across diverse domains (Jumper et al. , 2021 ; Dosovitskiy et al. , 2021 ; Comanici et al. , 2025 ) . This success often is attributed to their ability to learn at scale (Kaplan et al. , 2020 ) and in-context (Brown et al. , 2020 ) , both of which are the byproduct of their primary building block–attention module–that acts as an associative memory with growing capacity (Ramsauer et al. , 2021 ; Bietti et al. , 2024 ; Behrouz et al. , 2026 ) . While effective for many retrieval tasks (Arora et al. , 2024b ) , this growing memory incurs quadratic complexity and high inference-time memory usage (KV-caching). This has motivated the development of sub-quadratic architectures that aim to improve efficiency while maintaining performance (Dai et al. , 2019 ; Child et al. , 2019 ; Poli et al. , 2023 ) .
+
+In particular, recurrent neural networks that aim to compress the past data into their memory state, maintaining a fixed size over the entire input sequence, have regained attention in recent years (Katharopoulos et al. , 2020 ; Irie et al. , 2021 ; Sun et al. , 2023 ; Behrouz et al. , 2025c ) . Despite showing promising results in diverse short-context language modeling (Irie et al. , 2022 ) and other sequence modeling tasks such as video data (Park et al. , 2025 ) , the fixed-memory state of such recurrent architectures is the bottleneck to unleash their actual power.
+The foundation of these architectures is based on recurrence and data compression, which, with careful design, can result in highly efficient and expressive learning algorithms (Merrill et al. , 2024 ; Huang et al. , 2024 ) . However, their fixed capacity
+to compress a growing sequence forces them to forget past information, which is a critical bottleneck, specifically in recall-intensive and long-context tasks (Arora et al. , 2024b ; Kuratov et al. , 2024 ) .
+
+[FIGURE:MC-overall.png] Figure 1: The Overall Memory Caching Method. Each token attends to its online memory as well as a set of cached memories from the past.
+
+Contributions. We introduce Memory Caching ( MC ), a general technique that allows the effective memory of recurrent models to grow with sequence length by caching checkpoints of the memory states (see Figure 1 ). MC provides a flexible middle ground interpolating between standard recurrence and attention, offering a controllable complexity of 𝒪 ​ ( N ​ L ) \mathcal{O}(NL) . This allows for flexible interpolation between the 𝒪 ​ ( L ) \mathcal{O}(L) complexity of RNNs and the 𝒪 ​ ( L 2 ) \mathcal{O}(L^{2}) complexity of Transformers.
+Our contributions are threefold:
+
+- • The MC Framework: We propose segmenting the sequence and caching the compressed memory state of each segment, allowing the model to directly access compressed information from the entire history.
+- • Novel Aggregation Strategies: We introduce four methods to utilize these cached memories: (i, ii) (Gated) Residual Memory, which uses residual connections and a novel context-aware gating mechanism; (iii) Memory Soup, inspired by weight souping, which averages the parameters of cached memory modules (distinct for non-linear memories); and (iv) Sparse Selective Caching (SSC), which uses a Mixture-of-Experts style router to select only the most contextually relevant cached memories for efficient aggregation.
+- • Empirical Validation: As a proof of concept, we demonstrate the effectiveness of MC on three architectures of Linear Attention (LA) (Katharopoulos et al. , 2020 ) , deep memory module Titans (Behrouz et al. , 2025c ) and Sliding Window Linear Attention (SWLA), and Deep Linear Attention (DLA) (Behrouz et al. , 2025a ) , across language modeling, long-context, and retrieval tasks, showing that MC enhances performance and extends the effective context length of RNNs.
+
+The MC Framework: We propose segmenting the sequence and caching the compressed memory state of each segment, allowing the model to directly access compressed information from the entire history.
+
+Novel Aggregation Strategies: We introduce four methods to utilize these cached memories: (i, ii) (Gated) Residual Memory, which uses residual connections and a novel context-aware gating mechanism; (iii) Memory Soup, inspired by weight souping, which averages the parameters of cached memory modules (distinct for non-linear memories); and (iv) Sparse Selective Caching (SSC), which uses a Mixture-of-Experts style router to select only the most contextually relevant cached memories for efficient aggregation.
+
+Empirical Validation: As a proof of concept, we demonstrate the effectiveness of MC on three architectures of Linear Attention (LA) (Katharopoulos et al. , 2020 ) , deep memory module Titans (Behrouz et al. , 2025c ) and Sliding Window Linear Attention (SWLA), and Deep Linear Attention (DLA) (Behrouz et al. , 2025a ) , across language modeling, long-context, and retrieval tasks, showing that MC enhances performance and extends the effective context length of RNNs.
+
+## 2 預備知識與背景
+
+在本節中，我們回顧必要的背景知識並建立記號。特別地，我們回顧 attention 及其線性變體的概念，隨後討論參數化上下文內學習和嵌套學習範式（Behrouz et al.，2026；2025b），我們在此基礎上構建 Memory Caching。
+
+記號。我們使用粗體小寫字母（分別為粗體大寫字母）表示向量（分別為矩陣），並使用下標 $t$ 表示在時間 $t$ 對應的實體狀態。始終地，我們令 $x\in\mathbb{R}^{L\times d_{\text{in}}}$ 為輸入，$\mathcal{M}_{t}$ 為記憶體 $\mathcal{M}(\cdot)$ 在時間 $t$ 的狀態，$\mathbf{K}$ 為鍵，$\mathbf{V}$ 為值，$\mathbf{Q}$ 為查詢矩陣，$L$ 表示序列長度。我們專注於具有 $\mathcal{L}_{\mathcal{M}}\geq 1$ 層的基於 MLP 的記憶體架構。值得注意的是，當 $\mathcal{L}_{\mathcal{M}}=1$ 時，此公式包含線性矩陣值記憶體模組。在需要時，我們使用 $\bm{\theta}_{\mathcal{M}}:=\{W_{1},\dots,W_{\mathcal{L}_{\mathcal{M}}},\dots\}$ 對記憶體模組 $\mathcal{M}(\cdot)$ 進行參數化，其至少包含 MLP 中線性層的參數。
+
+Attention。Attention（Vaswani et al.，2017）是 Transformer 的主要構成塊，作用為其聯想記憶體（Bietti et al.，2023；Behrouz et al.，2026；Wang et al.，2025）。給定輸入 $x\in\mathbb{R}^{L\times d_{\text{in}}}$，因果 attention 在輸入相依的鍵、值和查詢矩陣 $\mathbf{Q}=x\mathbf{W}_{\mathbf{Q}}$、$\mathbf{K}=x\mathbf{W}_{\mathbf{K}}$ 和 $\mathbf{V}=x\mathbf{W}_{\mathbf{V}}$ 上計算輸出 $\mathbf{y}\in\mathbb{R}^{L\times d_{\text{in}}}$，如下所示：
+
+|  |  | $$\displaystyle\mathbf{y}_{i}=\sum_{t=1}^{i}\frac{\exp\left(\mathbf{q}_{i}^{\top}\mathbf{k}_{t}\right)\mathbf{v}_{t}}{\sum_{\ell=1}^{i}\exp\left(\mathbf{q}_{i}^{\top}\mathbf{k}_{\ell}\right)}=\frac{1}{Z_{i}}\sum_{t=1}^{i}\exp\left(\mathbf{q}_{i}^{\top}\mathbf{k}_{t}\right)\mathbf{v}_{t},$$ |  | (1) |
+| --- | --- | --- | --- |
+
+其中 $\mathbf{W}_{\mathbf{Q}}$、$\mathbf{W}_{\mathbf{K}}$ 和 $\mathbf{W}_{\mathbf{V}}\in\mathbb{R}^{d_{\text{in}}\times d_{\text{in}}}$ 是可學習的參數，$Z_{i}={\sum_{\ell=1}^{i}\exp\left(\mathbf{q}_{i}^{\top}\mathbf{k}_{\ell}\right)}$ 是歸一化項。Attention 由於需要存取所有過去的令牌，需要 $\mathcal{O}(L^{2})$ 次運算。
+
+線性 Attention。線性 attention（Katharopoulos et al.，2020）及其變體（Schlag et al.，2021；Peng et al.，2023；Yang et al.，2024b）透過將方程式 1 中的 $\exp(\cdot)$ 運算子替換為可分離核 $\phi(\cdot)$，改進了 attention 的效率，從而產生了高效的遞迴公式：
+
+|  |  | $$\displaystyle\mathbf{y}_{i}=\sum_{t=1}^{i}\frac{\phi\left(\mathbf{q}_{i}\right)^{\top}\phi\left(\mathbf{k}_{t}\right)\mathbf{v}_{t}}{\sum_{\ell=1}^{i}\phi\left(\mathbf{q}_{i}\right)^{\top}\phi\left(\mathbf{k}_{\ell}\right)}=\frac{1}{Z_{i}}\>\mathcal{M}_{i}\phi\left(\mathbf{q}_{i}\right)\>,$$ |  | (2) |
+| --- | --- | --- | --- |
+
+其中 $\mathcal{M}_{t}\!=\!\mathcal{M}_{t-1}+\mathbf{v}_{t}\phi\left(\mathbf{k}_{t}\right)^{\top}$ 作為固定大小的記憶體（Katharopoulos et al.，2020）。
+
+測試時記憶化與嵌套學習視角。最近的一個統一框架將序列模型的更新規則（包括 attention 和現代 RNN）解釋為具有不同目標的動態上下文內學習/記憶化過程（Behrouz et al.，2026；2025b）。在此觀點中，模型作用為一個聯想記憶體，主動學習輸入令牌（鍵和值）之間的映射。此記憶化是透過優化內部目標實現的，通常形式化為 $L_{2}$ 迴歸問題（Wang et al.，2025）或具有「注意力偏差」的通用目標（Behrouz et al.，2026；2025b）。此視角將記憶體狀態框架化為在前向傳播期間優化的動態實體。特別地，在 Miras 框架的最簡形式中（Behrouz et al.，2026），聯想記憶體 $\mathcal{M}(\cdot)$ 旨在基於目標（稱為「注意力偏差」）學習鍵 $\{{\bm{k}}_{t}\}_{t=1}^{L}$ 與值 $\{{\bm{v}}_{t}\}_{t=1}^{L}$ 之間的映射：
+
+|  | $$\displaystyle\mathcal{M}_{t+1}=\arg\min_{\mathcal{M}}\>\>\mathcal{L}\left(\mathcal{M}({\bm{k}}_{t});{\bm{v}}_{t}\right)+\texttt{Ret}\left(\mathcal{M};\mathcal{M}_{t}\right),$$ |  | (3) |
+| --- | --- | --- |
+
+其中目標 $\mathcal{L}(\cdot)$ 衡量映射的品質，$\texttt{Ret}\left(\mathcal{M};\mathcal{M}_{t}\right)$ 使新解決方案保持接近記憶體的最後狀態。對於特定的注意力偏差選擇，可以恢復眾所周知的架構：例如，令 $\mathcal{L}\left(\mathcal{M}({\bm{k}}_{t});{\bm{v}}_{t}\right)=\langle\mathcal{M}({\bm{k}}_{t}),{\bm{v}}_{t}\rangle$ 和 $\mathcal{M}(\cdot)\in\mathbb{R}^{d\times d}$，恢復非歸一化線性 attention 架構（Katharopoulos et al.，2020）。我們透過引入 Memory Caching 利用此觀點，其中快取狀態作為此優化過程的檢查點，增強了模型在長序列中檢索資訊的能力。
+
+## 3 具有記憶快取的循環神經網絡
+
+RNN 維護一個固定大小的記憶來壓縮輸入序列。隨著序列變長，這會導致記憶溢位和性能降低。相反地，attention 快取所有過去的 token，導致記憶增長但計算成本為二次方。我們提出記憶快取（Memory Caching, MC）來快取中間記憶狀態，提供一個中間方案，其中模型的記憶可以按任意規模增長。這允許計算成本在 $\mathcal{O}(L)$（類似於 RNN）和 $\mathcal{O}(L^{2})$（類似於 Transformer）之間插值。
+
+為此，給定一個 token 序列 $x\in\mathbb{R}^{L\times d_{\text{in}}}$，我們將序列分割成大小為 $L^{(1)},\dots,L^{(N)}$ 的片段 $S^{(1)},\dots,S^{(N)}$，並使用記憶 $\mathcal{M}^{(1)},\dots,\mathcal{M}^{(N)}$ 來壓縮這些片段。
+
+第 $s$ 個片段的記憶更新規則或循環對應為：
+
+|  |  | $\displaystyle{\bm{k}}_{t}=x_{t}W_{{\bm{k}}},\qquad{\bm{v}}_{t}=x_{t}W_{{\bm{v}}},\qquad{\bm{q}}_{t}=x_{t}W_{{\bm{q}}},$ |  |
+| --- | --- | --- | --- |
+|  |  | $\displaystyle\mathcal{M}^{(s)}_{t}=f\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right),\qquad\text{其中}\quad 1\leq t\leq L^{(s)}\>,$ |  | (4) |
+
+其中 $f(\cdot)$ 是學習更新規則（例如，$f\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right)=\mathcal{M}^{(s)}_{t-1}+{\bm{v}}_{t}{\bm{k}}_{t}^{\top}$ 用於 linear attention（Katharopoulos et al., 2020））。
+
+使用上述公式，在更新記憶後，我們快取每個片段中的最後狀態（即 $\{\mathcal{M}^{(s)}_{L^{(s)}}\}_{s=1}^{T}$，其中 $T$ 是目前片段的索引，$x_{t}\in S^{(T)}$）。標準 RNN 使用只有目前記憶狀態來計算輸出：$\mathbf{y}_{t}=\mathcal{M}_{t}({\bm{q}}_{t})$。相反地，我們的公式使用所有快取的記憶以及目前記憶（線上記憶）來計算查詢 ${\bm{q}}_{t}$ 的輸出。給定一個任意聚合函數 $\texttt{Agg}(\cdot;\cdot;\cdot)$，輸出為：
+
+|  | $\displaystyle\mathbf{y}_{t}=\texttt{Agg}\left(\{\mathcal{M}^{(1)}_{L^{(1)}}(\cdot),\dots,\mathcal{M}^{(s-1)}_{L^{(s-1)}}(\cdot)\};\mathcal{M}^{(s)}_{t}(\cdot);\mathbf{q}_{t}\right),$ |  | (5) |
+| --- | --- | --- | --- |
+
+其中 $s$ 是目前片段的索引。注意，對於 $1\leq i\leq s$，項 $\mathcal{M}^{(i)}_{L^{(i)}}(\mathbf{q}_{t})$ 為我們提供了在片段 $i$ 中查詢 ${\bm{q}}_{t}$ 的相應資訊。在接下來的章節中，我們提出不同的有效的 $\texttt{Agg}(\cdot;\cdot;\cdot)$ 函數選擇，以將過去的資訊納入目前輸出的計算中，並增加模型的有效記憶容量。
+
+### 3.1 Residual Memory
+
+We begin with the simplest Agg ​ ( ⋅ ; ⋅ ; ⋅ ) \texttt{Agg}(\cdot;\cdot;\cdot) operator: a summation, acting as a residual connection across memory states.
+In this case, given keys, values, and queries (see Equation 4 ) and segments S ( 1 ) , … , S ( N ) S^{(1)},\dots,S^{(N)} , we define the memory update and output computation at time t t in segment s s as:
+
+|  |  | ℳ t ( s ) = f ​ ( ℳ t − 1 ( s ) ; 𝒌 t , 𝒗 t ) , where 1 ≤ t ≤ L ( s ) , \displaystyle\mathcal{M}^{(s)}_{t}=f\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right),\qquad\text{where}\quad 1\leq t\leq L^{(s)}\>, |  | (6) |
+| --- | --- | --- | --- | --- |
+|  |  | 𝐲 t = ℳ t ( s ) ​ ( 𝐪 t ) ⏟ Online Memory + ∑ i = 1 s − 1 ℳ L ( i ) ( i ) ​ ( 𝐪 t ) ⏟ Cached Memories . \displaystyle\mathbf{y}_{t}=\underset{{\color[rgb]{0,0,0}\definecolor[named]{pgfstrokecolor}{rgb}{0,0,0}\text{Online Memory}}}{\underbrace{\mathcal{M}^{(s)}_{t}(\mathbf{q}_{t})}}\>\>+\>\>\underset{{\color[rgb]{0,0,0}\definecolor[named]{pgfstrokecolor}{rgb}{0,0,0}\text{Cached Memories}}}{\underbrace{\sum_{i=1}^{s-1}\mathcal{M}^{(i)}_{L^{(i)}}(\mathbf{q}_{t})}}\>. |  | (7) |
+
+The critical change in memory caching is how the output is computed. In fact, for retrieval of the memory, the model uses forward passes over both the current memory (called online memory) and the cached memories for input query 𝒒 t {\bm{q}}_{t} .
+
+Gated Residual Memory (GRM). When the memory module is strictly linear (i.e., ℳ \mathcal{M} is a matrix), the Residual Memory formulation ( Equation 7 ) mathematically collapses into a standard fixed-size memory, as the cached memories can be pre-summed (c.f. Equation 13 below). However, in practice, our experimental results show that even this simple formulation can enhance the power of recurrent models (see Section 5 ). The main reason is even a simple residual memory acts as a retention operator that enhance access to the long past.
+A further limitation of the residual approach is that it treats all cached memories equally, ignoring their relevance to the query 𝒒 t {\bm{q}}_{t} . To enable selective retrieval, we introduce input-dependent gating. Given input x t x_{t} in segment s s , we define parameters 0 ≤ γ t ( 1 ) , … , γ t ( s ) ≤ 1 0\leq\gamma^{(1)}_{t},\dots,\gamma_{t}^{(s)}\leq 1 be input-dependent parameters and reformulate the output as:
+
+|  | ℳ t ( s ) = f ​ ( ℳ t − 1 ( s ) ; 𝒌 t , 𝒗 t ) , for ​ 1 ≤ t ≤ L ( s ) , \displaystyle\mathcal{M}^{(s)}_{t}=f\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right),\;\text{for}\;1\leq t\leq L^{(s)}, |  | (8) |
+| --- | --- | --- | --- |
+|  | 𝐲 t = γ t ( s ) ​ ℳ t ( s ) ​ ( 𝐪 t ) + ∑ i = 1 s − 1 γ t ( i ) ​ ℳ L ( i ) ( i ) ​ ( 𝐪 t ) \displaystyle\mathbf{y}_{t}=\gamma_{t}^{(s)}\mathcal{M}^{(s)}_{t}(\mathbf{q}_{t})\>\>+\>\>\sum_{i=1}^{s-1}\gamma_{t}^{(i)}\mathcal{M}^{(i)}_{L^{(i)}}(\mathbf{q}_{t}) |  | (9) |
+
+Here, parameters γ t ( i ) \gamma^{(i)}_{t} modulate the contribution of each segment to the output. When γ t ( i ) → 1 \gamma^{(i)}_{t}\rightarrow 1 (resp. γ t ( i ) → 0 \gamma^{(i)}_{t}\rightarrow 0 ), i i -th segment has more (resp. less) contribution to the output. Due to these input dependent parameters, the above formulation cannot be pre-computed before this token and also cannot be reused for next tokens/segments. Therefore, contrary to the previous variant, it does not collapse into the fixed-size memory case (even in the linear memory case) and so requires to be recomputed for every token and needs caching memory states. A simple choice of parametrization for γ t ( i ) \gamma^{(i)}_{t} s is to define them as linear projection of input x t x_{t} (similar to projections for keys, values, and queries). With this parametrization, however, γ t ( i ) \gamma^{(i)}_{t} acts as a position-based filtering/focus, meaning that the context of x t x_{t} only determines how much the i i -th segment’s memory (based on the position) contributes, no matter what its context is. To overcome this issue, we suggests making γ t ( i ) \gamma^{(i)}_{t} as a function of both x t x_{t} and i i -th segment S ( i ) S^{(i)} , incorporating both of their contexts and how similar they are. To this end, we introduce a connector parameter 𝒖 t {\bm{u}}_{t} as the linear projection of input, and define γ t ( i ) \gamma^{(i)}_{t} as the similarity of 𝒖 t {\bm{u}}_{t} and i i -th segment S ( i ) S^{(i)} :
+
+|  | γ t ( i ) = ⟨ 𝒖 t , MeanPooling ​ ( S ( i ) ) ⟩ where ​ 𝒖 t = x t ​ W 𝒖 . \displaystyle\gamma^{(i)}_{t}=\langle{\bm{u}}_{t},\>\texttt{MeanPooling}(S^{(i)})\rangle\qquad\text{where}\>\>{\bm{u}}_{t}=x_{t}W_{{\bm{u}}}\>. |  | (10) |
+| --- | --- | --- | --- |
+
+Here, MeanPooling ​ ( ⋅ ) \texttt{MeanPooling}(\cdot) provides a simple representation of segment’s context as the mean of all tokens. It, however, can be replaced by any other pooling process. In practice, we also normalize γ t ( i ) \gamma^{(i)}_{t} using softmax ( ⋅ ) (\cdot) . As an alternative parameterization, we can use 𝒖 t = 𝒒 t {\bm{u}}_{t}={\bm{q}}_{t} . When γ t ( i ) \gamma^{(i)}_{t} s are constant, then GRM is equivalent to residual memory variant.
+
+Example. To better illustrate the above formulations and as an illustrative example, we let f ​ ( ℳ t − 1 ( s ) ; 𝒌 t , 𝒗 t ) = ℳ t − 1 ( s ) − ∇ ⟨ ℳ t − 1 ( s ) ​ ( 𝒌 t ) , 𝒗 t ⟩ f\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right)=\mathcal{M}^{(s)}_{t-1}-\nabla\langle\mathcal{M}^{(s)}_{t-1}({\bm{k}}_{t}),{\bm{v}}_{t}\rangle , where memory ℳ ​ ( ⋅ ) \mathcal{M}(\cdot) is an arbitrary feedforward layer (e.g., MLP or gated MLP layers). This general form is equivalent to Deep Linear Attention (DLA) (Behrouz et al. , 2025a ) and when the memory is a matrix (i.e., MLP with one layer) it is equivalent to the linear attention (Katharopoulos et al. , 2020 ) . Using residual memory caching on DLA results in a model with update and retrieval rules of:
+
+|  | ℳ t ( s ) = ℳ t − 1 ( s ) − ∇ ⟨ ℳ t − 1 ( s ) ​ ( 𝒌 t ) , 𝒗 t ⟩ , 𝐲 t = ℳ t ( s ) ​ ( 𝐪 t ) + ∑ i = 1 s − 1 ℳ L ( i ) ( i ) ​ ( 𝐪 t ) . \displaystyle\mathcal{M}^{(s)}_{t}=\mathcal{M}^{(s)}_{t-1}-\nabla\langle\mathcal{M}^{(s)}_{t-1}({\bm{k}}_{t}),{\bm{v}}_{t}\rangle,\qquad\mathbf{y}_{t}=\mathcal{M}^{(s)}_{t}(\mathbf{q}_{t})\>\>+\>\>\sum_{i=1}^{s-1}\mathcal{M}^{(i)}_{L^{(i)}}(\mathbf{q}_{t})\>. |  | (11) |
+| --- | --- | --- | --- |
+
+When using a linear matrix-valued memory (i.e., linear attention), Equation 11 can be simplified to:
+
+|  |  | ℳ t ( s ) = ℳ t − 1 ( s ) + 𝒗 t ​ 𝒌 t ⊤ , \displaystyle\mathcal{M}^{(s)}_{t}=\mathcal{M}^{(s)}_{t-1}+{\bm{v}}_{t}{\bm{k}}_{t}^{\top}, |  | (12) |
+| --- | --- | --- | --- | --- |
+|  |  | 𝐲 t = ℳ t ( s ) ​ 𝐪 t + ∑ i = 1 s − 1 ℳ L ( i ) ( i ) ​ 𝐪 t = ( ℳ t ( s ) + ∑ i = 1 s − 1 ℳ L ( i ) ( i ) ) ​ 𝐪 t . \displaystyle\mathbf{y}_{t}=\mathcal{M}^{(s)}_{t}\mathbf{q}_{t}\>\>+\>\>\sum_{i=1}^{s-1}\mathcal{M}^{(i)}_{L^{(i)}}\mathbf{q}_{t}=\left(\mathcal{M}^{(s)}_{t}\>+\>\sum_{i=1}^{s-1}\mathcal{M}^{(i)}_{L^{(i)}}\right)\mathbf{q}_{t}\>. |  | (13) |
+
+Memory Complexity. In the retrieval process, we use the current memory (online memory) and the cached memories of all previous segments and so given a fixed training sequence length, the number of cached memories is a function of segment lengths. While the memory update process has not changed and so requires 𝒪 ​ ( L ) \mathcal{O}(L) operation, the retrieval process requires forward pass over all cached memory and so needs 𝒪 ​ ( N ) \mathcal{O}(N) operations per token. This brings the complexity of the model to 𝒪 ​ ( N ​ L ) \mathcal{O}(NL) , where 1 ≤ N ≤ L 1\leq N\leq L . Note that when N = 1 N=1 (only one segment), we do not need to cache any memory state, resulting in a simple recurrent memory model. When N = L N=L , it means that each token is treated as a separate segment and so the memory state for all past tokens are cached. This closely matches the intuition behind the power of attention. In fact, attention by caching all past tokens, provide a direct access to each part of the sequence, enhancing the retrieval ability.
+
+### 3.2 Memory Soup
+
+將遞迴視為一個元學習過程，其中記憶狀態是檢查點，我們受到 Wortsman et al. (2022) 的啟發，引入 Memory Soup 變體。核心概念是將記憶狀態（參數）組合成單一的資料相依記憶用於檢索。
+
+與前面的變體類似，我們使用 $\mathcal{M}^{(i)}_{L^{(i)}}$ 表示對應於第 $i$ 個分段的緩存記憶，並使用 $\bm{\theta}_{\mathcal{M}^{(i)}_{L^{(i)}}}:=\{W^{(i)}_{1},\dots,W^{(i)}_{c}\}$ 參數化。注意記憶的架構保持不變，因此 $c$（參數數量）對所有記憶狀態都相同。相應地，記憶快取的記憶更新和檢索過程定義為：
+
+|  |  | $\displaystyle\mathcal{M}^{(s)}_{t}=f\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right),\;\text{for}\;1\leq t\leq L^{(s)}\>$ |  | (14) |
+| --- | --- | --- | --- | --- |
+|  |  | $\displaystyle\mathbf{y}_{t}=\mathcal{M}^{*}_{t}({\bm{q}}_{t})\>$ |  | (15) |
+
+其中 $\mathcal{M}^{*}_{t}$ 參數化為：$\bm{\theta}_{\mathcal{M}^{*}_{t}}:=\left\{\sum_{i=1}^{s}\gamma_{t}^{(i)}W^{(i)}_{1},\dots,\sum_{i=1}^{s}\gamma_{t}^{(i)}W^{(i)}_{c}\right\}$。因此，每個 token 都有自己的記憶用於檢索，這也取決於輸入資料並可以改變。實際上，可以將上述過程解釋為一個記憶系統，其中每個 token 都建構自己的記憶以從中檢索相應的資訊。注意這裡 $\gamma_{t}^{(i)}$ 參數使用與方程式 10 相同的過程定義。
+
+當記憶模組 $\mathcal{M}$ 是線性的時，Memory Soup 在數學上等價於 GRM（方程式 9）。這是因為對權重進行 souping 然後應用查詢，與對各個記憶應用查詢然後將輸出進行集成相同，這源於操作的線性性質。當使用深層或非線性記憶模組（例如 DLA 或 Titans）時，區分就變得至關重要。在這些情況下，等價性會破裂。Memory Soup 通過對參數本身進行插值來構造新的、輸入相依的記憶模組 $\mathcal{M}_{t}^{*}$，為該特定時步有效地創造了一個專門的非線性檢索函數。
+
+[FIGURE:MC-Sparse.png] 圖 2：記憶的稀疏選擇快取（SSC）。路由器測量每個 token 與其過去分段的上下文相似性，並選擇過去緩存記憶的子集以獲得更好的效率。
+
+### 3.3 稀疏選擇快取（SSC）記憶體
+
+先前的變體會關注所有過去快取的記憶體，這對超長序列可能會造成顯著的記憶體開銷。我們引入稀疏選擇快取（Sparse Selective Caching，SSC），其中每個 token 根據上下文選擇快取記憶體的子集，提高效率。
+
+為此，受到專家混合模型（Mixture of Experts，MoEs）（Shazeer et al., 2017）的啟發，我們使用一個路由器，根據 token 及其與每個區段上下文的相似度來選擇快取記憶體的子集。對於每個區段 $S^{(i)}$，根據方程式 10，我們令 $\texttt{MeanPooling}(S^{(i)})=\sum_{j\in S^{(i)}}{\bm{k}}_{j}$，並將每個區段 $S^{(i)}$ 對查詢 $x_t$ 的相關性分數定義為：
+
+|  | $\displaystyle\mathbf{r}_{t}^{(i)}=\langle{\bm{u}}_{t},\>\texttt{MeanPooling}(S^{(i)})\rangle,\qquad\text{where}\>\>{\bm{u}}_{t}=x_{t}W_{{\bm{u}}}\>.$ |  | (16) |
+| --- | --- | --- | --- |
+
+給定相關性分數，路由器選擇 $k$ 個相關性最高的快取記憶體，即 $\mathcal{R}_{t}=\arg\texttt{Top-k}(\{\mathbf{r}_{t}^{(i)}\}_{i=1}^{s-1})$，以及當前線上記憶體用於檢索。給定選定的記憶體，檢索過程與先前的變體相同，但僅使用選定的記憶體：
+
+|  |  | $\displaystyle\mathcal{M}^{(s)}_{t}=f\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right),\qquad\text{where}\quad 1\leq t\leq L^{(s)}\>,$ |  |
+| --- | --- | --- | --- |
+|  |  | $\displaystyle\mathbf{y}_{t}=\gamma_{t}^{(s)}\mathcal{M}^{(s)}_{t}(\mathbf{q}_{t})\>\>+\>\>\sum_{i\in\mathcal{R}_{t}}\gamma_{t}^{(i)}\mathcal{M}^{(i)}_{L^{(i)}}(\mathbf{q}_{t})\>.$ |  | (17) |
+
+在此公式中，每個區段的 $\texttt{MeanPooling}(S^{(i)})$ 可以預先計算，因此計算相關性分數以及為每個 token 選擇前 k 個區段可以簡單地並行化。此外，此類計算不需要將快取記憶體的狀態儲存在加速器（例如 GPU、TPU 等）中。因此，此過程只需為每個 token 載入「選定的」記憶體，因此可以在訓練和推論期間增強記憶體消耗。
+
+有效記憶體。SSC 的一個有趣解釋是將其視為稀疏統一記憶模組。我們在圖 2（右側）中說明了這一點。可以將 SSC 視為具有不斷增長的記憶體的模型，其中每個 token 為記憶體寫入操作（儲存 token）激活參數的子集，為檢索激活更大的參數子集。此公式允許記憶體（1）儲存資訊而不會干擾過去的記憶體，以及（2）有效且自適應地檢索資訊。區段大小在此處決定了統一記憶體中一起激活的區塊大小。
+
+### 3.4 快取檢查點或獨立壓縮器？
+
+重新審視方程式 4 中記憶體快取的一般公式，存在一個設計選擇：我們是快取單一記憶體的檢查點，還是使用一組獨立的記憶體模組來壓縮每個片段中的資訊。也就是說，有兩個視角：
+
+(1) 從優化的觀點（即方程式 3），我們正在訓練一個聯想記憶體，序列中的 token 是訓練資料樣本。因此，為了避免遺忘過去的知識，我們在訓練（優化過程）中快取記憶體的檢查點。在此公式中，對於每個 $s = 0, \cdots, N$，我們有 $\mathcal{M}_{0}^{(s)}(\cdot)=\mathcal{M}_{L^{(s-1)}}^{(s-1)}(\cdot)$，意思是在每個片段中的記憶體從其在前一個片段中的最後狀態開始。
+
+(2) 從壓縮的角度來看，當我們快取過去片段的記憶體時，我們希望它是該片段中資訊的壓縮代表。因此，前向傳遞 $\mathcal{M}_{L^{(s)}}^{(s)}({\bm{q}}_{t})$ 代表 ${\bm{q}}_{t}$ 在第 $s$ 個片段中對應的資訊。為了避免不同片段中的記憶體產生干擾，我們為每個片段使用獨立的記憶體，意思是對於片段 $s$，記憶體從一個初始點 $\mathcal{M}_{0}^{(s)}(\cdot)$ 開始，該初始點獨立於 $\mathcal{M}_{L^{(s-1)}}^{(s-1)}(\cdot)$。
+
+在實踐中，我們觀察到這兩個選擇各有其優缺點（見第 5.6 節）。
+
+## 4 討論和概念驗證
+
+在本節中，我們討論使用記憶體快取技術於線性和深層記憶體模組的含義，並討論我們在評估中作為概念驗證使用的模型。
+
+### 4.1 記憶體快取對線性和深度記憶體模組的影響
+
+線性記憶體。讓我們從一個簡單但極端的情況開始，其中區段大小為 1，且循環記憶體是一個向量值無值記憶體模組 1 1 1 無值記憶體模組是關聯性記憶體，其映射僅取決於鍵。詳見 Behrouz et al.（2026；2025b）。。在此設定中，每個令牌 $x_t \in \mathbb{R}^d$ 被視為一個區段，因此記憶體狀態僅存儲此令牌，即：
+
+|  | $\displaystyle\mathcal{M}^{(t)}_{1}=\underset{\mathbf{b}_{\mathbf{K}}}{\underbrace{\mathcal{M}^{(t)}_{0}}}+{\bm{k}}_{t}=\mathbf{b}_{\mathbf{K}}+x_{t}\mathbf{W}_{\mathbf{K}}$ |  | (18) |
+| --- | --- | --- | --- |
+
+其中 $\mathcal{M}^{(t)}_{0}$ 作為輸入 $x_t$ 投影到鍵 ${\bm{k}}_t$ 的偏置項。接下來，對此公式應用記憶體快取會導致：
+
+|  | $\displaystyle\mathbf{y}_{t}=\sum_{i=1}^{t}\gamma_{t}^{(i)}\mathcal{M}^{(i)}_{1}(\mathbf{q}_{t})=\sum_{i=1}^{t}\underset{\gamma_{t}^{(i)}}{\underbrace{\frac{\exp\left({\bm{u}}_{t}^{\top}{\bm{k}}_{i}\right)}{\sum_{\ell=1}^{i}\exp\left({\bm{u}}_{t}^{\top}{\bm{k}}_{\ell}\right)}}}\>\>\>\>\>\>\underset{\mathcal{M}^{(i)}_{1}}{\underbrace{\left(\mathbf{b}_{\mathbf{K}}+x_{i}\mathbf{W}_{\mathbf{K}}\right)}}\>\>{\bm{q}}_{t}\>\>.$ |  | (19) |
+| --- | --- | --- | --- |
+
+鑑於 ${\bm{q}}_t$ 是一個自由參數且是輸入的函數，可以通過令 $\mathcal{M}_1^{(i)}={\bm{v}}_i'$ 來重新參數化上述公式：
+
+|  | $\displaystyle\mathbf{y}_{t}=\left(\sum_{i=1}^{t}{\frac{\exp\left({\bm{u}}_{t}^{\top}{\bm{k}}_{i}\right)}{\sum_{\ell=1}^{i}\exp\left({\bm{u}}_{t}^{\top}{\bm{k}}_{\ell}\right)}}}\>{\bm{v}}_{i}^{\prime}\right)\>\otimes\>\sigma\left(x_{t}\mathbf{W}_{\mathbf{Q}}\right),$ |  | (20) |
+| --- | --- | --- | --- |
+
+這等價於門控全局注意力區塊——一種增強的注意力變體，其中輸出由輸入的線性投影進行門控。因此，將區段長度設為 1，並使用具有記憶體快取的無值向量值循環記憶體，可以恢復門控全局 softmax 注意力區塊。然而，此重新發現基於記憶體快取中最簡單的設計選擇，這激發設計原則上更強大的架構。此設計可以擴展到具有清晰動機的更複雜的全局注意力公式。例如，上述公式快取令牌投影的直接值，這意味著每個令牌儲存在無值記憶體模組中。然而，可以通過使用更具表現力的記憶體更新來擴展上述公式：例如，使用線性注意力（Katharopoulos et al.，2020）。
+
+然而，記憶體的線性性和/或使用乘法的簡單檢索過程（即令 $\mathbf{y}_{t}=\mathcal{M}_{t}{\bm{q}}_{t}$）可能會導致不想要的簡化，導致設計崩潰或次優性能。例如，在論文的前面，我們討論了記憶體融合技術如何可以對線性記憶體崩潰為（門控）殘差記憶體變體，而這兩種方法為深度記憶體模組提供了不同的解決方案。作為另一個例子，在線性記憶體配置中，可以通過 ${\bm{q}}_t=x_{t}\mathbf{W}_{\mathbf{Q}}$ 將檢索過程解釋為乘以壓縮上下文（即線性記憶體）的門控架構。在此觀點中，可以通過移除門控來簡化過程，因此設定 ${\bm{q}}_t=\mathds{1}\in\mathbb{R}^d$。我們將此類模組稱為壓縮器。
+
+最近，混合模型——即具有交錯全局注意力和記憶體有界模組（即 RNN、滑動窗口注意力等）的架構——已獲得普及，主要是由於其在回憶密集型任務中的穩健性能，同時改進了純全局注意力基礎模型的效率。特別是，讓我們考慮一個具有向量值循環記憶體的壓縮器層，後跟一個全局注意力區塊。給定 $x_t$ 作為輸入，第一個區塊計算如下：
+
+|  | $\displaystyle{\bm{q}}_{t}=\mathds{1},\qquad\qquad\qquad\>{\bm{k}}_{t}=x_{t}\mathbf{W}_{\mathbf{K}},\qquad\qquad\qquad\>{\bm{v}}_{t}=x_{t}\mathbf{W}_{\mathbf{V}}$ |  | (21) |
+| --- | --- | --- | --- |
+|  | $\displaystyle\mathcal{M}_{t}=f\left(\mathcal{M}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right),\>\>\quad\mathbf{y}_{t}=\mathcal{M}_{t}$ |  | (22) |
+
+接下來，此輸出被視為下一個區塊的輸入，層的最終輸出計算如下（為清楚起見，我們忽略歸一化）：
+
+|  | $\displaystyle{\bm{q}}^{(\texttt{attn})}_{t}=\mathbf{y}_{t}\mathbf{W}^{(\texttt{attn})}_{\mathbf{Q}},\quad\qquad\quad\>$ | $\displaystyle{\bm{k}}^{(\texttt{attn})}_{t}=\mathbf{y}_{t}\mathbf{W}^{(\texttt{attn})}_{\mathbf{K}},\quad\qquad\quad\>{\bm{v}}^{(\texttt{attn})}_{t}=\mathbf{y}_{t}\mathbf{W}^{(\texttt{attn})}_{\mathbf{V}}$ |  | (23) |
+| --- | --- | --- | --- | --- |
+|  | $\displaystyle\mathbf{o}_{t}=\sum_{i=1}^{t}$ | $\displaystyle{\frac{\exp\left({\bm{q}}^{(\texttt{attn})}_{t}{\bm{k}}^{(\texttt{attn})}_{i}\right)}{\sum_{\ell=1}^{i}\exp\left({\bm{q}}^{(\texttt{attn})^{\top}}_{t}{\bm{k}}^{(\texttt{attn})}_{\ell}\right)}}{\bm{v}}^{(\texttt{attn})}_{i}$ |  | (24) |
+
+注意 $\mathbf{y}_{t}=\mathcal{M}_{t}$，因此有趣的是，當我們快取記憶體檢查點而不是使用獨立記憶體時，上述公式等價於區段大小為 1 的記憶體快取（見第 3.4 節）。此觀點不僅為為什麼著名的混合模型配方應該有效提供了理由（因為它可以增強循環模型的有效記憶體容量），而且還通過將注意力視為強制快取過去輸入的模組來激發設計更強大的變體。注意上述說明僅對於過度簡化的版本演示了等價性，並且在考慮歸一化和前饋層時，兩種情況的建模表現力可能不同。然而，上述討論支持了記憶體快取技術的威力，並激發超越 ${\bm{q}}_t=\mathds{1}$。在 ${\bm{q}}_t=x_{t}\mathbf{W}_{\mathbf{Q}}$ 的情況下，記憶體快取可以導致特定注意力，其中注意力區塊的輸入序列對於每個查詢 ${\bm{q}}_t$ 都不同。也就是說，記憶體快取不是完全預定的令牌序列作為混合變體中注意力區塊的輸入（即最後記憶體層的輸出，$\mathbf{y}_{t}$），而是允許模型根據查詢 ${\bm{q}}_t$（即 $\{\mathcal{M}_{L^{(i)}}^{(i)}({\bm{q}}_{t})\}_{i=1}^{s}$）構建其自己的輸入序列。
+
+深度記憶體。與上述相反，具有深度記憶體的記憶體快取會產生與其混合變體無重疊的新架構類別。讓我們重新訪問我們用於線性記憶體模組的初始示例。我們令記憶體 $\mathcal{M}(\cdot)$ 為 2 層 MLP，並令每個令牌 $x_t \in \mathbb{R}^d$ 為一個區段（即區段大小為 1，因此每個記憶體僅儲存一個令牌）：即
+
+|  | $\displaystyle\mathcal{M}^{(t)}_{1}={\mathcal{M}^{(t)}_{0}}-\eta_{t}\nabla\mathcal{L}(\mathcal{M}^{(t)}_{0};{\bm{k}}_{t},{\bm{v}}_{t}).$ |  | (25) |
+| --- | --- | --- | --- |
+
+這有兩個含義：（i）現在，每個令牌由張量而非矩陣或向量表示。因此，令牌不再由常數向量表示，給定查詢 ${\bm{q}}_t$，令牌 $x_i$ 的上下文和表示可以是不同的（即 $\mathcal{M}_1^{(i)}({\bm{q}}_{t})$）；（ii）初始點或偏置項 $\mathcal{M}_0^{(i)}$，它編碼一般知識，是一個神經網路。因此，其對不同查詢檢索過程的影響（即 $\mathcal{M}_1^{(i)}({\bm{q}}_{t})$）是不相同的。
+
+[FIGURE:constant-log.png] 圖 3：具有常數和對數大小區段的記憶體快取的說明示例。對數分割雖然在計算上很吸引人，但會導致可能導致記憶體溢出的長子序列和/或防止記憶體在內循環中正確優化自身的短子序列。
+
+### 4.2 分割對容量和複雜性的影響
+
+記憶體快取的一個關鍵設計選擇是序列的分割。直觀地說，分段長度在壓縮級別和計算成本之間提供了一種權衡：例如，(1) 如前所述，Transformer 可以被視為分段大小為 1 的記憶體快取，意味著每個 token 本身被快取（無壓縮，計算成本為 $\mathcal{O}(L^{2})$）；(2) RNN 模組是記憶體快取的極端情況，其中整個序列被視為一個分段，只有單個線上記憶被快取（完全壓縮，每個 token 的常數計算成本，$\mathcal{O}(L)$）。
+
+更詳細地說，對於 token $x_{t}$，讓我們將序列分割成分段 $S^{(1)},\dots,S^{(N)}$，大小為 $L^{(1)},\dots,L^{(N)}$，並使用記憶 $\mathcal{M}^{(1)},\dots,\mathcal{M}^{(N)}$ 來壓縮這些分段。每個分段的壓縮過程對於分段大小是線性的，即 $\mathcal{O}(L^{(i)})$。因此，記憶體更新操作的成本為 $\mathcal{O}(\sum_{i=1}^{N}L^{(i)})=\mathcal{O}(L)$，而檢索過程需要對所有過去的快取記憶進行前向傳播（每個分段一個記憶）。因此，假設記憶的前向傳播需要 $\mathcal{O}(p)$ 次操作，每個 token 的計算成本將為 $\mathcal{O}(p\times N)$。因此，記憶體快取的總成本為 $\mathcal{O}(L+p\times N\times L)$。注意，$N$ 在此是分割的函數。例如，如果分段具有相等的長度，大小為 $C=\frac{L}{N}\geq 2$，那麼計算成本為 $\mathcal{O}(p\times\frac{L^{2}}{C})$，與 Transformer 相似，但常數項更小（即效率更高）。另一個例子是將序列按對數方式分割：即將 $L$ 寫成二進位格式，然後讓 $L^{(i)}$ 為對應於非零元素索引的 2 的冪。圖 3（左）顯示了這種分割的一個例子。對於序列長度 37 = $(100101)_{2}$，此分割使用三個長度為 $L^{(1)}=32$、$L^{(2)}=4$ 和 $L^{(3)}=1$ 的分段。因此，在此公式中，$N$ 的最大值為 $\log_{2}(L)$，因此計算複雜性為 $\mathcal{O}(p\times L\log(L))$。
+
+如前所述，分割在壓縮級別（回憶性能）和計算成本之間提供了權衡。圖 3 通過常數大小和對數分割的例子來說明此權衡。如上所述，這些方法的時間複雜性分別為 $\mathcal{O}(\frac{L^{2}}{C})$ 和 $\mathcal{O}(L\log(L))$，這使得對數分割更具效率。另一方面，對數分割為長期過去的 token 提供了顯著降低的解析度，限制了其在回憶密集型任務中的能力。
+
+### 4.3 Memory Caching for Titans and Linear Attention Variants
+
+As discussed earlier in the paper, the memory caching technique is applicable to any arbitrary recurrent update rule and potentially can enhance their effective context length. As a proof of concept, we use use memory caching on the update rule of Sliding Window Linear Attention (SWLA) and Deep Linear Attention (DLA) (Behrouz et al. , 2025a ) , Linear Attention (Katharopoulos et al. , 2020 ) , and Titans (Behrouz et al. , 2025c ) .
+
+Sliding Window Linear Attention. Recently, Behrouz et al. ( 2025a ) introduced Sliding Window Linear Attention (SWLA), in which the memory updates its weights based on a set of c ≥ 1 c\geq 1 past tokens (contrary to the online RNNs, where the memory is updated solely based on the last token). More specifically, given a memory module ℳ ​ ( ⋅ ) \mathcal{M}(\cdot) and keys, values, and queries, { ( 𝒌 t , 𝒗 t , 𝒒 t ) } t = 1 L \{({\bm{k}}_{t},{\bm{v}}_{t},{\bm{q}}_{t})\}_{t=1}^{L} , the update and retrieval rules are defined as:
+
+|  | ℳ t = α t ​ ℳ t − 1 + ∑ i = t − c + 1 t β i ( t ) ​ 𝒗 i ​ 𝒌 i ⊤ , \displaystyle\mathcal{M}_{t}=\alpha_{t}\>\mathcal{M}_{t-1}\>+\sum_{i=t-c+1}^{t}\beta_{i}^{(t)}{\bm{v}}_{i}{\bm{k}}_{i}^{\top}, |  | (26) |
+| --- | --- | --- | --- |
+|  | 𝐲 t = ℳ t ​ 𝒒 t , \displaystyle\mathbf{y}_{t}=\mathcal{M}_{t}{\bm{q}}_{t}, |  | (27) |
+
+When c = 1 c=1 , the design collapses to the simple linear attention (online linear RNN) and its gated variants (Katharopoulos et al. , 2020 ; Sun et al. , 2023 ; Li et al. , 2025 ) . As a proof of concept, we use memory caching on SWLA with c = 2 c=2 , resulting in a recurrence and retrieval of:
+
+|  | ℳ t ( s ) = α t ​ ℳ t − 1 ( s ) + ( β t ​ 𝒗 t − 1 ​ 𝒌 t − 1 ⊤ + λ t ​ 𝒗 t ​ 𝒌 t ⊤ ) , \displaystyle\mathcal{M}_{t}^{(s)}=\alpha_{t}\>\mathcal{M}_{t-1}^{(s)}\>+\left(\beta_{t}{\bm{v}}_{t-1}{\bm{k}}_{t-1}^{\top}+\lambda_{t}{\bm{v}}_{t}{\bm{k}}_{t}^{\top}\right), |  | (28) |
+| --- | --- | --- | --- |
+|  | 𝐲 t = γ t ( s ) ​ ℳ t ( s ) ​ 𝒒 t + ∑ i = 1 s − 1 γ t ( i ) ​ ℳ L ( i ) ( i ) ​ 𝒒 t . \displaystyle\mathbf{y}_{t}=\gamma_{t}^{(s)}\mathcal{M}^{(s)}_{t}{\bm{q}}_{t}\>\>+\>\>\sum_{i=1}^{s-1}\gamma_{t}^{(i)}\mathcal{M}^{(i)}_{L^{(i)}}{\bm{q}}_{t}. |  | (29) |
+
+Note that, as discussed earlier, since SWLA is a linear memory module, both GRM and Memory Soup variants result in the same formulation.
+
+[FIGURE_CAPTION] Table 1: Performance of models on language modeling and common-sense reasoning tasks.
+
+Deep Linear Attention. DLA uses the same update rule as linear attention (i.e., Hebbian rule), but with a deep memory module. That is, given a memory module ℳ ​ ( ⋅ ) \mathcal{M}(\cdot) and keys, values, and queries, { ( 𝒌 t , 𝒗 t , 𝒒 t ) } t = 1 L \{({\bm{k}}_{t},{\bm{v}}_{t},{\bm{q}}_{t})\}_{t=1}^{L} , the update and retrieval rules are defined as:
+
+|  | ℳ t = ℳ t − 1 − η t ​ ∇ ℒ ​ ( ℳ t − 1 ; 𝒌 t , 𝒗 t ) , \displaystyle\mathcal{M}_{t}=\mathcal{M}_{t-1}-\eta_{t}\nabla\mathcal{L}\left(\mathcal{M}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right), |  | (30) |
+| --- | --- | --- | --- |
+|  | 𝐲 t = ℳ t ​ ( 𝒒 t ) , \displaystyle\mathbf{y}_{t}=\mathcal{M}_{t}({\bm{q}}_{t}), |  | (31) |
+
+where the attentional bias objective is defined as ℒ ​ ( ℳ t − 1 ; 𝒌 t , 𝒗 t ) = − ⟨ ℳ t − 1 ​ ( 𝒌 t ) , 𝒗 t ⟩ \mathcal{L}\left(\mathcal{M}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right)=-\langle\mathcal{M}_{t-1}({\bm{k}}_{t}),{\bm{v}}_{t}\rangle . Using memory caching (GRM variant), the update and retrieval process for DLA are defined as:
+
+|  |  | ℳ t ( s ) = ℳ t − 1 ( s ) − η t ​ ∇ ℒ ​ ( ℳ t − 1 ( s ) ; 𝒌 t , 𝒗 t ) , for ​ 1 ≤ t ≤ L ( s ) , \displaystyle\mathcal{M}^{(s)}_{t}=\mathcal{M}^{(s)}_{t-1}-\eta_{t}\nabla\mathcal{L}\left(\mathcal{M}^{(s)}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right),\;\text{for}\;1\leq t\leq L^{(s)}, |  | (32) |
+| --- | --- | --- | --- | --- |
+|  |  | 𝐲 t = γ t ( s ) ​ ℳ t ( s ) ​ ( 𝐪 t ) + ∑ i = 1 s − 1 γ t ( i ) ​ ℳ L ( i ) ( i ) ​ ( 𝐪 t ) . \displaystyle\mathbf{y}_{t}=\gamma_{t}^{(s)}\mathcal{M}^{(s)}_{t}(\mathbf{q}_{t})\>\>+\>\>\sum_{i=1}^{s-1}\gamma_{t}^{(i)}\mathcal{M}^{(i)}_{L^{(i)}}(\mathbf{q}_{t}). |  | (33) |
+
+Similarly, we can replace Equation 14 or Equation 17 with the update rule of DLA (similar to Equation 32 ) to derive other memory caching variants. Note that when memory module ℳ ​ ( ⋅ ) \mathcal{M}(\cdot) is a matrix, then the above formulation is equivalent to the linear attention (Katharopoulos et al. , 2020 ) .
+
+Titans. In Titans, compared to DLA, both attentional bias objective as well as the internal optimizer are different. More specifically, given a memory module ℳ ​ ( ⋅ ) \mathcal{M}(\cdot) and keys, values, and queries, { ( 𝒌 t , 𝒗 t , 𝒒 t ) } t = 1 L \{({\bm{k}}_{t},{\bm{v}}_{t},{\bm{q}}_{t})\}_{t=1}^{L} , the update and retrieval rules of Titans are defined as:
+
+|  |  | ℳ t = α t ​ ℳ t − 1 − 𝒮 t , \displaystyle\mathcal{M}_{t}=\alpha_{t}\>\mathcal{M}_{t-1}-\mathcal{S}_{t}, |  | (34) |
+| --- | --- | --- | --- | --- |
+|  |  | 𝒮 t = β t ​ 𝒮 t − 1 − η t ​ ∇ ℒ ​ ( ℳ t − 1 ; 𝒌 t , 𝒗 t ) , \displaystyle\mathcal{S}_{t}=\beta_{t}\>\mathcal{S}_{t-1}-\eta_{t}\nabla\mathcal{L}\left(\mathcal{M}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right), |  | (35) |
+|  |  | 𝐲 t = ℳ t ​ ( 𝒒 t ) , \displaystyle\mathbf{y}_{t}=\mathcal{M}_{t}({\bm{q}}_{t}), |  | (36) |
+
+where the attentional bias objective is defined as ℒ ​ ( ℳ t − 1 ; 𝒌 t , 𝒗 t ) = ‖ ℳ t − 1 ​ ( 𝒌 t ) − 𝒗 t ‖ 2 2 \mathcal{L}\left(\mathcal{M}_{t-1};{\bm{k}}_{t},{\bm{v}}_{t}\right)=\|\mathcal{M}_{t-1}({\bm{k}}_{t})-{\bm{v}}_{t}\|^{2}_{2} . With MC , while the memory update operation for each segment is the same as Equation 34 and Equation 35 , the retrieval process for Titans with memory caching is defined the same as Equation 33 .
+
+Log-Linear++ Variant. Recently, Guo et al. ( 2025 ) take advantage of structured matrix formulation of linear RNNs and design log-linear attention, a hierarchical algorithm based on Fenwick tree structure (Fenwick, 1994 ) that allows a logarithmically growing set of hidden states. We aim to use log-linear attention as the baseline in our experiments to show the effect of segmentation on the efficiency and retrieval performance. Its formulation, however, suffer from the positional bias and lack of context-dependency in retrieval process that we discussed in Section 3.1 . For the sake of fair comparison, we improve Log-linear formulation, denoted as Log-Linear++ in our experiments, by reformulating it as a variant of memory caching with GRM and logartithmic-size set of segments. The segmentation process is the same as the process describe in Section 4.2 . The other components are kept unchanged, the same as our memory caching variants.
+
+Memory Caching as Post Training. Memory caching can also be applied after pre-training of the model, where at inference, we cache the state of the memory after each segment (e.g., training sequence length). For decoding, we use moving average of the past cached memory without learnable weights. In our experimental results, we observe that even this simple technique can enhance the length extrapolation capability of recurrent models significantly.
+
+[FIGURE_CAPTION] Table 2: Needle-In-A-Haystack experiments with three levels of difficulty: single-needle tasks—S-NIAH-1 (passkey retrieval), S-NIAH-2 (numerical needle), and S-NIAH-3 (UUID-based needle).
+
+## 5 實驗
+
+接下來，我們評估記憶體快取在改進模型在語言建模、常識推理、大海撈針和情境內召回任務上的效能。
+
+實驗設置。在我們的實驗評估中，我們主要遵循 Guo et al. ( 2025 ) 的方法。我們使用訓練上下文視窗大小為 $\{\text{2K, 4K, 8K, 16K, 32K}\}$ 和片段長度範圍為 $\{\text{16, 32, 64, 128, 256, 512}\}$ tokens 的模型進行訓練，使用 FineWeb 資料集 (Penedo et al. , 2024 ) 和 Long-Data-Collections (Together AI, 2024 ) 的混合。在語言建模和常識推理任務 ( 表 1 ) 中，預設模型使用 4K 的上下文長度和 256 的片段長度進行訓練。我們使用 760M 和 1.3B 參數的模型大小，並在從 FineWeb 資料集 (Penedo et al. , 2024 ) 採樣的 30B 和 100B tokens 上進行訓練。困惑度在保留的驗證資料上測量。至於下游任務，我們在 Wikitext (Merity et al. , 2017 ) 、LMB (Paperno et al. , 2016 ) 、PIQA (Bisk et al. , 2020 ) 、HellaSwag (Zellers et al. , 2019 ) 、WinoGrande (Sakaguchi et al. , 2021 ) 、ARC-easy (ARC-e) 和 ARC-challenge (ARC-c) (Clark et al. , 2018 ) 、SIQA (Sap et al. , 2019 ) 以及 BoolQ (Clark et al. , 2019 ) 上評估訓練過的模型。在其他下游任務上，例如大海撈針、情境內檢索和 LongBench，我們使用 16K 上下文長度訓練模型，以更好地區分模型在短和長上下文上的效能。有關實驗設置和其他使用資料集的額外詳細資訊在附錄 B 中。
+
+### 5.1 語言建模
+
+我們從常見的學術規模語言建模開始。表 1 報告了 SWLA、DLA 和 Titans 在有無記憶體快取情況下的結果。
+
+有三個觀察結果：(1) 比較 DLA、Titans 和 SWLA 與其使用記憶體快取增強的版本，我們觀察到所有記憶體快取變體在不同的下游任務以及平均基準線上都提供了一致的改進。這顯示了記憶體快取對進一步增強記憶體有限的模型的重要性。(2) 如前所述，記憶體快取可被視為（稀疏）注意力機制與循環模型的混合體。比較記憶體快取增強的模型和基於注意力的模型（即混合型和 Transformer），記憶體快取為循環模型中有限記憶體的問題提供了更強大的解決方案。特別是，Titans + MC 和 DLA + MC 相比 Titans 達到了 +0.8% 的效能提升。(3) 比較 MC 的恆定大小分段和 Log-Linear++ 方法，我們觀察到恆定大小分段變體提供了更好的結果。此外，在我們提供的方法中，GRM 然後是 SSC 達到了更好的結果。我們將此效能提升歸因於 MC 為模型提供的更大有效記憶體大小。
+
+[FIGURE_CAPTION] 表 3：檢索任務的準確度 / 輸入截短為不同長度。
+
+### 5.2 針眼在乾草堆任務
+
+我們使用針眼在乾草堆（Needle-in-a-Haystack, NIAH）任務評估 MC 對長上下文檢索的影響（表 2）。MC 增強的 DLA 和 Titans 一貫地優於基礎模型。此外，MC 變體優於 Log-Linear 方法，尤其是在較長的上下文中。Log-Linear 表現不佳是因為它強制單一記憶體壓縮非常大的初始片段（例如，16K 令牌序列中的 8K 令牌），而 MC 則更有效地分散壓縮負載。
+
+### 5.3 上下文內檢索任務
+
+上下文內回憶任務是循環神經網路最具挑戰性的基準之一。在本節中，我們遵循 Arora et al.（2024b），在 SWDE（Lockard et al., 2019）、NQ（Kwiatkowski et al., 2019）、DROP（Dua et al., 2019）、FDA（Arora et al., 2023）、SQUAD（Rajpurkar et al., 2016）和 TQA（Kembhavi et al., 2017）上進行實驗，以評估和比較 MC 增強變體與基準模型和 Transformer 的效能。結果報告在表 3 中。儘管 Transformer 在上下文內回憶任務中仍達到最佳結果，我們的 MC 變體表現具有競爭力，縮小與 Transformer 的差距，並優於最先進的循環模型。我們再次將此效能歸因於隨著序列長度擴展的更大記憶體容量。
+
+[FIGURE_CAPTION] 表 4：LongBench 任務（Bai et al., 2024）的精度：NarrativeQA、QasperQA、MultiFieldQA、HotpotQA、2WikiMultiQA、Musique、GovReport、QMSum、MultiNews、TREC、TriviaQA、SamSum、LCC 和 RepoBench-P。
+
+### 5.4 長上下文理解任務
+
+我們使用 LongBench（Bai et al., 2024）對長上下文理解任務進行實驗。結果報告在表 4 中。所有 MC 增強變體相比其基礎 RNN 提供效能改進，再次歸因於其增加的記憶體容量。
+
+[FIGURE:memory_cach.png] 圖 4：記憶體快取變體和基準模型的訓練吞吐量比較。
+
+[FIGURE_CAPTION] 圖 5：5 次種子上 MQAR 的平均精度。
+
+[FIGURE_CAPTION] 表 5：MC 的消融研究。MC 的所有設計選擇都對其有效性做出正面貢獻。
+
+| 模型 | 語言建模 | 計算科學推理 | 檢索 |
+| --- | --- | --- | --- |
+| ppl ↓ \downarrow | acc ↑ \uparrow | acc ↑ \uparrow |
+| Titans (GRM) | 13.3 | 58.3 | 40.5 |
+| - 上下文依賴 | 13.4 | 57.4 | 33.0 |
+| - 門控 | 13.5 | 56.9 | 32.4 |
+| - 線性記憶體 | 13.7 | 56.3 | 34.5 |
+| - 共享 $\bm{u}$ 和 $\bm{q}$ | 00.0 | 00.0 | 00.0 |
+| Titans (SSC) | 13.4 | 57.6 | 36.3 |
+| - 上下文依賴 | 13.4 | 57.1 | 32.6 |
+| - 門控 | 13.5 | 56.8 | 31.9 |
+| - 線性記憶體 | 13.8 | 56.8 | 33.4 |
+| - 共享 $\bm{u}$ 和 $\bm{q}$ | 00.0 | 00.0 | 00.0 |
+
+### 5.5 多查詢關聯回憶 (MQAR)
+
+在本節中，我們評估 MC 增強變體在多查詢關聯回憶 (MQAR) 任務中的性能 (Arora et al. , 2024a)。結果如圖 5 所示。與基礎 RNN 以及最先進的循環模型相比，我們的模型表現良好，相比 Atlas (Behrouz et al. , 2025a) 等最先進的模型，在每個維度值上實現了最佳性能。
+
+### 5.6 消融研究
+
+接下來，我們評估 MC 框架中設計選擇的效果。第一個選擇是 γ 是否應該僅作為輸入的函數或也作為區塊上下文的函數。結果如表 5 所示。平均而言，此設計選擇已顯示出顯著改進。第二個設計是移除門控機制。請注意，沒有門控機制的情況下，該設計會退化為殘差記憶。結果表明即使這種簡單的設計也能增強模型的性能。最後，在第三個設計中，我們使用線性記憶模組。令人驚訝的是，使用記憶快取相對於記憶架構和表達能力來說能提供更好的性能穩健性。
+
+### 5.7 效率
+
+最後，我們評估我們的變體與基準模型的訓練吞吐量。結果如圖 4 所示。我們的 MC 變體在 Transformer 和 RNN 之間提供了一個中間立場，並且當增加上下文長度時，相比 Transformer 變得極其高效。這些結果表明我們的 SSC 變體兼具兩者的優點，在我們之前討論的多個下游任務中表現相當或更優，同時相比原始基礎 RNN 變體增加的開銷極少。此外，它們在較長序列上表現出顯著更好的效率。
+
+## 6 結論
+
+在本論文中，我們提出記憶快取 (MC)，一種適用於所有循環神經網路的簡單技術，它快取記憶狀態的一個子集，允許後續令牌直接關注其過去的相關令牌。我們的實驗表明相比一部分基準有所改進。本論文中的許多選擇都是為了保持所得模型盡可能簡單而做出的，以更好地展示記憶快取想法的效果。不過，在未來的工作中，可以使用更具表達力的池化或路由機制來進一步增強性能。
+
+## References
+
+- [1] Z. Allen-Zhu Physics of language models: part 4.1, architecture design and the magic of canon layers . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , Cited by: Appendix A .
+- S. Arora, S. Eyuboglu, A. Timalsina, I. Johnson, M. Poli, J. Zou, A. Rudra, and C. Re (2024a) Zoology: measuring and improving recall in efficient language models . In The Twelfth International Conference on Learning Representations , External Links: Link Cited by: §5.5 .
+- S. Arora, S. Eyuboglu, M. Zhang, A. Timalsina, S. Alberti, J. Zou, A. Rudra, and C. Re (2024b) Simple linear attention language models balance the recall-throughput tradeoff . In Forty-first International Conference on Machine Learning , External Links: Link Cited by: Appendix A , §1 , §1 , §5.3 .
+- S. Arora, B. Yang, S. Eyuboglu, A. Narayan, A. Hojel, I. Trummer, and C. Ré (2023) Language models enable simple systems for generating structured views of heterogeneous data lakes . arXiv preprint arXiv:2304.09433 . Cited by: §5.3 .
+- Y. Bai, X. Lv, J. Zhang, H. Lyu, J. Tang, Z. Huang, Z. Du, X. Liu, A. Zeng, L. Hou, Y. Dong, J. Tang, and J. Li (2024) LongBench: a bilingual, multitask benchmark for long context understanding . In ACL (1) , pp. 3119–3137 . External Links: Link Cited by: §5.4 , Table 4 .
+- A. Behrouz, Z. Li, P. Kacham, M. Daliri, Y. Deng, P. Zhong, M. Razaviyayn, and V. Mirrokni (2025a) Atlas: learning to optimally memorize the context at test time . arXiv preprint arXiv:2505.23735 . Cited by: Appendix A , Appendix A , 3rd item , §3.1 , §4.3 , §4.3 , §5.5 .
+- A. Behrouz, M. Razaviyayn, P. Zhong, and V. Mirrokni (2025b) Nested learning: the illusion of deep learning architectures . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , External Links: Link Cited by: Appendix A , §2 , §2 , footnote 1 .
+- A. Behrouz, M. Razaviyayn, P. Zhong, and V. Mirrokni (2026) It’s all connected: a journey through test-time memorization, attentional bias, retention, and online optimization . In The Fourteenth International Conference on Learning Representations , External Links: Link Cited by: Appendix A , Appendix A , Appendix A , Appendix B , §1 , §2 , §2 , §2 , footnote 1 .
+- A. Behrouz, P. Zhong, and V. Mirrokni (2025c) Titans: learning to memorize at test time . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , External Links: Link Cited by: Appendix A , Appendix B , 3rd item , §1 , §4.3 .
+- A. Bietti, V. Cabannes, D. Bouchacourt, H. Jegou, and L. Bottou (2023) Birth of a transformer: a memory viewpoint . Advances in Neural Information Processing Systems 36 , pp. 1560–1588 . Cited by: §2 .
+- A. Bietti, V. Cabannes, D. Bouchacourt, H. Jegou, and L. Bottou (2024) Birth of a transformer: a memory viewpoint . Advances in Neural Information Processing Systems 36 . Cited by: §1 .
+- Y. Bisk, R. Zellers, J. Gao, Y. Choi, et al. (2020) Piqa: reasoning about physical commonsense in natural language . In Proceedings of the AAAI conference on artificial intelligence , Vol. 34 , pp. 7432–7439 . Cited by: Appendix B , §5 .
+- T. Brown, B. Mann, N. Ryder, M. Subbiah, J. D. Kaplan, P. Dhariwal, A. Neelakantan, P. Shyam, G. Sastry, A. Askell, et al. (2020) Language models are few-shot learners . Advances in neural information processing systems 33 , pp. 1877–1901 . Cited by: §1 .
+- R. Child, S. Gray, A. Radford, and I. Sutskever (2019) Generating long sequences with sparse transformers . arXiv preprint arXiv:1904.10509 . Cited by: §1 .
+- C. Clark, K. Lee, M. Chang, T. Kwiatkowski, M. Collins, and K. Toutanova (2019) BoolQ: exploring the surprising difficulty of natural yes/no questions . In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers) , J. Burstein, C. Doran, and T. Solorio (Eds.) , Minneapolis, Minnesota , pp. 2924–2936 . External Links: Link , Document Cited by: Appendix B , §5 .
+- P. Clark, I. Cowhey, O. Etzioni, T. Khot, A. Sabharwal, C. Schoenick, and O. Tafjord (2018) Think you have solved question answering? try arc, the ai2 reasoning challenge . arXiv preprint arXiv:1803.05457 . Cited by: Appendix B , §5 .
+- G. Comanici, E. Bieber, M. Schaekermann, I. Pasupat, N. Sachdeva, I. Dhillon, M. Blistein, O. Ram, D. Zhang, E. Rosen, et al. (2025) Gemini 2.5: pushing the frontier with advanced reasoning, multimodality, long context, and next generation agentic capabilities . arXiv preprint arXiv:2507.06261 . Cited by: §1 .
+- R. Csordás, C. Potts, C. D. Manning, and A. Geiger (2024) Recurrent neural networks learn to store and generate sequences using non-linear representations . In Proceedings of the 7th BlackboxNLP Workshop: Analyzing and Interpreting Neural Networks for NLP , pp. 248–262 . Cited by: Appendix A .
+- Z. Dai, Z. Yang, Y. Yang, J. G. Carbonell, Q. V. Le, and R. Salakhutdinov (2019) Transformer-xl: attentive language models beyond a fixed-length context . In ACL (1) , A. Korhonen, D. R. Traum, and L. Màrquez (Eds.) , pp. 2978–2988 . External Links: ISBN 978-1-950737-48-2 Cited by: §1 .
+- T. Dao, B. Chen, N. S. Sohoni, A. Desai, M. Poli, J. Grogan, A. Liu, A. Rao, A. Rudra, and C. Ré (2022) Monarch: expressive structured matrices for efficient and accurate training . In International Conference on Machine Learning , pp. 4690–4721 . Cited by: Appendix A .
+- T. Dao, A. Gu, M. Eichhorn, A. Rudra, and C. Ré (2019) Learning fast algorithms for linear transforms using butterfly factorizations . In International conference on machine learning , pp. 1517–1527 . Cited by: Appendix A .
+- A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn, X. Zhai, T. Unterthiner, M. Dehghani, M. Minderer, G. Heigold, S. Gelly, J. Uszkoreit, and N. Houlsby (2021) An image is worth 16x16 words: transformers for image recognition at scale . In International Conference on Learning Representations , External Links: Link Cited by: §1 .
+- D. Dua, Y. Wang, P. Dasigi, G. Stanovsky, S. Singh, and M. Gardner (2019) DROP: a reading comprehension benchmark requiring discrete reasoning over paragraphs . arXiv preprint arXiv:1903.00161 . Cited by: §5.3 .
+- P. M. Fenwick (1994) A new data structure for cumulative frequency tables . Software: Practice and experience 24 ( 3 ), pp. 327–336 . Cited by: §4.3 .
+- X. Gonzalez, A. Warrington, J. Smith, and S. Linderman (2024) Towards scalable and stable parallelization of nonlinear rnns . Advances in Neural Information Processing Systems 37 , pp. 5817–5849 . Cited by: Appendix A .
+- H. Guo, S. Yang, T. Goel, E. P. Xing, T. Dao, and Y. Kim (2025) Log-linear attention . arXiv preprint arXiv:2506.04761 . Cited by: Appendix A , Appendix B , §4.3 , §5 .
+- D. O. Hebb (2005) The organization of behavior: a neuropsychological theory . Psychology press . Cited by: Appendix A .
+- D. Hendrycks and K. Gimpel (2016) Gaussian error linear units (gelus) . arXiv preprint arXiv:1606.08415 . Cited by: Appendix B .
+- J. J. Hopfield (1982) Neural networks and physical systems with emergent collective computational abilities. . Proceedings of the national academy of sciences 79 ( 8 ), pp. 2554–2558 . Cited by: Appendix A , Appendix A .
+- J. Y. Hu, D. Wu, and H. Liu (2024) Provably optimal memory capacity for modern hopfield models: transformer-compatible dense associative memories as spherical codes . arXiv preprint arXiv:2410.23126 . Cited by: Appendix A .
+- J. Hu, Y. Pan, J. Du, D. Lan, X. Tang, Q. Wen, Y. Liang, and W. Sun (2025) Improving bilinear RNN with closed-loop control . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , External Links: Link Cited by: Appendix A .
+- Y. Huang, J. Zhang, Z. Shan, and J. He (2024) Compression represents intelligence linearly . In First Conference on Language Modeling , External Links: Link Cited by: §1 .
+- K. Irie, I. Schlag, R. Csordas, and J. Schmidhuber (2021) Going beyond linear transformers with recurrent fast weight programmers . Advances in neural information processing systems 34 , pp. 7703–7717 . Cited by: Appendix A , §1 .
+- K. Irie, I. Schlag, R. Csordás, and J. Schmidhuber (2022) A modern self-referential weight matrix that learns to modify itself . In International Conference on Machine Learning , pp. 9660–9677 . Cited by: §1 .
+- K. Jordan, Y. Jin, V. Boza, Y. Jiacheng, F. Cecista, L. Newhouse, and J. Bernstein (2024) Muon: an optimizer for hidden layers in neural networks, 2024b . URL https://kellerjordan. github. io/posts/muon . Cited by: Appendix A .
+- J. Jumper, R. Evans, A. Pritzel, T. Green, M. Figurnov, O. Ronneberger, K. Tunyasuvunakool, R. Bates, A. Žídek, A. Potapenko, et al. (2021) Highly accurate protein structure prediction with alphafold . nature 596 ( 7873 ), pp. 583–589 . Cited by: §1 .
+- Y. Kang, G. Tran, and H. De Sterck (2023) Fast multipole attention: a divide-and-conquer attention mechanism for long sequences . arXiv preprint arXiv:2310.11960 . Cited by: Appendix A .
+- J. Kaplan, S. McCandlish, T. Henighan, T. B. Brown, B. Chess, R. Child, S. Gray, A. Radford, J. Wu, and D. Amodei (2020) Scaling laws for neural language models . arXiv preprint arXiv:2001.08361 . Cited by: §1 .
+- M. Karami and V. Mirrokni (2025) Lattice: learning to efficiently compress the memory . Cited by: Appendix A .
+- A. Katharopoulos, A. Vyas, N. Pappas, and F. Fleuret (2020) Transformers are rnns: fast autoregressive transformers with linear attention . In International conference on machine learning , pp. 5156–5165 . Cited by: Appendix A , 3rd item , §1 , §2 , §2 , §2 , §3.1 , §3 , §4.1 , §4.3 , §4.3 , §4.3 .
+- A. Kembhavi, M. Seo, D. Schwenk, J. Choi, A. Farhadi, and H. Hajishirzi (2017) Are you smarter than a sixth grader? textbook question answering for multimodal machine comprehension . In Proceedings of the IEEE Conference on Computer Vision and Pattern recognition , pp. 4999–5007 . Cited by: §5.3 .
+- N. Kitaev, Ł. Kaiser, and A. Levskaya (2020) Reformer: the efficient transformer . arXiv preprint arXiv:2001.04451 . Cited by: Appendix A .
+- D. Krotov and J. J. Hopfield (2016) Dense associative memory for pattern recognition . Advances in neural information processing systems 29 . Cited by: Appendix A .
+- D. Krotov (2021) Hierarchical associative memory . arXiv preprint arXiv:2107.06446 . Cited by: Appendix A .
+- Y. Kuratov, A. Bulatov, P. Anokhin, I. Rodkin, D. I. Sorokin, A. Sorokin, and M. Burtsev (2024) BABILong: testing the limits of LLMs with long context reasoning-in-a-haystack . In The Thirty-eight Conference on Neural Information Processing Systems Datasets and Benchmarks Track , External Links: Link Cited by: §1 .
+- T. Kwiatkowski, J. Palomaki, O. Redfield, M. Collins, A. Parikh, C. Alberti, D. Epstein, I. Polosukhin, J. Devlin, K. Lee, et al. (2019) Natural questions: a benchmark for question answering research . Transactions of the Association for Computational Linguistics 7 , pp. 453–466 . Cited by: §5.3 .
+- A. Li, B. Gong, B. Yang, B. Shan, C. Liu, C. Zhu, C. Zhang, C. Guo, D. Chen, D. Li, et al. (2025) Minimax-01: scaling foundation models with lightning attention . arXiv preprint arXiv:2501.08313 . Cited by: Appendix A , §4.3 .
+- S. Li, X. Jin, Y. Xuan, X. Zhou, W. Chen, Y. Wang, and X. Yan (2019) Enhancing the locality and breaking the memory bottleneck of transformer on time series forecasting . Advances in neural information processing systems 32 . Cited by: Appendix A .
+- X. Li, Y. Li, Y. Liang, Z. Shi, and Z. Song (2024) On the expressive power of modern hopfield networks . arXiv preprint arXiv:2412.05562 . Cited by: Appendix A .
+- Y. H. Lim, Q. Zhu, J. Selfridge, and M. F. Kasim (2024) Parallelizing non-linear sequential models over the sequence length . In The Twelfth International Conference on Learning Representations , External Links: Link Cited by: Appendix A .
+- B. Liu, R. Wang, L. Wu, Y. Feng, P. Stone, and Q. Liu (2024) Longhorn: state space models are amortized online learners . arXiv preprint arXiv:2407.14207 . Cited by: Appendix A .
+- C. Lockard, P. Shiralkar, and X. L. Dong (2019) Openceres: when open information extraction meets the semi-structured web . In Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers) , pp. 3047–3056 . Cited by: §5.3 .
+- E. Lu, Z. Jiang, J. Liu, Y. Du, T. Jiang, C. Hong, S. Liu, W. He, E. Yuan, Y. Wang, Z. Huang, H. Yuan, S. Xu, X. Xu, G. Lai, Y. Chen, H. Zheng, J. Yan, J. Su, Y. Wu, Y. Zhang, Z. Yang, X. Zhou, M. Zhang, and J. Qiu (2025) MoBA: mixture of block attention for long-context LLMs . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , External Links: Link Cited by: Appendix A .
+- C. Lucibello and M. Mézard (2024) Exponential capacity of dense associative memories . Physical Review Letters 132 ( 7 ), pp. 077301 . Cited by: Appendix A .
+- S. Merity, C. Xiong, J. Bradbury, and R. Socher (2017) Pointer sentinel mixture models . In International Conference on Learning Representations , External Links: Link Cited by: Appendix B , §5 .
+- W. Merrill, J. Petty, and A. Sabharwal (2024) The illusion of state in state-space models . In Forty-first International Conference on Machine Learning , External Links: Link Cited by: Appendix A , §1 .
+- T. Munkhdalai, M. Faruqui, and S. Gopal (2024) Leave no context behind: efficient infinite context transformers with infini-attention . arXiv preprint arXiv:2404.07143 . Cited by: Appendix A .
+- T. Munkhdalai, A. Sordoni, T. Wang, and A. Trischler (2019) Metalearned neural memory . Advances in Neural Information Processing Systems 32 . Cited by: Appendix A .
+- T. Munkhdalai and H. Yu (2017) Neural semantic encoders . In Proceedings of the conference. Association for Computational Linguistics. Meeting , Vol. 1 , pp. 397 . Cited by: Appendix A .
+- T. Nguyen, V. Suliafu, S. Osher, L. Chen, and B. Wang (2021) Fmmformer: efficient and flexible transformer via decomposed near-field and far-field attention . Advances in neural information processing systems 34 , pp. 29449–29463 . Cited by: Appendix A .
+- D. Paperno, G. Kruszewski, A. Lazaridou, N. Q. Pham, R. Bernardi, S. Pezzelle, M. Baroni, G. Boleda, and R. Fernandez (2016) The LAMBADA dataset: word prediction requiring a broad discourse context . In Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , K. Erk and N. A. Smith (Eds.) , Berlin, Germany , pp. 1525–1534 . External Links: Link , Document Cited by: Appendix B , §5 .
+- Y. Park, M. Seo, and H. Jeon (2025) VideoTitans: scalable video prediction with integrated short- and long-term memory . In The Thirty-ninth Annual Conference on Neural Information Processing Systems , External Links: Link Cited by: §1 .
+- G. Penedo, H. Kydlíček, A. Lozhkov, M. Mitchell, C. A. Raffel, L. Von Werra, T. Wolf, et al. (2024) The fineweb datasets: decanting the web for the finest text data at scale . Advances in Neural Information Processing Systems 37 , pp. 30811–30849 . Cited by: §5 .
+- B. Peng, E. Alcaide, Q. G. Anthony, A. Albalak, S. Arcadinho, S. Biderman, H. Cao, X. Cheng, M. N. Chung, L. Derczynski, X. Du, M. Grella, K. K. GV, X. He, H. Hou, P. Kazienko, J. Kocon, J. Kong, B. Koptyra, H. Lau, J. Lin, K. S. I. Mantri, F. Mom, A. Saito, G. Song, X. Tang, J. S. Wind, S. Wozniak, Z. Zhang, Q. Zhou, J. Zhu, and R. Zhu (2023) RWKV: reinventing RNNs for the transformer era . In The 2023 Conference on Empirical Methods in Natural Language Processing , External Links: Link Cited by: Appendix A , §2 .
+- B. Peng, D. Goldstein, Q. Anthony, A. Albalak, E. Alcaide, S. Biderman, E. Cheah, X. Du, T. Ferdinan, H. Hou, et al. (2024) Eagle and finch: rwkv with matrix-valued states and dynamic recurrence . arXiv preprint arXiv:2404.05892 . Cited by: Appendix A .
+- M. Poli, S. Massaroli, E. Nguyen, D. Y. Fu, T. Dao, S. Baccus, Y. Bengio, S. Ermon, and C. Ré (2023) Hyena hierarchy: towards larger convolutional language models . In International Conference on Machine Learning , pp. 28043–28078 . Cited by: §1 .
+- D. Prados and S. Kak (1989) Neural network capacity using delta rule . Electronics Letters 25 ( 3 ), pp. 197–199 . Cited by: Appendix A .
+- S. Qiu, A. Potapczynski, M. Finzi, M. Goldblum, and A. G. Wilson (2024) Compute better spent: replacing dense layers with structured matrices . arXiv preprint arXiv:2406.06248 . Cited by: Appendix A .
+- P. Rajpurkar, J. Zhang, K. Lopyrev, and P. Liang (2016) Squad: 100,000+ questions for machine comprehension of text . arXiv preprint arXiv:1606.05250 . Cited by: §5.3 .
+- H. Ramsauer, B. Schäfl, J. Lehner, P. Seidl, M. Widrich, L. Gruber, M. Holzleitner, T. Adler, D. Kreil, M. K. Kopp, G. Klambauer, J. Brandstetter, and S. Hochreiter (2021) Hopfield networks is all you need . In International Conference on Learning Representations , External Links: Link Cited by: Appendix A , §1 .
+- L. Ren, Y. Liu, Y. Lu, Y. Shen, C. Liang, and W. Chen (2024) Samba: simple hybrid state space models for efficient unlimited context language modeling . arXiv preprint arXiv:2406.07522 . Cited by: Table 1 .
+- K. Sakaguchi, R. L. Bras, C. Bhagavatula, and Y. Choi (2021) Winogrande: an adversarial winograd schema challenge at scale . Communications of the ACM 64 ( 9 ), pp. 99–106 . Cited by: Appendix B , §5 .
+- M. Sap, H. Rashkin, D. Chen, R. Le Bras, and Y. Choi (2019) Social IQa: commonsense reasoning about social interactions . In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP) , K. Inui, J. Jiang, V. Ng, and X. Wan (Eds.) , Hong Kong, China , pp. 4463–4473 . External Links: Link , Document Cited by: Appendix B , §5 .
+- I. Schlag, K. Irie, and J. Schmidhuber (2021) Linear transformers are secretly fast weight programmers . In International Conference on Machine Learning , pp. 9355–9366 . Cited by: Appendix A , Appendix A , §2 .
+- J. Schmidhuber (1992) Learning to control fast-weight memories: an alternative to recurrent nets. accepted for publication in . Neural Computation . Cited by: Appendix A , Appendix A .
+- J. Schmidhuber (1993) Reducing the ratio between learning complexity and number of time varying variables in fully recurrent nets . In ICANN’93: Proceedings of the International Conference on Artificial Neural Networks Amsterdam, The Netherlands 13–16 September 1993 3 , pp. 460–463 . Cited by: Appendix A .
+- M. Schöne, B. Rahmani, H. Kremer, F. Falck, H. Ballani, and J. Gladrow (2025) Implicit language models are rnns: balancing parallelization and expressivity . arXiv preprint arXiv:2502.07827 . Cited by: Appendix A .
+- N. Shazeer, *. Mirhoseini, *. Maziarz, A. Davis, Q. Le, G. Hinton, and J. Dean (2017) Outrageously large neural networks: the sparsely-gated mixture-of-experts layer . In International Conference on Learning Representations , External Links: Link Cited by: §3.3 .
+- J. Siems, T. Carstensen, A. Zela, F. Hutter, M. Pontil, and R. Grazzi (2025) DeltaProduct: increasing the expressivity of deltanet through products of householders . arXiv preprint arXiv:2502.10297 . Cited by: Appendix A .
+- J. T.H. Smith, A. Warrington, and S. Linderman (2023) Simplified state space layers for sequence modeling . In The Eleventh International Conference on Learning Representations , External Links: Link Cited by: Appendix A .
+- Y. Sun, X. Li, K. Dalal, J. Xu, A. Vikram, G. Zhang, Y. Dubois, X. Chen, X. Wang, S. Koyejo, et al. (2024) Learning to (learn at test time): rnns with expressive hidden states . arXiv preprint arXiv:2407.04620 . Cited by: Appendix A , Appendix A .
+- Y. Sun, L. Dong, S. Huang, S. Ma, Y. Xia, J. Xue, J. Wang, and F. Wei (2023) Retentive network: a successor to transformer for large language models . arXiv preprint arXiv:2307.08621 . Cited by: Appendix A , §1 , §4.3 .
+- M. Tiezzi, M. Casoni, A. Betti, T. Guidi, M. Gori, and S. Melacci (2024) On the resurgence of recurrent models for long sequences: survey and research opportunities in the transformer era . arXiv preprint arXiv:2402.08132 . Cited by: Appendix A .
+- Together AI (2024) Long data collections . External Links: Link Cited by: §5 .
+- A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, and I. Polosukhin (2017) Attention is all you need . In Advances in Neural Information Processing Systems , I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett (Eds.) , Vol. 30 , pp. . External Links: Link Cited by: §1 , §2 .
+- J. Von Oswald, M. Schlegel, A. Meulemans, S. Kobayashi, E. Niklasson, N. Zucchet, N. Scherrer, N. Miller, M. Sandler, M. Vladymyrov, et al. (2023) Uncovering mesa-optimization algorithms in transformers . arXiv preprint arXiv:2309.05858 . Cited by: Appendix A .
+- K. A. Wang, J. Shi, and E. B. Fox (2025) Test-time regression: a unifying framework for designing sequence models with associative memory . arXiv preprint arXiv:2501.12352 . Cited by: Appendix A , §2 , §2 .
+- M. Wortsman, G. Ilharco, S. Y. Gadre, R. Roelofs, R. Gontijo-Lopes, A. S. Morcos, H. Namkoong, A. Farhadi, Y. Carmon, S. Kornblith, et al. (2022) Model soups: averaging weights of multiple fine-tuned models improves accuracy without increasing inference time . In International conference on machine learning , pp. 23965–23998 . Cited by: §3.2 .
+- S. Yang, J. Kautz, and A. Hatamizadeh (2024a) Gated delta networks: improving mamba2 with delta rule . arXiv preprint arXiv:2412.06464 . Cited by: Appendix A , Appendix A , Appendix B .
+- S. Yang, B. Wang, Y. Shen, R. Panda, and Y. Kim (2024b) Gated linear attention transformers with hardware-efficient training . In Forty-first International Conference on Machine Learning , External Links: Link Cited by: Appendix A , §2 .
+- S. Yang, B. Wang, Y. Zhang, Y. Shen, and Y. Kim (2024c) Parallelizing linear transformers with the delta rule over sequence length . Advances in Neural Information Processing Systems 37 , pp. 115491–115522 . Cited by: Appendix A , Appendix A .
+- R. Zellers, A. Holtzman, Y. Bisk, A. Farhadi, and Y. Choi (2019) HellaSwag: can a machine really finish your sentence? . In Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics , A. Korhonen, D. Traum, and L. Marquez (Eds.) , Florence, Italy , pp. 4791–4800 . External Links: Link , Document Cited by: Appendix B , §5 .
+- Z. Zeng, S. Pal, J. Kline, G. M. Fung, and V. Singh (2022) Multi resolution analysis (mra) for approximate self-attention . In International conference on machine learning , pp. 25955–25972 . Cited by: Appendix A .
+- T. Zhang, S. Bi, Y. Hong, K. Zhang, F. Luan, S. Yang, K. Sunkavalli, W. Freeman, and H. Tan (2025) Test-time training done right . arXiv preprint arXiv:2505.23884 . Cited by: Appendix A , Appendix B .
+- H. Zhou, S. Zhang, J. Peng, S. Zhang, J. Li, H. Xiong, and W. Zhang (2021) Informer: beyond efficient transformer for long sequence time-series forecasting . In Proceedings of the AAAI conference on artificial intelligence , Vol. 35 , pp. 11106–11115 . Cited by: Appendix A .
+
+## 附錄 A 相關工作
+
+**線性記憶模組。** 最近的努力集中在緩解 Transformer 的二次方複雜性、上下文長度限制和有限的表達能力在解決複雜問題中的不足，這促進了高效遞迴替代方案的發展，這些方案提供更快的推論和訓練（Tiezzi et al. , 2024）。更具體地說，Katharopoulos et al. (2020) 展示了通過將 softmax 替換為可分離核心來計算注意力，從而產生線性注意力公式，允許遞迴計算。基於此見解，多項研究專注於改進線性注意力的性能並縮小與二次方 Transformer 的差距。為此，RetNet（Sun et al. , 2023）、RWKV（Peng et al. , 2023）、Lightning Attention（Li et al. , 2025）和 S5（Smith et al. , 2023）在線性注意力公式中引入了遺忘門機制。之後，其他研究通過使線性注意力架構中現有的遺忘門依賴於輸入，為需要更有選擇性遺忘的任務調整了這些公式（Yang et al. , 2024b；Peng et al. , 2024）。同時，Schlag et al. (2021) 提出了 DeltaNet，一種基於 Delta 規則的遞迴神經網路遞迴的替代學習更新，以改進線性注意力模型的記憶管理。之後，多項研究設計了不同的算法來訓練 Delta 更新規則（Yang et al. , 2024c；Sun et al. , 2024；Liu et al. , 2024）。此外，基於這些現有技術——從遺忘門、學習算法到訓練算法設計——並結合它們，近年來設計了線性注意力模組的不同變體（Yang et al. , 2024a；c；a；Allen-Zhu；Liu et al. , 2024）。最近，Siems et al. (2025) 通過應用每個 token 多次更新來增強 delta 規則模型，從而產生更具表達力的狀態追蹤能力。除了線性遞迴模型之外，多項工作調查了具有非線性遞迴但具有線性矩陣值記憶的 RNN（Csordás et al. , 2024；Merrill et al. , 2024；Lim et al. , 2024；Behrouz et al. , 2026；2025a；Schöne et al. , 2025；Karami and Mirrokni, 2025；Von Oswald et al. , 2023；Gonzalez et al. , 2024；Hu et al. , 2025），強調加快其訓練速度（Gonzalez et al. , 2024；Lim et al. , 2024；Schöne et al. , 2025）。
+
+**深度記憶模組。** 另一條研究線路專注於增強記憶模組的容量以及改進其學習更新規則。Sun et al. (2024) 提出了 TTT 層，一種快速權重程式（Schmidhuber, 1992），根據 $L_{2}$ 迴歸損失更新其權重。Sun et al. (2024) 討論了注意力和簡單線性注意力是 TTT 層的實例，但將其他遞迴神經網路排除在 TTT 層之外，主要是因為它們無法使用內部 $L_{2}$ 迴歸損失（即 TTT 層的定義）準確恢復。Titans（Behrouz et al. , 2025c）建議融入更複雜的最佳化演算法並用它們替換梯度下降。作為概念驗證，Titans 使用帶動量的梯度下降和權重衰減來最佳化內部 $L_{2}$ 迴歸損失。基於 TTT 層的公式（即最佳化內部 $L_{2}$ 迴歸損失），Wang et al. (2025) 展示了如何逼近 $L_{2}$ 迴歸損失，從而近似恢復其他現代遞迴神經網路。基於此見解，Wang et al. (2025) 提出了一種比標準 softmax 注意力具有更高表達能力的高階注意力變體。同時，Behrouz et al. (2026) 提出了「測試時記憶化（TTM）」框架，其中基於聯想記憶的概念準確恢復架構，內部學習基於任意目標的映射。實際上，與限制內部模型為 $L_{2}$ 迴歸損失的 TTT 層（Sun et al. , 2024）相反，TTM 建議基於聯想記憶概念設計架構，具有四個設計選擇：(1) 記憶的架構；(2) 內部目標；(3) 內部保留門；(4) 內部最佳化演算法。
+
+遵循此方向，以及為內部迴圈選擇新目標和最佳化演算法的事實可以導致開發更具表達力的架構（Behrouz et al. , 2026），通過改變內部目標，已經出現了新一代架構。Moneta 和 Yaad 分別用 $L_{p}$ 和 Huber 損失替換 $L_{2}$ 迴歸損失。Atlas（Behrouz et al. , 2025a）融入了 Omega 學習規則，不是根據最後一個 token 更新記憶，而是根據過去資料的局部上下文更新記憶。它進一步建議使用 Muon（Jordan et al. , 2024）作為內部最佳化。Zhang et al. (2025) 用點積相似性替換 $L_{2}$ 迴歸損失，並建議使用較大的塊大小以實現更高效的訓練。最近，為了進一步改進機器學習模型的長期記憶，Behrouz et al. (2025b) 提出了連續記憶系統（CMS），建議不是替換注意力塊，而是用多個 MLP 塊替換 Transformer 中的一個靜態 MLP 塊，每個塊都根據手邊的任務以端對端方式根據其自身的頻率進行更新（與 MLP 塊相同的方式）。該架構——具有多個動態 MLP 塊的注意力序列——稱為 Hope-attention，已展示出比簡單 Transformer 更好的長上下文理解能力。
+
+**快速權重程式和元學習。** 將線性層視為鍵值聯想記憶系統的觀點可追溯到 Hopfield 網路（Hopfield, 1982）。此想法後來通過快速權重程式設計師的發展而得到擴展，其中動態快速程式被整合到遞迴神經網路中以作為可寫記憶存儲（Schlag et al. , 2021；Schmidhuber, 1992；1993）。在此類系統的學習範式中，Hebbian 學習（Hebb, 2005）和 delta 規則（Prados and Kak, 1989）最為突出。兩條規則都在文獻中得到了廣泛研究（Munkhdalai and Yu, 2017；Schmidhuber, 1992；Munkhdalai et al. , 2019；Schlag et al. , 2021；Irie et al. , 2021；Yang et al. , 2024c；a）。
+
+**Hopfield 網路。** 我們的公式基於聯想記憶的廣泛概念，其目標是學習鍵和值之間的映射。Hopfield (1982) 的開創性工作引入了 Hopfield 網路，作為最早基於聯想記憶的神經架構之一，通過最小化用於儲存鍵值對的能量函數而形式化。雖然古典 Hopfield 網路由於向量值記憶容量的限制和其能量函數的結構而應用性降低，但最近的研究已尋求通過各種方法增強其容量（Krotov, 2021；Li et al. , 2024；Krotov and Hopfield, 2016）。特別是，已經探索了具有指數核的能量函數的擴展（Krotov and Hopfield, 2016；Lucibello and Mézard, 2024）。此外，現代 Hopfield 網路和 Transformer 架構之間的聯繫已被積極調查（Ramsauer et al. , 2021；Hu et al. , 2024）。
+
+**高效注意力機制。** 除了遞迴架構外，最近的工作提出使用結構化矩陣來改進 token 和通道混合層的效率。例如，Butterfly 矩陣（Dao et al. , 2019）、Monarch 矩陣（Dao et al. , 2022）和塊張量列車矩陣（Qiu et al. , 2024）提供了緊湊但富有表達力的參數化，減少了密集投影的計算負擔。其他方法設計稀疏或混合注意力機制，如滑動窗口注意力或結合局部遞迴與選擇性長範圍連接的模型（Nguyen et al. , 2021；Arora et al. , 2024b；Munkhdalai et al. , 2024）。
+
+另一類方法將注意力的二次方複雜性降低到接近對數線性時間。古典示例包括使用局部敏感雜湊來聚類查詢和鍵的 Reformer（Kitaev et al. , 2020）以及依賴結構化稀疏模式以提高長序列和時間序列任務效率的 LogSparse Transformer（Li et al. , 2019）和 Informer（Zhou et al. , 2021）。後續工作引入了更精緻的設計，例如多分解析度注意力（Zeng et al. , 2022），它從粗到細逐步精化注意力分數，以及快速多極注意力（Kang et al. , 2023），它適配快速多極方法以實現可擴展的長範圍交互。另一組研究專注於塊或 token 級稀疏注意力模組。更具體地說，Lu et al. (2025) 提出了 MoBA，建議對序列進行分塊並對序列維度執行 MoE。不僅此設計基於注意力模組，而且它與我們的 MoE 有根本性的差異，其中注意力的計算對每個塊和 token 是臨時的。在這裡，記憶狀態是預先計算的，不需要臨時計算。最近，Guo et al. (2025) 引入了對數線性注意力，一個用對數增長的隱藏狀態集增強線性注意力的框架，通過 Fenwick 樹分割組織。此設計實現了 $\mathcal{O}(L\log L)$ 訓練複雜性和 $\mathcal{O}(\log L)$ 解碼記憶，同時保持硬體高效的並列化。
+
+[FIGURE_CAPTION] 表 6：架構細節。
+
+## Appendix B Experimental Details
+
+In our experimental setup we follow recent studies on recurrent models (Yang et al. , 2024a ; Behrouz et al. , 2025c ; 2026 ; Zhang et al. , 2025 ; Guo et al. , 2025 ) , we use Wikitext (Merity et al. , 2017 ) , LMB (Paperno et al. , 2016 ) , PIQA (Bisk et al. , 2020 ) , HellaSwag (Zellers et al. , 2019 ) , WinoGrande (Sakaguchi et al. , 2021 ) , ARC-easy (ARC-e) and ARC-challenge (ARC-c) (Clark et al. , 2018 ) , SIQA (Sap et al. , 2019 ) , and BoolQ (Clark et al. , 2019 ) . In the training, we use a vocabulary size of 32K and use training length of 4K-32K tokens. We employ AdamW optimizer with learning rate of 4 ​ e 4e - 4 4 with cosine annealing schedule with batch size of 0.5M tokens, and weight decay of 0.1 0.1 . For the memory architecture, unless state otherwise, we use an MLP with 2 2 layers with expansion factor of 4 and GELU activation function (Hendrycks and Gimpel, 2016 ) . We also use residual connections and layer norm at the end of each chunk: ℳ ​ ( x ) = x + W 1 ​ σ ​ ( W 2 ​ x ) \mathcal{M}(x)=x+W_{1}\sigma(W_{2}x) .

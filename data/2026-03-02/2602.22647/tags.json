@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Trie",
+    "Constrained Decoding",
+    "Sparse Matrix Operations",
+    "CSR Matrix"
+  ],
+  "task": [
+    "Generative Retrieval",
+    "Recommendation"
+  ],
+  "dataset": [],
+  "open_source": true
+}

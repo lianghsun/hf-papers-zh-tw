@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通過獎勵建模增強圖像生成中的空間理解 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-02/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-02 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">通過獎勵建模增強圖像生成中的空間理解</h1>
+  
+  <div class="en-title">Enhancing Spatial Understanding in Image Generation via Reward Modeling</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Zhenyu Tang, Chaoran Feng, Yufan Deng, Jie Wu, Xiaojie Li, Rui Wang, Yunpeng Chen, Daquan Zhou</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.24233" target="_blank">2602.24233</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.24233" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.24233" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.24233" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">RL</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Reward Modeling</span><span class="tag method">Reinforcement Learning</span><span class="tag method">Diffusion Models</span>
+    <span class="tag task">Text-to-Image Generation</span><span class="tag task">Spatial Relationship Evaluation</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+近年來文字轉圖像生成技術在視覺逼真度和創意性方面取得了顯著進展，但同時也對提示詞的複雜性提出了更高的要求——特別是在編碼複雜的空間關係時。在這些情況下，獲得令人滿意的結果往往需要多次採樣嘗試。為了解決這一挑戰，我們提出了一種新方法，增強了當前圖像生成模型對空間的理解能力。我們首先構建了 SpatialReward-Dataset，包含超過 8 萬個偏好對。基於此數據集，我們構建了 SpatialScore，這是一個獎勵模型，旨在評估文字轉圖像生成中空間關係的準確性，其性能甚至超過了領先的專有模型在空間評估上的表現。我們進一步證明了這個獎勵模型能夠有效地為複雜空間生成任務啟用在線強化學習。在多個基準上進行的廣泛實驗表明，我們的專門獎勵模型為圖像生成的空間理解帶來了顯著且一致的提升。</p>
+  
+  <div class="abstract-en">Recent progress in text-to-image generation has greatly advanced visual fidelity and creativity, but it has also imposed higher demands on prompt complexity-particularly in encoding intricate spatial relationships. In such cases, achieving satisfactory results often requires multiple sampling attempts. To address this challenge, we introduce a novel method that strengthens the spatial understanding of current image generation models. We first construct the SpatialReward-Dataset with over 80k preference pairs. Building on this dataset, we build SpatialScore, a reward model designed to evaluate the accuracy of spatial relationships in text-to-image generation, achieving performance that even surpasses leading proprietary models on spatial evaluation. We further demonstrate that this reward model effectively enables online reinforcement learning for the complex spatial generation. Extensive experiments across multiple benchmarks show that our specialized reward model yields significant and consistent gains in spatial understanding for image generation.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="_1">通過獎勵模型增強影像生成中的空間理解</h1>
+<p>近年來文字轉影像生成的進展大幅提升了視覺保真度和創意性，但也對提示詞的複雜度提出了更高要求——特別是在編碼複雜的空間關係時。在這些情況下，達到令人滿意的結果通常需要多次取樣嘗試。</p>
+<p>為了解決這一挑戰，我們提出了一種新方法，能夠增強現有影像生成模型的空間理解能力。我們首先構建了包含超過 80,000 個偏好對的 SpatialReward-Dataset。</p>
+<p>基於此資料集，我們建立了 SpatialScore，一個獎勵模型，用於評估文字轉影像生成中空間關係的準確性，其性能甚至超越了領先的專有模型在空間評估方面的表現。</p>
+<p>我們進一步證明了此獎勵模型能有效啟用複雜空間生成的線上強化學習。跨多個基準的廣泛實驗表明，我們專門設計的獎勵模型在影像生成的空間理解方面產生了顯著且一致的改進。</p>
+<p>視覺演示可在專案頁面取得。</p>
+<h2 id="1">1 引言</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x1.png" loading="lazy"></figure> 圖 1：獎勵模型在空間理解上的失敗。現有獎勵模型 [ 29 , 17 , 53 , 23 ] 經常向空間不正確的圖像分配比空間正確的圖像更高的獎勵值，從而暴露了它們有限的空間推理能力。</p>
+<p>生成模型的最近進展 [ 12 , 42 , 24 , 27 , 22 , 58 , 44 , 57 , 33 ] 已經改變了視覺內容創作，使高保真度和多樣化圖像的合成成為可能 [ 39 , 35 , 18 , 5 , 51 , 7 ]。繼線上強化學習 (RL) [ 41 ] 在大型語言模型中的成功之後 [ 10 , 32 ]，最近的研究 [ 25 , 54 , 21 , 11 , 48 , 46 , 61 ] 探索了將 GRPO 式強化學習應用於擴散模型，取得了顯著的性能提升。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x2.png" loading="lazy"></figure> 圖 2：GenEval [ 8 ] 作為獎勵模型的限制。
+(a) 基於 GenEval 的 RL 訓練無法推廣到涉及多個物體之間複雜空間關係的長提示。
+(b) 依賴於物體檢測器的基於規則的 GenEval 獎勵在遮擋等視覺挑戰下經常產生不正確的評估，而現代 VLM 可以準確推斷正確的回應。</p>
+<p>然而，隨著提示複雜性的增加，文本轉圖像模型經常難以準確描繪涉及多個物體之間複雜空間關係的場景。這激勵我們探索如何增強圖像生成模型的空間理解能力。強化學習成為了解決這一挑戰的有前景方向。然而，儘管在理論上很有潛力，應用線上 RL 來改進空間理解仍然很困難——主要原因是缺乏可靠且有效的獎勵模型。</p>
+<p>一個直接的方法是採用現有的圖像獎勵模型。如圖 1 所示，包含文本-圖像對齊作為評估因素之一的人類偏好獎勵模型 [ 53 , 17 , 52 , 29 , 49 ] 無法準確評估複雜的空間關係，而為文本-圖像對齊設計的獎勵模型 [ 23 , 15 ]（依賴於 VQA 風格的評估）也表現出相同的限制。第二個選項是利用視覺語言模型 (VLM) [ 31 , 6 ] 的最新專有 API。然而，它們的高成本使其對於需要頻繁獎勵查詢的線上 RL 而言不切實際。第三個替代方案是利用開源 VLM。然而，我們的實驗表明，即使是像 Qwen2.5-VL-72B [ 2 ] 這樣的先進模型也會遭受嚴重的幻覺，無法提供可靠且準確的獎勵，這可能是因為它們未針對多個物體之間複雜空間關係的推理進行優化。</p>
+<p>最近的研究如 Flow-GRPO [ 25 ] 也探索了基於規則的 GenEval 基準 [ 8 ] 上的組合生成，該基準使用物體檢測器和顏色分類器計算獎勵。然而，GenEval 只包含形式為「一張 A &lt;相對位置&gt; B 的照片」的簡單提示。在圖 2 中，我們觀察到在 GenEval 上進行的訓練無法推廣到具有多個空間關係的更長提示，並且其獎勵計算對遮擋等視覺因素高度敏感，導致獎勵不準確。</p>
+<p>在這項工作中，我們主張通過線上 RL 增強圖像生成中的空間理解依賴於構建一個可靠且準確的獎勵模型。我們首先介紹 SpatialReward-Dataset，它包含 80K 個對抗性偏好對，涵蓋範圍廣泛的真實世界場景。每個偏好對都通過一個對抗性設置收集，該設置包含一張準確符合提示中描述的複雜空間關係的圖像和一張違反部分這些關係的擾動圖像。為了確保數據質量和準確性，所有對都經過人類專家的仔細審查和篩選。</p>
+<p>基於此數據集，我們進一步訓練了 SpatialScore，一個強大的獎勵模型，旨在評估圖像生成中空間關係的準確性。我們的結果表明，SpatialScore 甚至超越了幾個領先的專有模型，這些模型在推理多個物體之間的複雜空間關係時會出現幻覺。</p>
+<p>我們進一步將 SpatialScore 用作線上 RL 的獎勵模型。為了提高訓練效率，我們提出了一個 top-k 篩選策略，該策略保持高獎勵和低獎勵候選之間的平衡採樣比例。多個基準上的結果表明，我們的方法有效地利用了 SpatialScore 的反饋，相較於基礎模型實現了顯著的性能改進。</p>
+<p>我們的貢獻總結如下：</p>
+<ul>
+<li>• 我們介紹 SpatialReward-Dataset，包含超過 80K 個對抗性偏好對，由人類仔細策劃以確保數據質量。</li>
+<li>• 我們開發了 SpatialScore，一個用於評估圖像生成中空間關係準確性的強大獎勵模型，超越了幾個領先的專有模型。</li>
+<li>• 我們採用 SpatialScore 作為線上 RL 的獎勵模型，結合 top-k 篩選策略。廣泛的實驗表明，相較於基礎模型，圖像生成中的空間理解得到了顯著改進。</li>
+</ul>
+<p>我們介紹 SpatialReward-Dataset，包含超過 80K 個對抗性偏好對，由人類仔細策劃以確保數據質量。</p>
+<p>我們開發了 SpatialScore，一個用於評估圖像生成中空間關係準確性的強大獎勵模型，超越了幾個領先的專有模型。</p>
+<p>我們採用 SpatialScore 作為線上 RL 的獎勵模型，結合 top-k 篩選策略。廣泛的實驗表明，相較於基礎模型，圖像生成中的空間理解得到了顯著改進。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x3.png" loading="lazy"></figure> 圖 3：我們的 SpatialReward-Dataset 概述。</p>
+<h2 id="2">2 相關研究</h2>
+<h3 id="21-t2i-reward-model">2.1 T2I 模型中的 Reward Model</h3>
+<p>Reward model 對於強化學習 (RL) 的成功至關重要，它提供了策略優化所需的高品質訊號。
+HPSv2 [52]、Pickscore [17]、Aesthetic score [4] 以及相關研究 [20, 59, 23] 使用人類偏好資料對基於 CLIP 的模型進行微調，而 HPSv3 [29] 和 UnifiedReward [49] 則採用 Vision-Language Models (VLMs) 作為文本到影像任務中 reward 生成的骨幹網絡。
+然而，儘管這些模型在評估美學質量和整體文本-影像對齊方面表現出色，但它們通常缺乏對多個物體之間複雜空間關係的細粒度理解和評估能力。
+這一限制可能導致在語義上可信但組成上不正確的生成結果，這激發了我們開發專注於空間理解的專用 reward model。</p>
+<h3 id="22">2.2 影像生成中的強化學習</h3>
+<p>強化學習已被有效應用於擴散模型以改進生成品質。
+Proximal Policy Optimization (PPO) [40] 和 Direct Preference Optimization (DPO) [36]（最初為大型語言模型開發）已成功適配到基於擴散的生成中 [16, 20, 62, 37, 53]，改進了任務對齊性和可控性。
+在此基礎之上，為了追求更穩定和高效的優化過程，Flow-GRPO [25]、Dance-GRPO [54] 及其他方法 [48, 21, 46, 11, 60] 已將流模型與 Group Relative Policy Optimization (GRPO) [10] 進行整合。
+它們將確定性常微分方程 (ODE) 採樣轉換為隨機微分方程 (SDE) [43, 1]，以便於策略探索。
+我們的工作不同之處在於引入了為影像生成中空間理解而量身定製的空間感知 reward model，提供可靠的回饋。</p>
+<h2 id="3">3 資料集</h2>
+<p>基於 VideoAlign [26]，該研究證明偏好學習優於逐點分數迴歸用於獎勵訓練，我們引入精心策劃的對抗 SpatialReward-Dataset 作為後續獎勵訓練的基礎。</p>
+<p>如圖 3 所示，我們構建了包含 80K 對抗配對的 SpatialReward Dataset。在圖 3(a) 中，我們展示了資料構建中使用的多樣化真實世界場景。為了最小化其他屬性的影響，例如跨圖像生成模型的美學差異，我們使用單一圖像生成模型以不同的提示詞生成每個偏好配對。</p>
+<p>具體來說，我們首先使用 GPT-5 建立一組初始提示詞，這些提示詞具有多個物件之間的複雜空間關係。然後我們使用 GPT-5 透過修改一個或多個空間關係（例如，將物件從左移動到右，交換物件的相對位置），同時保持其餘空間關係不變，來擾動這些乾淨提示詞。在這種設定下，從原始、未擾動提示詞生成的圖像充當完美圖像，而從擾動提示詞生成的圖像充當擾動圖像。</p>
+<p>對於資料構建，我們採用多個先進的圖像生成模型 Qwen-Image [51]、HunyuanImage-2.1 [45] 和 seedream4.0 [7]，這些模型展現出強大的文本–圖像對齊能力，從而減少了大量的資料篩選。每個資料配對都由人工標註者手動審查和驗證，以篩選出完美圖像未能完全符合提示詞中描述的複雜空間約束的情況，確保獎勵訓練的高資料品質。SpatialReward-Dataset 構建的更多詳細資訊在附錄中提供。如圖 3(d) 所示，我們精心策劃的資料集相比 GenEval [8] 包含顯著更長的提示詞，表示場景複雜度更高。此外，在圖 3(e) 中，這些提示詞涉及物件之間的多個空間關係，導致空間複雜度和組合多樣性遠高於 Geneval 基準中呈現的簡單且基於範本的構建。</p>
+<h2 id="4-spatialscore">4 方法：SpatialScore</h2>
+<h3 id="41">4.1 架構</h3>
+<p>最近，視覺語言模型（Visual Language Models, VLMs）在各種視覺–語言任務中取得顯著進展，並被廣泛應用於 grounding [ 34 , 56 , 30 ] 和 segmentation [ 19 , 55 , 38 ] 等任務。它們的成功在很大程度上源於在大規模網路資料集上進行訓練，並學習到高度可泛化的表徵。</p>
+<p>基於 VLMs 作為特徵提取器的強大表示能力，我們採用 VLM 作為獎勵模型的主幹網路。具體來說，我們使用 Qwen2.5-VL-7B [ 2 ] 作為主幹網路 $H_{\phi}$ 以從圖像和文本中提取特徵，同時將原始語言建模頭替換為新的線性獎勵頭 $R_{\phi}$，該頭將特徵投影以預測獎勵值。我們的獎勵模型在偏好對上進行訓練，這些偏好對由偏好圖像 $y_{w}$ 作為「獲勝者」和較不偏好的圖像 $y_{l}$ 作為「失敗者」組成，給定指令提示 $c$。生成圖像的獎勵分數 $s$ 計算如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$$s\;=\;R_{\phi}!\left(H_{\phi}(c,\,y)\right).$$</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>對於每個偏好對，分數 $s_{w}$ 和 $s_{l}$ 分別通過將偏好圖像 $y_{w}$ 和較不偏好的圖像 $y_{l}$ 輸入模型獲得。</p>
+<h3 id="42">4.2 獎勵訓練</h3>
+<p>為了建立我們的 SpatialScore 獎勵模型，我們使用 LoRA [13] 微調 Qwen2.5-VL-7B，以保留模型固有的知識先驗。
+在我們的 SpatialReward-Dataset 設置中，每個訓練樣本表示為一個三元組 $(c, y_w, y_l)$，其中 $y_w$ 和 $y_l$ 分別對應於完美圖像和從擾動提示生成的擾動圖像。</p>
+<p>受到 HPSv3 [29] 的啟發，HPSv3 將獎勵分數建模為概率分布以實現更穩健的排名，而不是直接輸出確定性值，我們採用高斯分布 $s \sim \mathcal{N}(\mu, \sigma^2)$ 來建模最終獎勵分數，其中 $\mu$ 和 $\sigma$ 分別表示均值和標準差。
+具體來說，在 VLM 指令設置中，我們在完整提示的末尾插入特殊標記 <reward>，使其能夠同時關注圖像和文本表示。此特殊標記的最終層嵌入隨後通過獎勵頭 $R_{\phi}$（實現為多層感知器 (MLP)）映射到 $\mu$ 和 $\sigma$。通過這種方式，我們通過從這個一維高斯分布採樣來建模輸出分數。</p>
+<p>最後，訓練過程涉及對每個三元組樣本 $(c, y_w, y_l)$ 進行兩次獨立的獎勵模型前向傳遞，以獲得 $y_w$ 和 $y_l$ 的獎勵分數。
+獎勵模型根據 Bradley-Terry 模型 [3] 進行最佳化，通過使用二元交叉熵損失最小化地面真實偏好的負對數似然：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$P(y_w \succ y_l \mid c) = \sigma!\Big(R_{\phi}!\left(H_{\phi}(y_w, c)\right) - R_{\phi}!\left(H_{\phi}(y_l, c)\right)\Big)$</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{Reward}}(\theta) = \mathbb{E}</em>{c, y_w, y_l}!\big[-\log P(y_w \succ y_l \mid c)\big]$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此處，$\sigma$ 表示 sigmoid 函數，它將輸出約束在區間 $[0, 1]$ 內的概率值，而 $\theta$ 表示獎勵模型的可訓練參數。
+通過對 $\mathcal{L}_{\text{Reward}}$ 的最佳化，我們的獎勵模型學會給偏好的圖像分配比較不偏好的圖像更高的分數。
+一旦訓練完成，SpatialScore 將作為在線強化學習的獎勵模型，進一步增強圖像生成中的空間理解能力。</p>
+<h2 id="5-spatialscore">5 SpatialScore 在影像生成中的應用</h2>
+<p>透過高保真度且專門化的獎勵模型 SpatialScore，我們隨後將其作為直接獎勵訊號用於線上強化學習微調，以驗證我們獎勵模型的有效性。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x4.png" loading="lazy"></figure> 圖 4：用於增強空間理解的 GRPO 訓練管線。我們首先從策略模型中取樣一組影像，並使用我們專門化的 SpatialScore 來評估其空間準確性。根據這些分數進行排名後，我們選擇前 k 個最準確和後 k 個最不準確的範例，並將這些分數轉換為優勢訊號。策略模型透過策略梯度最佳化進行更新，以直接獎勵正確的空間佈局並懲罰錯誤，從而增強基礎模型的空間理解能力。</p>
+<p>我們選擇 FLUX.1-dev [18] 作為影像生成的基礎模型，因為其先進的效能以及對處理長文本輸入的強大支持，這與我們 SpatialReward-Dataset 複雜的提示詞設定相吻合。此外，FLUX.1-dev 尚未經過後訓練階段，使其成為公平評估我們獎勵模型帶來的潛在收益的理想選擇。如圖 4 所示，我們採用來自 FlowGRPO [25] 的 GRPO 演算法，並利用我們的獎勵模型為最佳化基礎生成模型的空間理解提供可靠的回饋。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x5.png" loading="lazy"></figure> 圖 5：優勢偏誤。對於具有許多高獎勵樣本的簡單提示詞，由於群組平均值較高，一些高品質樣本通常會獲得負優勢。</p>
+<p>具體來說，作為一個線上 RL 演算法，GRPO [41] 需要群組內的多樣化樣本來最佳化策略並評估獎勵提升方向。然而，流匹配固有地採用確定性 ODE 進行取樣，而 RL 則依賴隨機性進行策略探索。遵循 Flow-GRPO [25]，我們將確定性 ODE 轉換為等價的 SDE，其邊際分佈相同。所得的 SDE 可以使用 Euler–Maruyama 方案離散化如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>x t + Δ ​ t \displaystyle x_{t+\Delta t}</th>
+<th>= x t + [ v θ ​ ( x t , t ) + σ t 2 2 ​ t ​ ( x t + ( 1 − t ) ​ v θ ​ ( x t , t ) ) ] ​ Δ ​ t \displaystyle=x_{t}+\left[v_{\theta}(x_{t},t)+\frac{\sigma_{t}^{2}}{2t}\left(x_{t}+(1-t)v_{\theta}(x_{t},t)\right)\right]\Delta t</th>
+<th></th>
+<th>(4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td>+ σ t ​ Δ ​ t ​ ϵ \displaystyle\quad+\sigma_{t}\sqrt{\Delta t}\,\epsilon</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 ϵ ∼ 𝒩 ​ ( 0 , I ) \epsilon\sim\mathcal{N}(0,I) 表示標準高斯噪聲，σ t \sigma_{t} 代表注入的噪聲水準，v θ ​ ( x t , t ) v_{\theta}(x_{t},t) 表示估計的速度場。</p>
+<p>對於從我們的 SpatialReward-Dataset 中取樣的每個提示詞 c c，基礎模型作為策略 π θ \pi_{\theta} 透過 SDE 取樣生成一組 G G 個影像 { x 0 i } i = 1 G {x^{i}<em>{0}}</em>{i=1}^{G}。我們的獎勵模型 SpatialScore 隨後評估每個生成的影像 x 0 i x^{i}<em>{0}（以 c c 為條件）並指派一個獎勵分數 R ​ ( x 0 i , c ) R(x^{i}</em>{0},c)。在每個群組內，第 i i 個影像的優勢 A i A^{i} 透過將其獎勵相對於群組平均值和標準差進行正規化來計算：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>A i = R ​ ( x i 0 , c ) − mean ⁡ ( { R ​ ( x 0 i , c ) } i = 1 G ) std ⁡ ( { R ​ ( x 0 i , c ) } i = 1 G ) . A^{i}=\frac{R(x_{i}^{0},\,c)-\operatorname{mean}!\big({\,R(x_{0}^{i},\,c)\,}<em>{i=1}^{G}\big)}{\operatorname{std}!\big({\,R(x</em>{0}^{i},\,c)\,}_{i=1}^{G}\big)}\,.</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>基於 Flow-GRPO [25] 中的初步發現，足夠大的群組大小對於確保多樣化取樣和穩定訓練至關重要。然而，在我們的實際實驗中，隨著線上 RL 訓練的進行，難度不同的提示詞可能會導致有偏的優勢估計。具體來說，簡單提示詞傾向於在群組內累積大量具有高獎勵分數的成功樣本，而困難提示詞通常會產生獎勵普遍較低的樣本。如圖 5 所示，對於簡單提示詞，群組級正規化可能會產生較高的平均值，進而為一些高品質樣本指派負優勢，產生偏離預期獎勵改進方向的最佳化梯度。相反地，困難提示詞也會產生優勢偏誤。</p>
+<p>為了緩解不同難度提示詞中的優勢偏誤，我們提出了一個前 k k 過濾策略。具體來說，對於由策略 π θ \pi_{\theta} 生成的取樣群組 G G 個影像 { x 0 i } i = 1 G {x^{i}<em>{0}}</em>{i=1}^{G}，我們根據獎勵模型估計的獎勵分數對其進行排名，得到排序序列 { x ^ 0 i } i = 1 G {\hat{x}^{i}<em>{0}}</em>{i=1}^{G}。為了平衡群組內的獎勵分佈並進一步緩解優勢偏誤，我們選擇前 k k 個和後 k k 個樣本以形成一個索引子集，即 S = { 1 , 2 , … , k , G − k + 1 , … , G } S={1,2,\ldots,k,\,G-k+1,\ldots,G}，隨後用來計算群組平均值和標準差。在策略更新期間，僅使用此子集 S S 中的這些選定樣本進行訓練。</p>
+<p>表 1：獎勵評估基準上的成對準確性比較。「1 Pert.」和「2–3 Pert.」分別表示在構造擾動提示詞時應用一個或兩個至三個空間擾動的子集。</p>
+<p>表 2：SpatialScore、DPG-Bench、TIIF-Bench（短/長）和 UnigenBench++（短/長）上的詳細比較。* 表示使用 Geneval 作為獎勵模型進行訓練。BR、AR 和 RR 分別表示基本關係、屬性+關係和關係+推理。Lay-2D/3D 指的是佈局-2D/3D。Unibench 表示 UniGenBench++。</p>
+<p>GRPO 演算法隨後透過最小化以下目標函數來最佳化策略：</p>
+<p>|  | ℒ GRPO ​ ( θ ) = \displaystyle\mathcal{L}<em>{\text{GRPO}}(\theta)= | 1 | S | ∑ i ∈ S 1 T ∑ t = 0 T − 1 min ( r t i ( θ ) A t i , \displaystyle\frac{1}{|S|}\sum</em>{i\in S}\frac{1}{T}\sum_{t=0}^{T-1}\min\left(r_{t}^{i}(\theta)\,A_{t}^{i},\right. |  |
+| --- | --- | --- | --- |
+|  |  | clip ( r t i ( θ ) , 1 − ϵ , 1 + ϵ ) A t i ) . \displaystyle\left.\text{clip}\big(r_{t}^{i}(\theta),1-\epsilon,1+\epsilon\big)\,A_{t}^{i}\right). |  | (6) |</p>
+<p>其中 r t i ​ ( θ ) = p θ ​ ( x ^ t − 1 i ∣ x ^ t i , c ) p θ old ​ ( x ^ t − 1 i ∣ x ^ t i , c ) r_{t}^{i}(\theta)=\frac{p_{\theta}(\hat{x}<em>{t-1}^{i}\mid\hat{x}</em>{t}^{i},c)}{p_{\theta_{\text{old}}}(\hat{x}<em>{t-1}^{i}\mid\hat{x}</em>{t}^{i},c)}。引入了額外的 KL 散度懲罰項 D KL ​ ( π θ ∥ π ref ) D_{\mathrm{KL}}!\left(\pi_{\theta}\,|\,\pi_{\mathrm{ref}}\right) 以正規化策略 π θ \pi_{\theta} 並防止其過度偏離參考策略 π ref \pi_{\text{ref}}。這確保了生成模型直接朝向改進的空間理解進行最佳化，由我們獎勵模型的回饋所驅動。</p>
+<p>與在每個群組內的所有樣本上進行最佳化相比，我們的 GRPO 最佳化減少了更新策略 π θ \pi_{\theta} 所需的函數評估次數（NFE）。遵循 Flow-GRPO [25] 的實證結果，該結果表明直接減少取樣群組大小可能會導致 GRPO 的訓練崩潰，我們與 Flow-GRPO 保持一致的群組大小以確保取樣期間有足夠的樣本多樣性。</p>
+<h2 id="6">6 實驗</h2>
+<h3 id="61">6.1 實驗設置</h3>
+<p>實現細節。對於獎勵模型訓練，我們的 SpatialScore 是通過使用 LoRA [ 13 ] 在我們策劃的 SpatialReward-Dataset 上微調 Qwen2.5-VL-7B [ 2 ] 構建的，該資料集包含 80K 個偏好對。
+訓練在八個 NVIDIA H20 GPU 上在一天內完成，使用學習率 $2 \times 10^{-6}$ 和梯度累積批量大小為 32。
+對於強化學習訓練，我們將訓練好的 SpatialScore 作為獎勵模型來微調基礎模型 Flux.1-dev [ 18 ]，該模型支持長文本提示以在線強化學習設置中處理複雜場景。
+遵循 Flow-GRPO [ 25 ]，我們採用基於 LoRA 的微調進行 GRPO 訓練，LoRA 秩為 32，學習率為 $3 \times 10^{-4}$，重要性裁剪範圍為 $1 \times 10^{-4}$，群組大小為 24，KL 懲罰係數為 0.01。
+線上強化學習訓練在 32 個 NVIDIA H20 GPU 上進行。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x6.png" loading="lazy"></figure> 圖 6：在具有多個物體複雜空間關係的提示上的定性比較。</p>
+<p>SpatialScore 的評估基準。對於獎勵模型評估，我們構建了一個由 365 個偏好對組成的高品質且多樣化的基準。
+遵循與 SpatialReward-Dataset 相似的過程，我們通過擾動原始完美提示來生成擾動提示。
+然後使用 Qwen-Image [ 51 ]、HunyuanImage-2.1 [ 45 ] 和 Seedream-4.0 [ 7 ] 將每個提示對生成為圖像，隨後進行細緻的人工審查和驗證以確保標註可靠性。
+我們使用整體偏好準確度作為指標在此基準上評估廣泛範圍的領先模型。
+評估包括專有模型如 GPT-5 [ 31 ] 和 Gemini-2.5 [ 6 ]、來自 Qwen2.5-VL [ 2 ] 系列的先進開源視覺語言模型（從 7B 到 72B），以及幾個現有的圖像獎勵模型，包括 PickScore [ 17 ]、ImageReward [ 53 ]、UnifiedReward [ 49 ] 和 HPS 系列 [ 52, 29 ]。對於 UnifiedReward，我們採用性能優越的基於 Qwen2.5-VL 的模型。</p>
+<p>圖像生成中的評估基準。為了評估圖像生成模型的空間理解能力，我們首先採用我們提出的獎勵模型 SpatialScore 來評估空間推理的域內性能。
+超越域內評估，我們進一步採用幾個旨在衡量文本–圖像對齊的域外基準，我們從中選擇具有空間感知的子維度以特別評估圖像生成中的空間理解。
+特別是，我們利用 DPG-Bench [ 14 ]，重點關注複雜文本到圖像對齊；TIIF-Bench [ 50 ]，T2I-Compbench++ [ 47 ] 針對長提示的擴展，由 GPT-4o [ 9 ] 評估；以及最近發佈的 UniGenBench++ [ 47 ]，由 Gemini-2.5 Pro [ 6 ] 評估。</p>
+<h3 id="62-reward-model-performance">6.2 Reward Model Performance</h3>
+<p>Building upon our carefully curated SpatialReward-Dataset , we propose a state-of-the-art specialized reward model SpatialScore for evaluating spatial understanding: the accuracy of complex spatial relationships among multiple objects.
+As shown in Table 1 , we compare the accuracy of preference prediction against a broad set of baselines, including human-preference reward models, reward models tailored for text–image alignment, advanced open-source vision language models (VLMs), and the proprietary models. To analyze robustness across difficulty levels, we split our built benchmark by the number of spatial perturbations applied to the perfect prompt to construct the perturbed prompt: a 1-perturbation subset and a 2-3 perturbation subset, while keeping all other spatial relations unchanged during data construction.</p>
+<p>As shown in Table 1 , proprietary models achieve consistently higher preference-prediction accuracy than both open-source vision language models (VLMs) and existing image-reward models on our benchmark. Leading proprietary models such as GPT-5 [ 31 ] and Gemini-2.5 Pro [ 6 ] constitute the top tier, attaining the accuracies from 0.89 to 0.95, which shows their strong zero-shot spatial understanding for image generation.
+However, their high per-query cost makes them impractical for the frequent evaluations required by online RL.
+By contrast, existing image-reward models, which consider text-image alignment, exhibit limited ability to assess multi-object spatial reasoning, attaining limited pairwise accuracies. Open-source VLMs also exhibit clear limitations. Although the Qwen2.5-VL series shows a scaling trend in spatial understanding from 7B to 72B parameters, the 72B variant reaches only 0.76 pairwise accuracy, well below proprietary models, and the 7B and 32B models perform even worse. These results indicate that current advanced open-source VLMs are not yet reliable providers of rewards for complex spatial reasoning.</p>
+<p>In contrast, our SpatialScore with 7B parameters achieves state-of-the-art results on the reward benchmark, reaching a pairwise accuracy of 95.77%. It surpasses strong proprietary models, including GPT-5 and Gemini-2.5 Pro, on spatial understanding across multiple objects. These results indicate that our specialized reward model can provide a reliable and stable reward signal for online RL.</p>
+<h3 id="63-spatialscore">6.3 為線上強化學習應用 SpatialScore</h3>
+<p><strong>定量結果。</strong> 在我們專門的獎勵模型 SpatialScore 的引導下，我們使用 Flux.1-dev 作為基礎模型進行線上強化學習訓練。如表 2 所示，我們與原始基礎模型以及在 GenEval 上訓練的 Flow-GRPO 變體進行比較，以進行跨多個基準的組合影像生成。在域內 SpatialScore 評估上，我們的方法將分數從 2.18 提高到 7.81，展示了獎勵引導訓練的有效性。為了進一步評估空間理解能力，我們評估了多個文字－影像對齊基準，並選擇其空間感知子維度。我們的強化學習訓練在短提示和長提示設定中都取得一致的改進。相比之下，在基於規則的 GenEval 上使用 Flow-GRPO 訓練的模型在短提示上顯示出一些改進，但在長提示設定上明顯下降，表明對具有複雜多物體空間關係的長提示的泛化性有限。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x7.png" loading="lazy"></figure> 圖 7：top-k 篩選消融的獎勵訓練曲線</p>
+<p>表 3：DPG-Bench 上的完整維度比較。最佳的 Flux 變體以粗體顯示，* 表示使用 GenEval 進行訓練。</p>
+<p><strong>定性結果。</strong> 如圖 6 所示，我們展示了與原始 Flux.1-dev 模型和在基於規則的 GenEval 基準上使用 Flow-GRPO 訓練的變體的定性比較。</p>
+<p>我們使用專門的 SpatialScore 進行強化學習訓練的模型展示了改進的空間理解能力，生成的影像更忠實地反映了提示中描述的多個物體之間的複雜空間關係。相比之下，在 GenEval 上使用 Flow-GRPO 訓練的 Flux.1-dev 變體在泛化到複雜空間組合方面能力有限，甚至喪失了基礎模型的部分長提示跟隨能力。如圖 6 所示，這包括遺漏關鍵物體，例如範例 (1) 中的蠟燭和範例 (4) 中的帳篷。此外，由於依賴於物體偵測器的基於規則的獎勵，由 GenEval 引導的模型頻繁生成視覺上不合理的人工產物，例如在範例 (5) 中看到的浮動地圖或夾克。</p>
+<p><strong>域外評估。</strong> 我們進一步在 DPG-Bench [14]（一個設計用於評估文字－影像對齊的基準）上進行了全譜評估。如表 3 所示，我們的方法在 DPG-Bench 的所有五個主要維度上相比原始 Flux.1-dev 模型都取得了一致且實質性的改進，並在空間子維度之外觀察到了改進。值得注意的是，我們的強化學習增強模型的整體效能接近於專有的 GPT-Image-1。相比之下，在 GenEval 上使用 Flow-GRPO 訓練的 Flux 變體表現出明顯的性能下降。</p>
+<h3 id="64">6.4 消融研究</h3>
+<p><strong>獎勵模型大小的消融實驗。</strong> 為了評估我們方法的通用性，我們使用不同的主幹網絡大小來訓練 SpatialScore。在我們的獎勵評估基準上，當將主幹網絡從 Qwen2.5-VL-3B 擴展到 Qwen2.5-VL-7B 時，SpatialScore 將成對偏好預測的準確度從 89.1% 改進到 95.8%。更多額外結果已在附錄中提供。</p>
+<p>表 4：Top-k 篩選的消融實驗。每個訓練步驟的每個提示的 NFE 在去噪步數為 6 的情況下報告。</p>
+<p><strong>Top-k 篩選的消融實驗。</strong> 在線上 RL 訓練中，難度不同的提示會導致組內獎勵分布高度不平衡。特別是，簡單的提示通常會產生許多高獎勵樣本，這些樣本獲得高的組平均值，進而對某些高品質樣本賦予負優勢。為了緩解這個問題，我們應用了 top-k 篩選策略，該策略選擇組內的前 k 個和後 k 個樣本來構建平衡子集並減少優勢偏差。如圖 7 所示，與基線 GRPO 設定（無篩選）相比，新增 top-k 篩選加速了訓練。當 $k=4$ 時，訓練在早期表現出更快的改進，但由於樣本多樣性不足，在後期會減速。相比之下，$k=6$ 在採樣平衡和多樣性之間保持了更好的權衡，我們在所有實驗中採用 $k=6$ 作為預設配置。如表 4 所示，我們發現使用 $k=6$ 在策略更新階段以更少的函數評估次數 (NFE) 達到了相當甚至更優越的性能。採樣組大小為 24，去噪步數為 6，當 $k=6$ 時，訓練階段每個提示的每個步驟只需 2<em>6</em>6 次 NFE，而原始 RL 需要 24*6 次 NFE。</p>
+<h2 id="7">7 結論</h2>
+<p>在本工作中，我們通過線上 RL 來解決改進影像生成中空間理解的挑戰。為此，我們首先引入了 SpatialReward-Dataset，這是一個包含 80K 對的偏好資料集，經過嚴格的人工驗證。基於此資料集，我們開發了 SpatialScore，這是一個專門的獎勵模型，提供可靠的信號並達到甚至超越專有模型的評估準確度。利用這個高保真獎勵模型和帶有 top-k 篩選的 GRPO 框架，我們在多個基準上相比基礎模型獲得了在空間推理方面的實質和一致的改進。</p>
+<h2 id="_2">參考文獻</h2>
+<ul>
+<li>[1] M. S. Albergo, N. M. Boffi, and E. Vanden-Eijnden (2023) Stochastic interpolants: a unifying framework for flows and diffusions . arXiv preprint arXiv:2303.08797 . Cited by: §2.2 .</li>
+<li>[2] S. Bai, K. Chen, X. Liu, J. Wang, W. Ge, S. Song, K. Dang, P. Wang, S. Wang, J. Tang, et al. (2025) Qwen2.5-vl technical report . arXiv preprint arXiv:2502.13923 . Cited by: §1 , §10.3 , §4.1 , §6.1 , §6.1 , §8.1 , §8.2 .</li>
+<li>[3] R. A. Bradley and M. E. Terry (1952) Rank analysis of incomplete block designs: i. the method of paired comparisons . Biometrika 39 ( 3/4 ), pp. 324–345 . Cited by: §4.2 .</li>
+<li>[4] L. J. Burger (2023) Laion: image data, ai, and dispossession . Master's Thesis . Cited by: §2.1 .</li>
+<li>[5] S. Cao, H. Chen, P. Chen, Y. Cheng, Y. Cui, X. Deng, Y. Dong, K. Gong, T. Gu, X. Gu, et al. (2025) Hunyuanimage 3.0 technical report . arXiv preprint arXiv:2509.23951 . Cited by: §1 .</li>
+<li>[6] G. Comanici, E. Bieber, M. Schaekermann, I. Pasupat, N. Sachdeva, I. Dhillon, M. Blistein, O. Ram, D. Zhang, E. Rosen, et al. (2025) Gemini 2.5: pushing the frontier with advanced reasoning, multimodality, long context, and next generation agentic capabilities . arXiv preprint arXiv:2507.06261 . Cited by: §1 , §10.3 , §6.1 , §6.1 , §6.2 , §8.2 , §8.4 .</li>
+<li>[7] Y. Gao, L. Gong, Q. Guo, X. Hou, Z. Lai, F. Li, L. Li, X. Lian, C. Liao, L. Liu, et al. (2025) Seedream 3.0 technical report . arXiv preprint arXiv:2504.11346 . Cited by: §1 , §3 , §6.1 , §9.1 .</li>
+<li>[8] D. Ghosh, H. Hajishirzi, and L. Schmidt (2023) Geneval: an object-focused framework for evaluating text-to-image alignment . Advances in Neural Information Processing Systems 36 , pp. 52132–52152 . Cited by: Figure 2 , Figure 2 , §1 , §3 .</li>
+<li>[9] GPT-4o . Note: https://openai.com/index/hello-gpt-4o/ Cited by: §6.1 , §8.4 .</li>
+<li>[10] D. Guo, D. Yang, H. Zhang, J. Song, R. Zhang, R. Xu, Q. Zhu, S. Ma, P. Wang, X. Bi, et al. (2025) Deepseek-r1: incentivizing reasoning capability in llms via reinforcement learning . arXiv preprint arXiv:2501.12948 . Cited by: §1 , §2.2 .</li>
+<li>[11] X. He, S. Fu, Y. Zhao, W. Li, J. Yang, D. Yin, F. Rao, and B. Zhang (2025) Tempflow-grpo: when timing matters for grpo in flow models . arXiv preprint arXiv:2508.04324 . Cited by: §1 , §2.2 .</li>
+<li>[12] J. Ho, A. Jain, and P. Abbeel (2020) Denoising diffusion probabilistic models . Advances in neural information processing systems 33 , pp. 6840–6851 . Cited by: §1 .</li>
+<li>[13] E. J. Hu, Y. Shen, P. Wallis, Z. Allen-Zhu, Y. Li, S. Wang, L. Wang, W. Chen, et al. (2022) Lora: low-rank adaptation of large language models. . ICLR 1 ( 2 ), pp. 3 . Cited by: §4.2 , §6.1 , §8.1 .</li>
+<li>[14] X. Hu, R. Wang, Y. Fang, B. Fu, P. Cheng, and G. Yu (2024) Ella: equip diffusion models with llm for enhanced semantic alignment . arXiv preprint arXiv:2403.05135 . Cited by: §6.1 , §6.3 , §8.4 .</li>
+<li>[15] Y. Hu, B. Liu, J. Kasai, Y. Wang, M. Ostendorf, R. Krishna, and N. A. Smith (2023) Tifa: accurate and interpretable text-to-image faithfulness evaluation with question answering . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 20406–20417 . Cited by: §1 .</li>
+<li>[16] D. Jiang, Z. Guo, R. Zhang, Z. Zong, H. Li, L. Zhuo, S. Yan, P. Heng, and H. Li (2025) T2i-r1: reinforcing image generation with collaborative semantic-level and token-level cot . arXiv preprint arXiv:2505.00703 . Cited by: §2.2 .</li>
+<li>[17] Y. Kirstain, A. Polyak, U. Singer, S. Matiana, J. Penna, and O. Levy (2023) Pick-a-pic: an open dataset of user preferences for text-to-image generation . Advances in neural information processing systems 36 , pp. 36652–36663 . Cited by: Figure 1 , Figure 1 , §1 , §2.1 , §6.1 , §8.2 .</li>
+<li>[18] B. F. Labs (2024) FLUX . Note: https://github.com/black-forest-labs/flux Cited by: §1 , §10.1 , §10.6 , Table 2 , §5 , §6.1 , §8.3 .</li>
+<li>[19] X. Lai, Z. Tian, Y. Chen, Y. Li, Y. Yuan, S. Liu, and J. Jia (2024) Lisa: reasoning segmentation via large language model . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 9579–9589 . Cited by: §4.1 .</li>
+<li>[20] J. Li, W. Chai, X. Fu, H. Xu, and S. Xie (2025) Science-t2i: addressing scientific illusions in image synthesis . In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 2734–2744 . Cited by: §2.1 , §2.2 .</li>
+<li>[21] J. Li, Y. Cui, T. Huang, Y. Ma, C. Fan, M. Yang, and Z. Zhong (2025) Mixgrpo: unlocking flow-based grpo efficiency with mixed ode-sde . arXiv preprint arXiv:2507.21802 . Cited by: §1 , §2.2 .</li>
+<li>[22] B. Lin, Y. Ge, X. Cheng, Z. Li, B. Zhu, S. Wang, X. He, Y. Ye, S. Yuan, L. Chen, et al. (2024) Open-sora plan: open-source large video generation model . arXiv preprint arXiv:2412.00131 . Cited by: §1 .</li>
+<li>[23] Z. Lin, D. Pathak, B. Li, J. Li, X. Xia, G. Neubig, P. Zhang, and D. Ramanan (2024) Evaluating text-to-visual generation with image-to-text generation . In European Conference on Computer Vision , pp. 366–384 . Cited by: Figure 1 , Figure 1 , §1 , §2.1 .</li>
+<li>[24] Y. Lipman, R. T. Chen, H. Ben-Hamu, M. Nickel, and M. Le (2022) Flow matching for generative modeling . arXiv preprint arXiv:2210.02747 . Cited by: §1 .</li>
+<li>[25] J. Liu, G. Liu, J. Liang, Y. Li, J. Liu, X. Wang, P. Wan, D. Zhang, and W. Ouyang (2025) Flow-grpo: training flow matching models via online rl . arXiv preprint arXiv:2505.05470 . Cited by: §1 , §1 , §2.2 , Table 2 , §5 , §5 , §5 , §5 , §6.1 , §8.3 .</li>
+<li>[26] J. Liu, G. Liu, J. Liang, Z. Yuan, X. Liu, M. Zheng, X. Wu, Q. Wang, W. Qin, M. Xia, et al. (2025) Improving video generation with human feedback . arXiv preprint arXiv:2501.13918 . Cited by: §3 .</li>
+<li>[27] X. Liu, C. Gong, and Q. Liu (2022) Flow straight and fast: learning to generate and transfer data with rectified flow . arXiv preprint arXiv:2209.03003 . Cited by: §1 .</li>
+<li>[28] C. Lu, Y. Zhou, F. Bao, J. Chen, C. Li, and J. Zhu (2022) Dpm-solver: a fast ode solver for diffusion probabilistic model sampling in around 10 steps . Advances in neural information processing systems 35 , pp. 5775–5787 . Cited by: §10.5 .</li>
+<li>[29] Y. Ma, X. Wu, K. Sun, and H. Li (2025) Hpsv3: towards wide-spectrum human preference score . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 15086–15095 . Cited by: Figure 1 , Figure 1 , §1 , §2.1 , §4.2 , §6.1 , §8.2 .</li>
+<li>[30] S. Munasinghe, H. Gani, W. Zhu, J. Cao, E. Xing, F. S. Khan, and S. Khan (2025) Videoglamm: a large multimodal model for pixel-level visual grounding in videos . In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 19036–19046 . Cited by: §4.1 .</li>
+<li>[31] OpenAI (2025) GPT-5 is here . Note: https://openai.com/gpt-5/ Accessed: 2025-09-18 Cited by: §1 , §6.1 , §6.2 , §8.2 , §9.1 .</li>
+<li>[32] OpenAI (2025) Image generation API . Note: Accessed: 2025-10-30 External Links: Link Cited by: §1 .</li>
+<li>[33] W. Peebles and S. Xie (2023) Scalable diffusion models with transformers . In Proceedings of the IEEE/CVF international conference on computer vision , pp. 4195–4205 . Cited by: §1 .</li>
+<li>[34] Z. Peng, W. Wang, L. Dong, Y. Hao, S. Huang, S. Ma, and F. Wei (2023) Kosmos-2: grounding multimodal large language models to the world . arXiv preprint arXiv:2306.14824 . Cited by: §4.1 .</li>
+<li>[35] D. Podell, Z. English, K. Lacey, A. Blattmann, T. Dockhorn, J. Müller, J. Penna, and R. Rombach (2023) Sdxl: improving latent diffusion models for high-resolution image synthesis . arXiv preprint arXiv:2307.01952 . Cited by: §1 .</li>
+<li>[36] R. Rafailov, A. Sharma, E. Mitchell, C. D. Manning, S. Ermon, and C. Finn (2023) Direct preference optimization: your language model is secretly a reward model . Advances in neural information processing systems 36 , pp. 53728–53741 . Cited by: §2.2 .</li>
+<li>[37] A. Z. Ren, J. Lidard, L. L. Ankile, A. Simeonov, P. Agrawal, A. Majumdar, B. Burchfiel, H. Dai, and M. Simchowitz (2024) Diffusion policy policy optimization . arXiv preprint arXiv:2409.00588 . Cited by: §2.2 .</li>
+<li>[38] Z. Ren, Z. Huang, Y. Wei, Y. Zhao, D. Fu, J. Feng, and X. Jin (2024) Pixellm: pixel reasoning with large multimodal model . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 26374–26383 . Cited by: §4.1 .</li>
+<li>[39] R. Rombach, A. Blattmann, D. Lorenz, P. Esser, and B. Ommer (2022) High-resolution image synthesis with latent diffusion models . In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 10684–10695 . Cited by: §1 .</li>
+<li>[40] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov (2017) Proximal policy optimization algorithms . arXiv preprint arXiv:1707.06347 . Cited by: §2.2 .</li>
+<li>[41] Z. Shao, P. Wang, Q. Zhu, R. Xu, J. Song, X. Bi, H. Zhang, M. Zhang, Y. Li, Y. Wu, et al. (2024) Deepseekmath: pushing the limits of mathematical reasoning in open language models . arXiv preprint arXiv:2402.03300 . Cited by: §1 , §5 .</li>
+<li>[42] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B. Poole (2020) Score-based generative modeling through stochastic differential equations . arXiv preprint arXiv:2011.13456 . Cited by: §1 .</li>
+<li>[43] Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B. Poole (2020) Score-based generative modeling through stochastic differential equations . arXiv preprint arXiv:2011.13456 . Cited by: §2.2 .</li>
+<li>[44] Z. Tang, J. Zhang, X. Cheng, W. Yu, C. Feng, Y. Pang, B. Lin, and L. Yuan (2025) Cycle3d: high-quality and consistent image-to-3d generation via generation-reconstruction cycle . In Proceedings of the AAAI Conference on Artificial Intelligence , Vol. 39 , pp. 7320–7328 . Cited by: §1 .</li>
+<li>[45] T. H. Team (2025) HunyuanImage 2.1: an efficient diffusion model for high-resolution (2k) text-to-image generation . Note: https://github.com/Tencent-Hunyuan/HunyuanImage-2.1 Cited by: §3 , §6.1 , §9.1 .</li>
+<li>[46] J. Wang, J. Liang, J. Liu, H. Liu, G. Liu, J. Zheng, W. Pang, A. Ma, Z. Xie, X. Wang, M. Wang, P. Wan, and X. Liang (2025) GRPO-guard: mitigating implicit over-optimization in flow matching via regulated clipping . External Links: 2510.22319 , Link Cited by: §1 , §2.2 .</li>
+<li>[47] Y. Wang, Z. Li, Y. Zang, J. Bu, Y. Zhou, Y. Xin, J. He, C. Wang, Q. Lu, C. Jin, et al. (2025) UniGenBench++: a unified semantic evaluation benchmark for text-to-image generation . arXiv preprint arXiv:2510.18701 . Cited by: §6.1 , §8.4 .</li>
+<li>[48] Y. Wang, Z. Li, Y. Zang, Y. Zhou, J. Bu, C. Wang, Q. Lu, C. Jin, and J. Wang (2025) Pref-grpo: pairwise preference reward-based grpo for stable text-to-image reinforcement learning . arXiv preprint arXiv:2508.20751 . Cited by: §1 , §2.2 .</li>
+<li>[49] Y. Wang, Y. Zang, H. Li, C. Jin, and J. Wang (2025) Unified reward model for multimodal understanding and generation . arXiv preprint arXiv:2503.05236 . Cited by: §1 , §2.1 , §6.1 , §8.2 .</li>
+<li>[50] X. Wei, J. Zhang, Z. Wang, H. Wei, Z. Guo, and L. Zhang (2025) TIIF-bench: how does your t2i model follow your instructions? . arXiv preprint arXiv:2506.02161 . Cited by: §6.1 , §8.4 .</li>
+<li>[51] C. Wu, J. Li, J. Zhou, J. Lin, K. Gao, K. Yan, S. Yin, S. Bai, X. Xu, Y. Chen, et al. (2025) Qwen-image technical report . arXiv preprint arXiv:2508.02324 . Cited by: §1 , §10.1 , Table 7 , §3 , §6.1 , §9.1 .</li>
+<li>[52] X. Wu, Y. Hao, K. Sun, Y. Chen, F. Zhu, R. Zhao, and H. Li (2023) Human preference score v2: a solid benchmark for evaluating human preferences of text-to-image synthesis . arXiv preprint arXiv:2306.09341 . Cited by: §1 , §2.1 , §6.1 , §8.2 .</li>
+<li>[53] J. Xu, X. Liu, Y. Wu, Y. Tong, Q. Li, M. Ding, J. Tang, and Y. Dong (2023) Imagereward: learning and evaluating human preferences for text-to-image generation . Advances in Neural Information Processing Systems 36 , pp. 15903–15935 . Cited by: Figure 1 , Figure 1 , §1 , §2.2 , §6.1 , §8.2 .</li>
+<li>[54] Z. Xue, J. Wu, Y. Gao, F. Kong, L. Zhu, M. Chen, Z. Liu, W. Liu, Q. Guo, W. Huang, et al. (2025) DanceGRPO: unleashing grpo on visual generation . arXiv preprint arXiv:2505.07818 . Cited by: §1 , §2.2 .</li>
+<li>[55] S. Yang, T. Qu, X. Lai, Z. Tian, B. Peng, S. Liu, and J. Jia (2023) Lisa++: an improved baseline for reasoning segmentation with large language model . arXiv preprint arXiv:2312.17240 . Cited by: §4.1 .</li>
+<li>[56] H. Zhang, H. Li, F. Li, T. Ren, X. Zou, S. Liu, S. Huang, J. Gao, Leizhang, C. Li, et al. (2024) Llava-grounding: grounded visual chat with large multimodal models . In European Conference on Computer Vision , pp. 19–35 . Cited by: §4.1 .</li>
+<li>[57] J. Zhang, Z. Tang, Y. Pang, X. Cheng, P. Jin, Y. Wei, X. Zhou, M. Ning, and L. Yuan (2024) Repaint123: fast and high-quality one image to 3d generation with progressive controllable repainting . In European Conference on Computer Vision , pp. 303–320 . Cited by: §1 .</li>
+<li>[58] K. Zhang, Z. Tang, X. Hu, X. Pan, X. Guo, Y. Liu, J. Huang, L. Yuan, Q. Zhang, X. Long, et al. (2025) Epona: autoregressive diffusion world model for autonomous driving . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 27220–27230 . Cited by: §1 .</li>
+<li>[59] S. Zhang, B. Wang, J. Wu, Y. Li, T. Gao, D. Zhang, and Z. Wang (2024) Learning multi-dimensional human preference for text-to-image generation . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 8018–8027 . Cited by: §2.1 .</li>
+<li>[60] Y. Zhou, P. Ling, J. Bu, Y. Wang, Y. Zang, J. Wang, L. Niu, and G. Zhai (2025) G2rpo: granular grpo for precise reward in flow models . arXiv preprint arXiv:2510.01982 . Cited by: §2.2 .</li>
+<li>[61] Y. Zhou, P. Ling, J. Bu, Y. Wang, Y. Zang, J. Wang, L. Niu, and G. Zhai (2025) G2rpo: granular grpo for precise reward in flow models . arXiv preprint arXiv:2510.01982 . Cited by: §1 .</li>
+<li>[62] H. Zhu, T. Xiao, and V. G. Honavar (2025) DSPO: direct score preference optimization for diffusion model alignment . In The Thirteenth International Conference on Learning Representations , Cited by: §2.2 .</li>
+</ul>
+<p>補充資料</p>
+<h2 id="8">8 實驗細節</h2>
+<h3 id="81">8.1 獎勵模型訓練</h3>
+<p>我們的獎勵模型 SpatialScore 是通過使用 LoRA [ 13 ] 微調 Qwen2.5-VL-7B [ 2 ] 在我們精心策劃的 SpatialReward-Dataset 上構建的，該數據集包含 80k 個偏好對，涵蓋廣泛的真實場景。在訓練過程中，我們在指令中插入一個特殊標記 <reward> 以關注視覺和文本特徵。完整的指令模板顯示在下一頁頂部的文本框 8 中。此特殊標記的最終層嵌入由獎勵頭 R ϕ R_{\phi} 投影為高斯分佈的均值 μ \mu 和標準差 σ \sigma，最終獎勵分數通過採樣獲得。為了增強訓練穩定性，在計算 ℒ Reward \mathcal{L}<em>{\text{Reward}} 時，我們從偏好圖像 y w y</em>{w} 和擾動圖像 y l y_{l} 的高斯分佈中各採樣 1000 次，並使用這 1000 個分數對的平均值計算最終損失。訓練在 8 個 NVIDIA H20 GPU 上於一天內完成，使用學習率 2 × 10 − 6 2\times 10^{-6}、批大小 16 和梯度積累步數 2。</p>
+<h3 id="82">8.2 獎勵模型評估</h3>
+<p>與 SpatialReward-Dataset 的構建類似，我們構建了一個包含 365 個偏好對的基準用於獎勵模型評估。每個偏好對包含一個由完美提示生成的完美圖像和一個從相應擾動提示生成的擾動圖像。每個偏好對都經過嚴格的人工審查和驗證，以確保註解的可靠性和一致性。我們使用整體偏好準確度作為評估指標，在此基準上評估範圍廣泛的領先模型。評估包括專有模型如 GPT-5 [ 31 ] 和 Gemini-2.5 Pro [ 6 ]、來自 Qwen2.5-VL 系列 [ 2 ] 的先進開源 VLM（從 7B 到 72B）、以及多個現有的圖像獎勵模型：PickScore [ 17 ]、ImageReward [ 53 ]、UnifiedReward [ 49 ] 和 HPS 系列 [ 52 , 29 ]。對於 UnifiedReward，我們採用其基於 Qwen2.5-VL 的變體，因為它們具有更優越的性能。對於專有模型和 Qwen2.5-VL 系列的評估，我們指示 VLM 通過選擇「第一張圖像」或「第二張圖像」來在每個偏好對中的兩張圖像之間進行選擇。考慮到模型預測可能對圖像呈現順序敏感，我們通過進行兩次評估來減輕這種潛在偏差，每次都以相反的圖像順序進行。然後我們計算兩次評估的平均準確度，以獲得更穩健和可靠的性能指標。</p>
+<h3 id="83-applying-spatialscore-for-online-rl">8.3 Applying SpatialScore for Online RL</h3>
+<p>To further validate the improved spatial understanding through SpatialScore , we use our reward model for online RL training. Specifically, the reward model is applied to RL fine-tuning the base model, Flux.1-dev [ 18 ] , which supports the long-text prompts necessary to align with our complex spatial scenarios. Following the Flow-GRPO [ 25 ] , we adopt LoRA-based RL fine-tuning and leverage the perfect prompts from our curated SpatialReward-Dataset for GRPO training, employing the following hyperparameters: a LoRA rank of 32, a learning rate of 3 × 10 − 4 3\times 10^{-4} , an importance clipping range of 1 × 10 − 4 1\times 10^{-4} , a sampling group size of 24, and a KL-penalty coefficient of 0.01 0.01 . The entire online RL training process is conducted on 32 NVIDIA H20 GPUs.</p>
+<h3 id="84-evaluations-for-image-generation">8.4 Evaluations for Image Generation</h3>
+<p>For evaluating the spatial understanding of image generation models, we first employ our proposed reward model SpatialScore to assess in-domain performance in complex spatial reasoning using the prompts from our reward model evaluation benchmark.
+Beyond in-domain evaluation, we further adopt several out-of-domain benchmarks designed to measure text–image alignment, from which we specifically select the spatial-aware sub-dimensions to robustly evaluate spatial understanding in image generation.
+In particular, we utilize DPG-Bench [ 14 ] , which focuses on complex text-to-image alignment; TIIF-Bench [ 50 ] , an extension of T2I-Compbench++ [ 47 ] to long prompts, evaluated by the proprietary model GPT-4o [ 9 ] ; and the recently released UniGenBench++ [ 47 ] , which is assessed by the powerful leading model Gemini-2.5 Pro [ 6 ] .
+and provides reliable multi-dimensional alignment evaluation.</p>
+<h2 id="9-dataset-construction">9 Dataset Construction</h2>
+<h3 id="91">9.1 偏好對構建</h3>
+<p>對於我們精選的 SpatialReward-Dataset，我們構建了 80k 個對抗性偏好對用於後續的獎勵模型訓練。
+為了最小化其他因素的影響，例如不同影像生成模型之間的美學差異，我們使用單一影像生成模型生成每個偏好對，同時僅改變提示。具體來說，我們首先採用 GPT-5 [31] 來創建一個初始提示集合，其中包含多個物體之間的複雜空間關係。然後，我們使用 GPT-5 通過修改一個或多個空間關係（例如，將物體從左移至右邊，交換物體的相對位置）來擾亂這些乾淨提示，同時保持其餘關係不變。在此設置下，從原始、未擾亂提示生成的影像作為完美影像，而從擾亂提示生成的影像作為擾亂影像，從而形成完整的偏好對。如圖 9 和圖 10 所示，我們展示了偏好對的幾個代表性示例，以視覺化我們精選的 SpatialReward-Dataset。</p>
+<p>為了進一步增強我們資料集的多樣性，我們採用了幾個最先進的影像生成模型 Qwen-Image [51]、HunyuanImage-2.1 [45] 和 Seedream 4.0 [7]，這些模型展示了強大的文本-影像對齐能力，從而減輕了後續人類評估過程中廣泛手動篩選的需要。對於每個偏好對的生成，我們隨機選擇三個模型中的一個來生成完美影像及其對應的擾亂影像，確保每對都由同一模型一致生成。如圖 8 所示，我們呈現了 SpatialReward-Dataset 中由每個模型貢獻的偏好對的分佈和比例。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/fig_supp_circle_v2.png" loading="lazy"></figure> 圖 8：SpatialReward-Dataset 的分佈統計。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x8.png" loading="lazy"></figure> 圖 9：SpatialReward-Dataset 中偏好對（完美影像和擾亂影像）的視覺化。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x9.png" loading="lazy"></figure> 圖 10：SpatialReward-Dataset 中偏好對（完美影像和擾亂影像）的更多視覺化。</p>
+<h3 id="92-human-verifications">9.2 Human Verifications</h3>
+<p>After collecting the initial preference prompts and generating the corresponding preference pairs, we perform an additional round of human verification to ensure the reliability and overall quality of our SpatialReward-Dataset . Specifically, the verification follows two main principles:</p>
+<ul>
+<li>
+<ol>
+<li>Verification of perfect images. We examine whether each perfect image faithfully satisfies the complex spatial relationships across all objects in the prompt. If a perfect image contains clear violations of the specified spatial relations, the entire preference pair is discarded.</li>
+</ol>
+</li>
+<li>
+<ol>
+<li>Verification of perturbed images. We assess the spatial discrepancies between the perturbed image and its corresponding perfect image. In some cases, although the perturbed prompt differs from the original prompt, the resulting spatial relationships may remain nearly identical. If the perturbed image fails to exhibit the intended spatial deviation and instead shares the same spatial layout as the perfect image, the preference pair is removed.</li>
+</ol>
+</li>
+</ul>
+<p>Verification of perfect images. We examine whether each perfect image faithfully satisfies the complex spatial relationships across all objects in the prompt. If a perfect image contains clear violations of the specified spatial relations, the entire preference pair is discarded.</p>
+<p>Verification of perturbed images. We assess the spatial discrepancies between the perturbed image and its corresponding perfect image. In some cases, although the perturbed prompt differs from the original prompt, the resulting spatial relationships may remain nearly identical. If the perturbed image fails to exhibit the intended spatial deviation and instead shares the same spatial layout as the perfect image, the preference pair is removed.</p>
+<h2 id="10-additional-experiment-results">10 Additional Experiment Results</h2>
+<h3 id="101-applying-spatialscore-to-qwen-image">10.1 Applying SpatialScore to Qwen-Image</h3>
+<p>To further assess the effectiveness and robustness of our reward model SpatialScore , we perform RL fine-tuning on advanced image generation models Qwen-Image [ 51 ] . As shown in Table 7 , we observe consistent and significant improvements in spatial understanding compared to the base model Qwen-Image, similar to the comparisons on the Flux.1-dev [ 18 ] . On the in-domain SpatialScore evaluation, our method improves from 6.74 to 8.25, demonstrating the effectiveness of RL training using SpatialScore as the reward model. For other text-image alignment benchmarks, we select the spatial-aware sub-dimensions to assess spatial understanding, as discussed in the paper. As seen in Table 7 , our RL training yields consistent improvements across both short-prompt and long-prompt settings.</p>
+<p>Table 5 : Quantitative evaluations on the Geneval benchmark. Our model is trained using SpatialScore as the reward model.</p>
+<h3 id="102-geneval">10.2 Geneval 基準上的評估</h3>
+<p>儘管 Geneval 作為一個獎勵模型，在遮擋等視覺挑戰下經常產生不可靠的評估，並且在 RL 訓練後對涉及複雜物體間空間關係的長文本的泛化能力有限，我們仍然利用 Geneval 基準來全面評估我們模型的泛化能力。具體來說，我們對由簡單的固定範本構成的 Geneval 基準進行評估。如表 5 所示，採用 SpatialScore 引導的 RL 訓練的我們的模型在所有評估的指標上都取得了顯著的零次學習改進。</p>
+<p>表 6：SpatialScore 主幹網路尺寸的消融研究，針對獎勵評估基準。"1 Pert." 和 "2–3 Pert." 分別表示通過對完美提示應用一個或兩個至三個空間擾動而構造的子集，用於生成擾動提示。</p>
+<h3 id="103">10.3 模型尺寸的消融研究</h3>
+<p>為了調查我們方法的泛化能力，我們訓練了來自 Qwen2.5-VL 系列 [ 2 ] 的不同主幹網路尺寸的模型。如表 6 所示，在我們的獎勵評估基準上成對偏好預測的準確度隨著主幹網路尺寸從 3B 分別擴展到 7B 和 32B，從 0.891 0.891 逐漸增加到 0.958 0.958 和 0.973 0.973。此外，通過參考論文中的比較，我們觀察到具有 7B 尺寸的 SpatialScore 的性能超過了 Gemini 2.5 Pro [ 6 ] 的性能，並接近 32B 變體的性能。因此，考慮到 RL 訓練的訓練效率，我們最終為所有實驗選擇了 7B 尺寸配置。</p>
+<p>表 7：Qwen-Image 系列在 SpatialScore、DPG-Bench、TIIF-Bench（短/長）和 UnigenBench++（短/長）上的詳細比較。* 表示使用我們的 SpatialScore 作為獎勵模型進行的 RL 訓練。
+BR、AR 和 RR 分別表示基本關係、屬性+關係和關係+推理。
+Lay-2D/3D 指的是佈局-2D/3D。Unibench 表示 UnigenBench++。</p>
+<h3 id="104-t2i">10.4 對 T2I 模型中空間問題的理解</h3>
+<p>核心問題是訓練字幕與複雜推理提示之間的不對齐。目前的 T2I 模型是基於 MLLM 衍生的字幕進行訓練，這些字幕主要描述多個物體的存在，但缺乏對它們之間複雜空間關係的約束。因此，這些模型容易在長的、空間複雜的提示中出現空間錯誤。此外，現有的獎勵模型主要關注美學和語義對齐，而我們論文中的圖 1 顯示這些模型無法正確懲罰空間錯誤。我們提出了第一個為空間理解而設計的獎勵模型。</p>
+<h3 id="105-nfe">10.5 關於 NFE 的進一步澄清</h3>
+<p>在本文中，我們呈現了關於函數評估次數 (NFE) [ 28 ] 的比較，用於 Top-k 過濾的消融研究。在此，我們提供了其計算方式的詳細說明。具體而言，NFE 指的是在訓練階段（而非採樣階段）中，策略模型為計算策略比率 $r(\theta)$ 而進行的前向傳遞次數。給定每個提示的採樣組大小為 24 且有 6 個去噪步驟，NFE 會根據設置而有所不同。對於原始的不含 top-k 過濾的 GRPO 設置，在每個訓練步驟的訓練階段中，每個提示需要 $24\times 6$ 次 NFE。對於我們加入 top-k 過濾的 GRPO 設置，我們在採樣階段之後選擇總共 $2\times k$ 個樣本（包括 top-k 和 bottom-k）。隨後，我們將這些過濾後的樣本用於訓練階段，因此在每個訓練步驟中，每個提示需要 $2\times k\times 6$ 次 NFE。</p>
+<h3 id="106">10.6 更多視覺演示</h3>
+<p>如圖 11 所示，我們提供了基礎模型 Flux.1-dev [ 18 ] 與使用 Flow-GRPO 在 Geneval 上訓練的 Flux 變體之間更多的定性比較。我們的使用 SpatialScore 的 RL 訓練模型展示了改進的空間理解能力，生成的圖像更準確地反映了提示中描述的多個物體之間複雜的空間關係。相比之下，使用 Flow-GRPO 在 Geneval 上訓練的 Flux.1-dev 變體對於複雜空間關係的泛化能力有限，甚至喪失了基礎模型遵循長提示的部分能力。如圖 11 所示，這包括遺漏關鍵物體，例如範例 (1) 中的蠟燭和範例 (2) 中的肥皂和牙刷。此外，由於其對物體檢測器基於規則的獎勵的依賴，由 Geneval 引導的 Flux 變體經常生成具有視覺上不合理的偽影的圖像，例如範例 (5) 中浮在空中的餐巾。</p>
+<h2 id="11">11 限制和未來工作</h2>
+<p>儘管我們已驗證了透過獎勵建模在影像層級上增強空間理解的效果，空間理解與時間動態的整合尚未被充分探索，特別是關於影片生成的方面。影片生成不僅要求模型理解靜態空間關係，還需要考慮時間上的動態變化。例如，模型可能需要將物體 A 移動到物體 B 的左側，然後將物體 C 放置在物體 B 的右側，隨後交換物體 A 和 C 的位置。因此，未來工作的一個重要挑戰將是有效地擴展獎勵建模，以增強影片生成模型的空間理解能力。這個方向對於 sim-to-real 體現模擬情景尤其重要，其中生成時間一致且空間準確的影片序列對於縮小模擬環境與現實世界動態之間的差距至關重要。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-02/2602.24233/x10.png" loading="lazy"></figure> 圖 11：帶有物體間複雜空間關係的長提示詞的更多定性比較。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

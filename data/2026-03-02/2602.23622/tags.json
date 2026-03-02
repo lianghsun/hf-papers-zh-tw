@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion",
+    "LMM"
+  ],
+  "task": [
+    "Image Editing",
+    "Instruction Following",
+    "Benchmark Evaluation"
+  ],
+  "dataset": [
+    "DLEBench"
+  ],
+  "open_source": false
+}

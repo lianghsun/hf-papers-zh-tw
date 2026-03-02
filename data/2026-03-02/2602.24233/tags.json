@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "CV",
+    "RL",
+    "Multimodal"
+  ],
+  "method": [
+    "Reward Modeling",
+    "Reinforcement Learning",
+    "Diffusion Models"
+  ],
+  "task": [
+    "Text-to-Image Generation",
+    "Spatial Relationship Evaluation"
+  ],
+  "dataset": [
+    "SpatialReward-Dataset"
+  ],
+  "open_source": false
+}

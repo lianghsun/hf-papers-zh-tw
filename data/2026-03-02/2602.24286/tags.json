@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "Code",
+    "RL"
+  ],
+  "method": [
+    "Reinforcement Learning",
+    "LLM",
+    "Agentic RL"
+  ],
+  "task": [
+    "CUDA Kernel Generation",
+    "Code Optimization"
+  ],
+  "dataset": [
+    "KernelBench"
+  ],
+  "open_source": false
+}
