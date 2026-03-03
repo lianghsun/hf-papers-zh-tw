@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal",
+    "NLP"
+  ],
+  "method": [
+    "Contrastive Learning",
+    "Dual Encoders",
+    "Fine-tuning"
+  ],
+  "task": [
+    "Image-Text Retrieval",
+    "Compositional Understanding",
+    "Similarity Matching"
+  ],
+  "dataset": [
+    "COCO"
+  ],
+  "open_source": true
+}

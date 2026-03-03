@@ -1,0 +1,390 @@
+# RubricBench：使模型生成的評分規則與人類標準對齊
+
+隨著大型語言模型（LLM）的對齊從簡單的文本完成發展到複雜且高度精細的生成任務，獎勵模型（Reward Models）越來越多地轉向以評分規則引導的評估，以減輕表面層次的偏差。然而，社群缺乏統一的基準來評估這種評估範例，因為現有基準既缺乏足夠的判別複雜性，也缺乏進行嚴格分析所需的地面真實評分規則註釋。為了彌補這一空缺，我們推出了 RubricBench，一個精選的基準，包含 1,147 個成對比較，專門設計用於評估基於評分規則的評估的可靠性。我們的構建採用多維篩選管道來針對具有細微輸入複雜性和誤導性表面偏差的困難樣本，並為每個樣本增添由專家註釋、嚴格源自指令的原子化評分規則。全面的實驗揭示了人類註釋評分規則與模型生成評分規則之間存在的巨大能力差距，表明即使是最先進的模型也難以自主指定有效的評估標準，與人類引導的性能相差甚遠。
+
+Code Data
+
+## 1 Introduction
+
+Reward Models (RMs) are fundamental to aligning LLMs, serving as proxies of human preferences (Christiano et al., 2017 ; Zhong et al., 2025 ) . They are essential throughout the LLMs lifecycle, providing feedback signals for policy optimization during training (Schulman et al., 2017 ; Ziegler et al., 2020 ) and acting as verifiers for candidate selection during inference (Cobbe et al., 2021 ; Lightman et al., 2024 ; Brown et al., 2024 ) . However, as LLM outputs evolve from simple completions (Ouyang et al., 2022 ) to complex, reasoning-intensive generation (OpenAI, 2024 ; DeepSeek-AI, 2025 ) , RMs face a bottleneck: they tend to prioritize surface-level complexity over the actual satisfaction of user intents.
+
+While emerging Generative Reward Models (GRMs) (Zheng et al., 2023b ; Yuan et al., 2024 ; Zhang et al., 2025a ; Wu et al., 2025 ) attempt to address this by producing Chain-of-Thought (CoT) rationales (Wei et al., 2022 ) , this free-form reasoning often lacks rigorous grounding. Consequently, even reasoning-aware RMs (Chen et al., 2026 ; Whitehouse et al., 2026 ) frequently mistake high-quality presentation for actual problem resolution, prioritizing stylistic sophistication over user intent. This misalignment results in well-known issues such as verbosity bias (Saito et al., 2023 ; Ye et al., 2025 ) and reward hacking (Coste et al., 2024 ; Casper et al., 2023 ) . To introduce necessary rigor, the field is shifting toward rubric-guided evaluation (also known as checklists or principles). By decomposing vague quality definitions into atomic, verifiable constraints, rubrics provide a structured framework to steer the evaluation process, ensuring judgments are grounded in objective criteria rather than implicit model intuition.
+
+Despite the rapid adoption of this paradigm, the community lacks a unified benchmark designed to assess the reliability of rubric-guided evaluations. Unlike traditional RMs, this approach requires models to dynamically synthesize constraints tailored to specific, often complex instructions. Current benchmarks fail to meet this requirement, as shown in Table 1 . First, they often rely on saturated or outdated samples that lack the complexity needed to distinguish between modern, high-performing models (Lambert et al., 2025b ) . Consequently, rubric-based methods (Gunjal et al., 2026 ) are often evaluated on scattered, custom datasets (Arora et al., 2025 ) , preventing rigorous cross-methodology comparison. Most critically, existing benchmarks lack human-level rubric annotations. Without this reference baseline, it is impossible to measure the gap between the model’s generated rubrics and the ideal evaluation standards required for verifiable alignment.
+
+[FIGURE_CAPTION] Table 1: Comparison of benchmarks for reward model evaluation. We indicate whether each benchmark supports diverse domains, exhibits discriminative ability,
+provides high-quality annotations, supports rubric-based evaluation,
+and includes human-authored rubrics.
+✓, ✗, and △ \triangle denote full, no, and partial support.
+
+To bridge this gap, we construct RubricBench , a curated benchmark comprising 1,147 pairwise comparisons specifically designed to assess the reliability of rubric-guided evaluation. Instead of relying on raw data, we employ a multi-dimensional filtration pipeline to retain challenging samples across three specific levels: input complexity (e.g., prompts requiring unstated tone adaptation), output surface bias (e.g., misleading responses with superior length or formatting), and process failures (e.g., reasoning traces with logical errors). Crucially, each sample is augmented with human-annotated rubrics derived strictly from instructions. These rubrics serve as atomic, verifiable constraints, providing a rigorous reference to evaluate both the quality of generated rubrics and the accuracy of preference judgments.
+
+Comprehensive experiments on RubricBench reveal three conclusions:
+(1) Validity of the Testbed: Our benchmark effectively differentiates RMs’ performance: while previous RMs and judges stagnate at 40-47% accuracy, rubric-aware RMs reach a distinct tier ≈ 58 % \approx 58\% . This clear discrimination validates the benchmark as a valid testbed for assessing capabilities.
+(2) The Rubric Gap and Efficacy Disparity: We quantify a severe 27% accuracy gap between model-generated and human rubrics. Crucially, human rubrics demonstrate consistent efficacy with scale, whereas model-generated rubrics suffer from severe diminishing returns. This proves the bottleneck is rubric quality, which cannot be resolved by naively scaling.
+(3) Cognitive Misalignment as the Root Cause: Current RMs struggle to figure out the implicit rules that human experts prioritize. While models are good at checking explicit instructions, they fail to define the necessary constraints on their own. This highlights that the critical next step for reward modeling is aligning rubrics with the deep cognition of human intent.
+
+## 2 相關工作
+
+### 2.1 獎勵模型的發展
+
+早期的對齊策略（Christiano et al., 2017；Ziegler et al., 2020；Ouyang et al., 2022）主要依賴於標量 RM（Scalar RMs），將偏好壓縮為不透明的單一分數。這種缺乏透明度的方式容易導致獎勵駭客（Skalse et al., 2022），即模型利用虛假相關性—例如冗長度（Saito et al., 2023）或表面語氣（Chen et al., 2024）—來最大化獎勵，而不改善品質 Gao et al.（2023）；Park et al.（2024）。為了增強可解釋性，該領域轉向生成式獎勵模型（LLM-as-a-Judge）（Zheng et al., 2023a；Zhang et al., 2025a），利用思維鏈推理來改進信號可靠性（Kim et al., 2024；Wang et al., 2024c；Zhang et al., 2025b）。然而，若無明確的約束，這些模型仍容易進行事後理性化，經常製造虛假批評來為有偏見的判斷提供正當理由。因此，最近的範式強調基於評分準則的評估（Team, 2022；Viswanathan et al., 2025；Gunjal et al., 2026）。藉由將模糊的品質定義分解為可驗證的約束（例如布林檢查），這種方法將獎勵建立在客觀信號的基礎上，從而限制最佳化景觀並緩解駭客行為。
+
+### 2.2 獎勵基準
+
+評估景觀隨著獎勵建模範式而演進。
+RewardBench（Lambert et al., 2025b）為偏好準確性奠定了基礎，而後續的倡議擴展了此範圍：RM-Bench（Liu et al., 2025b）和 RMB（Zhou et al., 2025）處理敏感性，PPE（Frick et al., 2025）聚焦於 RL 對齊，而 RewardBench-v2（Malik et al., 2025）增加了樣本複雜性。
+然而，這些基準低估了現代大型語言模型生成的複雜和多面性質。
+它們在很大程度上保留了過時或平凡的指令和相應的回應，未能評估性能上界，而且至關重要的是，它們缺乏驗證結構有效性所需的評分準則註解。
+相反，雖然 HealthBench（Arora et al., 2025）和 ProfBench（Wang et al., 2025）等倡議引入了基於評分準則的協議，但其資料仍然嚴格限於特定領域，缺乏通用標準所需的一般性。
+為了彌補這一差距—統一判別難度、廣泛的一般性和評分準則註解—我們提出 RubricBench。
+
+## 3 基準測試構建
+
+[FIGURE:x1.png] 圖 1：RubricBench 構建和評估設置的概述。從現有的偏好數據開始，我們通過多維度過濾來策劃具有挑戰性的偏好對，並通過具有品質控制的三階段流程使用僅基於指令的人類評分標準進行標註。
+
+在本節中，我們詳細說明 RubricBench 的構建。我們的目標是將現有基準測試萃取為焦點子集，使其在現代 LLM 生成行為下仍保持區分力。該基準測試包含 1,147 個成對比較，每個都配有專家標註的指令衍生評分標準。這些標註將隱含的品質定義轉化為明確的標準，作為基準測試 RM 生成評估的結構化參考。
+
+### 3.1 設計原則
+
+RubricBench 的構建遵循三項設計原則，旨在解決現有評估基準中的常見缺陷：
+(1) 區分難度：
+我們優先選擇表面級線索（例如，冗長度、格式）與實際回應品質相矛盾的樣本。這確保基準測試對依賴膚淺啟發式的模型保持區分力。
+(2) 指令衍生：
+評分標準僅從指令衍生，無法存取候選回應，防止評分標準制定中的回應感知洩漏。
+(3) 原子驗證：
+評分標準被制定為獨立的二元（是/否）約束。此分解允許對評估失敗進行細粒度、可檢查的診斷。
+
+### 3.2 資料來源和領域覆蓋
+
+為了確保在常見評估設置中的廣泛適用性，我們從多個領域（包括 Chat、指令遵循、STEM、程式設計和安全）策劃樣本。所有樣本都重新策劃自現有的高品質基準測試，例如 HelpSteer3（Wang et al., 2024c）、PPE（Frick et al., 2024）和 RewardBench2（Malik et al., 2025）。雖然這些來源提供真實的使用者樣本，但它們主要包含偏好顯而易見的「簡易」對。因此，我們應用過濾來精化和重塑現有數據。圖 2 總結了基準測試組成和結構統計資訊。
+
+### 3.3 第一階段：資料策劃
+
+我們透過多維度過濾過程來策劃 RubricBench。目標是保留能夠揭示整體性或表面驅動評估失敗的範例。每個候選範例都沿著三個獨立維度進行檢查：輸入複雜性、輸出表面偏差和過程失敗。不滿足這些條件的範例會被過濾掉。
+
+#### 輸入複雜性。
+
+我們優先選擇複雜的、組合性的指令，這些指令需要多個不同的需求。我們將這些分類為明確約束和隱含約束。明確需求是直接陳述的，例如格式化規則或內容指令（例如「列出三個原因」或「避免迴圈」）。隱含需求是透過推理推導出的核心條件；例如，向祖父母解釋「區塊鏈」需要避免專業術語，即使沒有明確禁止。此過濾確保保留的樣本具有足夠的結構複雜性以支持判別式評估。
+
+[FIGURE:x2.png] 圖 2：RubricBench 統計概況。(a) RubricBench 的域和來源組成。(b) 每個範例的評分規則項目分佈以及指令、回應和評分規則的文本長度分佈。
+
+#### 詳細資料統計。
+
+圖 2 (a) 報告了最終基準的域組成。通用聊天和編碼佔據最大部分（分別為 36.5% 和 23.9%），其次是 STEM 推理（23.8%）、指令遵循（8.8%）和安全（7.0%）。如圖 2 (b) 所示，大多數範例與一組緊湊的評分規則項目相關聯，其中大多數每個範例在 4 到 6 個檢查之間。這種模式在各個域中是一致的，表明註釋者傾向於以相當的粒度級別表達任務需求。安全域平均表現出稍少的項目，反映許多違規更容易定位，同時仍保持多個獨立檢查。文本長度統計進一步顯示評分規則實質上比回應更短，並且在規模上與指令相當，暗示標準專注於基本約束而非詳盡的重述。
+
+#### 輸出表面偏差。
+
+我們的目標是被拒絕的回應作為表面級蒸餾器的配對，可能會誤導偏好判斷。具體來說，我們保留被拒絕回應滿足以下至少一項條件的配對：
+(1) 長度偏差：被拒絕的回應長度 ≥ 1.5 × \geq 1.5\times 偏好回應；
+(2) 格式化偏差：被拒絕的回應相比偏好回應具有更優越的結構化（例如 JSON、Markdown 或 L a T e X）；或
+(3) 語調偏差：被拒絕的回應表現出更高的表觀信心或專業術語。
+
+此過濾隔離了表面精巧性掩蓋無法滿足核心指令需求失敗的實例，確保模型學會優先考慮實質而非表面級模式。
+
+#### 過程失敗。
+
+我們優先選擇推理依賴實例，其中偏好判斷無法僅從最終答案可靠地確定。這些情況是正確的結論可能掩蓋有缺陷的中間步驟的情況。為了隔離這些失敗，我們利用一套判斷模型來生成評估 CoT，並且只保留展現兩個或更多不同推理謬誤的範例。有三種典型錯誤：
+(1) 由指令或上下文不支持的幻覺步驟；
+(2) 推理轉換之間的邏輯不一致；以及
+(3) 推理過程中指令約束的侵蝕。
+
+此過濾確保資料集需要實質的過程級檢查，為 RM 提供比最終判決基準更判別式的訊號。
+
+### 3.4 第二階段：評分規則標註協議
+
+我們將評分規則定義為高品質回應必須滿足的一組基本條件。評分規則不是一份詳盡的檢查清單，而是從指令衍生的核心要求，為偏好提供客觀基礎。
+
+#### 評分規則標註指南。
+
+標註人員為每項指令開發評分規則作為可執行規範。該協議遵循兩項主要標準：(1) **結構原子性**：每個評分規則包含 2–10 個項目。為確保評估精確度，每個項目都被表述為二元（是/否）檢查。標準必須恰好是一個約束條件，以防止內部衝突，並確保每個維度在評估期間都能獨立驗證；(2) **語義客觀性**：
+評分規則項目在未知候選回應的情況下草擬，以防止事後偏差。標準純粹來自指令，並對應到相關領域：推理、內容、表達、對齐或安全。這些包括明確陳述的約束和從任務背景推斷的隱含要求。例如，「為老年人設計的步行導覽」隱含地要求休息區和無障礙路線。任何依賴於特定回應特徵的標準都被嚴格排除，以維持評分規則作為中立、與指令對齐的約束的角色。
+
+### 3.5 第三階段：品質控制與驗證
+
+為確保我們的評分規則的可靠性和結構完整性，我們實施三階段品質控制協議：
+(1) **專家調和**：在獨立雙重標註後，資深審查員將這些版本綜合為統一的評分規則。此流程僅保留基於共識的標準，同時移除主觀、模糊或非必要的項目。
+(2) **結構驗證**：評分規則經過最終驗證以確保：
+i. 邏輯一致性：檢查內部衝突或矛盾的二元檢查。
+ii. 最小冗餘：修剪重疊的標準以維持原子性。
+iii. 指令對齐：驗證每個評分規則項目都直接與原始提示的約束相關聯。
+(3) **壓力測試**：我們對安全和推理任務進行抽查，並根據保留的模型回應驗證評分規則。這確保標準在廣泛的回應品質範圍內保持判別力。
+
+## 4 實驗
+
+我們的實驗旨在逐步解構自動評判器的能力和局限性。我們首先在 RubricBench 上進行一套多樣化評估器的基準測試，建立清晰的能力層級，驗證該基準的判別力。超越最終裁決，我們隔離評分規則的作用，揭示一個深刻的**評分規則鴻溝**：自生成評分規則中的持久效能缺陷，與人類標註的約束不同，其對測試時間擴展保持免疫。
+
+### 4.1 實驗設置
+
+#### 評估設定。
+
+為了隔離評分標準品質的影響，我們在三種受控條件下評估評判模型（見表 3），保持骨幹網絡、提示詞和解碼參數固定：(1) Vanilla。模型直接根據指令生成偏好判定，無需明確的中間推理過程。這作為模型內在判別能力的基線。(2) Self-Generated Rubrics。反映當前評分標準感知的管道，RM/評判模型首先從指令推導評分標準，然後根據它們驗證回應。此設定測試模型制定有效評分標準的能力。(3) Human-Annotated Rubrics。我們注入來自 RubricBench 的人工製作評分標準。通過繞過評分標準瓶頸，此設定隔離模型基於基準評分標準執行後續驗證的能力，作為評分標準引導評估的上界。
+
+#### 模型。
+
+我們涵蓋獎勵建模中的四個代表性範式（詳見附錄 A.2）：(1) Scalar RMs：直接對回應評分的開源權重模型，包括 ArmoRM（Wang et al., 2024a）、InternLM2-Reward（Cai et al., 2024）和 Tulu-3-RM（Lambert et al., 2025a）。(2) Generative RMs：在評分前生成 CoTs 的模型，例如 Nemotron-GenRM-49B（Bercovich et al., 2025）、Nemotron-BRRM-14B（Jiao et al., 2025）和 RM-R1-32B（Chen et al., 2026）。(3) LLM-as-a-Judge：標準的配對評判模型，包括專有 APIs（GPT-4o-mini、DeepSeek-v3.2、Gemini-3-Flash）和開源權重評判模型（Self-Taught-Evaluator（Wang et al., 2024b）、FARE（Xu et al., 2025））。(4) Rubric-Aware Judges：專門的管道（Auto-Rubric（Xie et al., 2025）、RocketEval（Wei et al., 2025）、CheckEval（Lee et al., 2025）、TICK（Cook et al., 2024）、OpenRubric（Liu et al., 2025a））在自生成和人工標註兩種模式下進行評估。
+
+#### 指標。
+
+我們採用兩類指標來評估最終判定和中間推理過程：
+
+(1) 偏好準確度。每個例子包含一個指令和一對候選回應 $(y^{(A)},y^{(B)})$。評判模型輸出二元偏好 $\hat{z}\in\{A,B\}$。令 $z^{\star}$ 表示人類偏好標籤。偏好準確度為
+
+|  | $\mathrm{Acc}=\frac{1}{\|\mathcal{D}\|}\sum_{i\in\mathcal{D}}\mathbb{I}\!\left[\hat{z}_{i}=z_{i}^{\star}\right].$ |  | (1) |
+| --- | --- | --- | --- |
+
+我們報告按領域的準確度以及所有領域的整體平均值。
+
+(2) 評分標準對齐指標。除了準確度，我們測量自動推導的準則與人工標註評分標準在規則級別的對齐程度。具體來說，對於每個任務，我們將推導的準則 $\tilde{\mathcal{R}}$ 與參考評分標準 $\mathcal{R}$ 進行比較，並報告用於診斷和消融的結構對齐統計資訊（第 5 節）。令 $\tilde{\mathcal{R}}=\{\tilde{r}_{1},\dots,\tilde{r}_{K}\}$ 為推導的評分標準，$\mathcal{R}=\{r_{1},\dots,r_{M}\}$ 為人工標註的參考評分標準。評分標準召回率衡量至少被一個推導項目匹配的參考項目的比例：
+
+|  | $\mathrm{RubricRecall}=\frac{H}{M}.$ |  | (2) |
+| --- | --- | --- | --- |
+
+幻覺率計算與任何參考項目都不匹配的推導項目：
+
+|  | $u_{k}=\mathbb{I}\!\left[\sum_{j=1}^{M}\mathrm{match}(\tilde{r}_{k},r_{j})=0\right],$ |  | (3) |
+| --- | --- | --- | --- |
+
+|  | $\mathrm{HallucinationRate}=\frac{1}{K}\sum_{k=1}^{K}u_{k}.$ |  | (4) |
+| --- | --- | --- | --- |
+
+結構 F1 使用精確度代理 $\mathrm{Prec}=1-\mathrm{HallucinationRate}$：
+
+|  | $\mathrm{StructuralF1}=\frac{2\,\mathrm{RubricRecall}\,\mathrm{Prec}}{\mathrm{RubricRecall}+\mathrm{Prec}}.$ |  | (5) |
+| --- | --- | --- | --- |
+
+完整的匹配協議詳見附錄 B。
+
+### 4.2 Main Results
+
+Table 2 demonstrates a distinct performance hierarchy, validating RubricBench ’s discriminative power in distinguishing evaluator capabilities.
+
+#### Implicit reasoning is insufficient:
+
+Scalar and generative RMs struggle to consistently outperform random chance (Acc ≈ \approx 44–50%), and standard LLM judges fare similarly poorly (GPT-4o-mini: 40.2%). This indicates that without explicit constraints, even strong models fail to capture the granular requirements of RubricBench .
+
+[FIGURE_CAPTION] Table 2: Main Results on RubricBench . Comparison of baselines vs. our self-generated rubric methods and human-annotated oracle. Bold indicates best overall; Underline indicates best automated result.
+
+#### Rubric-aware pipelines recover performance:
+
+Introducing self-generated rubrics yields consistent improvements over vanilla baselines (e.g., boosting GPT-4o-mini by ∼ \sim 6% and DeepSeek by ∼ \sim 19%), with the strongest configurations reaching the high-50s. However, the most dramatic jump occurs when rubric quality is solved: injecting human-annotated rubrics, boosts accuracy to ∼ \sim 84.9% (OpenRubric with DeepSeek). Since the backbone and verification process remain identical, this delta (+27%) effectively isolates rubric mis-specification as the dominant failure mode in current automated evaluation.
+
+#### Failure Concentration:
+
+Failures are not uniformly distributed. Safety shows the highest sensitivity to rubric quality: while self-generated methods fail to enforce safety boundaries (Acc ≈ \approx 25–30%), human rubrics—which explicitly encode refusal logic—restore performance to > > 90%. This highlights that models often lack the intrinsic “safety awareness” to self-propose necessary refusal constraints.
+
+#### Execution Ceiling.
+
+It is notable that even with human rubrics, accuracy plateaus around 85% rather than approaching 100%. This reflects the irreducible ambiguity in open-ended preference and the remaining execution errors (as detailed in Table 8 ), where models fail to apply rubrics even when correctly specified.
+
+### 4.3 評判標準差距
+
+表 3 量化了評判標準差距，即僅歸因於評判標準品質的性能赤字。通過隔離評判標準來源的影響，我們發現雖然自生成的評判標準相比於無提示詞的基線提供了明顯的改進（例如，DeepSeek-v3.2 從 38.8% 上升到 57.8%），但當切換到人工標註的評判標準時，仍然存在巨大的性能差距。關鍵的是，這個差距即使對於最新的前沿推理模型（包括 GPT-OSS-120B、Gemini-3-Pro 和最近發布的 Qwen3.5-Plus）也持續存在。在所有模型系列中——從輕量級評判器到前沿規模的推理系統——人工評判標準的性能收益在各模型上保持穩定，約為 ∼ \sim 26%。這個差距的穩定性表明，當前評估中的主要限制不是推理能力，而是評判標準的形成。當被引導時，模型擁有執行高品質判斷的推理能力，但它們系統性地無法自主地歸納必要的評估標準。因此，評判標準誤設定成為了阻止達到人類水準可靠性的主要瓶頸。
+
+[FIGURE_CAPTION] 表 3：受控評判標準來源下的評判標準差距。代表性大語言模型評判器在僅變化評判標準來源情況下的準確度（%）：無評判標準（無提示詞）、自生成和人工標註。Δ \Delta 表示人工標註評判標準相比於自生成基線的收益。
+
+### 4.4 計算資源無法彌補差距
+
+圖 3 對比了在固定骨幹網路和驗證程序下，合成評分標準與人類評分標準的縮放行為，僅改變測試時計算資源。
+對於自動生成的評分標準（圖 3 a），增加採樣評分標準的數量會產生遞減且非單調的回報：GPT-4o-mini 從 Rub@4 時的 48.0% 下降到 Rub@32 時的 46.8%，而 Gemini-3-Flash 保持在 56.7–57.5% 附近幾乎沒有變化，表明額外的樣本主要是累積雜訊而非補充缺失的約束條件。
+與之形成鮮明對比，通過隨機子採樣來縮放人類標註的評分標準（圖 3 b）表現出穩健的正相關性：Gemini-3-Flash 從 H-Rub@2 時的 75.4% 提升到 H-Rub@8 時的 85.3%，GPT-4o-mini 從 64.5% 提升到 72.7%，表明測試時縮放只有在基礎評分標準結構合理時才有效。
+最後，縮放迭代精化深度（圖 3 c）也無法彌補差距：增加精化步驟不會產生單調增益，甚至可能稍微降低性能（例如，GPT-4o-mini 46.7% $\rightarrow$ 46.4% $\rightarrow$ 45.7%；Gemini-3-Flash 58.0% $\rightarrow$ 58.6% $\rightarrow$ 58.2%）。
+綜合這些結果，我們確認瓶頸在於評分標準質量而非計算資源：無論是更多的採樣合成評分標準還是更深的精化都無法彌補缺失或規格不當的標準，而即使少量的人類評分標準也已經優於完整的合成集合。
+
+[FIGURE:x4.png] 圖 3：測試時縮放結果。(a) 縮放自動評分標準。
+(b) 縮放人類評分標準。
+(c) 縮放精化。
+所有情況均改變測試時計算資源。
+
+## 5 Analysis
+
+In this section, we deconstruct the evaluation process on RubricBench . Given our finding that the rubric gap acts as the primary bottleneck, our analysis focuses on the formation of rubrics, diagnosing structural failures of autonomously generated rubrics and subsequently illustrating how these failures lead to judgment inversion.
+
+[FIGURE_CAPTION] Table 4: Structural Quality Analysis of Generated Rubrics. We quantify quality by matching generated criteria against human references. Rubric Recall : The percentage of human constraints successfully recovered by the model. Hallucination Rate : The proportion of generated rules that fail to match any human constraint (irrelevant or non-binding). Structural F1 : The harmonic mean of precision (1 - Hallucination Rate) and recall, balancing coverage against noise.
+
+#### Cognitive Misalignment.
+
+To quantify the rubric quality deficit, we employ the strict matching protocol detailed in Appendix B . Table 4 reveals a fundamental misalignment: current models relying on standard prompting strategies struggle to figure out the implicit rules that human experts prioritize. This results in Attention Displacement : models waste their generation budget on tangential rubrics. For instance, despite generating lengthy checklists (e.g., Auto-Rubric and OpenRubric average > 13 >13 items), models sustain high Hallucination Rates ( > 70 % >70\% ) while missing nearly half of the critical constraints. Even methods that reduce noise, like RocketEval (4.4 items avg.), do so by sacrificing coverage rather than improving precision. These results highlight a stark reality: simple, fully autonomous prompting is currently insufficient to replicate the rigorous content selection of human experts. Notably, CheckEval achieves the highest Rubric Recall (53.8%); this performance likely stems from its reliance on human-curated high-level criteria to seed generation, suggesting that injecting even minimal human priors is currently necessary to bridge the validity gap in model-generated rubrics.
+
+[FIGURE_CAPTION] Table 5: Rubric Feature Statistics. Feature-level comparison of atomic criteria between human and LLM-generated rubrics. R: Constraint Rigidity; N: Intent Necessity.
+
+#### Rubric Feature Diagnosis.
+
+To further characterize the formation deficit, we analyze atomic criteria along two orthogonal dimensions: Constraint Rigidity (how strictly a rule is enforced) and Intent Necessity (whether a rule is essential to the instruction). As shown in Table 5 , LLM-generated rubrics contain significantly more low-necessity rules (N=1: 17.9% vs. 10.1%) and more extremely rigid rules (R=5: 12.8% vs. 7.7%), resulting in a larger share of High-R/Low-N criteria (13.7% vs. 8.4%). Moreover, the coupling between rigidity and necessity is substantially weaker for LLM rubrics (corr(R,N)=0.133 vs. 0.306). These statistics indicate that models often generate rules that are overly strict without being necessary, or necessary but insufficiently specified, unlike humans whose strictness is more closely aligned with task intent. The detailed scoring protocol are provided in Appendix E .
+
+#### Value Inversion.
+
+To ground the formation failures in a realistic setting, Table 6 illustrates a representative failure on an ill-posed task: “convert SQL to Mongo for all cases.” This case tests a meta-level constraint: the evaluator must realize the task is impossible and reward honest refusal.
+While the human rubric encodes this boundary (requiring acknowledgment of infeasibility), the model-generated rubric devolves into a standard implementation checklist (e.g., checking for specific libraries).
+Consequently, the model penalizes a correct refusal (Response B) for “missing code” while rewarding a hallucinatory solution (Response A). Table 7 illustrates the same inversion pattern under underspecification. These cases exemplify how Attention Displacement (focusing on style over feasibility) directly leads to judgment inversion.
+
+[FIGURE_CAPTION] Table 6: Case Study: Cognitive Alignment Failure. For an impossible instruction (“handle all cases”), Human Rubrics prioritize feasibility and honesty. In contrast, Model Rubrics focus on rigid tooling constraints and fail to detect the impossible premise, leading to inverted verdicts.
+
+[FIGURE_CAPTION] Table 7: Case Study: Assumption Injection via Epistemic Failure. The instruction is underspecified, lacking the necessary interest rate.
+The human rubric enforces an epistemic constraint, requiring the model to ask for clarification.
+The model-generated rubric, however, suffers from False Precision Bias : it validates the correctness of the math performed on arbitrary assumptions (e.g., 3%), effectively penalizing the model for being honest (Response A) and rewarding it for making up data (Response B).
+
+#### Execution failures.
+
+Even with human-authored rubrics, model judges still exhibit systematic evaluation errors.
+These failures largely do not stem from deficiencies in rubric specification, but from how rubrics are executed during judgment.
+Across our analysis, we observe several recurring execution-level failure patterns, which we group into four broad categories and summarize with representative cases in Table 8 .
+At a high level, models often identify relevant rubric items in their reasoning traces yet fail to enforce them as binding constraints in the final decision, implicitly treating critical requirements as soft signals that can be traded off against secondary qualities such as explanation or structure.
+Judges also tend to re-weight rubric criteria in ways that diverge from human-intended priority hierarchies, and struggle to operationalize rubric-implied behaviors such as abstention or rejection when tasks are indeterminate or infeasible.
+As a result, incorrect preferences persist despite the availability of correct rubrics, highlighting a consistent execution gap between human rubric use and model-based evaluation.
+
+[FIGURE_CAPTION] Table 8: Failure modes when executing human-authored rubrics. All cases use correct human rubrics; failures arise from how model judges apply them during reasoning and the final decision.
+We show minimal excerpts; highlighted spans mark the execution failure.
+
+#### Aligning Rubric Content is Future Outlook.
+
+The structural deficits identified above suggest that the core challenge is not the procedural generation of rubrics, but the misalignment of underlying values. Future research must therefore move beyond scaling synthesis to address rubric alignment —developing methods that enable models to internalize human priority hierarchies. The ultimate goal is to transition models from simply expanding to autonomously identifying the specific, high-value constraints that drive human judgments. More structured rubric designs (e.g., distinguishing hard/soft constraints or incorporating explicit weight assignments) could also help bridge the execution gap by making binding constraints operationally explicit.
+
+## 6 結論
+
+在本研究中，我們引入 RubricBench，一個全面的基準測試，旨在嚴格評估獎勵模型中基於評分規則的評估之可靠性。通過精選 1,147 個對抗性偏好配對，並增加人工標註、指令導向的評分規則，我們揭示了當前 LLM 作為評估器的系統性缺陷。我們廣泛的實驗揭示了實質性的 Rubric Gap，其中最先進的模型無法自主合成有效的評估標準，優先考慮邊際細節而非核心功能約束。這些發現表明，獎勵模型對齊的瓶頸已從驗證簡單偏好轉變為指定和遵守客觀標準的複雜能力。最終，RubricBench 驗證了評分規則感知獎勵模型的效能，並為解決這些缺陷提供了必要的基礎，引導開發更可信和有原則的獎勵模型。
+
+## 7 限制
+
+儘管 RubricBench 設計嚴謹，我們的研究仍存在幾項限制。首先，我們的資料集是通過重新精選現有公開基準的樣本而構建的；雖然我們應用了積極的過濾以確保複雜性，但資料分佈本質上受到這些源資料集範圍的限制，可能無法完全代表專業專有領域中發現的長尾情景。其次，我們對高品質專家標註黃金標準評分規則的依賴限制了與完全合成資料集相比基準的規模，可能限制其在大規模訓練目的上的實用性。最後，通過將評估嚴格表述為一組二進位檢查清單約束，我們優先考慮可驗證性而非細微差別，這可能無法完美捕捉創意寫作等高度主觀任務中品質的連續性。
+
+## 參考文獻
+
+- Arora et al. (2025) Rahul K. Arora, Jason Wei, Rebecca Soskin Hicks, Preston Bowman, Joaquin Quiñonero-Candela, Foivos Tsimpourlas, Michael Sharman, Meghan Shah, Andrea Vallone, Alex Beutel, Johannes Heidecke, and Karan Singhal. Healthbench: 評估大型語言模型以改進人類健康, 2025. URL https://arxiv.org/abs/2505.08775 .
+- Bercovich et al. (2025) Akhiad Bercovich, Itay Levy, Izik Golan, Mohammad Dabbah, Ran El-Yaniv, Omri Puny, Ido Galil, Zach Moshe, Tomer Ronen, Najeeb Nabwani, Ido Shahaf, Oren Tropp, Ehud Karpas, Ran Zilberstein, Jiaqi Zeng, Soumye Singhal, Alexander Bukharin, Yian Zhang, Tugrul Konuk, Gerald Shen, Ameya Sunil Mahabaleshwarkar, Bilal Kartal, Yoshi Suhara, Olivier Delalleau, Zijia Chen, Zhilin Wang, David Mosallanezhad, Adi Renduchintala, Haifeng Qian, Dima Rekesh, Fei Jia, Somshubra Majumdar, Vahid Noroozi, Wasi Uddin Ahmad, Sean Narenthiran, Aleksander Ficek, Mehrzad Samadi, Jocelyn Huang, Siddhartha Jain, Igor Gitman, Ivan Moshkov, Wei Du, Shubham Toshniwal, George Armstrong, Branislav Kisacanin, Matvei Novikov, Daria Gitman, Evelina Bakhturina, Prasoon Varshney, Makesh Narsimhan, Jane Polak Scowcroft, John Kamalu, Dan Su, Kezhi Kong, Markus Kliegl, Rabeeh Karimi Mahabadi, Ying Lin, Sanjeev Satheesh, Jupinder Parmar, Pritam Gundecha, Brandon Norick, Joseph Jennings, Shrimai Prabhumoye, Syeda Nahida Akter, Mostofa Patwary, Abhinav Khattar, Deepak Narayanan, Roger Waleffe, Jimmy Zhang, Bor-Yiing Su, Guyue Huang, Terry Kong, Parth Chadha, Sahil Jain, Christine Harvey, Elad Segal, Jining Huang, Sergey Kashirsky, Robert McQueen, Izzy Putterman, George Lam, Arun Venkatesan, Sherry Wu, Vinh Nguyen, Manoj Kilaru, Andrew Wang, Anna Warno, Abhilash Somasamudramath, Sandip Bhaskar, Maka Dong, Nave Assaf, Shahar Mor, Omer Ullman Argov, Scot Junkin, Oleksandr Romanenko, Pedro Larroy, Monika Katariya, Marco Rovinelli, Viji Balas, Nicholas Edelman, Anahita Bhiwandiwalla, Muthu Subramaniam, Smita Ithape, Karthik Ramamoorthy, Yuting Wu, Suguna Varshini Velury, Omri Almog, Joyjit Daw, Denys Fridman, Erick Galinkin, Michael Evans, Shaona Ghosh, Katherine Luna, Leon Derczynski, Nikki Pope, Eileen Long, Seth Schneider, Guillermo Siman, Tomasz Grzegorzek, Pablo Ribalta, Monika Katariya, Chris Alexiuk, Joey Conway, Trisha Saar, Ann Guan, Krzysztof Pawelec, Shyamala Prayaga, Oleksii Kuchaiev, Boris Ginsburg, Oluwatobi Olabiyi, Kari Briski, Jonathan Cohen, Bryan Catanzaro, Jonah Alben, Yonatan Geifman, and Eric Chung. Llama-nemotron: 高效推理模型, 2025. URL https://arxiv.org/abs/2505.00949 .
+- Brown et al. (2024) Bradley Brown, Jordan Juravsky, Ryan Ehrlich, Ronald Clark, Quoc V. Le, Christopher Ré, and Azalia Mirhoseini. 大型語言猴子：透過重複取樣擴展推理計算, 2024. URL https://arxiv.org/abs/2407.21787 .
+- Cai et al. (2024) Zheng Cai, Maosong Cao, Haojiong Chen, Kai Chen, Keyu Chen, Xin Chen, Xun Chen, Zehui Chen, Zhi Chen, Pei Chu, Xiaoyi Dong, Haodong Duan, Qi Fan, Zhaoye Fei, Yang Gao, Jiaye Ge, Chenya Gu, Yuzhe Gu, Tao Gui, Aijia Guo, Qipeng Guo, Conghui He, Yingfan Hu, Ting Huang, Tao Jiang, Penglong Jiao, Zhenjiang Jin, Zhikai Lei, Jiaxing Li, Jingwen Li, Linyang Li, Shuaibin Li, Wei Li, Yining Li, Hongwei Liu, Jiangning Liu, Jiawei Hong, Kaiwen Liu, Kuikun Liu, Xiaoran Liu, Chengqi Lv, Haijun Lv, Kai Lv, Li Ma, Runyuan Ma, Zerun Ma, Wenchang Ning, Linke Ouyang, Jiantao Qiu, Yuan Qu, Fukai Shang, Yunfan Shao, Demin Song, Zifan Song, Zhihao Sui, Peng Sun, Yu Sun, Huanze Tang, Bin Wang, Guoteng Wang, Jiaqi Wang, Jiayu Wang, Rui Wang, Yudong Wang, Ziyi Wang, Xingjian Wei, Qizhen Weng, Fan Wu, Yingtong Xiong, Chao Xu, Ruiliang Xu, Hang Yan, Yirong Yan, Xiaogui Yang, Haochen Ye, Huaiyuan Ying, Jia Yu, Jing Yu, Yuhang Zang, Chuyu Zhang, Li Zhang, Pan Zhang, Peng Zhang, Ruijie Zhang, Shuo Zhang, Songyang Zhang, Wenjian Zhang, Wenwei Zhang, Xingcheng Zhang, Xinyue Zhang, Hui Zhao, Qian Zhao, Xiaomeng Zhao, Fengzhe Zhou, Zaida Zhou, Jingming Zhuo, Yicheng Zou, Xipeng Qiu, Yu Qiao, and Dahua Lin. Internlm2 技術報告, 2024. URL https://arxiv.org/abs/2403.17297 .
+- Casper et al. (2023) Stephen Casper, Xander Davies, Claudia Shi, Thomas Krendl Gilbert, Jérémy Scheurer, Javier Rando, Rachel Freedman, Tomek Korbak, David Lindner, Pedro Freire, Tony Tong Wang, Samuel Marks, Charbel-Raphael Segerie, Micah Carroll, Andi Peng, Phillip J.K. Christoffersen, Mehul Damani, Stewart Slocum, Usman Anwar, Anand Siththaranjan, Max Nadeau, Eric J Michaud, Jacob Pfau, Dmitrii Krasheninnikov, Xin Chen, Lauro Langosco, Peter Hase, Erdem Biyik, Anca Dragan, David Krueger, Dorsa Sadigh, and Dylan Hadfield-Menell. 強化學習從人類回饋的開放問題和基本限制。Machine Learning Research 上的交易, 2023. ISSN 2835-8856.
+- Chen et al. (2024) Guiming Hardy Chen, Shunian Chen, Ziche Liu, Feng Jiang, and Benyou Wang. 人類或大型語言模型作為判官？對判斷偏差的研究。在自然語言處理實驗方法會議中, 頁碼 8301–8327, 2024.
+- Chen et al. (2026) Xiusi Chen, Gaotang Li, Ziqi Wang, Bowen Jin, Cheng Qian, Yu Wang, Hongru WANG, Yu Zhang, Denghui Zhang, Tong Zhang, Hanghang Tong, and Heng Ji. RM-r1: 獎勵建模作為推理。在國際學習表現會議中, 2026. URL https://openreview.net/forum?id=1ZqJ6jj75q .
+- Christiano et al. (2017) Paul F. Christiano, Jan Leike, Tom B. Brown, Miljan Martic, Shane Legg, and Dario Amodei. 深度強化學習從人類偏好。在國際神經資訊處理系統會議中, 頁碼 4302–4310, 2017.
+- Cobbe et al. (2021) Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano, Christopher Hesse, and John Schulman. 訓練驗證器求解數學應用問題, 2021. URL https://arxiv.org/abs/2110.14168 .
+- Cook et al. (2024) Jonathan Cook, Tim Rocktäschel, Jakob Foerster, Dennis Aumiller, and Alex Wang. 勾選所有方框：產生的檢查清單改進大型語言模型評估和生成, 2024. URL https://arxiv.org/abs/2410.03608 .
+- Coste et al. (2024) Thomas Coste, Usman Anwar, Robert Kirk, and David Krueger. 獎勵模型集合有助於緩解過度優化。在國際學習表現會議中, 2024. URL https://openreview.net/forum?id=dcjtMYkpXx .
+- DeepSeek-AI (2025) Team DeepSeek-AI. Deepseek-r1 透過強化學習在大型語言模型中激勵推理。Nature, 頁碼 633–638, 2025.
+- Frick et al. (2024) Evan Frick, Tianle Li, Connor Chen, Wei-Lin Chiang, Anastasios N. Angelopoulos, Jiantao Jiao, Banghua Zhu, Joseph E. Gonzalez, and Ion Stoica. 如何評估 RLHF 的獎勵模型, 2024. URL https://arxiv.org/abs/2410.14872 .
+- Frick et al. (2025) Evan Frick, Tianle Li, Connor Chen, Wei-Lin Chiang, Anastasios Nikolas Angelopoulos, Jiantao Jiao, Banghua Zhu, Joseph E. Gonzalez, and Ion Stoica. 如何評估 RLHF 的獎勵模型。在國際學習表現會議中, 2025.
+- Gao et al. (2023) Leo Gao, John Schulman, and Jacob Hilton. 獎勵模型過度優化的縮放定律。在國際機器學習會議中, 2023.
+- Gunjal et al. (2026) Anisha Gunjal, Anthony Wang, Elaine Lau, Vaskar Nath, Yunzhong He, Bing Liu, and Sean M. Hendryx. 評分表作為獎勵：可驗證領域之外的強化學習。在國際學習表現會議中, 2026. URL https://openreview.net/forum?id=c1bTcrDmt4 .
+- Jiao et al. (2025) Yizhu Jiao, Jiaqi Zeng, Julien Veron Vialard, Oleksii Kuchaiev, Jiawei Han, and Olivier Delalleau. 思考兩次：分支和重新思考推理獎勵模型, 2025. URL https://arxiv.org/abs/2510.23596 .
+- Kim et al. (2024) Seungone Kim, Jamin Shin, Yejin Cho, Joel Jang, Shayne Longpre, Hwaran Lee, Sangdoo Yun, Seongjin Shin, Sungdong Kim, James Thorne, and Minjoon Seo. Prometheus: 在語言模型中引導細粒度評估能力。在國際學習表現會議中, 2024.
+- Lambert et al. (2025a) Nathan Lambert, Jacob Morrison, Valentina Pyatkin, Shengyi Huang, Hamish Ivison, Faeze Brahman, Lester James Validad Miranda, Alisa Liu, Nouha Dziri, Xinxi Lyu, Yuling Gu, Saumya Malik, Victoria Graf, Jena D. Hwang, Jiangjiang Yang, Ronan Le Bras, Oyvind Tafjord, Christopher Wilhelm, Luca Soldaini, Noah A. Smith, Yizhong Wang, Pradeep Dasigi, and Hannaneh Hajishirzi. Tulu 3: 推進開放語言模型後訓練的前沿。在語言建模會議中, 2025a. URL https://openreview.net/forum?id=i1uGbfHHpH .
+- Lambert et al. (2025b) Nathan Lambert, Valentina Pyatkin, Jacob Morrison, LJ Miranda, Bill Yuchen Lin, Khyathi Chandu, Nouha Dziri, Sachin Kumar, Tom Zick, Yejin Choi, Noah A. Smith, and Hannaneh Hajishirzi. RewardBench: 評估語言建模的獎勵模型。在美國計算語言學協會北美分會會議的發現中, 頁碼 1755–1797, 2025b.
+- Lee et al. (2025) Yukyung Lee, JoongHoon Kim, Jaehee Kim, Hyowon Cho, Jaewook Kang, Pilsung Kang, and Najoung Kim. CheckEval: 使用檢查清單評估文本生成的可靠大型語言模型評審框架。在自然語言處理實驗方法會議中, 頁碼 15782–15809, 2025.
+- Lightman et al. (2024) Hunter Lightman, Vineet Kosaraju, Yuri Burda, Harrison Edwards, Bowen Baker, Teddy Lee, Jan Leike, John Schulman, Ilya Sutskever, and Karl Cobbe. 讓我們逐步驗證。在第十二屆國際學習表現會議中, 2024. URL https://openreview.net/forum?id=v8L0pN6EOi .
+- Liu et al. (2025a) Tianci Liu, Ran Xu, Tony Yu, Ilgee Hong, Carl Yang, Tuo Zhao, and Haoyu Wang. Openrubrics: 朝著獎勵建模和大型語言模型對齐的可擴展合成評分表生成, 2025a. URL https://arxiv.org/abs/2510.07743 .
+- Liu et al. (2025b) Yantao Liu, Zijun Yao, Rui Min, Yixin Cao, Lei Hou, and Juanzi Li. RM-bench: 以微妙和風格對語言模型獎勵模型進行基準測試。在國際學習表現會議中, 2025b.
+- Malik et al. (2025) Saumya Malik, Valentina Pyatkin, Sander Land, Jacob Morrison, Noah A. Smith, Hannaneh Hajishirzi, and Nathan Lambert. RewardBench 2: 推進獎勵模型評估, 2025. URL https://arxiv.org/abs/2506.01937 .
+- OpenAI (2024) Team OpenAI. OpenAI O1 系統卡, 2024. URL https://arxiv.org/abs/2412.16720 .
+- Ouyang et al. (2022) Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, and Ryan Lowe. 訓練語言模型遵循人類回饋的指令。在國際神經資訊處理系統會議中, 2022.
+- Park et al. (2024) Ryan Park, Rafael anderme Rafailov, Ermon Stefano, and Finn Chelsea. 在直接偏好優化中解開長度和品質的糾纏。在 arXiv 預印本 arXiv:2403.19159 中, 2024.
+- Saito et al. (2023) Keita Saito, Akifumi Wachi, Koki Wataoka, and Youhei Akimoto. 大型語言模型偏好標籤中的冗長偏差, 2023. URL https://arxiv.org/abs/2310.10076 .
+- Schulman et al. (2017) John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, and Oleg Klimov. 近端策略優化算法, 2017. URL https://arxiv.org/abs/1707.06347 .
+- Skalse et al. (2022) Joar Max Viktor Skalse, Nikolaus H. R. Howe, Dmitrii Krasheninnikov, and David Krueger. 定義和表徵獎勵遊戲。在 Alice H. Oh, Alekh Agarwal, Danielle Belgrave, and Kyunghyun Cho (編輯), 神經資訊處理系統的進展, 2022.
+- Starace et al. (2025) Giulio Starace, Oliver Jaffe, Dane Sherburn, James Aung, Jun Shern Chan, Leon Maksin, Rachel Dias, Evan Mays, Benjamin Kinsella, Wyatt Thompson, Johannes Heidecke, Amelia Glaese, and Tejal Patwardhan. Paperbench: 評估人工智慧複製人工智慧研究的能力, 2025. URL https://arxiv.org/abs/2504.01848 .
+- Team (2022) Anthropic Team. 憲法人工智慧：來自人工智慧回饋的無害性, 2022. URL https://arxiv.org/abs/2212.08073 .
+- Viswanathan et al. (2025) Vijay Viswanathan, Yanchao Sun, Xiang Kong, Meng Cao, Graham Neubig, and Tongshuang Wu. 檢查清單比獎勵模型更適合對齐語言模型。在神經資訊處理系統會議中, 2025.
+- Wang et al. (2024a) Haoxiang Wang, Wei Xiong, Tengyang Xie, Han Zhao, and Tong Zhang. 可解釋的偏好透過多目標獎勵建模和混合專家。在美國計算語言學協會 EMNLP 2024 會議的發現中, 頁碼 10582–10592, 2024a.
+- Wang et al. (2024b) Tianlu Wang, Ilia Kulikov, Olga Golovneva, Ping Yu, Weizhe Yuan, Jane Dwivedi-Yu, Richard Yuanzhe Pang, Maryam Fazel-Zarandi, Jason Weston, and Xian Li. 自我教導的評估者, 2024b. URL https://arxiv.org/abs/2408.02666 .
+- Wang et al. (2024c) Zhilin Wang, Yi Dong, Jiaqi Zeng, Virginia Adams, Makesh Narsimhan Sreedhar, Daniel Egert, Olivier Delalleau, Jane Scowcroft, Neel Kant, Aidan Swope, and Oleksii Kuchaiev. HelpSteer: 用於 SteerLM 的多屬性有幫助數據集。在北美計算語言學協會分會會議中, 頁碼 3371–3384, 2024c.
+- Wang et al. (2025) Zhilin Wang, Jaehun Jung, Ximing Lu, Shizhe Diao, Ellie Evans, Jiaqi Zeng, Pavlo Molchanov, Yejin Choi, Jan Kautz, and Yi Dong. Profbench: 需要專業知識才能回答和判斷的多領域評分表, 2025. URL https://arxiv.org/abs/2510.18941 .
+- Wei et al. (2022) Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Ed Chi, Quoc Le, and Denny Zhou. 鏈式推理提示在大型語言模型中引發推理。在國際神經資訊處理系統會議, 第 35 卷中, 2022.
+- Wei et al. (2025) Tianjun Wei, Wei Wen, Ruizhi Qiao, Xing Sun, and Jianghong Ma. Rocketeval: 透過評分檢查清單進行高效自動化大型語言模型評估。在國際學習表現會議中, 2025. URL https://openreview.net/forum?id=zJjzNj6QUe .
+- Whitehouse et al. (2026) Chenxi Whitehouse, Tianlu Wang, Ping Yu, Xian Li, Jason E Weston, Ilia Kulikov, and Swarnadeep Saha. J1: 透過強化學習在大型語言模型評審中激勵思考。在國際學習表現會議中, 2026. URL https://openreview.net/forum?id=dnJEHl6DI1 .
+- Wu et al. (2025) Tianhao Wu, Weizhe Yuan, Olga Golovneva, Jing Xu, Yuandong Tian, Jiantao Jiao, Jason E Weston, and Sainbayar Sukhbaatar. 元獎勵語言模型：利用大型語言模型元評審的自我改進對齐。在自然語言處理實驗方法會議中, 頁碼 11537–11554, 2025.
+- Xie et al. (2025) Lipeng Xie, Sen Huang, Zhuo Zhang, Anni Zou, Yunpeng Zhai, Dingchao Ren, Kezun Zhang, Haoyuan Hu, Boyin Liu, Haoran Chen, Zhaoyang Liu, and Bolin Ding. 自動評分表：學習提取獎勵建模的可推廣標準, 2025. URL https://arxiv.org/abs/2510.17314 .
+- Xu et al. (2025) Austin Xu, Xuan-Phi Nguyen, Yilun Zhou, Chien-Sheng Wu, Caiming Xiong, and Shafiq Joty. 基礎自動評估器：為推理中心領域擴展多任務生成評估器訓練, 2025. URL https://arxiv.org/abs/2510.17793 .
+- Ye et al. (2025) Jiayi Ye, Yanbo Wang, Yue Huang, Dongping Chen, Qihui Zhang, Nuno Moniz, Tian Gao, Werner Geyer, Chao Huang, Pin-Yu Chen, Nitesh V Chawla, and Xiangliang Zhang. 正義還是偏見？量化大型語言模型評審中的偏差。在國際學習表現會議中, 2025. URL https://openreview.net/forum?id=3GTtZFiajM .
+- Yuan et al. (2024) Weizhe Yuan, Richard Yuanzhe Pang, Kyunghyun Cho, Xian Li, Sainbayar Sukhbaatar, Jing Xu, and Jason Weston. 自我獎勵語言模型。在國際機器學習會議中, 2024.
+- Zhang et al. (2025a) Lunjun Zhang, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, and Rishabh Agarwal. 生成驗證器：獎勵建模作為下一個令牌預測。在國際學習表現會議中, 2025a.
+- Zhang et al. (2025b) Qiyuan Zhang, Yufei Wang, Yuxin Jiang, Liangyou Li, Chuhan Wu, Yasheng Wang, Xin Jiang, Lifeng Shang, Ruiming Tang, Fuyuan Lyu, and Chen Ma. 群眾比較推理：解鎖大型語言模型評審的綜合評估。在美國計算語言學協會年度會議中, 頁碼 5059–5074, 2025b.
+- Zheng et al. (2023a) Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric Xing, Hao Zhang, Joseph E. Gonzalez, and Ion Stoica. 利用 MT-bench 和 Chatbot Arena 評判大型語言模型評審。在神經資訊處理系統會議數據集和基準測試軌道中, 2023a. URL https://openreview.net/forum?id=uccHPGDlao .
+- Zheng et al. (2023b) Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric P. Xing, Hao Zhang, Joseph E. Gonzalez, and Ion Stoica. 利用 MT-bench 和 Chatbot Arena 評判大型語言模型評審。在國際神經資訊處理系統會議中, 2023b.
+- Zhong et al. (2025) Jialun Zhong, Wei Shen, Yanzeng Li, Songyang Gao, Hua Lu, Yicheng Chen, Yang Zhang, Wei Zhou, Jinjie Gu, and Lei Zou. 獎勵模型的綜合調查：分類、應用、挑戰和未來, 2025. URL https://arxiv.org/abs/2504.12328 .
+- Zhou et al. (2025) Enyu Zhou, Guodong Zheng, Binghai Wang, Zhiheng Xi, Shihan Dou, Rong Bao, Wei Shen, Limao Xiong, Jessica Fan, Yurong Mou, Rui Zheng, Tao Gui, Qi Zhang, and Xuanjing Huang. RMB: 在大型語言模型對齐中全面基準測試獎勵模型。在國際學習表現會議中, 2025.
+- Ziegler et al. (2020) Daniel M. Ziegler, Nisan Stiennon, Jeffrey Wu, Tom B. Brown, Alec Radford, Dario Amodei, Paul Christiano, and Geoffrey Irving. 從人類偏好微調語言模型, 2020. URL https://arxiv.org/abs/1909.08593 .
+
+## 附錄 A 額外詳細資訊
+
+本附錄提供支持主文的補充材料。
+
+### A.1 AI 協助揭露
+
+AI 協助揭露：在本工作的準備過程中，作者們專門使用 AI 輔助寫作工具進行語法錯誤更正、文風調整和 L a T e X 格式化。所有科學概念化、實驗設計、資料分析和結論均代表作者的原創工作。作者們已審閱所有 AI 建議的編輯，並對內容的準確性和完整性承擔全部責任。
+
+### A.2 模型詳細資訊
+
+我們在表 9 中提供了我們實驗中使用的確切模型規格和檢查點。
+
+[FIGURE_CAPTION] 表 9：評估者模型和檢查點列表。
+
+### A.3 標註者檔案
+
+我們的標註團隊由 9 名專家標註者組成，分為三個小組。團隊包括熟悉特定領域的從業人員以及計算機科學或相關領域的博士候選人。每位標註者在 NLP 評估方面擁有豐富經驗，並深刻熟悉我們基準中涵蓋的特定領域（STEM、編碼、安全）。這些背景確保在制定評分標準過程中，顯式的技術限制和隱式的推理要求都能準確捕捉。
+
+## 附錄 B 對齊協議
+
+本附錄總結了 (i) 我們如何將評分標準規範化為原子級評分標準項目，以及 (ii) 我們如何執行嚴格的評分標準級別匹配以計算第 5 節中使用的結構對齊指標。
+
+### B.1 實現和規範化
+
+除非另有說明，否則匹配元件使用 Qwen/Qwen3-30B-A3B 和確定性解碼（temperature = 0.0）。
+人工評分標準和模型生成的評分標準都通過按換行字符進行分割並修剪空行轉換為原子級評分標準項目的扁平列表：
+
+|  | ℛ = { r 1 , … , r M } , ℛ ~ = { r ~ 1 , … , r ~ K } . \mathcal{R}=\{r_{1},\ldots,r_{M}\},\quad\tilde{\mathcal{R}}=\{\tilde{r}_{1},\ldots,\tilde{r}_{K}\}. |  |
+| --- | --- | --- |
+
+此規範化確保所有評分標準來源都可作為檢查清單進行比較。
+
+### B.2 嚴格評分規則匹配協議
+
+為了計算上述結構指標，我們評估每個生成的評分規則項目 $\tilde{r}_{k}$ 是否在語義上等價於任何金標準評分規則項目 $r_{j}$。
+匹配模型強制執行兩個嚴格標準：
+
+- 1. 特定意圖匹配：生成的評分規則項目必須檢查與金標準評分規則項目完全相同的約束條件。例如，如果金標準項目檢查「Markdown 結構」，則生成的通用檢查「品質」的項目會被拒絕。
+- 2. 範圍匹配：生成的評分規則項目不得明顯寬於或含糊於金標準評分規則項目。只有當候選項目在實踐中能接受或拒絕與匹配的金標準項目基本相同的回應集時，才會返回「命中」。
+
+特定意圖匹配：生成的評分規則項目必須檢查與金標準評分規則項目完全相同的約束條件。例如，如果金標準項目檢查「Markdown 結構」，則生成的通用檢查「品質」的項目會被拒絕。
+
+範圍匹配：生成的評分規則項目不得明顯寬於或含糊於金標準評分規則項目。只有當候選項目在實踐中能接受或拒絕與匹配的金標準項目基本相同的回應集時，才會返回「命中」。
+
+如果生成的評分規則項目在這些標準下無法匹配任何金標準評分規則項目，則對幻覺率有所貢獻。相反地，在生成集中找不到匹配項的金標準項目會導致評分規則召回率下降。
+
+## 附錄 C 額外案例研究
+
+我們呈現了因篇幅限制而從主文中省略的額外定性範例。
+表 10 說明了一個安全關鍵故障，其中模型生成的評分規則優先考慮字面指令遵從性而非安全約束，導致接受違反政策的內容。
+
+[FIGURE_CAPTION] 表 10：案例研究：透過評分規則誤設而導致的安全關鍵故障。該指令要求明確涉及真實個人的戀物癖內容。人類標註的評分規則編碼了一項規範性安全約束，要求拒絕。相比之下，模型生成的評分規則退化為字面敘述合規性，抑制了政策考量並產生了獎勵違反政策的倒置偏好。
+
+[FIGURE_CAPTION] 表 11：隨機子集上的人類與模型評估準確度（N=100）。
+
+[FIGURE_CAPTION] 表 12：評分規則匹配的標註者間一致性。
+
+## 附錄 D 人類與標註者間驗證
+
+為了驗證人類標註評分規則的可解釋性和我們自動化匹配管道的可靠性，我們進行了兩項互補分析：(i) 一項受控人類評估者研究以隔離評分規則品質的效應，以及 (ii) 一項標註者間一致性 (IAA) 分析以評估匹配器的一致性。
+
+### D.1 人工評估者研究
+
+我們從 RubricBench 中隨機抽取 100 個實例，並招募了兩位在 NLP 評估中具有先前經驗的合格人工標註者。每位標註者在兩種評分標準條件下獨立執行成對偏好標註：(1) 人工標註評分標準和 (2) 模型生成評分標準（Gemini-Generated）。為了將評分標準品質與評估者能力解耦，人類和模型評估者均在相同的評分標準約束下進行評估。
+
+表 11 總結了結果。使用人工標註評分標準時，人工評估者達到高準確率（92.0%），驗證了評分標準的清晰性和資料集的內在品質。然而，當受限於生成的評分標準時，人類準確率大幅下降至 61.0%。模型評估者（Gemini）也觀察到類似的性能下降，其準確率從 83.0%（人工評分標準）下降至 54.0%（生成評分標準）。
+
+這些結果表明，主要瓶頸在於評分標準品質而非評估者推理能力。即使是人類在受到低品質生成評分標準的限制時也會陷入困境，確認評分標準規格不當是導致觀察到的評分標準差距（Rubric Gap）的主要因素。
+
+### D.2 評分標準匹配的標註者間一致性
+
+為了評估我們的評分標準匹配程序的穩健性，我們進行了兩項一致性分析。首先，我們通過使用 Qwen3-14B 重新運行完整的匹配管道，並將其輸出與我們的主要匹配器（Qwen3-30B-A3B）進行比較，來評估模型一致性。其次，我們通過要求專家標註者手動標註 200 個生成評分標準項目的分層樣本，以進行人工驗證，判斷每個項目是否在我們嚴格的語義匹配標準下與相應的人工金標準規則匹配。
+
+表 12 報告了一致性率。模型-模型一致性在完整資料集上達到 0.85，表明對匹配器選擇具有強大的穩健性。人類-模型一致性在採樣子集上達到 0.79，展示了自動化匹配與人工判斷之間的高度一致。
+
+這些結果確認了我們的結構 F1、評分標準召回率和幻覺率指標是在穩定且可靠的匹配基礎上計算的，而非特定評估者的產物。
+
+## 附錄 E 評分標準特徵分析協議
+
+為了支持表 5 中的評分標準特徵分析，我們使用 Claude4.5-Haiku 搭配確定性解碼（temperature = 0）對每條原子評分標準規則進行評分，條件為其指令。每條規則在兩個正交維度上獨立標註，評分範圍為 1–5 分：意圖必要性（N），衡量該規則對使用者明確或隱含意圖的重要程度；以及限制嚴格性（R），衡量規則的限制性或表面約束程度。標註者被指示僅對目標維度進行評分，並輸出單鍵 JSON 物件以確保穩定的彙總。我們隨後分別針對人工和 LLM 生成的評分標準集合計算摘要統計資料（均值、分組比率和 R 與 N 之間的 Pearson 相關係數）。
+
+## 附錄 F 提示詞範本
+
+我們包含了用於評分標準生成和評判的完整提示詞。

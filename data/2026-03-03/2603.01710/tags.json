@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "RAG",
+    "Embedding Models",
+    "LLM"
+  ],
+  "task": [
+    "Question Answering",
+    "Information Retrieval",
+    "Legal Document Analysis"
+  ],
+  "dataset": [
+    "Legal RAG Bench"
+  ],
+  "open_source": true
+}

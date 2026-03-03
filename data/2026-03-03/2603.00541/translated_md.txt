@@ -1,0 +1,1930 @@
+1]高德林人工智慧學院，中國人民大學
+2]字節跳動 Seed \contribution [‡]在字節跳動 Seed 實習期間完成的工作 \contribution [†]對應作者為李重軒。
+
+# 寬度-深度縮放下 μ P 的譜條件
+
+生成式基礎模型在寬度和深度上的縮放日益增加，對穩定的特徵學習和跨模型大小的可靠超參數（HP）遷移帶來了重大挑戰。
+雖然最大化更新參數化（μ P）為寬度縮放的兩個問題提供了有原則的解決方案，但現有的對聯合寬度-深度縮放體制的擴展仍然是分散的、特定於架構和優化器的，並且經常依賴於技術上複雜的理論。
+在這項工作中，我們為聯合寬度-深度縮放下的 μ P 開發了一個簡單統一的譜框架。考慮具有不同區塊深度的殘差網路，我們首先引入了譜 μ P 條件，該條件精確地刻畫了權重的範數及其每步更新應如何隨寬度和深度縮放，將先前不同的 μ P 表述統一為特例。
+基於此條件，我們然後為跨越廣泛的優化器類別實現 μ P 推導了一般配方，通過將譜約束對應到具體的 HP 參數化。
+這種方法不僅恢復了現有的 μ P 表述（例如，針對 SGD 和 AdamW），而且自然地擴展到更廣泛的優化器範圍。
+最後，在 GPT-2 風格語言模型上的實驗表明，所提出的譜 μ P 條件保持了穩定的特徵學習，並在寬度-深度縮放下實現了魯棒的 HP 遷移。
+
+[專案頁面] https://github.com/ML-GSAI/Width-Depth-muP
+
+## 1 簡介
+
+生成式基礎模型在寬度和深度方面都在快速擴展 [ 22 , 17 , 24 , 34 , 41 ]，並且在可預見的未來預計會繼續這一趨勢，因為資料集在增長，任務複雜性在提高。然而，當模型規模變得足夠大（例如，數十億個參數）時，特徵學習動態通常會變得不穩定或退化 [ 33 , 20 ]，超參數 (HP) 調整變得昂貴到令人無法接受的程度 [ 45 ]。這些問題對有效的擴展造成了根本障礙，突顯了對原理性方法的必要性，以便在模型規模間實現穩定的特徵學習和可靠的 HP 轉移。
+
+最大更新參數化 ( μ \mu P) [ 43 ] 最初被提出來解決寬度擴展的兩個挑戰 [ 45 ]，最近已初步延伸至共同擴展寬度和深度的設置 [ 47 , 6 , 5 , 10 ]。通過使用模型大小適當地重新參數化 HP，μ \mu P 原理旨在保留尺度不變的特徵學習，同時最大化參數更新所引發的特徵變化，從而導致高效的訓練動態 [ 43 , 10 ]。此外，μ \mu P 在經驗上穩定了跨不同規模的最優 HP，使得在小模型上調整的 HP 能夠直接轉移到大得多的模型 [ 45 , 49 ]。
+
+然而，在聯合寬度–深度擴展體系中，現有的 μ \mu P 表述仍然是初步的，通常與特定架構緊密耦合 [ 47 , 6 , 5 , 10 ] 和特定的最佳化演算法 [ 47 , 6 , 10 , 31 ]。此外，它們的推導通常依賴於技術上複雜的工具，如 Tensor Programs [ 44 , 47 ] 或動力平均場理論 [ 5 , 6 ]。因此，社群仍然難以系統地理解現有結果並將 μ \mu P 原理擴展到新的最佳化工具和架構，突顯了對簡單和統一理論框架的必要性。
+
+為了解決上述挑戰，我們從為寬度擴展 μ \mu P 開發的統一頻譜視角中汲取靈感 [ 46 ]。我們將這一頻譜視角擴展到聯合寬度–深度擴展體系，這導致了一個簡單且統一的框架，用於表徵深度殘差網路中的 μ \mu P，以及系統地跨廣泛的最佳化工具類別推導 μ \mu P 表述。我們的主要貢獻總結如下。
+
+首先，我們引入了一個統一的頻譜縮放條件 (條件 3.1)，該條件在寬度–深度擴展下表徵了殘差網路的 μ \mu P 原理，其指定了權重及其逐步更新的 RMS 運算元範數應如何隨著模型大小而縮放。通過分析具有不同深度的殘差區塊，我們澄清了更深的殘差區塊如何施加更嚴格的頻譜約束，並展示了以前不同的 μ \mu P 表述 [ 47 , 5 , 6 , 10 , 31 ] 如何作為統一頻譜框架的特例而出現。值得注意的是，與以更複雜技術為基礎的先前推導不同，我們的分析僅依賴初等線性代數和概率，因此更容易遵循。
+
+其次，基於提議的頻譜條件，我們透過直接將條件對映到具體的 HP 參數化，為跨廣泛的最佳化工具類別實施 μ \mu P 呈現了一個統一的步驟。我們的框架將聯合寬度–深度擴展下的現有 μ \mu P 表述作為特例進行恢復，例如用於 SGD [ 5 ]、AdamW [ 10 ] 和矩陣預條件最佳化工具 [ 31 ] 的表述。此外，我們系統地將 μ \mu P 原理擴展到更廣泛的現代最佳化工具，包括 Muon-Kimi [ 26 ]、Spectral Sphere Optimizer (SSO) [ 40 ]、Sophia [ 25 ] 和 Lion [ 7 ]，產生了從其更新規則導出的實用和理論上有根據的 μ \mu P 表述，而不是臨時性的調整啟發式方法。
+
+最後，通過在由 Muon-Kimi 訓練的 GPT-2 風格語言模型 [ 32 , 23 ] 上進行對照實驗，我們在經驗上證明了從所提議的頻譜條件導出的 μ \mu P 表述在聯合寬度–深度擴展下實現了尺度不變的特徵學習和穩健的 HP 轉移。這些結果驗證了所提議的頻譜框架的實際有效性。
+
+## 2 預備知識
+
+我們首先為數學技術和 μ P 建立必要的背景。關於額外相關工作的詳細討論放在附錄 A 中。
+
+### 2.1 數學符號與性質
+
+我們定義 $[n]=\{1,2,\dots,n\}$。
+對於向量 ${\bm{a}}\in\mathbb{R}^{n}$，我們使用 $\|{\bm{a}}\|_{2}$ 和 $\|{\bm{a}}\|_{\mathrm{R}}$ 分別表示其 $\ell_{2}$ 範數和根均方（Root Mean Square, RMS）範數。根據定義，我們有 $\|{\bm{a}}\|_{\mathrm{R}}=\|{\bm{a}}\|_{2}/\sqrt{n}$。
+對於矩陣 ${\bm{A}}\in\mathbb{R}^{m\times n}$，我們使用 $\|{\bm{A}}\|_{2}$ 和 $\|{\bm{A}}\|_{\mathrm{R}}$ 分別表示其譜範數和 RMS 算子範數。RMS 算子範數定義為 $\|{\bm{A}}\|_{\mathrm{R}}\mathrel{\mathop{\ordinarycolon}}=\max_{{\bm{v}}\neq{\bm{0}}}\frac{\|{\bm{A}}{\bm{v}}\|_{\mathrm{R}}}{\|{\bm{v}}\|_{\mathrm{R}}}=\sqrt{\frac{n}{m}}\,\|{\bm{A}}\|_{2}$。由於譜範數條件可以等價地用 RMS 算子範數表示，我們在本論文中採用後者來書寫譜條件，以簡化符號。
+最後，在主要文本中，我們主要依賴向量和矩陣範數的以下基本性質。
+
+- • 次可加性（Subadditivity）：$\|{\bm{A}}+{\bm{B}}\|_{\mathrm{R}}\leq\|{\bm{A}}\|_{\mathrm{R}}+\|{\bm{B}}\|_{\mathrm{R}}$ 和 $\|{\bm{a}}+{\bm{b}}\|_{\mathrm{R}}\leq\|{\bm{a}}\|_{\mathrm{R}}+\|{\bm{b}}\|_{\mathrm{R}}$。
+- • 次乘性（Submultiplicativity）：$\|{\bm{A}}{\bm{B}}\|_{\mathrm{R}}\leq\|{\bm{A}}\|_{\mathrm{R}}\|{\bm{B}}\|_{\mathrm{R}}$ 和 $\|{\bm{A}}{\bm{v}}\|_{\mathrm{R}}\leq\|{\bm{A}}\|_{\mathrm{R}}\|{\bm{v}}\|_{\mathrm{R}}$。
+- • 隨機矩陣的譜範數 [38]：對於矩陣 ${\bm{A}}\in\mathbb{R}^{m\times n}$，其元素獨立同分布地從高斯分佈 $\mathcal{N}(0,\sigma^{2})$ 中取樣，其譜範數滿足 $\|{\bm{A}}\|_{2}=\Theta\big(\sigma(\sqrt{m}+\sqrt{n})\big)，以高概率成立。
+
+次可加性（Subadditivity）：$\|{\bm{A}}+{\bm{B}}\|_{\mathrm{R}}\leq\|{\bm{A}}\|_{\mathrm{R}}+\|{\bm{B}}\|_{\mathrm{R}}$ 和 $\|{\bm{a}}+{\bm{b}}\|_{\mathrm{R}}\leq\|{\bm{a}}\|_{\mathrm{R}}+\|{\bm{b}}\|_{\mathrm{R}}$。
+
+次乘性（Submultiplicativity）：$\|{\bm{A}}{\bm{B}}\|_{\mathrm{R}}\leq\|{\bm{A}}\|_{\mathrm{R}}\|{\bm{B}}\|_{\mathrm{R}}$ 和 $\|{\bm{A}}{\bm{v}}\|_{\mathrm{R}}\leq\|{\bm{A}}\|_{\mathrm{R}}\|{\bm{v}}\|_{\mathrm{R}}$。
+
+隨機矩陣的譜範數 [38]：對於矩陣 ${\bm{A}}\in\mathbb{R}^{m\times n}$，其元素獨立同分布地從高斯分佈 $\mathcal{N}(0,\sigma^{2})$ 中取樣，其譜範數滿足 $\|{\bm{A}}\|_{2}=\Theta\big(\sigma(\sqrt{m}+\sqrt{n})\big)，以高概率成立。
+
+### 2.2 寬度縮放下 μ μ P 的譜條件
+
+我們簡要回顧 μ μ P 及其在寬度縮放下的譜條件 [ 46 ]，這作為我們對聯合寬度–深度縮放延伸的概念基礎。
+
+**理論設定。**
+
+分析 μ μ P 在寬度縮放下的典型設定 [ 46 ] 是在單個資料點 ( 𝒙 , 𝒚 ) ({\bm{x}},{\bm{y}}) 上訓練一步的深層線性多層感知機 (MLP)。
+具體來說，我們設定 𝒉 0 ​ ( 𝒙 ) = 𝑾 0 ​ 𝒙 {\bm{h}}_{0}({\bm{x}})={\bm{W}}_{0}{\bm{x}}，並用 𝑾 l {\bm{W}}_{l} 表示第 l l 層的矩陣權重。
+網路定義如下
+
+|  | 𝒉 l ​ ( 𝒙 ) = 𝑾 l ​ 𝒉 l − 1 ​ ( 𝒙 ) , l ∈ [ L + 1 ] , \displaystyle{\bm{h}}_{l}({\bm{x}})={\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}}),\quad l\in[L+1], |  |
+| --- | --- | --- |
+
+其中深度 L = Θ ​ ( 1 ) L=\Theta(1) 固定，而模型寬度縮放至無窮。
+雖然高度簡化，此設定捕捉了特徵學習的核心縮放行為 [ 46 ]。
+此外，在此設定下導出的 μ μ P 公式可直接應用於實用預訓練 [ 45 , 18 , 49 ]，包括使用 AdamW 訓練的 Transformer，實現穩定的特徵學習和可靠的超參數轉移。
+
+**μ μ P 原則及其譜條件。**
+
+隨著網路規模增加，標準參數化 (SP) 通常導致特徵更新爆炸或消失。μ μ P 通過使用大小重新參數化超參數來解決此問題，以實現以下原則 [ 43 ]。
+
+μ μ P 旨在實現尺度不變的特徵學習，同時最大化參數更新引起的特徵變化。形式上，它期望
+
+|  | ‖ 𝒉 l ​ ( 𝒙 ) ‖ R = Θ ​ ( 1 ) , ‖ Δ ​ 𝒉 l ​ ( 𝒙 ) ‖ R = Θ ​ ( 1 ) , l ∈ [ L ] . \displaystyle\|{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1),\ \|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1),\ l\in[L]. |  | (P1) |
+| --- | --- | --- | --- |
+|  | 最大化 Δ ​ 𝑾 l 對 Δ ​ 𝒉 L ​ ( 𝒙 ) 的貢獻， l ∈ [ L ] 。 \displaystyle\text{maximize $\Delta{\bm{W}}_{l}$'s contribution to $\Delta{\bm{h}}_{L}({\bm{x}}),\ l\in[L]$}. |  | (P2) |
+
+在寬度縮放機制下，Yang 等人 [ 46 ] 證明原則 2.1 由以下簡單的權重及其單步更新的譜縮放條件保證：
+
+|  | ‖ 𝑾 l ‖ R = Θ ​ ( 1 ) , ‖ Δ ​ 𝑾 l ‖ R = Θ ​ ( 1 ) , l ∈ [ L + 1 ] . \displaystyle\|{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1),\ \|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1),\ l\in[L+1]. |  | (1) |
+| --- | --- | --- | --- |
+
+此譜條件提供了寬度縮放下 μ μ P 的簡潔且統一的特徵化，從中可以以統一且透明的方式導出廣泛的優化算法類別的超參數參數化 [ 46 , 13 , 29 ]。
+
+**目前的限制。**
+
+然而，譜條件 ( 1 ) 僅在深度固定時適用。
+相對地，現代基礎模型同時縮放寬度和深度，且在此機制下現有的 μ μ P 結果依賴於複雜分析，其結論依賴於特定架構和優化器 [ 47 , 5 , 6 , 10 , 31 ]。
+這促發了我們的核心問題：我們能否在聯合寬度–深度縮放機制下建立簡單且統一的譜觀點？
+
+## 3 寬度-深度縮放下 μP 的譜條件
+
+在本節中，我們建立了寬度-深度縮放下 μP 的譜條件。我們首先介紹問題設定，然後推導相應的譜 μP 條件並討論其含義。
+
+### 3.1 問題設定
+
+我們的設定主要遵循第 2.2 節的寬度縮放，關鍵差異在於引入殘差連結，這對於穩定深度網路訓練至關重要 [ 15 ]。由於實際殘差區塊通常包含多個轉換（例如 Transformers 中的注意力或 FFN 模組），我們研究具有多層主分支的殘差區塊。為了保持分析的最小性，同時捕捉核心行為，我們在主文本中關注兩層線性區塊；任意固定殘差區塊深度的擴展延遲到附錄 B.2。正式地，網路定義如下：
+
+|  | $\displaystyle{\bm{h}}_{0}({\bm{x}})=\alpha_{0}{\bm{W}}_{0}{\bm{x}}$ |  |
+| --- | --- | --- |
+|  | $\displaystyle{\bm{h}}_{l}({\bm{x}})={\bm{h}}_{l-1}({\bm{x}})+\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}}),\ l\in[L]$ |  | (2) |
+|  | $\displaystyle{\bm{h}}_{L+1}({\bm{x}})=\alpha_{L+1}{\bm{W}}_{L+1}{\bm{h}}_{L}({\bm{x}})$ |  |
+
+其中權重 ${\bm{W}}_{0}\in\mathbb{R}^{n\times d_{0}},{\bm{W}}_{l}^{(1)}\in\mathbb{R}^{n_{l}\times{n}},{\bm{W}}_{l}^{(2)}\in\mathbb{R}^{n\times{n}_{l}},{\bm{W}}_{L+1}\in\mathbb{R}^{d_{L+1}\times n}$ 均以高斯分佈初始化 $({\bm{W}}_{l})_{ij}\overset{\mathrm{i.i.d.}}{\sim}\mathcal{N}(0,\sigma_{l}^{2})$ 1 1 1 為了簡化記號，當與 ${\bm{W}}_{l}^{(1)}$ 和 ${\bm{W}}_{l}^{(2)}$ 相關的量採用相同形式時，我們省略上標。並使用逐層學習率 $\eta_{l}$ 進行訓練。此外，$\{\alpha_{l}\}_{l=0}^{L+1}$ 是區塊乘數，用於控制每個轉換的有效強度。
+
+遵循現有的 μ P 文獻 [ 47, 5, 6, 10 ]，我們固定輸入和輸出資料維度，並將寬度和深度縮放到無窮，即
+
+|  | $d_{0},d_{L+1}=\Theta(1),\quad n_{l}=\Theta(n),\quad n,L\to\infty.$ |  | (3) |
+| --- | --- | --- | --- |
+
+此設定在基於 Transformer 的大型模型中是標準的 [ 37, 34 ]，其中 $n$ 表示模型寬度，通常與 $n_{l}$ 的數量級相同（例如前饋寬度）。
+此外，我們假設 $\|{\bm{x}}\|_{\mathrm{R}}=\Theta(1)$，
+這對於常見的資料模態成立，例如自然影像（$\|{\bm{x}}\|_{\mathrm{R}}=\Theta(1)$）和單熱編碼語言輸入（$\|{\bm{x}}\|_{\mathrm{R}}=\sqrt{1/d_{0}}=\Theta(1)$）。
+
+在下列各節中，我們試圖尋求充分且統一的頻譜條件，以在聯合寬度-深度縮放下滿足 μ P 原則 2.1。
+
+### 3.2 頻譜縮放條件
+
+類似於寬度縮放下的條件 (1)，我們的頻譜條件也由兩個組成部分構成。
+$\bm{W}_l$ 上的初始條件足以保證特徵傳播受控，得到 $\|{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，
+而 $\Delta{\bm{W}}_{l}$ 上的更新條件保證單個優化步驟引發的特徵變化保持 $\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 且根據原則 (P2) 最大程度地更新。
+我們現在正式陳述寬度-深度縮放的譜 μP 條件。
+
+為了確保 μP 原則 2.1，初始權重及其逐步更新應滿足：
+
+- • **初始條件**。輸入和輸出權重：$\displaystyle\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。 (C1.1) 隱藏權重：$\displaystyle\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$。 (C1.2)
+- • **更新條件**。輸入和輸出權重：$\displaystyle\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。 (C2.1) 隱藏權重（一階權重更新）：$\displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$ (C2.2) $\displaystyle\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$。 隱藏權重（二階權重更新）：$\displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$。 (C2.3)
+
+**初始條件**。
+
+輸入和輸出權重：
+
+|  | $\displaystyle\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。 |  | (C1.1) |
+| --- | --- | --- | --- |
+
+隱藏權重：
+
+|  | $\displaystyle\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$。 |  | (C1.2) |
+| --- | --- | --- | --- |
+
+**更新條件**。
+
+輸入和輸出權重：
+
+|  | $\displaystyle\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。 |  | (C2.1) |
+| --- | --- | --- | --- |
+
+隱藏權重（一階權重更新）：
+
+|  |  | $\displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$ |  | (C2.2) |
+| --- | --- | --- | --- | --- |
+|  |  | $\displaystyle\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$。 |  |
+
+隱藏權重（二階權重更新）：
+
+|  | $\displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\ l\in[L]$。 |  | (C2.3) |
+| --- | --- | --- | --- |
+
+與寬度縮放相比（參見條件 (1)），我們的頻譜條件表明隱藏權重及其更新的 RMS 算子範數應隨深度以 $\Theta(L^{-1})$ 的方式縮小，以防止沿殘差連接積累造成的特徵爆炸。
+
+據我們所知，先前重要但分散的 μP 結果 [47, 5, 6, 10, 31] 在寬度-深度縮放下可以通過改變殘差塊深度在我們的頻譜框架內統一。
+當塊深度為 1 時，條件 3.1 的相同推導產生附錄 B.1 中條件 B.1 的相應頻譜結果。
+在此情況下，二階更新約束 (C2.3) 的缺失導致一個更寬鬆的條件，其自然地導致殘差乘數 $\alpha_{l}=\Theta(1/\sqrt{L})$（詳見附錄 B.1），從而恢復了 Yang 等人 [47]、Bordelon 等人 [6] 的早期結果。
+當塊深度為 2 時，額外的二階條件導致根本不同且更強的殘差乘數 $\alpha_{l}=\Theta(1/L)$（見第 4 章和附錄 C 的詳細超參數化），從而重新審視了 Bordelon 等人 [5]、Dey 等人 [10]、Qiu 等人 [31] 的近期結果。
+
+此外，我們的分析自然延伸到任意固定深度 $k$ 的殘差塊（附錄 B.2 中的條件 B.2）以及包含偏置的架構（附錄 B.3 中的條件 B.3）。
+對於深度為 $k$ 的殘差塊，初始化要求 $\alpha_{l}$ 與 $k$ 個隱藏權重的範數的乘積以 $\Theta(1/L)$ 的方式縮放，而更新條件約束所有一階至 $k$ 階的更新項以 $\Theta(1/L)$ 的方式縮放。
+在存在偏置時出現類似的條件，考慮它們與權重更新的相互作用。
+如附錄 B.2 和 B.3 所示，與兩層情況相比，這些額外的約束不會導致不同的超參數化。
+因此，方程 (2) 中的兩層殘差塊構成了在聯合寬度-深度縮放下捕捉核心 μP 行為的最小設置。
+
+儘管條件 3.1 是在單步更新的線性殘差 MLP 下推導的，但它自然地推廣到更一般和更實用的訓練體制。
+從理論上講，我們在附錄 F 中引入並驗證了一些溫和假設 [46]，在這些假設下頻譜結果推廣到多個梯度步驟、非線性和多個訓練示例。
+從實驗上講，第 5 章的實驗表明從條件 3.1 得到的 μP 公式在 GPT-2 風格模型上實現了穩定的特徵學習和可靠的超參數轉移。
+結合先前的實驗 μP 研究 [10, 31]，這些表明我們的設置在實踐中捕捉了核心縮放行為。
+
+### 3.3 理論推導
+
+在本節中，我們推導條件 3.1 中的頻譜條件。
+推導分三個步驟進行：
+(i) 建立初步初始化條件，確保 $\|{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，
+(ii) 推導更新條件，使得 $\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 同時根據原則 (P2) 最大化更新，
+以及 (iii) 利用更新條件來精化初始條件。
+與依賴複雜技術的先前分析 [47, 5, 6] 不同，我們的論證僅使用基本的線性代數和概率論，這更容易理解。
+
+在整個分析過程中，我們使用從次可加性和次乘法性不等式推導的上界來刻畫 $\|{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}$ 和 $\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}$ 的規模；例如，我們將 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\alpha_{0}\|{\bm{W}}_{0}{\bm{x}}\|_{\mathrm{R}}=\Theta(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}\|{\bm{x}}\|_{\mathrm{R}})$ 視為。
+我們主張，根據寬度縮放 [46] 的聲明，這些界在標準神經網絡訓練下通常是緊的，詳細的證明在寬度-深度縮放範疇中延遲至附錄 E。
+
+#### 3.3.1 初步初始條件
+
+我們首先推導初步初始化條件，確保前向傳播過程中特徵大小的穩定性。
+我們按層逐一考慮。
+
+輸入層。
+
+通過 RMS 算子範數的次乘法性，我們可以估計 ${\bm{h}}_{0}({\bm{x}})=\alpha_{0}{\bm{W}}_{0}{\bm{x}}$ 的範數為 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}\|{\bm{x}}\|_{\mathrm{R}})=\Theta(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}})$，其中我們假設 $\|{\bm{x}}\|_{\mathrm{R}}=\Theta(1)$。
+因此，要求 $\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$ 確保 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+
+隱藏層。
+
+為了估計隱藏特徵的規模，我們展開式 (2) 中的殘差遞推，得到
+
+$${\bm{h}}_{s}({\bm{x}})={\bm{h}}_{0}({\bm{x}})+\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}}),\quad s\in[L]. \tag{4}$$
+
+運用次可加性，我們可以估計其階為
+
+$$\|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta\bigg(\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}+\big\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\big\|_{\mathrm{R}}\bigg).$$
+
+由於我們有 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，只需確保 $\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\mathcal{O}(1)$ 對所有 $s\in[L]$ 成立，以保持 $\|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+在獨立同分布零均值高斯初始化下，求和項是獨立零均值隨機向量，因此其和的 RMS 範數（標準差）與其平方 RMS 範數之和的平方根（方差）成比例（見 Vershynin [38] 中的定理 3.3.1），得到 $\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(\sqrt{\sum_{l=1}^{s}\|\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}^{2}})$。通過次乘法性，我們可以進一步估計 $\|\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}})$。
+因此，從 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 開始，施加
+
+$$\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L}),\ l\in[L],$$
+
+遞迴地確保 $\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\mathcal{O}(1)$ 對所有 $s\in[L]$ 成立。
+這提供了隱藏權重的初步初始條件 (C1.2)，在納入更新約束後將進一步精化。
+
+輸出層。
+
+次乘法性給出 $\|{\bm{h}}_{L+1}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}\|{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}})=\Theta(\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}})$，其中 $\|{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 由初始隱藏特徵得出。因此選擇 $\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$ 保持輸出穩定。
+
+#### 3.3.2 更新條件
+
+接下來我們推導確保穩定特徵演化 $\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 在原則 (P1) 中所需的更新條件，
+同時根據原則 (P2) 最大化參數更新。
+
+輸入層。
+
+由於 $\Delta{\bm{h}}_{0}({\bm{x}})=\alpha_{0}\Delta{\bm{W}}_{0}{\bm{x}}$，矩陣範數的次乘法性得到
+
+$$\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}\|{\bm{x}}\|_{\mathrm{R}})=\Theta(\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}),$$
+
+因此我們設置 $\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$ 以確保 $\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+
+隱藏層。
+
+為了分析隱藏特徵更新 $\Delta{\bm{h}}_{s}({\bm{x}})$，我們在單個梯度步後展開式 (4) 中的殘差表示：${\bm{h}}_{s}({\bm{x}})+\Delta{\bm{h}}_{s}({\bm{x}})={\bm{h}}_{0}({\bm{x}})+\Delta{\bm{h}}_{0}({\bm{x}})+\sum_{l=1}^{s}\alpha_{l}({\bm{W}}_{l}^{(2)}+\Delta{\bm{W}}_{l}^{(2)})({\bm{W}}_{l}^{(1)}+\Delta{\bm{W}}_{l}^{(1)})({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))$，導出
+
+$$\begin{align}
+\Delta{\bm{h}}_{s}({\bm{x}})&=\Delta{\bm{h}}_{0}({\bm{x}})+\underbrace{\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}\Delta{\bm{h}}_{l-1}({\bm{x}})}_{{{\bm{\epsilon}}_{0}(s)}}+\underbrace{\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}\Delta{\bm{W}}_{l}^{(1)}({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))}_{{{\bm{\epsilon}}_{1}^{(1)}(s)}} \\
+&\quad+\underbrace{\sum_{l=1}^{s}\alpha_{l}\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))}_{{{\bm{\epsilon}}_{1}^{(2)}(s)}}+\underbrace{\sum_{l=1}^{s}\alpha_{l}\Delta{\bm{W}}_{l}^{(2)}\Delta{\bm{W}}_{l}^{(1)}({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))}_{{{\bm{\epsilon}}_{2}(s)}}.
+\end{align}$$
+
+根據權重更新的次數，我們將這些貢獻分別稱為零階、一階和二階更新項，
+分別記為 ${\bm{\epsilon}}_{0}(s)$、${\bm{\epsilon}}_{1}^{(1)}(s)$、${\bm{\epsilon}}_{1}^{(2)}(s)$ 和 ${\bm{\epsilon}}_{2}(s)$。
+由向量範數的次可加性，我們有
+
+$$\|\Delta{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta\big(\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{0}(s)\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{1}^{(1)}(s)\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{1}^{(2)}(s)\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{2}(s)\|_{\mathrm{R}}\big). \tag{5}$$
+
+由於輸入層更新得 $\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，我們有 $\|\Delta{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Omega(1)$ 對所有 $s\in[L]$。
+而且，通過次可加性，剩餘項不隨深度衰減，意味著 $\|\Delta{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\mathcal{O}(\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}})$ 對任意 $s\in[L]$。
+因此，為了強制執行原則 2.1，
+只需要求 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 同時滿足
+原則 (P2)。
+接下來我們控制式 (5) 右側的項。
+
+零階項。項 ${\bm{\epsilon}}_{0}(L)$ 傳播來自較早層的特徵更新，不依賴於當前層的權重更新 $\Delta{\bm{W}}_{l}$，因此根據原則 (P2) 不需要被最大化。
+因此，只需驗證 ${\bm{\epsilon}}_{0}(L)$ 在初步初始條件下保持 $\mathcal{O}(1)$。實際上，第 3.3.1 節中用於推導 $\|{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}$ 的相同論證直接蘊含 $\|{\bm{\epsilon}}_{0}(L)\|_{\mathrm{R}}=\Theta(\sqrt{\sum_{l=1}^{L}\alpha_{l}^{2}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}^{2}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}^{2}\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}^{2}})=\mathcal{O}(1)$，其中如果我們最終確保 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，則對 $l\in[L]$ 使用 $\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+
+一階項。使用次可加性和次乘法性，我們估計 $\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}$ 的階為
+
+$$\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}=\Theta\bigg(\sum_{l=1}^{L}\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\bigg)+\Theta\bigg(\sum_{l=1}^{L}\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\bigg).$$
+
+對於 $l\in[L]$，使用初步初始條件得到的 $\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 和如果我們最終設置 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 則得到的 $\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，我們可以得到 $\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}=\Theta(\sum_{l=1}^{L}\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}})$。為了滿足原則 (P2)，我們需要最大化來自每個 $\Delta{\bm{W}}_{l}^{(1)}$ 的貢獻並同時確保 $\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}=\Theta(1)$，這自然要求
+
+$$\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\qquad\forall\,l\in[L].$$
+
+為了控制 ${\bm{\epsilon}}_{1}^{(2)}(L)$ 的規模，同樣的論證給出 $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)$ 對每個 $l\in[L]$，完成了一階更新條件 (C2.2)。
+
+二階項。我們注意到當殘差塊是單層時，此項將消失。
+使用次可加性和次乘法性如同 $\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}$，我們可以估計其規模為
+
+$$\|{\bm{\epsilon}}_{2}(L)\|_{\mathrm{R}}=\Theta\bigg(\sum_{l=1}^{L}\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\bigg).$$
+
+原則 (P2) 要求最大化每個求和項並同時確保 $\|{\bm{\epsilon}}_{2}(L)\|_{\mathrm{R}}=\Theta(1)$，導出 $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)$ 對所有 $l\in[L]$，完成了隱藏權重二階更新條件的推導 (C2.3)。
+
+輸出層。
+
+對於輸出層 ${\bm{h}}_{L+1}({\bm{x}})=\alpha_{L+1}{\bm{W}}_{L+1}{\bm{h}}_{L}({\bm{x}})$，其單步特徵更新為
+
+$$\Delta{\bm{h}}_{L+1}({\bm{x}})=\alpha_{L+1}{\bm{W}}_{L+1}\Delta{\bm{h}}_{L}({\bm{x}})+\alpha_{L+1}\Delta{\bm{W}}_{L+1}\bigl({\bm{h}}_{L}({\bm{x}})+\Delta{\bm{h}}_{L}({\bm{x}})\bigr).$$
+
+通過次可加性和次乘法性，我們有
+
+$$\begin{align}
+\|\Delta{\bm{h}}_{L+1}({\bm{x}})\|_{\mathrm{R}}&=\Theta(\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}})+\Theta(\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}\|{\bm{h}}_{L}({\bm{x}})+\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}) \\
+&=\Theta(1)+\Theta\left(\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}\right),
+\end{align}$$
+
+其中我們使用了初步初始條件得到的 $\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}},\ \|{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，
+以及隱藏權重更新條件得到的 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+因此，要求原則 2.1 得到更新條件 $\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+
+#### 3.3.3 最終初始條件
+
+我們現在通過納入更新條件施加的約束，為隱藏權重 (C1.2) 推導最終初始化條件。
+將隱藏權重的兩個一階更新條件相乘得
+
+$$\alpha_{l}^{2}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L^{2}),\ \forall l\in[L].$$
+
+另一方面，二階更新條件蘊含 $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L)$ 對所有 $l\in[L]$。
+結合兩個關係立即得到 $\alpha_{l}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L)$ 對任意 $l\in[L]$，
+完成了條件 3.1 的推導。
+
+我們注意到，在一階更新條件 (C2.2) 存在的情況下，上述初始條件 (C1.2) 等價於隱藏權重的二階更新條件 (C2.3)。因此，在條件 3.1 中保留其中任何一個都將足夠。
+儘管如此，為了更清楚地強調底層 $\mu$P 原則，我們
+在條件 3.1 中明確包含兩者。
+
+## 4 光譜條件的實現
+
+在本節中，我們的目標是為 Muon-Kimi 確定 α l \alpha_{l}、σ l 2 \sigma_{l}^{2} 和 η l \eta_{l} 的適當參數化，以滿足條件 3.1。
+關於額外超參數（如權重衰減）和優化器的討論已推遲至附錄 C。
+
+### 4.1 初始條件
+
+由於這些超參數相互作用以滿足光譜條件，存在多個等價的參數化解決方案 [ 43 , 44 ]。
+為了促進實際應用，我們選擇將初始方差與標準寬度縮放 μ \mu P 算法對齊 [ 45 ]。
+具體來說，對於任何權重矩陣 𝑾 l ∈ ℝ n out × n in {{\bm{W}}}_{l}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{in}}}，我們設置：
+
+|  | σ l = { Θ ​ ( 1 n in ​ min ⁡ { 1 , n out n in } ) , 0 ≤ l ≤ L , Θ ​ ( 1 ) , l = L + 1 . \displaystyle\sigma_{l}=\left\{\begin{array}[]{ll}\Theta\big(\frac{1}{\sqrt{n_{\mathrm{in}}}}\min\{1,\sqrt{\frac{n_{\mathrm{out}}}{n_{\mathrm{in}}}}\}\big),&0\leq l\leq L,\\
+\Theta(1),&l=L+1.\end{array}\right. |  |
+| --- | --- | --- |
+
+在此方差參數化下，權重矩陣在初始化時的 RMS 算子範數滿足：
+
+|  | ‖ 𝑾 l ‖ R = n in n out ​ ‖ 𝑾 l ‖ 2 = n in n out ⋅ Θ ​ ( σ l ​ ( n in + n out ) ) = { Θ ​ ( 1 ) , 0 ≤ l ≤ L , Θ ​ ( n in ) , l = L + 1 , \displaystyle\|{{\bm{W}}}_{l}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\,\|{{\bm{W}}}_{l}\|_{2}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\cdot\Theta\left(\sigma_{l}(\sqrt{n_{\mathrm{in}}}+\sqrt{n_{\mathrm{out}}})\right)=\left\{\begin{array}[]{ll}\Theta(1),&0\leq l\leq L,\\
+\Theta(n_{\mathrm{in}}),&l=L+1,\end{array}\right. |  | (8) |
+| --- | --- | --- | --- |
+
+其中我們使用了第 2 節回顧的隨機矩陣的譜範數性質。
+基於方程 ( 8 )，我們已準備好確定 α l \alpha_{l} 的參數化以滿足條件 3.1 中的初始條件。
+
+對於輸入層和輸出層，給定
+
+|  | α l ​ ‖ 𝑾 l ‖ R = { Θ ​ ( α 0 ) , l = 0 , Θ ​ ( α L + 1 ​ n in ) , l = L + 1 , \displaystyle\alpha_{l}\|{\bm{W}}_{l}\|_{\mathrm{R}}=\left\{\begin{array}[]{ll}\Theta(\alpha_{0}),&l=0,\\
+\Theta(\alpha_{L+1}n_{\mathrm{in}}),&l=L+1,\end{array}\right. |  |
+| --- | --- | --- |
+
+為了滿足 ( C1.1 )，我們需要設置
+
+|  | α 0 = Θ ​ ( 1 ) , α L + 1 = Θ ​ ( 1 / n in ) . \displaystyle\alpha_{0}=\Theta(1),\quad\alpha_{L+1}=\Theta(1/n_{\mathrm{in}}). |  | (9) |
+| --- | --- | --- | --- |
+
+對於隱藏層，給定
+
+|  | α l ​ ‖ 𝑾 l ( 1 ) ‖ R ​ ‖ 𝑾 l ( 2 ) ‖ R = Θ ​ ( α l ) , l ∈ [ L ] , \displaystyle\alpha_{l}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(\alpha_{l}),\ l\in[L], |  |
+| --- | --- | --- |
+
+為了滿足 ( C1.2 )，我們需要設置
+
+|  | α l = Θ ​ ( 1 / L ) , l ∈ [ L ] . \displaystyle\alpha_{l}=\Theta(1/L),\ l\in[L]. |  | (10) |
+| --- | --- | --- | --- |
+
+### 4.2 Update Condition for Muon-Kimi
+
+[FIGURE_CAPTION] Table 1 : μ \mu P implementation for Muon-Kimi [ 26 ] under width-depth scaling. Entries in purple indicate differences between μ \mu P and SP [ 14 ] , while gray shows the corresponding SP choices.
+Here, r n r_{n} and r L r_{L} denote the width and depth scaling ratios relative to the base model. The variance of input weights is σ base 2 \sigma^{2}_{\mathrm{base}} for language and σ base 2 / d 0 \sigma^{2}_{\mathrm{base}}/d_{0} for image.
+
+Since different optimizers take different scales of ‖ Δ ​ 𝑾 l ‖ R \|\Delta{\bm{W}}_{l}\|_{\mathrm{R}} , the implementation of the update condition depends on the choice of optimizer.
+In the main text, we focus on the Muon-Kimi [ 26 ] . Other optimizers:
+Muon [ 21 ] ,
+SGD,
+AdamW [ 27 ] ,
+Shampoo [ 12 ] ,
+SOAP [ 39 ] ,
+SSO [ 40 ] ,
+Lion [ 7 ] , and Sophia [ 25 ] are deferred to
+Appendix C , where we recover several existing μ \mu P results (e.g., for SGD, AdamW, and several matrix-preconditioned optimizers) in the width–depth scaling setting [ 47 , 5 , 6 , 10 , 31 ] .
+
+Muon-Kimi [ 26 ] is a widely used variant of Muon [ 21 ] designed to align its update scales of matrix parameters with those of AdamW-optimized vector parameters by applying RMS normalization, which facilitates the reuse of HPs well-tuned for AdamW.
+It has been successfully applied to pretraining models with up to 1T parameters [ 35 ] .
+Specifically, for a weight matrix 𝑾 l ∈ ℝ n out × n in {{\bm{W}}}_{l}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{in}}} , the update rule (without weight decay) is:
+
+|  | Δ ​ 𝑾 l = − η l ⋅ 0.2 ​ max ⁡ { n in , n out } ⋅ 𝑼 l ​ 𝑽 l ⊤ , \Delta{{\bm{W}}}_{l}=-\,\eta_{l}\cdot 0.2\sqrt{\max\{n_{\mathrm{in}},n_{\mathrm{out}}\}}\cdot{\bm{U}}_{l}{\bm{V}}_{l}^{\top}, |  |
+| --- | --- | --- |
+
+where 𝑼 l , 𝑽 l {\bm{U}}_{l},{\bm{V}}_{l} are the left and right singular vector matrices of the gradient that ∇ 𝑾 l ℒ = 𝑼 l ​ 𝚺 l ​ 𝑽 l ⊤ \nabla_{{{\bm{W}}}_{l}}\mathcal{L}={\bm{U}}_{l}{\bm{\Sigma}}_{l}{\bm{V}}_{l}^{\top} .
+The resulting update norm satisfies
+
+|  | ‖ Δ ​ 𝑾 l ‖ R = n in n out ​ ‖ Δ ​ 𝑾 l ‖ 2 = Θ ​ ( η l ​ n in ​ max ⁡ { 1 , n in n out } ) = { Θ ​ ( η l ) , l = 0 , Θ ​ ( η l ​ n in ) , l ∈ [ L ] , Θ ​ ( η l ​ n in ) , l = L + 1 . \displaystyle\|\Delta{{\bm{W}}}_{l}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\|\Delta{{\bm{W}}}_{l}\|_{2}=\Theta\left(\eta_{l}\sqrt{n_{\mathrm{in}}}\max\left\{1,\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\right\}\right)=\left\{\begin{array}[]{ll}\Theta(\eta_{l}),&l=0,\\
+\Theta(\eta_{l}\sqrt{n_{\mathrm{in}}}),&l\in[L],\\
+\Theta(\eta_{l}n_{\mathrm{in}}),&l=L+1.\end{array}\right. |  | (14) |
+| --- | --- | --- | --- |
+
+Based on Equation ( 14 ), we are now ready to determine the parameterization of η l \eta_{l} to satisfy the update condition.
+
+For the input and output layers , given the dimension magnitude assumption in Equation ( 3 ) and the α l \alpha_{l} parameterization in Equation ( 9 ), we have:
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ‖ R \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}} | = { Θ ​ ( 1 ) ​ Θ ​ ( η l ) , l = 0 , Θ ​ ( 1 / n in ) ​ Θ ​ ( η l ​ n in ) , l = L + 1 , \displaystyle=\left\{\begin{array}[]{ll}\Theta(1)\Theta(\eta_{l}),&l=0,\\
+\Theta(1/n_{\mathrm{in}})\Theta(\eta_{l}n_{\mathrm{in}}),&l=L+1,\end{array}\right. |  |
+| --- | --- | --- | --- |
+|  |  | = Θ ​ ( η l ) . \displaystyle=\Theta(\eta_{l}). |  |
+
+Thus, to satisfy ( C2.1 ), we need to set:
+
+|  | η 0 = Θ ​ ( 1 ) , η L + 1 = Θ ​ ( 1 ) . \displaystyle\eta_{0}=\Theta(1),\quad\eta_{L+1}=\Theta(1). |  |
+| --- | --- | --- |
+
+For the hidden layers , let us first consider the first-order update condition.
+Given the dimension magnitude in Equation ( 3 ), the weight norm at initialization in Equation ( 8 ), and the α l \alpha_{l} parameterization in Equation ( 10 ), we have:
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( 1 / L ) ⋅ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R = Θ ​ ( 1 L ​ η l ( 2 ) ​ n in ) . \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)\cdot\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta\left(\frac{1}{L}\eta_{l}^{(2)}\sqrt{n_{\mathrm{in}}}\right). |  |
+| --- | --- | --- |
+
+Thus, to satisfy ( C2.2 ), we need to set:
+
+|  | η l ( 2 ) = Θ ​ ( 1 n in ) , l ∈ [ L ] . \displaystyle\eta_{l}^{(2)}=\Theta(\frac{1}{\sqrt{n_{\mathrm{in}}}}),\ l\in[L]. |  | (15) |
+| --- | --- | --- | --- |
+
+Symmetrically, we have the same choice for 𝑾 l ( 1 ) {\bm{W}}_{l}^{(1)} that η l ( 1 ) = Θ ​ ( 1 n in ) \eta_{l}^{(1)}=\Theta(\frac{1}{\sqrt{n_{\mathrm{in}}}}) to ensure the first-order condition.
+
+Recall that the second-order update condition ( C2.3 ) is automatically satisfied once the initial condition ( C1.2 ) and the first-order update condition ( C2.2 ) are met, as discussed in Section 3.3.3 , so no further constraint is needed for implementing the second-order condition ( C2.3 ).
+
+Until now, we have obtained the proper parameterization of the learning rate η l \eta_{l} for Muon-Kimi.
+
+[FIGURE:x1.png] (a)
+
+### 4.3 Practical HP Parameterization and Transfer
+
+In practice, μ \mu P is often implemented using a ratio-based approach [ 45 , 10 , 49 ] .
+We define width and depth scaling ratios as r n = n / n base r_{n}=n/n_{\mathrm{base}} and r L = L / L base r_{L}=L/L_{\mathrm{base}} , where n base n_{\mathrm{base}} and L base L_{\mathrm{base}} are some fixed base model constants.
+The target model’s HPs are then set by scaling the corresponding base HPs, denoted as α base \alpha_{\mathrm{base}} , σ base 2 \sigma_{\mathrm{base}}^{2} , and η base \eta_{\mathrm{base}} , according to these ratios.
+
+For instance, for Muon-Kimi, the hidden layer learning rate is set to η l = η base / r n \eta_{l}=\eta_{\mathrm{base}}/\sqrt{r_{n}} , which satisfies the theoretical requirement η l = η base / n / n base = Θ ​ ( η base / n ) \eta_{l}=\eta_{\mathrm{base}}/\sqrt{n/n_{\mathrm{base}}}=\Theta(\eta_{\mathrm{base}}/\sqrt{n}) in Equation ( 15 ).
+Table 1 summarizes the complete HP parameterization for Muon-Kimi under width-depth scaling derived in former sections.
+
+As illustrated in Section 1 , a critical utility of μ \mu P is enabling HP transfer, which effectively reduces the cost of HP search for training large models.
+In practice, the transfer follows this procedure: optimal base HPs (e.g., η base \eta_{\mathrm{base}} ) are first identified on a small model; these optimal values are then transferred to a larger target model to obtain true HPs (e.g. η base / r n \eta_{\mathrm{base}}/\sqrt{r_{n}} ). Consequently, we only need to search the base HPs on the computationally inexpensive small model.
+
+Note that although the theoretically induced parameterization in Table 1 is derived from a simplified setup, we apply it to standard language models pretraining and verify its practical utility in the next section.
+
+## 5 Experiments
+
+In this section, we empirically verify that the μ \mu P formulation derived from the proposed spectral condition (Condition 3.1 ) enables scale-invariant feature learning and robust HP transfer across model scales.
+
+### 5.1 實驗設置
+
+遵循標準的實驗 μ P 研究 [ 10 , 31 ]，我們在 OpenWebText 資料集 [ 11 ] 上訓練 GPT-2 風格的 Transformer 語言模型 [ 32 , 23 ]，使用 GPT-2 分詞器，最大序列長度為 1024。所有模型將注意力頭維度固定為 64，並使用 4n 的前饋維度。根據常見做法 [ 21 , 26 ]，隱藏矩陣參數由 Muon-Kimi 使用 Nesterov 風格動量 [ 28 ] 0.95 進行最佳化。而所有其他參數（例如所有偏差、嵌入層）則由 AdamW [ 27 ] 進行更新，其中 $\beta_{1}=0.9$、$\beta_{2}=0.95$、$\epsilon=10^{-16}$。在所有實驗中我們不使用權重衰減。
+
+我們定義一個基礎模型 $(n_{\mathrm{base}},L_{\mathrm{base}})=(256,4)$ 並根據 μ P 譜條件 3.1 縮放超參數，具體的超參數參數化總結在表 1（Muon-Kimi）和附錄 C 中的表 5（AdamW）中。詳細的實驗配置請參見附錄 D。
+
+### 5.2 特徵學習和 HP 轉移
+
+在本節中，我們比較 SP 和提議的 μ P 公式的特徵學習穩定性和 HP 可轉移性。主要結果如圖 1 所示，完整結果請見附錄 D。
+
+**特徵學習。**
+
+我們首先使用標準座標檢查測試 [45, 10, 29] 檢查特徵學習的穩定性。模型經過 $10^{10}$ 步的訓練，同時縮放寬度 $n$ 或深度 $L$，我們測量最終 Transformer 區塊輸出端的 RMS 範數 $\|{\bm{h}}_{L}\|_{\mathrm{R}}$。
+
+如圖 1 (a,b) 所示，在 SP 下，特徵規模隨著寬度和深度快速增長。相比之下，μ P 保持穩定且與規模無關的特徵規模，與 μ P 原理 2.1 一致。這證實了所提議的 μ P 公式在寬度-深度縮放下保持穩定的特徵學習。
+
+**HP 轉移。**
+
+接下來，我們通過使用批次大小為 240、包含線性預熱後跟隨餘弦衰減的學習率計劃，為所有模型訓練 300M 令牌來評估 HP 可轉移性。
+
+如圖 1 (c) 所示，SP 在寬度縮放時表現出最優學習率的實質性偏移，表明 HP 轉移能力較差。相比之下，μ P 在寬度和深度縮放時都保持幾乎不變的最優學習率（圖 1 (c,d)）。這種穩定的 HP 可轉移性可以在縮放模型大小時顯著降低調整成本，特別是在預訓練大型模型時 [34, 35, 30]。此外，我們注意到隨著寬度和深度的增加，μ P 持續取得更低的損失。
+
+**討論。**
+
+有人可能會注意到在 SP 下，最優學習率在我們的實驗中沿著深度方向的轉移似乎相當良好。我們將此歸因於兩個因素。首先，測試的深度仍然是中等水準；隨著深度的進一步增加，圖 1 (b) 表明隱藏特徵最終會發散，使得在 SP 下穩定的深度縮放變得不可行。其次，現代架構元件如 LayerNorm [1] 和 QKNorm [16] 大幅增強了訓練穩定性，部分掩蓋了 SP 在實際深度上的底層縮放病態。
+
+為了隔離這個效應，我們移除 LayerNorm 層並在附錄 D 中重複實驗。結果（請見附錄 D.3 中的圖 2）顯示 SP 訓練變得不穩定且深度方向的 HP 轉移崩潰，而 μ P 即使在大深度下（最多 $L=256$）仍然保持穩定，並且持續表現出強健的 HP 轉移。
+
+## 6 結論
+
+在本文中，我們針對聯合寬度-深度縮放下的 μP 提出一個簡單且統一的頻譜框架。我們的頻譜 μP 條件精確刻畫了權重及其更新的縮放方式，為廣泛的優化器類別提供通用的超參數選擇配方。在 GPT-2 風格語言模型上的實證結果驗證了我們的方法保留了尺度不變特徵學習，並促進了穩健的超參數遷移，為生成式基礎模型的高效縮放提供簡單而有原則的解決方案。
+
+## 影響聲明
+
+這主要是一項理論工作，所提出的 μP 公式有潛力加速生成式基礎模型的縮放進展，包括語言建模、文本到圖像和視頻生成。然而，基礎模型縮放的改進也可能促進深度偽造造假的創建用於傳播虛假信息。
+
+## 參考文獻
+
+- Ba et al. [2016] Lei Jimmy Ba, Jamie Ryan Kiros, and Geoffrey E. Hinton. Layer normalization. CoRR, abs/1607.06450, 2016.
+- Balzano et al. [2025] Laura Balzano, Tianjiao Ding, Benjamin D. Haeffele, Soo Min Kwon, Qing Qu, Peng Wang, Zhangyang Wang, and Can Yaras. 大型模型訓練和適應中低秩結構的概述。CoRR, abs/2503.19859, 2025.
+- Blake et al. [2025] Charlie Blake, Constantin Eichenberg, Josef Dean, Lukas Balles, Luke Yuri Prince, Björn Deiseroth, Andrés Felipe Cruz-Salinas, Carlo Luschi, Samuel Weinbach, and Douglas Orr. u-$\mu$p: 單位縮放最大更新參數化。In ICLR, 2025.
+- Bordelon and Pehlevan [2022] Blake Bordelon and Cengiz Pehlevan. 寬神經網路核函數演化的自洽動力學場論。In NeurIPS, 2022.
+- Bordelon et al. [2024a] Blake Bordelon, Hamza Tahir Chaudhry, and Cengiz Pehlevan. 多頭 Transformer 動力學的無限極限。In NeurIPS, 2024a.
+- Bordelon et al. [2024b] Blake Bordelon, Lorenzo Noci, Mufan Bill Li, Boris Hanin, and Cengiz Pehlevan. 殘差網路中的深度超參數轉移：動力學與縮放極限。In ICLR, 2024b.
+- Chen et al. [2023] Xiangning Chen, Chen Liang, Da Huang, Esteban Real, Kaiyuan Wang, Hieu Pham, Xuanyi Dong, Thang Luong, Cho-Jui Hsieh, Yifeng Lu, and Quoc V. Le. 最佳化演算法的符號發現。In NeurIPS, 2023.
+- Dey et al. [2023] Nolan Dey, Gurpreet Gosal, Zhiming Chen, Hemant Khachane, William Marshall, Ribhu Pathria, Marvin Tom, and Joel Hestness. Cerebras-GPT：在 Cerebras 晶片級叢集上訓練的開放計算最優語言模型。CoRR, abs/2304.03208, 2023.
+- Dey et al. [2024] Nolan Dey, Shane Bergsma, and Joel Hestness. 稀疏最大更新參數化：稀疏訓練動力學的整體方法。In NeurIPS, 2024.
+- Dey et al. [2025] Nolan Dey, Bin Claire Zhang, Lorenzo Noci, Mufan Bill Li, Blake Bordelon, Shane Bergsma, Cengiz Pehlevan, Boris Hanin, and Joel Hestness. 別懶散：Complete$\mu$p 實現計算高效的深度 Transformer。CoRR, abs/2505.01618, 2025.
+- Gokaslan and Cohen [2019] Aaron Gokaslan and Vanya Cohen. Openwebtext 語料庫。http://Skylion007.github.io/OpenWebTextCorpus, 2019.
+- Gupta et al. [2018] Vineet Gupta, Tomer Koren, and Yoram Singer. Shampoo：預條件隨機張量最佳化。In International Conference on Machine Learning, pages 1842–1850. PMLR, 2018.
+- Haas et al. [2024] Moritz Haas, Jin Xu, Volkan Cevher, and Leena Chennuru Vankadara. $\mu$p$^2$：有效的銳度感知最小化需要分層擾動縮放。In NeurIPS, 2024.
+- He et al. [2015] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. 深入整流器：在 ImageNet 分類上超越人類水準的效能。In ICCV, pages 1026–1034, 2015.
+- He et al. [2016] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. 深度殘差學習用於影像識別。In CVPR, pages 770–778, 2016.
+- Henry et al. [2020] Alex Henry, Prudhvi Raj Dachapally, Shubham Shantaram Pawar, and Yuxuan Chen. Transformer 的查詢鍵正規化。In Trevor Cohn, Yulan He, and Yang Liu, editors, Findings of the Association for Computational Linguistics: EMNLP 2020, volume EMNLP 2020, pages 4246–4253, 2020.
+- Hoffmann et al. [2022] Jordan Hoffmann, Sebastian Borgeaud, Arthur Mensch, Elena Buchatskaya, Trevor Cai, Eliza Rutherford, Diego de Las Casas, Lisa Anne Hendricks, Johannes Welbl, Aidan Clark, et al. 訓練計算最優的大型語言模型。CoRR, abs/2203.15556, 2022.
+- Hu et al. [2024] Shengding Hu, Yuge Tu, Xu Han, Chaoqun He, Ganqu Cui, Xiang Long, Zhi Zheng, Yewei Fang, Yuxiang Huang, Weilin Zhao, et al. MiniCPM：透過可擴展訓練策略揭示小型語言模型的潛力。arXiv preprint arXiv:2404.06395, 2024.
+- Ishikawa and Karakida [2024] Satoki Ishikawa and Ryo Karakida. 關於無限寬度下有效的二階最佳化參數化。In ICLR, 2024.
+- Jacot et al. [2018] Arthur Jacot, Clément Hongler, and Franck Gabriel. Neural tangent kernel：神經網路的收斂與泛化。In NeurIPS, pages 8580–8589, 2018.
+- Jordan et al. [2024] Keller Jordan, Yuchen Jin, Vlado Boza, You Jiacheng, Franz Cecista, Laker Newhouse, and Jeremy Bernstein. Muon：神經網路隱層的最佳化器。URL https://kellerjordan.github.io/posts/muon, 6, 2024.
+- Kaplan et al. [2020] Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B. Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei. 神經語言模型的縮放律。CoRR, abs/2001.08361, 2020.
+- Karpathy [2022] Andrej Karpathy. nanoGPT。https://github.com/karpathy/nanoGPT, 2022.
+- Liu et al. [2024a] Aixin Liu, Bei Feng, Bing Xue, Bingxuan Wang, Bochao Wu, Chengda Lu, Chenggang Zhao, Chengqi Deng, Chenyu Zhang, Chong Ruan, et al. DeepSeek-V3 技術報告。arXiv preprint arXiv:2412.19437, 2024a.
+- Liu et al. [2024b] Hong Liu, Zhiyuan Li, David Leo Wright Hall, Percy Liang, and Tengyu Ma. Sophia：語言模型預訓練的可擴展隨機二階最佳化器。In ICLR, 2024b.
+- Liu et al. [2025] Jingyuan Liu, Jianlin Su, Xingcheng Yao, Zhejun Jiang, Guokun Lai, Yulun Du, Yidao Qin, Weixin Xu, Enzhe Lu, Junjie Yan, et al. Muon 對於大型語言模型訓練是可擴展的。arXiv preprint arXiv:2502.16982, 2025.
+- Loshchilov and Hutter [2019] Ilya Loshchilov and Frank Hutter. 解耦權重衰減正則化。In ICLR, 2019.
+- Nesterov [1983] Yurii Nesterov. 凸規劃問題的求解方法與收斂速率 O(1/k²)。In Dokl akad nauk Sssr, volume 269, page 543, 1983.
+- Ngom et al. [2025] Marieme Ngom, Sam Foreman, Venkatram Vishwanath, et al. 擴展 $\mu$p：跨最佳化器的特徵學習的譜條件。In OPT 2025: Optimization for Machine Learning, 2025.
+- Nie et al. [2025] Shen Nie, Fengqi Zhu, Zebin You, Xiaolu Zhang, Jingyang Ou, Jun Hu, Jun Zhou, Yankai Lin, Ji-Rong Wen, and Chongxuan Li. 大型語言擴散模型。CoRR, abs/2502.09992, 2025.
+- Qiu et al. [2025] Shikai Qiu, Zixi Chen, Hoang Phan, Qi Lei, and Andrew Gordon Wilson. 超參數轉移使得矩陣預條件最佳化器能夠在各種規模上實現一致的改進。arXiv preprint arXiv:2512.05620, 2025.
+- Radford et al. [2019] Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, Ilya Sutskever, et al. 語言模型是無監督的多任務學習者。OpenAI blog, 1(8):9, 2019.
+- Schoenholz et al. [2017] Samuel S. Schoenholz, Justin Gilmer, Surya Ganguli, and Jascha Sohl-Dickstein. 深度資訊傳播。In ICLR, 2017.
+- Singh et al. [2025] Aaditya Singh, Adam Fry, Adam Perelman, Adam Tart, Adi Ganesh, Ahmed El-Kishky, Aidan McLaughlin, Aiden Low, AJ Ostrow, Akhila Ananthram, et al. OpenAI GPT-5 系統卡。arXiv preprint arXiv:2601.03267, 2025.
+- Team et al. [2025] Kimi Team, Yifan Bai, Yiping Bao, Guanduo Chen, Jiahao Chen, Ningxin Chen, Ruijue Chen, Yanru Chen, Yuankun Chen, Yutian Chen, et al. Kimi K2：開放式代理智慧。arXiv preprint arXiv:2507.20534, 2025.
+- Vankadara et al. [2024] Leena Chennuru Vankadara, Jin Xu, Moritz Haas, and Volkan Cevher. 關於結構化狀態空間模型中的特徵學習。In NeurIPS, 2024.
+- Vaswani et al. [2017] Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. Attention is all you need. In NIPS, pages 5998–6008, 2017.
+- Vershynin [2018] Roman Vershynin. 高維機率：資料科學應用簡介，volume 47. Cambridge university press, 2018.
+- Vyas et al. [2024] Nikhil Vyas, Depen Morwani, Rosie Zhao, Mujin Kwun, Itai Shapira, David Brandfonbrener, Lucas Janson, and Sham Kakade. SOAP：使用 Adam 改進並穩定 Shampoo。arXiv preprint arXiv:2409.11321, 2024.
+- Xie et al. [2026] Tian Xie, Haoming Luo, Haoyu Tang, Yiwen Hu, Jason Klein Liu, Qingnan Ren, Yang Wang, Wayne Xin Zhao, Rui Yan, Bing Su, et al. 頻譜球上的受控大型語言模型訓練。arXiv preprint arXiv:2601.08393, 2026.
+- Yang et al. [2025] An Yang, Anfeng Li, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chang Gao, Chengen Huang, Chenxu Lv, et al. Qwen3 技術報告。arXiv preprint arXiv:2505.09388, 2025.
+- Yang [2020] Greg Yang. Tensor programs III：神經矩陣律。CoRR, abs/2009.10685, 2020.
+- Yang and Hu [2021] Greg Yang and Edward J. Hu. Tensor programs IV：無限寬神經網路中的特徵學習。In ICML, volume 139, pages 11727–11737. PMLR, 2021.
+- Yang and Littwin [2023] Greg Yang and Etai Littwin. Tensor programs IVb：無限寬極限中的自適應最佳化。CoRR, abs/2308.01814, 2023.
+- Yang et al. [2022] Greg Yang, Edward J. Hu, Igor Babuschkin, Szymon Sidor, Xiaodong Liu, David Farhi, Nick Ryder, Jakub Pachocki, Weizhu Chen, and Jianfeng Gao. Tensor programs V：透過零樣本超參數轉移調整大型神經網路。CoRR, abs/2203.03466, 2022.
+- Yang et al. [2023] Greg Yang, James B. Simon, and Jeremy Bernstein. 特徵學習的譜條件。CoRR, abs/2310.17813, 2023.
+- Yang et al. [2024] Greg Yang, Dingli Yu, Chen Zhu, and Soufiane Hayou. Tensor programs VI：無限深度神經網路中的特徵學習。In ICLR, 2024.
+- Zhao et al. [2024] Jiawei Zhao, Zhenyu Zhang, Beidi Chen, Zhangyang Wang, Anima Anandkumar, and Yuandong Tian. Galore：透過梯度低秩投影實現記憶體有效的大型語言模型訓練。In ICML, 2024.
+- Zheng et al. [2025] Chenyu Zheng, Xinyu Zhang, Rongzhen Wang, Wei Huang, Zhi Tian, Weilin Huang, Jun Zhu, and Chongxuan Li. 透過 $\mu$p 有效地縮放擴散 Transformer。CoRR, abs/2505.15270, 2025.
+
+## 附錄 A 其他相關工作
+
+### A.1 寬度縮放下的 μ P
+
+μ P 最初被提出用於表徵和控制神經網絡無限寬度極限中的訓練動力學，以通過適當的超參數縮放實現穩定的特徵學習 [ 43 ]。
+
+早期的理論工作使用張量程序 [ 42 , 43 ] 和動力學均場論 [ 4 ] 對 SGD 訓練的 MLP 進行了 μ P 的形式化。實證上，Yang 等人 [ 45 ] 證明了 μ P 在不同模型寬度上穩定了最優超參數，從而在擴展模型規模時大幅降低了調優成本。
+
+受這些優勢的啟發，μ P 原理已成功擴展到各種現代架構，包括卷積神經網絡 [ 44 ]、Transformers [ 44 ]、擴散 Transformers [ 49 ] 和狀態空間模型 [ 36 ]。同時，μ P 也被應用於廣泛的最佳化演算法類別，例如 AdamW [ 27 ]、Muon [ 29 ]、銳度感知最佳化器 [ 13 ]、二階最佳化器 [ 19 ]、低精度訓練 [ 3 ] 和稀疏訓練 [ 9 ]。這些基於 μ P 的方法也已成功應用於工業環境中大規模基礎模型的預訓練 [ 45 , 8 , 18 , 49 ]。
+
+儘管取得了實質性進展，μ P 表述通常與特定架構 [ 44 , 49 , 36 ] 或特定最佳化演算法 [ 44 , 13 , 19 , 29 ] 緊密耦合，其推導通常依賴於技術上複雜的工具，例如張量程序或動力學均場論 [ 42 , 43 , 44 , 4 ]。因此，對新架構或最佳化器進行系統性分析並推導相應的 μ P 表述仍然很困難。為了緩解此限制，Yang 等人 [ 46 ] 提出了一個簡單且通用的譜條件，該條件在寬度縮放制度中表徵 μ P，為廣泛的最佳化演算法類別提供了透明的推導 [ 46 , 29 , 13 ]。然而，這個譜視角僅專注於寬度縮放，不考慮深度縮放，而深度縮放對現代深層架構至關重要。
+
+### A.2 μ \mu P under Width-Depth Scaling
+
+Recent work has begun to extend the μ \mu P principle beyond pure width scaling to regimes where network depth grows jointly with model size.
+Early theoretical analyses [ 47 , 6 ] of residual networks with one-layer residual blocks trained by SGD or Adam showed that a residual multiplier of order Θ ​ ( 1 / L ) \Theta(1/\sqrt{L}) suffices to preserve stable feature learning, but observes that this scaling fails to maintain HP transferability in practical architectures such as Transformers [ 47 , 10 ] .
+
+Subsequent studies [ 5 ] of Transformers with two-layer residual blocks trained by SGD using dynamical mean-field theory argued that a stronger residual scaling of Θ ​ ( 1 / L ) \Theta(1/L) is preferable, as it enables both nontrivial feature learning and non-negligible updates in attention layers.
+More recently, Dey et al. [ 10 ] shows that for residual networks with two-layer blocks trained by AdamW, the residual multiplier of Θ ​ ( 1 / L ) \Theta(1/L) is in fact necessary to simultaneously maintain stable feature learning and maximize parameter updates. Moreover, Dey et al. [ 10 ] empirically find that this parameterization enables HP transfer in Transformer (e.g., GPT-2).
+This method [ 5 , 10 ] is further extended to matrix-preconditioned optimizers such as Muon and SOAP [ 31 ] .
+
+Overall, existing μ \mu P extensions to the joint width-depth scaling regime remain fragmented, architecture- and optimizer-specific, and often rely on technically involved analyses, motivating the need for a simple and unified framework.
+
+## Appendix B Spectral Condition for General Residual Networks
+
+In this section, we present a detailed derivation of the spectral condition for general residual networks, extending and unifying existing results in the literature [ 47 , 6 , 5 , 10 , 31 ] .
+We begin with the simplest case of residual networks with one-layer residual blocks, where our spectral condition recovers previously studied width-depth μ \mu P formulations and clarifies the role of block depth in determining μ \mu P condition.
+After that, building on analysis for the two-layer block in Section 3 of the main text, we further generalize the spectral condition to residual blocks with an arbitrary but finite number of layers, and show that, despite differences in block depth, these architectures admit essentially the same scaling rules from an algorithmic perspective.
+Finally, we extend the spectral condition to bias parameters and show that they can be incorporated in a consistent and scale-invariant manner under the same framework.
+
+As in the main text, we assume ‖ 𝒙 ‖ R = Θ ​ ( 1 ) \|{\bm{x}}\|_{\mathrm{R}}=\Theta(1) for simplicity, which holds for natural image data and one-hot language data ( Θ ​ ( 1 / d 0 ) = Θ ​ ( 1 ) \Theta(1/\sqrt{d_{0}})=\Theta(1) ). We also assume the network dimensions satisfy Equation ( 3 ).
+
+### B.1 單層殘差塊
+
+#### B.1.1 問題設定
+
+我們考慮具有單層殘差塊的殘差網路，定義為
+
+|  | $\displaystyle{\bm{h}}_{0}({\bm{x}})$ | $\displaystyle=\alpha_{0}{\bm{W}}_{0}{\bm{x}},$ |  |
+| --- | --- | --- | --- |
+|  | $\displaystyle{\bm{h}}_{l}({\bm{x}})$ | $\displaystyle={\bm{h}}_{l-1}({\bm{x}})+\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}}),\quad\forall\,l\in[L],$ |  |
+|  | $\displaystyle{\bm{h}}_{L+1}({\bm{x}})$ | $\displaystyle=\alpha_{L+1}{\bm{W}}_{L+1}{\bm{h}}_{L}({\bm{x}}),$ |  |
+
+其中 ${\bm{W}}_{0}\in\mathbb{R}^{n\times d_{0}}$、${\bm{W}}_{l}\in\mathbb{R}^{n\times n}$ 對於 $l\in[L]$，以及 ${\bm{W}}_{L+1}\in\mathbb{R}^{d_{L+1}\times n}$。
+網路輸出 ${\bm{h}}_{L+1}({\bm{x}})\in\mathbb{R}^{d_{L+1}}$ 用於計算損失 $\mathcal{L}({\bm{h}}_{L+1}({\bm{x}}),{\bm{y}})$。
+如同雙層塊的情況，我們的目標是在此制度下刻畫保證 μ P 原理 2.1 的譜條件。
+
+#### B.1.2 譜縮放條件
+
+我們現在闡述上述具有單層塊的殘差網路的譜縮放條件，它在聯合寬度–深度縮放下刻畫 μ P 原理 2.1。
+
+為了確保 μ P 原理 2.1，初始權重及其逐步更新應滿足：
+
+- • **初始條件**。– 輸入和輸出權重：$\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。– 隱藏權重：$\alpha_{l}\|{\bm{W}}_{l}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L})$，$\forall l\in[L]$。
+- • **更新條件**。– 輸入和輸出權重：$\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。– 隱藏權重（一階）：$\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1/L),\ \forall l\in[L]$。
+
+**初始條件。**
+
+- – 輸入和輸出權重：$\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+- – 隱藏權重：$\alpha_{l}\|{\bm{W}}_{l}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L})$，$\forall l\in[L]$。
+
+**更新條件。**
+
+- – 輸入和輸出權重：$\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+- – 隱藏權重（一階）：$\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1/L),\ \forall l\in[L]$。
+
+單層與雙層殘差塊之間的本質區別在於直接影響特徵演化的權重更新項的階數。
+對於單層殘差塊，特徵更新展開式在權重更新中只包含零階（${\bm{\epsilon}}_{0}(L)$）和一階（${\bm{\epsilon}}_{1}(L)$）項。
+因此，μ P 原理 2.1 需要控制單一類直接更新效應，
+導致條件 $\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1/L)$，
+同時使初始化尺度在初步條件 $\|{\bm{W}}_{l}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L})$ 之外不受約束。
+
+從演算法（HP 參數化）的觀點來看，當初始化方差 $\sigma_{l}^{2}$ 與
+標準寬度縮放 μ P 框架 [45] 對齊（如主文本第 4 節所示）時，條件 $\|{\bm{W}}_{l}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L})$ 自然導出一個 $\mathcal{O}(1/\sqrt{L})$ 的殘差乘子。
+推導過程遵循第 4 節實現中的相同步驟，
+因此在此省略。
+因此，Bordelon 等人 [6]、Yang 等人 [47] 採用 $\Theta(1/\sqrt{L})$ 的殘差乘子，他們將其解釋為進一步促進特徵多樣性。
+在我們的譜框架中，此選擇統一為對應於進一步最大化零階特徵更新幅度 $\|{\bm{\epsilon}}_{0}(L)\|_{\mathrm{R}}$ 的自然情況。
+
+相比之下，雙層殘差塊引入二階更新項，
+這些項源於兩個子層之間權重更新的乘積。
+為了滿足 μ P 原理（P2），
+這些二階貢獻應被最大化至 $\Theta(1)$。
+此需求對權重更新的縮放施加額外約束，
+進而將初始化條件和殘差乘子緊化至 $\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L)$（在（C1.2）中）和 $\Theta(1/L)$，分別。
+這說明了為什麼 Yang 等人 [47]、Bordelon 等人 [6] 中的此類制定無法直接擴展到實際架構（具有兩層或更多層的殘差塊），也不支持跨深度的健全 HP 轉移 [47, 10]。
+
+#### B.1.3 初始條件的推導
+
+我們首先推導初始化條件，該條件確保單層殘差塊在正向傳播期間特徵幅度的穩定性。我們依次考慮每一層。
+
+**輸入層。**
+
+論證與雙層情況相同。根據 RMS 算子範數的次乘法性，我們有
+
+|  | $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\alpha_{0}\|{\bm{W}}_{0}{\bm{x}}\|_{\mathrm{R}}=\Theta(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}\|{\bm{x}}\|_{\mathrm{R}})=\Theta(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}),$ |  |
+| --- | --- | --- |
+
+其中我們假設 $\|{\bm{x}}\|_{\mathrm{R}}=\Theta(1)$。因此，選擇 $\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$ 確保 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+
+**隱藏層。**
+
+對於單層殘差塊，正向遞迴為
+
+|  | ${\bm{h}}_{l}({\bm{x}})={\bm{h}}_{l-1}({\bm{x}})+\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}}).$ |  |
+| --- | --- | --- |
+
+展開遞迴得到
+
+|  | $\displaystyle{\bm{h}}_{s}({\bm{x}})={\bm{h}}_{0}({\bm{x}})+\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}}).$ |  | (16) |
+| --- | --- | --- | --- |
+
+應用次可加性，我們可以估計其階數為
+
+|  | $\displaystyle\|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta\left(\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}+\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\right).$ |  |
+| --- | --- | --- |
+
+由於我們有 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，因此確保 $\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\mathcal{O}(1)$ 對任意 $s\in[L]$ 成立就足夠了，以保持 $\|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+在 i.i.d. 零均值高斯初始化下，求和項是獨立的零均值隨機向量，所以它們的和的 RMS 範數（標準差）按照它們的平方 RMS 範數（方差）之和的平方根縮放（參見 Vershynin [38] 中的定理 3.3.1），得出
+
+|  | $\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta\left(\sqrt{\sum_{l=1}^{s}\|\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}^{2}}\right).$ |  |
+| --- | --- | --- |
+
+根據次乘法性，我們可以進一步估計 $\|\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{l}\|{\bm{W}}_{l}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}})$。
+因此，從 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 開始，施加
+
+|  | $\alpha_{l}\|{\bm{W}}_{l}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L}),\quad l\in[L]$ |  |
+| --- | --- | --- |
+
+遞迴地確保 $\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\mathcal{O}(1)$ 對任意 $s\in[L]$ 成立。
+這提供了隱藏權重上的初始條件。
+
+**輸出層。**
+
+與雙層塊情況相同的論證給出
+
+|  | $\displaystyle\|{\bm{h}}_{L+1}({\bm{x}})\|_{\mathrm{R}}=\|\alpha_{L+1}{\bm{W}}_{L+1}{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}\|{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}})=\Theta(\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}),$ |  |
+| --- | --- | --- |
+
+所以選擇 $\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$ 保持輸出尺度穩定。
+這完成了初始化分析。
+
+#### B.1.4 更新條件的推導
+
+我們接下來推導確保穩定特徵演化所需的更新條件，
+即 $\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，同時按照 μ P 原理（P2）規定最大程度地更新參數。
+
+**輸入層。**
+
+由於 $\Delta{\bm{h}}_{0}({\bm{x}})=\alpha_{0}\Delta{\bm{W}}_{0}{\bm{x}}$，次乘法性得出
+
+|  | $\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}\|{\bm{x}}\|_{\mathrm{R}})=\Theta(\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}),$ |  |
+| --- | --- | --- |
+
+因此我們設定 $\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$。
+
+**隱藏層。**
+
+在單一梯度步驟後展開方程（16）得到
+
+|  | $\displaystyle\Delta{\bm{h}}_{s}({\bm{x}})$ | $\displaystyle=\Delta{\bm{h}}_{0}({\bm{x}})+\underbrace{\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}\Delta{\bm{h}}_{l-1}({\bm{x}})}_{{\bm{\epsilon}}_{0}(s)}+\underbrace{\sum_{l=1}^{s}\alpha_{l}\Delta{\bm{W}}_{l}({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))}_{{\bm{\epsilon}}_{1}(s)}.$ |  |
+| --- | --- | --- | --- |
+
+與雙層情況不同，沒有二階更新項，因為每個殘差塊只包含單個權重矩陣。
+根據向量範數的次可加性，我們有
+
+|  | $\displaystyle\|\Delta{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta(\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{0}(s)\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{1}(s)\|_{\mathrm{R}}).$ |  |
+| --- | --- | --- |
+
+由於通過輸入層更新 $\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，我們對所有 $s\in[L]$ 有 $\|\Delta{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Omega(1)$。
+而且，根據次可加性，剩餘項不隨深度衰減，意味著對任意 $s\in[L]$，$\|\Delta{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\mathcal{O}(\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}})$。
+因此，為了強制原理 2.1，
+只需要求 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，同時滿足
+原理（P2）。
+
+**零階項。** 項 ${\bm{\epsilon}}_{0}(L)$ 傳播來自較早層的特徵更新，不依賴於當前層的權重更新 $\Delta{\bm{W}}_{l}$，所以根據原理（P2）不需要被最大化。
+因此，只需驗證 ${\bm{\epsilon}}_{0}(L)$ 在初始條件下保持 $\mathcal{O}(1)$。實際上，用於推導 $\|{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}$ 的相同論證直接意味著
+
+|  | $\|{\bm{\epsilon}}_{0}(L)\|_{\mathrm{R}}=\Theta\left(\sqrt{\sum_{l=1}^{s}\alpha_{l}^{2}\|{\bm{W}}_{l}\|_{\mathrm{R}}^{2}\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}^{2}}\right)=\mathcal{O}(1),$ |  |
+| --- | --- | --- |
+
+其中我們使用了對於 $l\in[L]$，如果我們最終設定 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，則 $\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+
+**一階項。** 一階更新項反映權重更新 $\Delta{\bm{W}}_{l}$ 對特徵的直接效應，
+必須被最大化（$\Theta(1)$）以滿足 μ P 原理（P2）。
+使用次可加性和次乘法性，我們估計 $\|{\bm{\epsilon}}_{1}(L)\|_{\mathrm{R}}$ 的階數為
+
+|  | $\displaystyle\|{\bm{\epsilon}}_{1}(L)\|_{\mathrm{R}}=\Theta\left(\sum_{l=1}^{L}\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\right)+\Theta\left(\sum_{l=1}^{L}\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\right).$ |  |
+| --- | --- | --- |
+
+對於 $l\in[L]$，使用初步初始條件給出的 $\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$ 以及隱藏權重更新條件給出的 $\|\Delta{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)（如果我們最終設定 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$）），我們可以得到 $\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}=\Theta\big(\sum_{l=1}^{L}\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}\big)$。為了滿足原理（P2），我們需要最大化每個 $\Delta{\bm{W}}_{l}$ 的貢獻，同時確保 $\|{\bm{\epsilon}}_{1}(L)\|_{\mathrm{R}}=\Theta(1)$，這自然要求
+
+|  | $\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1/L),\qquad\forall\,l\in[L],$ |  |
+| --- | --- | --- |
+
+這完成了隱藏權重上的一階更新條件。
+
+**輸出層。**
+
+輸出層更新滿足
+
+|  | $\Delta{\bm{h}}_{L+1}({\bm{x}})=\alpha_{L+1}\Delta{\bm{W}}_{L+1}({\bm{h}}_{L}({\bm{x}})+\Delta{\bm{h}}_{L}({\bm{x}}))+\alpha_{L+1}{\bm{W}}_{L+1}\Delta{\bm{h}}_{L}({\bm{x}}).$ |  |
+| --- | --- | --- |
+
+根據次可加性和次乘法性，
+
+|  | $\displaystyle\|\Delta{\bm{h}}_{L+1}({\bm{x}})\|_{\mathrm{R}}$ | $\displaystyle=\Theta\left(\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}\|{\bm{h}}_{L}({\bm{x}})+\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}+\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}\right)$ |  |
+| --- | --- | --- | --- |
+|  |  | $\displaystyle=\Theta(\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}})+\Theta(1),$ |  |
+
+其中我們使用了初步初始條件給出的 $\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}},\ \|{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，
+以及隱藏權重更新條件給出的 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+因此，要求 μ P 原理 2.1 得出更新條件 $\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+
+### B.2 多層殘差塊
+
+#### B.2.1 問題設置
+
+我們現在將譜分析從一層和兩層殘差塊推廣到 k k -層殘差塊的一般情況，其中 k ≥ 2 k\geq 2 是一個固定的 Θ ​ ( 1 ) \Theta(1) 常數。
+具體來說，我們考慮一個深度為 L L 的殘差網路，其前向傳播由以下公式給出
+
+|  | 𝒉 0 ​ ( 𝒙 ) \displaystyle{\bm{h}}_{0}({\bm{x}}) | = α 0 ​ 𝑾 0 ​ 𝒙 , \displaystyle=\alpha_{0}{\bm{W}}_{0}{\bm{x}}, |  |
+| --- | --- | --- | --- |
+|  | 𝒉 l ​ ( 𝒙 ) \displaystyle{\bm{h}}_{l}({\bm{x}}) | = 𝒉 l − 1 ​ ( 𝒙 ) + α l ​ 𝑾 l ( k ) ​ 𝑾 l ( k − 1 ) ​ ⋯ ​ 𝑾 l ( 1 ) ​ 𝒉 l − 1 ​ ( 𝒙 ) = 𝒉 l − 1 ​ ( 𝒙 ) + α l ​ ∏ i = 1 k 𝑾 l ( i ) ​ 𝒉 l − 1 ​ ( 𝒙 ) , ∀ l ∈ [ L ] , \displaystyle={\bm{h}}_{l-1}({\bm{x}})+\alpha_{l}{\bm{W}}_{l}^{(k)}{\bm{W}}_{l}^{(k-1)}\cdots{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})={\bm{h}}_{l-1}({\bm{x}})+\alpha_{l}\prod_{i=1}^{k}{\bm{W}}_{l}^{(i)}{\bm{h}}_{l-1}({\bm{x}}),\quad\forall\,l\in[L], |  |
+|  | 𝒉 L + 1 ​ ( 𝒙 ) \displaystyle{\bm{h}}_{L+1}({\bm{x}}) | = α L + 1 ​ 𝑾 L + 1 ​ 𝒉 L ​ ( 𝒙 ) . \displaystyle=\alpha_{L+1}{\bm{W}}_{L+1}{\bm{h}}_{L}({\bm{x}}). |  |
+
+在這裡，每個殘差塊由一個深度為 k k 的線性變換組成，
+其中 { 𝑾 l ( i ) } i = 1 k \{{\bm{W}}_{l}^{(i)}\}_{i=1}^{k} 表示第 l l 個塊內的權重矩陣。
+如前面各節所述，𝒉 L + 1 ​ ( 𝒙 ) {\bm{h}}_{L+1}({\bm{x}}) 表示用於計算損失的網路輸出。
+如同兩層塊的情況，我們的目標是刻畫譜條件，以在此設置中確保 μ \mu P 原理 2.1。
+
+在下文中，我們展示雖然增加內部塊深度 k k 引入了權重更新之間的高階相互作用，但所產生的譜條件承認簡單和系統的刻畫，並不會從根本上改變 μ \mu P 的算法實現。
+
+#### B.2.2 譜縮放條件
+
+我們現在陳述上述具有 k k -層殘差塊的殘差網路的譜縮放條件，該條件刻畫了在聯合寬度–深度縮放下的 μ \mu P 原理。
+
+為了確保 μ \mu P 原理 2.1，初始權重及其逐步更新應滿足：
+
+- • 初始條件。– 輸入和輸出權重：α 0 ​ ‖ 𝑾 0 ‖ R , α L + 1 ​ ‖ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。– 隱藏權重：α l ​ ∏ i = 1 k ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\prod_{i=1}^{k}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L) ，∀ l ∈ [ L ] \forall l\in[L] 。
+- – 輸入和輸出權重：α 0 ​ ‖ 𝑾 0 ‖ R , α L + 1 ​ ‖ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。
+- – 隱藏權重：α l ​ ∏ i = 1 k ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\prod_{i=1}^{k}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L) ，∀ l ∈ [ L ] \forall l\in[L] 。
+- • 更新條件。– 輸入和輸出權重：α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R , α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。– 隱藏權重（一階）：α l ​ ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ m ≠ i ‖ 𝑾 l ( m ) ‖ R = Θ ​ ( 1 / L ) , ∀ l ∈ [ L ] , i ∈ [ k ] . \alpha_{l}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{m\neq i}\|{\bm{W}}_{l}^{(m)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall l\in[L],i\in[k]. – 隱藏權重（ j j -階，j ≥ 2 j\geq 2 ），通過結合初始條件和一階更新條件自動滿足：α l ​ ∏ i ∈ S ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ i ∉ S ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) , ∀ S ⊆ [ k ] , | S | = j , j ∈ [ k ] , l ∈ [ L ] \alpha_{l}\prod_{i\in S}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{i\notin S}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall S\subseteq[k],\ |S|=j,\ j\in[k],\ l\in[L] 。
+- – 輸入和輸出權重：α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R , α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。
+- – 隱藏權重（一階）：α l ​ ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ m ≠ i ‖ 𝑾 l ( m ) ‖ R = Θ ​ ( 1 / L ) , ∀ l ∈ [ L ] , i ∈ [ k ] . \alpha_{l}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{m\neq i}\|{\bm{W}}_{l}^{(m)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall l\in[L],i\in[k].
+- – 隱藏權重（ j j -階，j ≥ 2 j\geq 2 ），通過結合初始條件和一階更新條件自動滿足：α l ​ ∏ i ∈ S ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ i ∉ S ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) , ∀ S ⊆ [ k ] , | S | = j , j ∈ [ k ] , l ∈ [ L ] \alpha_{l}\prod_{i\in S}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{i\notin S}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall S\subseteq[k],\ |S|=j,\ j\in[k],\ l\in[L] 。
+
+初始條件。
+
+- – 輸入和輸出權重：α 0 ​ ‖ 𝑾 0 ‖ R , α L + 1 ​ ‖ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。
+- – 隱藏權重：α l ​ ∏ i = 1 k ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\prod_{i=1}^{k}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L) ，∀ l ∈ [ L ] \forall l\in[L] 。
+
+輸入和輸出權重：α 0 ​ ‖ 𝑾 0 ‖ R , α L + 1 ​ ‖ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。
+
+隱藏權重：α l ​ ∏ i = 1 k ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\prod_{i=1}^{k}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L) ，∀ l ∈ [ L ] \forall l\in[L] 。
+
+更新條件。
+
+- – 輸入和輸出權重：α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R , α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。
+- – 隱藏權重（一階）：α l ​ ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ m ≠ i ‖ 𝑾 l ( m ) ‖ R = Θ ​ ( 1 / L ) , ∀ l ∈ [ L ] , i ∈ [ k ] . \alpha_{l}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{m\neq i}\|{\bm{W}}_{l}^{(m)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall l\in[L],i\in[k].
+- – 隱藏權重（ j j -階，j ≥ 2 j\geq 2 ），通過結合初始條件和一階更新條件自動滿足：α l ​ ∏ i ∈ S ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ i ∉ S ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) , ∀ S ⊆ [ k ] , | S | = j , j ∈ [ k ] , l ∈ [ L ] \alpha_{l}\prod_{i\in S}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{i\notin S}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall S\subseteq[k],\ |S|=j,\ j\in[k],\ l\in[L] 。
+
+輸入和輸出權重：α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R , α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) 。
+
+隱藏權重（一階）：α l ​ ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ m ≠ i ‖ 𝑾 l ( m ) ‖ R = Θ ​ ( 1 / L ) , ∀ l ∈ [ L ] , i ∈ [ k ] . \alpha_{l}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{m\neq i}\|{\bm{W}}_{l}^{(m)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall l\in[L],i\in[k].
+
+隱藏權重（ j j -階，j ≥ 2 j\geq 2 ），通過結合初始條件和一階更新條件自動滿足：α l ​ ∏ i ∈ S ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ i ∉ S ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) , ∀ S ⊆ [ k ] , | S | = j , j ∈ [ k ] , l ∈ [ L ] \alpha_{l}\prod_{i\in S}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{i\notin S}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L),\ \forall S\subseteq[k],\ |S|=j,\ j\in[k],\ l\in[L] 。
+
+條件 B.2 揭示了將殘差塊從兩層擴展到一般固定深度 k ≥ 2 k\geq 2 不會改變 μ \mu P 原理的算法實現。
+相比於兩層情況，更深塊引入的新元素是同一塊內權重更新之間的高階相互作用項。
+但是，我們證明了這些高階項不會施加超出初始條件和一階更新條件已經強制的任何額外約束。
+
+具體來說，一旦初始化時的譜範數乘積滿足 α l ​ ∏ i = 1 k ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\prod_{i=1}^{k}\|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1/L) 且每個更新遵守一階縮放 α l ​ ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ m ≠ i ‖ 𝑾 l ( m ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{m\neq i}\|{\bm{W}}_{l}^{(m)}\|_{\mathrm{R}}=\Theta(1/L) ，所有 j ≥ 2 j\geq 2 階的高階更新貢獻都會自動被控制為 Θ ​ ( 1 / L ) \Theta(1/L) 。
+因此，增加內部塊深度 k k 只會增加此類高階貢獻的數量，但不會改變其縮放行為。
+
+遵循第 4 節和附錄 C 中實現推導的相同步驟，我們可以發現為 k k -層殘差塊實現 μ \mu P 不需要超出兩層情況所需的任何額外參數化。
+特別是，當初始化方差與標準寬度縮放 μ \mu P 公式 [ 43 , 45 ] 對齐（如第 4 節所示）（‖ 𝑾 l ‖ R = Θ ​ ( 1 ) , ∀ l ∈ [ L ] \|{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1),\ \forall l\in[L] ）時，
+初始條件仍然為 l ∈ [ L ] l\in[L] 誘導殘差乘數 α l = Θ ​ ( 1 / L ) \alpha_{l}=\Theta(1/L) ，這與兩層情況相同。基於初始條件，一階更新條件滿足
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ( i ) ‖ R ​ ∏ m ≠ i ‖ 𝑾 l ( m ) ‖ R = Θ ​ ( 1 L ​ ‖ Δ ​ 𝑾 l ( i ) ‖ R ) . \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}\prod_{m\neq i}\|{\bm{W}}_{l}^{(m)}\|_{\mathrm{R}}=\Theta\left(\frac{1}{L}\|\Delta{{\bm{W}}}_{l}^{(i)}\|_{\mathrm{R}}\right). |  |
+| --- | --- | --- |
+
+因此，要求一階更新條件產生 ‖ Δ ​ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 ) \|\Delta{{\bm{W}}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1) 對於 ∀ l ∈ [ L ] , i ∈ [ k ] \forall l\in[L],i\in[k] 。這也與兩層情況的方式相同（‖ Δ ​ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 ) \|\Delta{{\bm{W}}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1) 對於 ∀ l ∈ [ L ] , i ∈ [ 2 ] \forall l\in[L],i\in[2] ），因此導致相同的優化器相關超參數調整。
+多層分析因此用於論證兩層 μ \mu P 規則的穩健性和一般性，而不是引入依賴於塊深度的不同算法。
+
+#### B.2.3 初步初始條件的推導
+
+我們首先推導初步初始化條件，該條件保證了 k k -層（k ≥ 2 k\geq 2 ）殘差塊在前向傳播期間特徵量級的穩定性。
+如同兩層情況，我們依次分析每一層。
+
+輸入層。
+
+根據 RMS 算子範數的次乘性，我們有
+
+|  | ‖ 𝒉 0 ​ ( 𝒙 ) ‖ R = α 0 ​ ‖ 𝑾 0 ​ 𝒙 ‖ R = Θ ​ ( α 0 ​ ‖ 𝑾 0 ‖ R ​ ‖ 𝒙 ‖ R ) = Θ ​ ( α 0 ​ ‖ 𝑾 0 ‖ R ) , \displaystyle\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\alpha_{0}\|{\bm{W}}_{0}{\bm{x}}\|_{\mathrm{R}}=\Theta(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}\,\|{\bm{x}}\|_{\mathrm{R}})=\Theta(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}), |  |
+| --- | --- | --- |
+
+其中我們假設了 ‖ 𝒙 ‖ R = Θ ​ ( 1 ) \|{\bm{x}}\|_{\mathrm{R}}=\Theta(1) 。
+因此，選擇 α 0 ​ ‖ 𝑾 0 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1) 確保 ‖ 𝒉 0 ​ ( 𝒙 ) ‖ R = Θ ​ ( 1 ) \|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1) 。
+
+隱藏層。
+
+展開殘差遞迴產生
+
+|  | 𝒉 s ​ ( 𝒙 ) \displaystyle{\bm{h}}_{s}({\bm{x}}) | = 𝒉 s − 1 ​ ( 𝒙 ) + α s ​ ∏ i = 1 k 𝑾 s ( i ) ​ 𝒉 s − 1 ​ ( 𝒙 ) = ⋯ = 𝒉 0 ​ ( 𝒙 ) + ∑ l = 1 s α l ​ ∏ i = 1 k 𝑾 l ( i ) ​ 𝒉 l − 1 ​ ( 𝒙 ) . \displaystyle={\bm{h}}_{s-1}({\bm{x}})+\alpha_{s}\prod_{i=1}^{k}{\bm{W}}_{s}^{(i)}{\bm{h}}_{s-1}({\bm{x}})=\cdots={\bm{h}}_{0}({\bm{x}})+\sum_{l=1}^{s}\alpha_{l}\prod_{i=1}^{k}{\bm{W}}_{l}^{(i)}{\bm{h}}_{l-1}({\bm{x}}). |  | (17) |
+| --- | --- | --- | --- | --- |
+
+應用次加性，我們可以估計其階為
+
+|  | ‖ 𝒉 s ​ ( 𝒙 ) ‖ R = Θ ​ ( ‖ 𝒉 0 ​ ( 𝒙 ) ‖ R + ‖ ∑ l = 1 s α l ​ ∏ i = 1 k 𝑾 l ( i ) ​ 𝒉 l − 1 ​ ( 𝒙 ) ‖ R ) . \displaystyle\|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta\left(\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}+\Big\|\sum_{l=1}^{s}\alpha_{l}\prod_{i=1}^{k}{\bm{W}}_{l}^{(i)}{\bm{h}}_{l-1}({\bm{x}})\Big\|_{\mathrm{R}}\right). |  |
+| --- | --- | --- |
+
+由於我們有 ‖ 𝒉 0 ​ ( 𝒙 ) ‖ R = Θ ​ ( 1 ) \|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1) ，只需確保 ‖ ∑ l = 1 s α l ​ ∏ i = 1 k 𝑾 l ( i ) ​ 𝒉 l − 1 ​ ( 𝒙 ) ‖ R = 𝒪 ​ ( 1 ) \|\sum_{l=1}^{s}\alpha_{l}\prod_{i=1}^{k}{\bm{W}}_{l}^{(i)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\mathcal{O}(1) 對任意 s ∈ [ L ] s\in[L] 以保持 ‖ 𝒉 s ​ ( 𝒙 ) ‖ R = Θ ​ ( 1 ) \|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta(1) 。
+在獨立同分佈零均值高斯初始化下，求和項是獨立零均值隨機向量，因此其和的 RMS 範數（標準差）按其平方 RMS 範數（方差）之和的平方根縮放（見 Vershynin [ 38 ] 中的定理 3.3.1），得出
+
+|  | ‖
+
+### B.3 偏差參數
+
+#### B.3.1 問題設置
+
+如附錄 B.2 所示，具有任意固定內部深度 $k \geq 2$ 的殘差塊滿足頻譜縮放條件，在演算法上等價於兩層情況。
+因此，為了簡化展示同時保留完全的一般性，我們關注具有偏差的兩層殘差塊。
+具體地，我們考慮一個殘差網路，其前向傳播由以下給出
+
+|  | $\displaystyle{\bm{h}}_{0}({\bm{x}})$ | $\displaystyle=\alpha_{0}\bigl({\bm{W}}_{0}{\bm{x}}+{\bm{b}}_{0}\bigr),$ |  |
+| --- | --- | --- | --- |
+|  | $\displaystyle{\bm{h}}_{l}({\bm{x}})$ | $\displaystyle={\bm{h}}_{l-1}({\bm{x}})+\alpha_{l}\Bigl({\bm{W}}_{l}^{(2)}\bigl({\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})+{\bm{b}}_{l}^{(1)}\bigr)+{\bm{b}}_{l}^{(2)}\Bigr),\quad\forall\,l\in[L],$ |  |
+|  | $\displaystyle{\bm{h}}_{L+1}({\bm{x}})$ | $\displaystyle=\alpha_{L+1}{\bm{W}}_{L+1}{\bm{h}}_{L}({\bm{x}}).$ |  |
+
+這裡，每個殘差塊由一個具有加法偏差的兩層線性變換組成，
+其中 ${\bm{W}}_{l}^{(1)},{\bm{W}}_{l}^{(2)}$ 表示權重矩陣，${\bm{b}}_{l}^{(1)},{\bm{b}}_{l}^{(2)}$ 表示第 $l$ 塊內的相應偏差向量。
+標量 $\{\alpha_{l}\}_{l=0}^{L+1}$ 表示控制每個變換有效強度的塊乘數。
+如前面各節所述，${\bm{h}}_{L+1}({\bm{x}})$ 表示用於計算損失的網路輸出。
+我們的目標是刻畫在此設置中確保 μP 原理 2.1 的頻譜條件。
+
+#### B.3.2 頻譜縮放條件
+
+我們現在陳述具有偏差的殘差網路的頻譜縮放條件，該條件在聯合寬度-深度縮放下刻畫 μP 原理。
+
+為確保 μP 原理 2.1，初始參數及其每步更新應滿足：
+
+- • 初始條件。 – 輸入參數：$\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$，$\alpha_{0}\|{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。 – 隱藏參數： * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 * $\alpha_{l}\|{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L}),\quad\forall l\in[L]$。 – 輸出參數：$\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+- – 輸入參數：$\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$，$\alpha_{0}\|{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。
+- – 隱藏參數：
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L}),\quad\forall l\in[L]$。
+- – 輸出參數：$\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+- • 更新條件。 – 輸入參數：$\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\ \alpha_{0}\|\Delta{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。 – 隱藏參數（一階）： * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 * $\alpha_{l}\|\Delta{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 – 隱藏參數（二階），在給定初始條件和一階更新條件的情況下自動滿足： * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。 – 輸出參數：$\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+- – 輸入參數：$\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\ \alpha_{0}\|\Delta{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。
+- – 隱藏參數（一階）：
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|\Delta{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- – 隱藏參數（二階），在給定初始條件和一階更新條件的情況下自動滿足：
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- – 輸出參數：$\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+- • 高效實現。在第 4 節和附錄 C 中描述的塊乘數 $\{\alpha_{l}\}$ 和矩陣權重 $\{{\bm{W}}_{l}\}$ 的 HP 參數化下，所有與偏差相關的頻譜條件可以通過初始化和訓練具有 $\Theta(1)$ 階的偏差來同時滿足。
+具體地，只需執行 $$\|{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1),\quad\|\Delta{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1),\quad\forall\,0\leq l\leq L. \quad \text{(18)}$$
+初始條件 $\|{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1)$ 可以通過設置 $\sigma_{{\bm{b}}_{l}}=\Theta(1)$ 來滿足，更新條件 $\|\Delta{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1)$ 的實現將在附錄 C 中推導。
+
+**初始條件。**
+
+- – 輸入參數：$\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$，$\alpha_{0}\|{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。
+- – 隱藏參數：
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L}),\quad\forall l\in[L]$。
+- – 輸出參數：$\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+
+**輸入參數：** $\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1)$，$\alpha_{0}\|{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。
+
+**隱藏參數：**
+
+- * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- * $\alpha_{l}\|{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L}),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\mathcal{O}(1/\sqrt{L}),\quad\forall l\in[L]$。
+
+**輸出參數：** $\alpha_{L+1}\|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+
+**更新條件。**
+
+- – 輸入參數：$\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\ \alpha_{0}\|\Delta{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。
+- – 隱藏參數（一階）：
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|\Delta{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- – 隱藏參數（二階），在給定初始條件和一階更新條件的情況下自動滿足：
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+  - * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- – 輸出參數：$\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+
+**輸入參數：** $\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1),\ \alpha_{0}\|\Delta{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$。
+
+**隱藏參數（一階）：**
+
+- * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- * $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- * $\alpha_{l}\|\Delta{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|\Delta{\bm{b}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+**隱藏參數（二階），在給定初始條件和一階更新條件的情況下自動滿足：**
+
+- * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+- * $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+$\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|\Delta{\bm{b}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L),\quad\forall l\in[L]$。
+
+**輸出參數：** $\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$。
+
+**高效實現。** 在第 4 節和附錄 C 中描述的塊乘數 $\{\alpha_{l}\}$ 和矩陣權重 $\{{\bm{W}}_{l}\}$ 的 HP 參數化下，所有與偏差相關的頻譜條件可以通過初始化和訓練具有 $\Theta(1)$ 階的偏差來同時滿足。
+具體地，只需執行
+
+|  | $\displaystyle\|{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1),\quad\|\Delta{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1),\quad\forall\,0\leq l\leq L.$ |  | (18) |
+| --- | --- | --- | --- |
+
+初始條件 $\|{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1)$ 可以通過設置 $\sigma_{{\bm{b}}_{l}}=\Theta(1)$ 來滿足，更新條件 $\|\Delta{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1)$ 的實現將在附錄 C 中推導。
+
+條件 B.3 表明，在聯合寬度-深度縮放下，
+可以在不修改權重矩陣現有 HP 參數化的情況下引入偏差參數。
+具體地，一旦塊乘數 $\{\alpha_{l}\}$ 和權重 $\{{\bm{W}}_{l}\}$ 如第 4 節所實現，偏差就滿足簡單的額外一階頻譜條件，保證其初始化和更新的正確縮放。
+因此，偏差可以通過我們框架的輕量級擴展進行處理，而無偏差殘差塊的 μP 公式保持不變。
+
+#### B.3.3 初步初始條件的推導
+
+**輸入層。**
+
+由次加性和次乘性，
+
+|  | $\displaystyle\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(\alpha_{0}(\|{\bm{W}}_{0}\|_{\mathrm{R}}\|{\bm{x}}\|_{\mathrm{R}}+\|{\bm{b}}_{0}\|_{\mathrm{R}}))=\Theta\left(\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}\right)+\Theta\left(\|{\bm{b}}_{0}\|_{\mathrm{R}}\right),$ |  |
+| --- | --- | --- |
+
+其中我們假設 $\|{\bm{x}}\|_{\mathrm{R}}=\Theta(1)$。
+因此，選擇 $\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}},\alpha_{0}\|{\bm{b}}_{0}\|_{\mathrm{R}}=\Theta(1)$ 確保 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+
+**隱藏層。**
+
+展開殘差遞推產生
+
+|  | $\displaystyle{\bm{h}}_{s}({\bm{x}})$ | $\displaystyle={\bm{h}}_{0}({\bm{x}})+\sum_{l=1}^{s}\alpha_{l}\Big({\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})+{\bm{W}}_{l}^{(2)}{\bm{b}}_{l}^{(1)}+{\bm{b}}_{l}^{(2)}\Big).$ |  | (19) |
+| --- | --- | --- | --- | --- |
+
+應用次加性，我們可以估計其階為
+
+|  | $\displaystyle\|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta\left(\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}+\Big\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})+\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{b}}_{l}^{(1)}+\sum_{l=1}^{s}\alpha_{l}{\bm{b}}_{l}^{(2)}\Big\|_{\mathrm{R}}\right).$ |  |
+| --- | --- | --- |
+
+由於我們有 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$，只需確保其他項對於任意 $s \in [L]$ 都是 $\mathcal{O}(1)$ 即可保留 $\|{\bm{h}}_{s}({\bm{x}})\|_{\mathrm{R}}=\Theta(1)$。
+在 i.i.d. 零均值高斯初始化下，求和項是獨立的零均值隨機向量，因此其和的 RMS 範數（標準差）按其平方 RMS 範數（方差）之和的平方根縮放（見 Vershynin [38] 中的定理 3.3.1）。因此，我們可以得到
+
+|  | $\displaystyle\Big\|\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})+\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{b}}_{l}^{(1)}+\sum_{l=1}^{s}\alpha_{l}{\bm{b}}_{l}^{(2)}\Big\|_{\mathrm{R}}$ |  |
+
+## 附錄 C 針對各種優化器和超參數實現頻譜條件
+
+回顧主文本第 4.1 節，我們為初始化實現了頻譜條件，並指定了區塊乘數 α l \alpha_{l} 和初始化方差 σ l \sigma_{l} 的參數化，這是與優化器無關的。在第 4.2 節中，我們進一步為更新實現了頻譜條件，並推導了 Muon-Kimi [ 26 ] 的學習率 η l \eta_{l} 的參數化。
+
+現在我們將此更新條件分析擴展至更廣泛的優化器類別，並納入額外的超參數，包括權重衰減和偏差學習率。
+
+為了在不同優化器之間提供統一的推導，我們首先以通用形式表達它們的更新規則。
+當包含權重衰減時，權重矩陣的單次更新步驟可以寫為
+
+|  | Δ ​ 𝑾 l = − η l ​ ( 𝑨 l + λ l ​ 𝑾 l ) , \displaystyle\Delta{\bm{W}}_{l}=-\eta_{l}\bigl({\bm{A}}_{l}+\lambda_{l}{\bm{W}}_{l}\bigr), |  |
+| --- | --- | --- |
+
+其中 𝑨 l {\bm{A}}_{l} 表示優化器特定的針對 𝑾 l {\bm{W}}_{l} 的更新（例如，SGD 的 𝑨 l = ∇ 𝑾 l ℒ {\bm{A}}_{l}=\nabla_{{\bm{W}}_{l}}\mathcal{L}，Muon-Kimi 的 𝑨 l = 0.2 ​ max ⁡ { n in , n out } ​ 𝑼 l ​ 𝑽 l ⊤ {\bm{A}}_{l}=0.2\sqrt{\max\{n_{\mathrm{in}},n_{\mathrm{out}}\}}\,{\bm{U}}_{l}{\bm{V}}_{l}^{\top}），而 λ l \lambda_{l} 是權重衰減係數。
+
+更新量級 ‖ Δ ​ 𝑾 l ‖ R = η l ​ ‖ 𝑨 l + λ l ​ 𝑾 l ‖ R \|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\eta_{l}\|{\bm{A}}_{l}+\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}} 需要滿足條件 3.1 中的更新條件。
+我們在兩種互補的體制下分析此需求。
+
+不含權重衰減。當權重衰減被禁用時（ λ l = 0 \lambda_{l}=0 ），更新簡化為 ‖ Δ ​ 𝑾 l ‖ R = η l ​ ‖ 𝑨 l ‖ R 。 \|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\eta_{l}\|{\bm{A}}_{l}\|_{\mathrm{R}}. 在此情況下，我們預期：
+
+|  | ‖ Δ ​ 𝑾 l ‖ R = η l ​ ‖ 𝑨 l ‖ R ​ satisfies Condition 3.1 . \displaystyle\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\eta_{l}\|{\bm{A}}_{l}\|_{\mathrm{R}}\ \text{satisfies Condition\penalty 10000\ \ref{condition: scale-invariant fl}}. |  | ( Δ ​ 1 \Delta 1 ) |
+| --- | --- | --- | --- |
+
+含有權重衰減。當權重衰減被啟用時（ λ l ≠ 0 \lambda_{l}\neq 0 ），我們預期權重衰減項的量級應與梯度驅動項相當，以便權重衰減對更新動態產生有效影響：
+
+|  | ‖ λ l ​ 𝑾 l ‖ R = Θ ​ ( ‖ 𝑨 l ‖ R ) . \displaystyle\|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right). |  | ( Δ ​ 2 \Delta 2 ) |
+| --- | --- | --- | --- |
+
+在以下內容中，我們將推導一系列優化器的學習率和權重衰減係數的參數化。
+由於基於矩陣的優化器（如 Muon 和 Shampoo）通常不應用於偏差參數，我們將偏差參數化分析限制在基於向量的優化器（如 SGD 和 AdamW）。偏差參數 𝒃 l {\bm{b}}_{l} 遵循與上述矩陣參數相似的表述（方程式 ( Δ ​ 1 \Delta 1 ) 和 ( Δ ​ 2 \Delta 2 )）。
+
+我們注意到動量在標準 μ \mu P 分析中通常被省略 [ 43 , 44 , 45 ] （例如，在 AdamW 中設置 β 1 = β 2 = 0 \beta_{1}=\beta_{2}=0 ），而在實務 μ \mu P 實現中，動量係數被視為 Θ ​ ( 1 ) \Theta(1) 。
+主要理由是動量項的範數和目前更新的範數預期具有相同的階，而由於頻譜條件旨在控制更新範數，省略動量被認為是可接受的簡化。
+此外，分析無動量的更新可以解釋為研究初始化後的第一次更新，根據實證觀察，這對於理解神經網路訓練是可靠的 [ 46 , 29 , 4 , 5 ] 。
+在隨後的推導中，我們也採用此簡化。
+
+我們還在此呈現關於梯度範數的有用基礎。在實務中已廣泛觀察到神經網路訓練期間出現的梯度展現低秩結構 [ 46 , 2 , 48 ] ，也就是說，只有少數主導奇異方向承載大部分梯度。因此，梯度矩陣的頻譜範數和 Frobenius 範數的階相同，即
+
+|  | ‖ ∇ 𝑾 l ℒ ‖ 2 = Θ ​ ( ‖ ∇ 𝑾 l ℒ ‖ F ) , \|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{2}=\Theta(\|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{\mathrm{F}}), |  | (20) |
+| --- | --- | --- | --- |
+
+直至獨立於寬度和深度的常數。此性質將用於估計 ‖ 𝑨 l ‖ R \|{\bm{A}}_{l}\|_{\mathrm{R}} 的量級。
+
+### C.1 Muon-Kimi（附權重衰減）
+
+對於權重矩陣 ${\bm{W}}_{l}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{in}}}$，Muon-Kimi [26] 附權重衰減的更新規則為
+
+|  | $\Delta{{\bm{W}}}_{l}=-\,\eta_{l}\bigl(\,\underbrace{0.2\sqrt{\max\{n_{\mathrm{in}},n_{\mathrm{out}}\}}\,{\bm{U}}_{l}{\bm{V}}_{l}^{\top}}_{{\bm{A}}_{l}}+\lambda_{l}{{\bm{W}}}_{l}\bigr),$ |  |
+| --- | --- | --- |
+
+其中 ${\bm{U}}_{l},{\bm{V}}_{l}$ 來自梯度 $\nabla_{{{\bm{W}}}_{l}}\mathcal{L}={\bm{U}}_{l}{\bm{\Sigma}}_{l}{\bm{V}}_{l}^{\top}$ 的緊湊 SVD。
+
+回顧主文第 4.2 節，我們已推導學習率參數化以達成 $(\Delta 1)$
+
+|  | $\displaystyle\eta_{0}=\Theta\left(1\right),\ \eta_{l}^{(1)}=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}}}\right),\ \eta_{l}^{(2)}=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}}}\right),\ \eta_{L+1}=\Theta\left(1\right).$ |  |
+| --- | --- | --- |
+
+根據方程式 (14) 中的更新範數，我們有
+
+|  | $\displaystyle\|{\bm{A}}_{l}\|_{\mathrm{R}}=\Theta\left(\sqrt{n_{\mathrm{in}}}\max\left\{1,\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\right\}\right)=\left\{\begin{array}[]{ll}\Theta(1),&l=0,\\
+\Theta(\sqrt{n_{\mathrm{in}}}),&l\in[L],\\
+\Theta({n_{\mathrm{in}}}),&l=L+1.\end{array}\right.$ |  |
+| --- | --- | --- |
+
+給定方程式 (8) 中 $\|{{\bm{W}}}_{l}\|_{\mathrm{R}}$ 的大小，如 $(\Delta 2)$ 所要求的，$\lambda_{l}$ 的參數化需要設定如下：
+
+|  | $\displaystyle\lambda_{l}=\left\{\begin{array}[]{ll}\Theta(1),&l=0,\\
+\Theta(\sqrt{n_{\mathrm{in}}}),&l\in[L],\\
+\Theta(1),&l=L+1.\end{array}\right.$ |  |
+| --- | --- | --- |
+
+這完成了 Muon-Kimi 附權重衰減的更新條件實現，總結於表 2。
+
+[FIGURE_CAPTION] 表 2：寬度-深度縮放下 Muon-Kimi [26] 附權重衰減的 $\mu$P 實現。紫色項目表示 $\mu$P 與 SP [14] 之間的差異，灰色顯示對應的 SP 選擇。
+此處 $r_{n}$ 和 $r_{L}$ 分別表示相對於基底模型的寬度和深度縮放比率。輸入權重的變異數為語言模型的 $\sigma^{2}_{\mathrm{base}}$ 和影像的 $\sigma^{2}_{\mathrm{base}}/d_{0}$。
+
+### C.2 Muon
+
+我們在本節中恢復並擴展 Qiu et al. [31] 中 Muon 在寬度-深度縮放下的 μP 公式。
+
+#### C.2.1 更新規則
+
+對於權重矩陣 ${\bm{W}}_{l}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{in}}}$，Muon [21] 的更新規則為
+
+|  | $\Delta{{\bm{W}}}_{l}=-\,\eta_{l}\bigl(\,\underbrace{{\bm{U}}_{l}{\bm{V}}_{l}^{\top}}_{{\bm{A}}_{l}}+\lambda_{l}{{\bm{W}}}_{l}\bigl)$ | (21) |
+| --- | --- | --- |
+
+其中 ${\bm{U}}_{l},{\bm{V}}_{l}$ 來自梯度的緊凑奇異值分解 $\nabla_{{{\bm{W}}}_{l}}\mathcal{L}={\bm{U}}_{l}{\bm{\Sigma}}_{l}{\bm{V}}_{l}^{\top}$。
+與 Muon-Kimi [26] 相比，唯一的區別在於沒有 $0.2\sqrt{\max\{n_{\mathrm{in}},n_{\mathrm{out}}\}}$ 預因子。
+
+考慮方程式 (3) 中的維度假設，所得 ${\bm{A}}_{l}$ 的範數滿足
+
+|  | $\displaystyle\|{\bm{A}}_{l}\|_{\mathrm{R}}=\|{\bm{U}}_{l}{\bm{V}}_{l}^{\top}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\|{\bm{U}}_{l}{\bm{V}}_{l}^{\top}\|_{2}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}=\left\{\begin{array}[]{ll}\Theta(1/\sqrt{n_{\mathrm{out}}}),&l=0,\\\ \Theta(1),&l\in[L],\\\ \Theta(\sqrt{n_{\mathrm{in}}}),&l=L+1.\end{array}\right.$ | (25) |
+| --- | --- | --- |
+
+#### C.2.2 參數化的推導
+
+輸入和輸出層。
+
+當 $\lambda_{0}=0$ 時，給定維度假設 $d_{0},d_{L+1}=\Theta(1),n_{l}=\Theta(n)$ 在方程式 (3) 中，乘數參數化 $\alpha_{0}=\Theta(1),\alpha_{L+1}=\Theta(1/n_{\mathrm{in}})$ 在方程式 (9) 中，以及 $\|{\bm{A}}_{l}\|_{\mathrm{R}}$ 在方程式 (25) 中的縮放，我們有
+
+|  | $\displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\alpha_{l}\eta_{l}\|{\bm{A}}_{l}\|_{\mathrm{R}}=\left\{\begin{array}[]{ll}\Theta(\eta_{0}/\sqrt{n_{\mathrm{out}}}),&l=0,\\\ \Theta(\eta_{L+1}/\sqrt{n_{\mathrm{in}}}),&l=L+1.\end{array}\right.$ |  |
+| --- | --- | --- |
+
+如在 (Δ1) 中所期望的，為滿足 (C2.1) 即 $\alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1)$，我們需要設定
+
+|  | $\displaystyle\eta_{0}=\Theta(\sqrt{n_{\mathrm{out}}}),\quad\eta_{L+1}=\Theta(\sqrt{n_{\mathrm{in}}})$ |  |
+| --- | --- | --- |
+
+當 $\lambda_{l}\neq 0$ 時，給定方程式 (8) 中 $\|{{\bm{W}}}_{0}\|_{\mathrm{R}}=\Theta(1)$ 和 $\|{{\bm{W}}}_{L+1}\|_{\mathrm{R}}=\Theta(n_{\mathrm{in}})$，我們有
+
+|  | $\displaystyle\|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\left\{\begin{array}[]{ll}\Theta(\lambda_{0}),&l=0,\\\ \Theta(\lambda_{L+1}n_{\mathrm{in}}),&l=L+1.\end{array}\right.$ |  |
+| --- | --- | --- |
+
+為滿足 (Δ2) 即 $\|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right)$，我們需要設定
+
+|  | $\displaystyle\lambda_{0}=\Theta(1/\sqrt{n_{\mathrm{out}}}),\quad\lambda_{L+1}=\Theta(1/\sqrt{n_{\mathrm{in}}})$ |  |
+| --- | --- | --- |
+
+隱藏層（一階）。
+
+當 $\lambda_{l}=0$ 時，給定維度假設 $d_{0},d_{L+1}=\Theta(1),n_{l}=\Theta(n)$ 在方程式 (3) 中，權重範數 $\|{{\bm{W}}}_{l}\|_{\mathrm{R}}=\Theta(1)$ 在方程式 (8) 中，乘數參數化 $\alpha_{l}=\Theta(1/L)$ 在方程式 (10) 中，以及 $\|{\bm{A}}_{l}\|_{\mathrm{R}}$ 在方程式 (25) 中的縮放，我們有
+
+|  | $\displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)\cdot\eta_{l}^{(2)}\|{\bm{A}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(\eta_{l}^{(2)}/L)$ |  |
+| --- | --- | --- |
+
+如在 (Δ1) 中所期望的，為滿足隱藏權重的一階更新條件 (C2.2) 即 $\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)$，我們需要設定
+
+|  | $\displaystyle\eta_{l}^{(2)}=\Theta(1)$ |  |
+| --- | --- | --- |
+
+當 $\lambda_{l}\neq 0$ 時，給定權重範數 $\|{{\bm{W}}}_{l}\|_{\mathrm{R}}=\Theta(1)$ 在方程式 (8) 中，我們有
+
+|  | $\displaystyle\|\lambda_{l}^{(2)}{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(\lambda_{l}^{(2)})$ |  |
+| --- | --- | --- |
+
+為滿足 (Δ2) 即 $\|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right)$，我們需要設定
+
+|  | $\displaystyle\lambda_{l}^{(2)}=\Theta(1)$ |  |
+| --- | --- | --- |
+
+對稱地，我們對 ${\bm{W}}_{l}^{(1)}$ 有相同的選擇：
+
+|  | $\displaystyle\eta_{l}^{(1)}=\Theta(1),\quad\lambda_{l}^{(1)}=\Theta(1)$ |  |
+| --- | --- | --- |
+
+隱藏層（二階）。
+
+如第 3.3.3 節所討論的，一旦滿足初始條件和一階更新條件，二階更新條件就會自動滿足。
+我們在此為了清晰起見再解釋一遍：將 (C2.2) 中的兩個方程式相乘得 $\alpha_{l}^{2}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|\Delta{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(\frac{1}{L^{2}})$。將其與 (C1.2) 結合，即 $\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)$ 直接蘊含二階條件 (C2.3)。
+
+這完成了 Muon 與權重衰減的更新條件的實現，總結在表 3 中。
+
+[FIGURE_CAPTION] 表 3：在寬度-深度縮放下，Muon [21]、Shampoo [12] 和 SOAP [39] 與權重衰減的 μP 實現。紫色的項目表示 μP 和 SP [14] 之間的區別，而灰色表示相應的 SP 選擇。
+此處，$r_{n}$ 和 $r_{L}$ 表示相對於基礎模型的寬度和深度縮放比例。
+輸入權重的方差對於語言是 $\sigma^{2}_{\mathrm{base}}$，對於圖像是 $\sigma^{2}_{\mathrm{base}}/d_{0}$。
+
+### C.3 SGD
+
+We recover and extend the μ \mu P formulation under width-depth scaling of SGD in Bordelon et al. [ 5 ] in this section.
+
+#### C.3.1 Update Rule
+
+For a weight matrix 𝑾 l ∈ ℝ n out × n in {\bm{W}}_{l}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{in}}} , the SGD update rule with weight decay can be written as:
+
+|  | Δ 𝑾 l = − η l ( ∇ 𝑾 l ℒ ⏟ 𝑨 l + λ l 𝑾 l ) . \Delta{\bm{W}}_{l}=-\,\eta_{l}\bigl(\,\underbrace{\nabla_{{\bm{W}}_{l}}\mathcal{L}}_{{\bm{A}}_{l}}+\lambda_{l}{\bm{W}}_{l}\bigl). |  |
+| --- | --- | --- |
+
+Here, we follow the method in Yang et al. [ 46 ] to estimate the scale of gradient ∇ 𝑾 l ℒ \nabla_{{\bm{W}}_{l}}\mathcal{L} . From the derivation of the update condition in Section 3 , we can observe that gradient updates Δ ​ 𝑾 0 , Δ ​ 𝑾 L + 1 \Delta{\bm{W}}_{0},\Delta{\bm{W}}_{L+1} induce a change ‖ Δ ​ 𝒉 L + 1 ‖ = Θ ​ ( 1 ) \|\Delta{\bm{h}}_{L+1}\|=\Theta(1) in the output, which induces a change Δ ​ ℒ = Θ ​ ( 1 ) \Delta\mathcal{L}=\Theta(1) for common loss functions ℒ \mathcal{L} . In contrast, each hidden gradient update Δ ​ 𝑾 l \Delta{\bm{W}}_{l} ( l ∈ [ L ] l\in[L] ) induces a change ‖ Δ ​ 𝒉 L + 1 ‖ R = Θ ​ ( 1 / L ) \|\Delta{\bm{h}}_{L+1}\|_{\mathrm{R}}=\Theta(1/L) in the output, which induces a change Δ ​ ℒ = Θ ​ ( 1 / L ) \Delta\mathcal{L}=\Theta(1/L) . We use these properties to derive the scale of ∇ 𝑾 l ℒ \nabla_{{\bm{W}}_{l}}\mathcal{L} as follows.
+
+For the input weights, we have
+
+|  | Θ ​ ( 1 ) = Δ 𝑾 0 ​ ℒ = Θ ​ ( ⟨ Δ ​ 𝑾 0 , ∇ 𝑾 0 ℒ ⟩ ) = Θ ​ ( ‖ Δ ​ 𝑾 0 ‖ F ​ ‖ ∇ 𝑾 0 ℒ ‖ F ) = Θ ​ ( ‖ Δ ​ 𝑾 0 ‖ 2 ​ ‖ ∇ 𝑾 0 ℒ ‖ 2 ) , \displaystyle\Theta(1)=\Delta_{{\bm{W}}_{0}}\mathcal{L}=\Theta(\langle\Delta{\bm{W}}_{0},\nabla_{{\bm{W}}_{0}}\mathcal{L}\rangle)=\Theta(\|\Delta{\bm{W}}_{0}\|_{\mathrm{F}}\|\nabla_{{\bm{W}}_{0}}\mathcal{L}\|_{\mathrm{F}})=\Theta(\|\Delta{\bm{W}}_{0}\|_{2}\|\nabla_{{\bm{W}}_{0}}\mathcal{L}\|_{2}), |  |
+| --- | --- | --- |
+
+where ⟨ ⋅ , ⋅ ⟩ \langle\cdot,\cdot\rangle denotes the trace inner product, and we use the facts that the two arguments of the inner product are proportional to each other and low-rank (see Equation ( 20 )). Since we finally realize the spectral condition ( C2.1 ) that α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1) and use α 0 = Θ ​ ( 1 ) \alpha_{0}=\Theta(1) by initial implementation in Equation ( 9 ), we have ‖ Δ ​ 𝑾 0 ‖ R = Θ ​ ( 1 ) \|\Delta{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1) so ‖ Δ ​ 𝑾 0 ‖ 2 = Θ ​ ( n out / n in ) \|\Delta{\bm{W}}_{0}\|_{2}=\Theta(\sqrt{n_{\mathrm{out}}/n_{\mathrm{in}}}) .
+Therefore, we obtain ‖ ∇ 𝑾 0 ℒ ‖ 2 = Θ ​ ( n in / n out ) \|\nabla_{{\bm{W}}_{0}}\mathcal{L}\|_{2}=\Theta(\sqrt{{n_{\mathrm{in}}}/{n_{\mathrm{out}}}}) , which leads to
+
+|  | ‖ 𝑨 0 ‖ R = ‖ ∇ 𝑾 0 ℒ ‖ R = n in n out ​ ‖ ∇ 𝑾 0 ℒ ‖ 2 = Θ ​ ( n in n out ) = Θ ​ ( 1 n out ) . \|{\bm{A}}_{0}\|_{\mathrm{R}}=\|\nabla_{{\bm{W}}_{0}}\mathcal{L}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\|\nabla_{{\bm{W}}_{0}}\mathcal{L}\|_{2}=\Theta(\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}})=\Theta(\frac{1}{n_{\mathrm{out}}}). |  |
+| --- | --- | --- |
+
+Similarly, for the hidden weight 𝑾 l {\bm{W}}_{l} , we have
+
+|  | Θ ​ ( 1 L ) = Δ 𝑾 l ​ ℒ = Θ ​ ( ⟨ Δ ​ 𝑾 l , ∇ 𝑾 l ℒ ⟩ ) = Θ ​ ( ‖ Δ ​ 𝑾 l ‖ F ​ ‖ ∇ 𝑾 l ℒ ‖ F ) = Θ ​ ( ‖ Δ ​ 𝑾 l ‖ 2 ​ ‖ ∇ 𝑾 l ℒ ‖ 2 ) , \displaystyle\Theta(\frac{1}{L})=\Delta_{{\bm{W}}_{l}}\mathcal{L}=\Theta(\langle\Delta{\bm{W}}_{l},\nabla_{{\bm{W}}_{l}}\mathcal{L}\rangle)=\Theta(\|\Delta{\bm{W}}_{l}\|_{\mathrm{F}}\|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{\mathrm{F}})=\Theta(\|\Delta{\bm{W}}_{l}\|_{2}\|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{2}), |  |
+| --- | --- | --- |
+
+Since we finally set α l ​ ‖ Δ ​ 𝑾 l ‖ R ​ ‖ 𝑾 l ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}\|{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1/L) to satisfy the update condition ( C2.2 ), and use α l = Θ ​ ( 1 / L ) \alpha_{l}=\Theta(1/L) in Equation ( 10 ), ‖ 𝑾 l ‖ R = Θ ​ ( 1 ) \|{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1) in Equation ( 8 ) by initial implementation, we have ‖ Δ ​ 𝑾 l ‖ R = Θ ​ ( 1 ) \|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta(1) so ‖ Δ ​ 𝑾 l ‖ 2 = Θ ​ ( n out / n in ) \|\Delta{\bm{W}}_{l}\|_{2}=\Theta(\sqrt{n_{\mathrm{out}}/n_{\mathrm{in}}}) .
+Therefore, we obtain ‖ ∇ 𝑾 l ℒ ‖ 2 = Θ ​ ( L − 1 ​ n in / n out ) \|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{2}=\Theta(L^{-1}\sqrt{{n_{\mathrm{in}}}/{n_{\mathrm{out}}}}) , which leads to
+
+|  | ‖ 𝑨 l ‖ R = ‖ ∇ 𝑾 l ℒ ‖ R = n in n out ​ ‖ ∇ 𝑾 l ℒ ‖ 2 = Θ ​ ( n in L ​ n out ) = Θ ​ ( 1 L ) . \|{\bm{A}}_{l}\|_{\mathrm{R}}=\|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{2}=\Theta(\frac{n_{\mathrm{in}}}{Ln_{\mathrm{out}}})=\Theta(\frac{1}{L}). |  |
+| --- | --- | --- |
+
+Finally, for the output weight 𝑾 L + 1 {\bm{W}}_{L+1} , we have
+
+|  | Θ ​ ( 1 ) = Δ 𝑾 L + 1 ​ ℒ = Θ ​ ( ⟨ Δ ​ 𝑾 L + 1 , ∇ 𝑾 L + 1 ℒ ⟩ ) = Θ ​ ( ‖ Δ ​ 𝑾 L + 1 ‖ F ​ ‖ ∇ 𝑾 L + 1 ℒ ‖ F ) = Θ ​ ( ‖ Δ ​ 𝑾 L + 1 ‖ 2 ​ ‖ ∇ 𝑾 L + 1 ℒ ‖ 2 ) , \displaystyle\Theta(1)=\Delta_{{\bm{W}}_{L+1}}\mathcal{L}=\Theta(\langle\Delta{\bm{W}}_{L+1},\nabla_{{\bm{W}}_{L+1}}\mathcal{L}\rangle)=\Theta(\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{F}}\|\nabla_{{\bm{W}}_{L+1}}\mathcal{L}\|_{\mathrm{F}})=\Theta(\|\Delta{\bm{W}}_{L+1}\|_{2}\|\nabla_{{\bm{W}}_{L+1}}\mathcal{L}\|_{2}), |  |
+| --- | --- | --- |
+
+Since we will set α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 / L ) \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1/L) to realize the update condition ( C2.1 ) and use α L + 1 = Θ ​ ( 1 / n in ) \alpha_{L+1}=\Theta(1/n_{\mathrm{in}}) in initial implementation in Equation ( 9 ), we have ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( n in ) \|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(n_{\mathrm{in}}) so ‖ Δ ​ 𝑾 L + 1 ‖ 2 = Θ ​ ( n out ​ n in ) \|\Delta{\bm{W}}_{L+1}\|_{2}=\Theta(\sqrt{n_{\mathrm{out}}n_{\mathrm{in}}}) .
+Therefore, we obtain ‖ ∇ 𝑾 L + 1 ℒ ‖ 2 = Θ ​ ( 1 / n in ​ n out ) \|\nabla_{{\bm{W}}_{L+1}}\mathcal{L}\|_{2}=\Theta(1/\sqrt{{n_{\mathrm{in}}}{n_{\mathrm{out}}}}) , which leads to
+
+|  | ‖ 𝑨 L + 1 ‖ R = ‖ ∇ 𝑾 L + 1 ℒ ‖ R = n in n out ​ ‖ ∇ 𝑾 L + 1 ℒ ‖ 2 = Θ ​ ( 1 n out ) = Θ ​ ( 1 ) . \|{\bm{A}}_{L+1}\|_{\mathrm{R}}=\|\nabla_{{\bm{W}}_{L+1}}\mathcal{L}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\|\nabla_{{\bm{W}}_{L+1}}\mathcal{L}\|_{2}=\Theta(\frac{1}{n_{\mathrm{out}}})=\Theta(1). |  |
+| --- | --- | --- |
+
+To sum up, we have
+
+|  | ‖ 𝑨 l ‖ R = ‖ ∇ 𝑾 l ℒ ‖ R = { Θ ​ ( 1 / n out ) , l = 0 , Θ ​ ( 1 / L ) , l ∈ [ L ] , Θ ​ ( 1 ) , l = L + 1 . \displaystyle\|{\bm{A}}_{l}\|_{\mathrm{R}}=\|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{\mathrm{R}}=\begin{cases}\Theta(1/{n_{\mathrm{out}}}),&l=0,\\
+\Theta(1/L),&l\in[\,L\,],\\
+\Theta(1),&l=L+1.\end{cases} |  |
+| --- | --- | --- |
+
+#### C.3.2 Derivation of Parameterization
+
+Input and output layers.
+
+When λ 0 = 0 \lambda_{0}=0 , using the dimension assumptions d 0 , d L + 1 = Θ ​ ( 1 ) d_{0},d_{L+1}=\Theta(1) and n l = Θ ​ ( n ) n_{l}=\Theta(n) in Equation ( 3 ), together with the initialization parameterization α 0 = Θ ​ ( 1 ) \alpha_{0}=\Theta(1) and α L + 1 = Θ ​ ( 1 / n in ) \alpha_{L+1}=\Theta(1/n_{\mathrm{in}}) in Equation ( 9 ), we obtain
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ‖ R = α l ​ η l ​ ‖ 𝑨 l ‖ R = { Θ ​ ( η 0 / n out ) , l = 0 , Θ ​ ( η L + 1 / n in ) , l = L + 1 . \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\alpha_{l}\eta_{l}\|{\bm{A}}_{l}\|_{\mathrm{R}}=\begin{cases}\Theta\big(\eta_{0}/{n_{\mathrm{out}}}\big),&l=0,\\
+\Theta\big(\eta_{L+1}/{n_{\mathrm{in}}}\big),&l=L+1.\end{cases} |  |
+| --- | --- | --- |
+
+To satisfy the input/output update requirement α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R , α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\ \alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) in
+Condition ( C2.1 ),
+we therefore choose
+
+|  | η 0 = Θ ​ ( n out ) , η L + 1 = Θ ​ ( n in ) . \displaystyle\eta_{0}=\Theta({n_{\mathrm{out}}}),\quad\eta_{L+1}=\Theta({n_{\mathrm{in}}}). |  |
+| --- | --- | --- |
+
+When weight decay is active ( λ l ≠ 0 \lambda_{l}\neq 0 ), using ‖ 𝑾 0 ‖ R = Θ ​ ( 1 ) \|{\bm{W}}_{0}\|_{\mathrm{R}}=\Theta(1) and ‖ 𝑾 L + 1 ‖ R = Θ ​ ( n in ) \|{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(n_{\mathrm{in}}) from inital implementation Equation ( 8 )), we have
+
+|  | ‖ λ l ​ 𝑾 l ‖ R = { Θ ​ ( λ 0 ) , l = 0 , Θ ​ ( λ L + 1 ​ n in ) , l = L + 1 . \|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\begin{cases}\Theta(\lambda_{0}),&l=0,\\
+\Theta(\lambda_{L+1}n_{\mathrm{in}}),&l=L+1.\end{cases} |  |
+| --- | --- | --- |
+
+Matching this to ‖ 𝑨 l ‖ R \|{\bm{A}}_{l}\|_{\mathrm{R}} as desired by condition ( Δ ​ 2 \Delta 2 ) yields
+
+|  | λ 0 = Θ ​ ( 1 / n out ) , λ L + 1 = Θ ​ ( 1 / n in ) . \displaystyle\lambda_{0}=\Theta(1/{n_{\mathrm{out}}}),\quad\lambda_{L+1}=\Theta(1/{n_{\mathrm{in}}}). |  |
+| --- | --- | --- |
+
+Hidden layers (first-order).
+
+For a hidden block we have implemented α l = Θ ​ ( 1 / L ) \alpha_{l}=\Theta(1/L) in Equation ( 10 ) and ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 ) \|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1) in Equation ( 8 ).
+When λ l = 0 \lambda_{l}=0 we obtain
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}} | = Θ ​ ( 1 / L ) ⋅ η l ( 2 ) ​ ‖ 𝑨 l ( 2 ) ‖ R = Θ ​ ( η l ( 2 ) / L 2 ) . \displaystyle=\Theta(1/L)\cdot\eta_{l}^{(2)}\|{\bm{A}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(\eta_{l}^{(2)}/L^{2}). |  |
+| --- | --- | --- | --- |
+
+Enforcing the first-order hidden update condition ( C2.2 ) that α l ​ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L) gives
+
+|  | η l ( 2 ) = Θ ​ ( L ) . \displaystyle\eta_{l}^{(2)}=\Theta(L). |  |
+| --- | --- | --- |
+
+By the same reasoning, the same choice applies to the other learning rate, η l ( 1 ) = Θ ​ ( L ) \eta_{l}^{(1)}=\Theta(L) .
+
+If weight decay is enabled on hidden matrices, using ‖ 𝑾 l ( i ) ‖ R = Θ ​ ( 1 ) \|{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(1) by Equation ( 8 ), we obtain ‖ λ l ( i ) ​ 𝑾 l ( i ) ‖ R = Θ ​ ( λ l ( i ) ) \|\lambda_{l}^{(i)}{\bm{W}}_{l}^{(i)}\|_{\mathrm{R}}=\Theta(\lambda_{l}^{(i)}) ,
+so condition ( Δ ​ 2 \Delta 2 ) that ‖ λ l ​ 𝑾 l ‖ R = Θ ​ ( ‖ 𝑨 l ‖ R ) = Θ ​ ( 1 / L ) \|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right)=\Theta(1/L) implies the natural choice
+
+|  | λ l ( i ) = Θ ​ ( 1 / L ) , i = 1 , 2 . \displaystyle\lambda_{l}^{(i)}=\Theta(1/L),\qquad i=1,2. |  |
+| --- | --- | --- |
+
+Hidden layers (second-order).
+
+As illustrated in Section 3.3.3 and Appendix C.2 , the second-order update condition is satisfied automatically once the initial condition and the first-order update condition are met.
+
+Biases.
+
+Similar to the above derivation for ‖ ∇ 𝑾 l ℒ ‖ R \|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{\mathrm{R}} , we can obtain
+
+|  | ‖ ∇ 𝒃 l ℒ ‖ R = { Θ ​ ( 1 / n out ) , l = 0 , Θ ​ ( 1 / ( L ​ n out ) ) , l ∈ [ L ] . \displaystyle\|\nabla_{{\bm{b}}_{l}}\mathcal{L}\|_{\mathrm{R}}=\begin{cases}\Theta(1/{n_{\mathrm{out}}}),&l=0,\\
+\Theta(1/(Ln_{\mathrm{out}})),&l\in[L].\end{cases} |  |
+| --- | --- | --- |
+
+Requiring ‖ 𝒃 l ‖ R = Θ ​ ( 1 ) \|{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1) according to Equation ( 18 ) leads to the learning rate as
+
+|  | η 𝒃 l = { Θ ​ ( n out ) , l = 0 , Θ ​ ( L ​ n out ) , l ∈ [ L ] , \displaystyle\eta_{{\bm{b}}_{l}}=\begin{cases}\Theta(n_{\mathrm{out}}),&l=0,\\
+\Theta(Ln_{\mathrm{out}}),&l\in[L],\end{cases} |  |
+| --- | --- | --- |
+
+and corresponding weight decays as
+
+|  | λ 𝒃 l = { Θ ​ ( 1 / n out ) , l = 0 , Θ ​ ( 1 / ( L ​ n out ) ) , l ∈ [ L ] . \displaystyle\lambda_{{\bm{b}}_{l}}=\begin{cases}\Theta(1/n_{\mathrm{out}}),&l=0,\\
+\Theta\left(1/(Ln_{\mathrm{out}})\right),&l\in[L].\end{cases} |  |
+| --- | --- | --- |
+
+This completes the implementation of the update condition for SGD with
+weight decay, which is summarized in Table 4 .
+
+[FIGURE_CAPTION] Table 4 : μ \mu P implementation for SGD with weight decay under width–depth scaling. Entries in purple indicate differences between μ \mu P and SP [ 14 ] , while gray shows the corresponding SP choices.
+Here, r n r_{n} and r L r_{L} denote the width and depth scaling ratios relative to the base model.
+The variance of input weights is σ base 2 \sigma^{2}_{\mathrm{base}} for language and σ base 2 / d 0 \sigma^{2}_{\mathrm{base}}/d_{0} for image. The initial variance of input bias is σ base 2 \sigma^{2}_{\mathrm{base}} .
+
+### C.4 AdamW
+
+In this section, we recover and extend the μ \mu P formulation under width-depth scaling of AdamW in Dey et al. [ 10 ] .
+
+#### C.4.1 Update Rule
+
+First, we present the full update rule of AdamW [ 27 ] .
+To distinguish iteration steps, we append a superscript t ∈ [ T ] t\in[T] , which might be omitted later when no confusion arises.
+
+|  | 𝑾 l ( t ) = 𝑾 l ( t − 1 ) − η l ( t ) ​ ( AdamW ​ ( ∇ 𝑾 l ( t ) ℒ ) + λ l ​ 𝑾 l ( t ) ) , \displaystyle{\bm{W}}_{l}^{(t)}={\bm{W}}_{l}^{(t-1)}-\eta_{l}^{(t)}\left(\mathrm{AdamW}\left(\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right)+\lambda_{l}{\bm{W}}_{l}^{(t)}\right), |  |
+| --- | --- | --- |
+
+where
+
+|  |  | AdamW ​ ( ∇ 𝑾 l ( t ) ℒ ) = 𝒎 ^ l ( t ) 𝒗 ^ l ( t ) + ε l , \displaystyle\mathrm{AdamW}\left(\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right)=\frac{\hat{{\bm{m}}}_{l}^{(t)}}{\sqrt{\hat{{\bm{v}}}_{l}^{(t)}}+\varepsilon_{l}}, |  | (26) |
+| --- | --- | --- | --- | --- |
+|  |  | where { 𝒎 ^ l ( t ) = 𝒎 l ( t ) 1 − β 1 t , 𝒎 l ( t ) = β 1 ​ 𝒎 l ( t − 1 ) + ( 1 − β 1 ) ​ ∇ 𝑾 l ( t ) ℒ , 𝒗 ^ l ( t ) = 𝒗 l ( t ) 1 − β 2 t , 𝒗 l ( t ) = β 2 ​ 𝒗 l ( t − 1 ) + ( 1 − β 2 ) ​ ( ∇ 𝑾 l ( t ) ℒ ) 2 . \displaystyle\text{where}\quad\left\{\begin{array}[]{ll}\hat{{\bm{m}}}_{l}^{(t)}=\frac{{{\bm{m}}}_{l}^{(t)}}{1-\beta_{1}^{t}},\quad{{\bm{m}}}_{l}^{(t)}=\beta_{1}{{\bm{m}}}_{l}^{(t-1)}+(1-\beta_{1})\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L},\\
+\hat{{\bm{v}}}_{l}^{(t)}=\frac{{{\bm{v}}}_{l}^{(t)}}{1-\beta_{2}^{t}},\quad{{\bm{v}}}_{l}^{(t)}=\beta_{2}{{\bm{v}}}_{l}^{(t-1)}+(1-\beta_{2})\left(\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right)^{2}.\end{array}\right. |  |
+
+We simplify the full update rule by omitting the momentum and the stabilization term, i.e., setting β 1 = 0 \beta_{1}=0 , β 2 = 0 \beta_{2}=0 , and ε l = 0 \varepsilon_{l}=0 .
+As discussed at the beginning of the Appendix C , omitting momentum does not affect the scaling analysis.
+The stabilization term ε l \varepsilon_{l} must, in fact, be scaled consistently with 𝒗 ^ l ( t ) \sqrt{\hat{{\bm{v}}}_{l}^{(t)}} , and since it does not alter the resulting parameterization of learning rate, we defer its discussion to the end of this section.
+Now, the AdamW is reduced to sign gradient descent as:
+
+|  | 𝑾 l ( t ) = 𝑾 l ( t − 1 ) − η l ( t ) ​ ( sign ​ ( ∇ 𝑾 l ( t ) ℒ ) + λ l ​ 𝑾 l ( t ) ) . \displaystyle{\bm{W}}_{l}^{(t)}={\bm{W}}_{l}^{(t-1)}-\eta_{l}^{(t)}\left(\mathrm{sign}\left(\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right)+\lambda_{l}{\bm{W}}_{l}^{(t)}\right). |  |
+| --- | --- | --- |
+
+Here, the superscript of the iteration step can be left out, and we write this simplified update rule as:
+
+|  | Δ 𝑾 l = − η l ( sign ​ ( ∇ 𝑾 l ℒ ) ⏟ 𝑨 l + λ l 𝑾 l ) . \displaystyle\Delta{{\bm{W}}}_{l}=-\eta_{l}\bigl(\,\underbrace{\mathrm{sign}\left(\nabla_{{\bm{W}}_{l}}\mathcal{L}\right)}_{{\bm{A}}_{l}}+\lambda_{l}{{\bm{W}}}_{l}\bigl). |  | (27) |
+| --- | --- | --- | --- |
+
+Given the dimension assumption d 0 , d L + 1 = Θ ​ ( 1 ) , n l = Θ ​ ( n ) d_{0},d_{L+1}=\Theta(1),n_{l}=\Theta(n) in Equation ( 3 ), the norm of 𝑨 l {\bm{A}}_{l} satisfies
+
+|  | ‖ 𝑨 l ‖ R \displaystyle\|{\bm{A}}_{l}\|_{\mathrm{R}} | = ‖ sign ​ ( ∇ 𝑾 l ( t ) ℒ ) ‖ R = n in n out ​ ‖ sign ​ ( ∇ 𝑾 l ( t ) ℒ ) ‖ 2 \displaystyle=\left\|\mathrm{sign}\left(\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right)\right\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\left\|\mathrm{sign}\left(\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right)\right\|_{2} |  |
+| --- | --- | --- | --- |
+|  |  | = n in n out ​ ‖ sign ​ ( ∇ 𝑾 l ( t ) ℒ ) ‖ F \displaystyle=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\left\|\mathrm{sign}\left(\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right)\right\|_{F} |  | (by low-rank approximation in Equation ( 20 )) |
+|  |  | = n in n out ​ n in ​ n out \displaystyle=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}} |  |
+|  |  | = n in = { Θ ​ ( 1 ) , l = 0 , Θ ​ ( n in ) , l ∈ [ L ] , Θ ​ ( n in ) , l = L + 1 . \displaystyle=n_{\mathrm{in}}=\left\{\begin{array}[]{ll}\Theta(1),&l=0,\\
+\Theta(n_{\mathrm{in}}),&l\in[L],\\
+\Theta(n_{\mathrm{in}}),&l=L+1.\end{array}\right. |  | (31) |
+
+#### C.4.2 Derivation of Parameterization
+
+Input and output layers.
+
+When λ 0 = 0 \lambda_{0}=0 , given the dimension assumption d 0 , d L + 1 = Θ ​ ( 1 ) , n l = Θ ​ ( n ) d_{0},d_{L+1}=\Theta(1),n_{l}=\Theta(n) in Equation ( 3 ), the multiplier parameterizations α 0 = Θ ​ ( 1 ) , α L + 1 = Θ ​ ( 1 / n in ) \alpha_{0}=\Theta(1),\alpha_{L+1}=\Theta(1/n_{\mathrm{in}}) in Equation ( 9 ), and the scale of ‖ 𝑨 l ‖ R \|{\bm{A}}_{l}\|_{\mathrm{R}} in Equation ( 31 ), we have
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ‖ R = α l ​ η l ​ ‖ 𝑨 l ‖ R = { Θ ​ ( η 0 ) , l = 0 , Θ ​ ( η L + 1 ) , l = L + 1 . \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\alpha_{l}\eta_{l}\|{\bm{A}}_{l}\|_{\mathrm{R}}=\left\{\begin{array}[]{ll}\Theta(\eta_{0}),&l=0,\\
+\Theta(\eta_{L+1}),&l=L+1.\end{array}\right. |  |
+| --- | --- | --- |
+
+As desired in ( Δ ​ 1 \Delta 1 ), to satisfy ( C2.1 ) that α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R , α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) , we need to set
+
+|  | η 0 = Θ ​ ( 1 ) , η L + 1 = Θ ​ ( 1 ) . \displaystyle\eta_{0}=\Theta(1),\quad\eta_{L+1}=\Theta(1). |  |
+| --- | --- | --- |
+
+When λ l ≠ 0 \lambda_{l}\neq 0 , given Equation ( 8 ) that ‖ 𝑾 0 ‖ R = Θ ​ ( 1 ) \|{{\bm{W}}}_{0}\|_{\mathrm{R}}=\Theta(1) and ‖ 𝑾 L + 1 ‖ R = Θ ​ ( n in ) \|{{\bm{W}}}_{L+1}\|_{\mathrm{R}}=\Theta(n_{\mathrm{in}}) , we have
+
+|  | ‖ λ l ​ 𝑾 l ‖ R = { Θ ​ ( λ 0 ) , l = 0 , Θ ​ ( λ L + 1 ​ n in ) , l = L + 1 . \displaystyle\|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\left\{\begin{array}[]{ll}\Theta(\lambda_{0}),&l=0,\\
+\Theta(\lambda_{L+1}n_{\mathrm{in}}),&l=L+1.\end{array}\right. |  |
+| --- | --- | --- |
+
+To satisfy ( Δ ​ 2 \Delta 2 ) that ‖ λ l ​ 𝑾 l ‖ R = Θ ​ ( ‖ 𝑨 l ‖ R ) \|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right) , we need to set
+
+|  | λ 0 = Θ ​ ( 1 ) , λ L + 1 = Θ ​ ( 1 ) , \displaystyle\lambda_{0}=\Theta(1),\quad\lambda_{L+1}=\Theta(1), |  |
+| --- | --- | --- |
+
+Hidden layers (first-order).
+
+When λ l = 0 \lambda_{l}=0 , given the dimension assumption d 0 , d L + 1 = Θ ​ ( 1 ) , n l = Θ ​ ( n ) d_{0},d_{L+1}=\Theta(1),n_{l}=\Theta(n) in Equation ( 3 ), the weight norm ‖ 𝑾 l ‖ R = Θ ​ ( 1 ) \|{{\bm{W}}}_{l}\|_{\mathrm{R}}=\Theta(1) in Equation ( 8 ), the multiplier parameterization α l = Θ ​ ( 1 / L ) \alpha_{l}=\Theta(1/L) in Equation ( 10 ), and the scale of ‖ 𝑨 l ‖ R \|{\bm{A}}_{l}\|_{\mathrm{R}} in Equation ( 31 ), we have
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( 1 / L ) ⋅ η l ( 2 ) ​ ‖ 𝑨 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( η l ( 2 ) ​ n in / L ) . \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)\cdot\eta_{l}^{(2)}\|{\bm{A}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(\eta_{l}^{(2)}n_{\mathrm{in}}/L). |  |
+| --- | --- | --- |
+
+As desired in ( Δ ​ 1 \Delta 1 ), to satisfy the first-order update condition on hidden weights ( C2.2 ) that α l ​ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L) , we need to set
+
+|  | η l ( 2 ) = Θ ​ ( 1 / n in ) . \displaystyle\eta_{l}^{(2)}=\Theta(1/n_{\mathrm{in}}). |  |
+| --- | --- | --- |
+
+When λ l ≠ 0 \lambda_{l}\neq 0 , given the weight norm ‖ 𝑾 l ‖ R = Θ ​ ( 1 ) \|{{\bm{W}}}_{l}\|_{\mathrm{R}}=\Theta(1) in Equation ( 8 ), we have
+
+|  | ‖ λ l ( 2 ) ​ 𝑾 l ( 2 ) ‖ R = Θ ​ ( λ l ( 2 ) ) . \displaystyle\|\lambda_{l}^{(2)}{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(\lambda_{l}^{(2)}). |  |
+| --- | --- | --- |
+
+To satisfy ( Δ ​ 2 \Delta 2 ) that ‖ λ l ​ 𝑾 l ‖ R = Θ ​ ( ‖ 𝑨 l ‖ R ) \|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right) we need to set
+
+|  | λ l ( 2 ) = Θ ​ ( n in ) . \displaystyle\lambda_{l}^{(2)}=\Theta(n_{\mathrm{in}}). |  |
+| --- | --- | --- |
+
+Symmetrically, we have the same choice for 𝑾 l ( 1 ) {\bm{W}}_{l}^{(1)} :
+
+|  | η l ( 1 ) = Θ ​ ( 1 / n in ) , λ l ( 1 ) = Θ ​ ( n in ) . \displaystyle\eta_{l}^{(1)}=\Theta(1/n_{\mathrm{in}}),\quad\lambda_{l}^{(1)}=\Theta(n_{\mathrm{in}}). |  |
+| --- | --- | --- |
+
+Hidden layers (second-order).
+
+As illustrated in Section 3.3.3 or in Appendix C.2 for Muon, the second-order update condition is satisfied automatically once the initial condition and the first-order update condition are met.
+
+Biases.
+
+For bias parameters, following a similar derivation for ‖ sign ​ ( ∇ 𝑾 l ℒ ) ‖ R \|\mathrm{sign}(\nabla_{{\bm{W}}_{l}}\mathcal{L})\|_{\mathrm{R}} , we have
+
+|  | ‖ sign ​ ( ∇ 𝑾 l ℒ ) ‖ R = Θ ​ ( n in ) = Θ ​ ( 1 ) , 0 ≤ l ≤ L . \displaystyle\|\mathrm{sign}\left(\nabla_{{\bm{W}}_{l}}\mathcal{L}\right)\|_{\mathrm{R}}=\Theta(n_{\mathrm{in}})=\Theta(1),\quad 0\leq l\leq L. |  |
+| --- | --- | --- |
+
+To satisfy the condtion ‖ 𝒃 l ‖ R = Θ ​ ( 1 ) , ‖ Δ ​ 𝒃 l ‖ R = Θ ​ ( 1 ) , ∀ 0 ≤ l ≤ L \|{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1),\ \|\Delta{\bm{b}}_{l}\|_{\mathrm{R}}=\Theta(1),\ \forall\ 0\leq l\leq L in Equation ( 18 ), we set
+
+|  | η 𝒃 l = Θ ​ ( 1 ) , 0 ≤ l ≤ L , \displaystyle\eta_{{\bm{b}}_{l}}=\Theta(1),\quad 0\leq l\leq L, |  |
+| --- | --- | --- |
+
+and the corresponding weight decay
+
+|  | λ 𝒃 l = Θ ​ ( 1 ) , 0 ≤ l ≤ L . \displaystyle\lambda_{{\bm{b}}_{l}}=\Theta(1),\quad 0\leq l\leq L. |  |
+| --- | --- | --- |
+
+Parameterization of ε l \varepsilon_{l} .
+
+To make the stabilization term ε l \varepsilon_{l} effective and not dominate the gradient, we desire it to be of the same scale as 𝒗 ^ l ( t ) \sqrt{\hat{{\bm{v}}}_{l}^{(t)}} .
+When omitting the momentum, we have 𝒗 ^ l = ∇ 𝑾 l ℒ \sqrt{\hat{{\bm{v}}}_{l}}=\nabla_{{\bm{W}}_{l}}\mathcal{L} .
+Therefore, we need to ensure ε l = Θ ​ ( ‖ ∇ Vec ​ ( 𝑾 l ) ℒ ‖ R ) \varepsilon_{l}=\Theta(\|\nabla_{\mathrm{Vec}({\bm{W}}_{l})}\mathcal{L}\|_{\mathrm{R}}) , the latter can be estimated based on the derivation for ‖ ∇ 𝑾 l ℒ ‖ R \|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{\mathrm{R}} or ‖ ∇ 𝑾 l ℒ ‖ 2 \|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{2} in Appendix C.3 .
+
+For the input weights 𝑾 0 {\bm{W}}_{0} , we have
+
+|  | ‖ ∇ Vec ​ ( 𝑾 0 ) ℒ ‖ R = 1 n in ​ n out ​ ‖ ∇ 𝑾 0 ℒ ‖ F = Θ ​ ( 1 n in ​ n out ​ ‖ ∇ 𝑾 0 ℒ ‖ 2 ) = Θ ​ ( 1 n in ​ n out ​ n in n out ) = Θ ​ ( 1 n out ) . \displaystyle\|\nabla_{\mathrm{Vec}({\bm{W}}_{0})}\mathcal{L}\|_{\mathrm{R}}=\frac{1}{\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}}\|\nabla_{{\bm{W}}_{0}}\mathcal{L}\|_{\mathrm{F}}=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}}\|\nabla_{{\bm{W}}_{0}}\mathcal{L}\|_{\mathrm{2}}\right)=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}}\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\right)=\Theta(\frac{1}{n_{\mathrm{out}}}). |  |
+| --- | --- | --- |
+
+Therefore, we set
+
+|  | ε 0 = Θ ​ ( 1 n out ) . \varepsilon_{0}=\Theta(\frac{1}{n_{\mathrm{out}}}). |  |
+| --- | --- | --- |
+
+For the hidden weights 𝑾 l , l ∈ [ L ] {\bm{W}}_{l},l\in[L] , we have
+
+|  | ‖ ∇ Vec ​ ( 𝑾 l ) ℒ ‖ R = Θ ​ ( 1 n in ​ n out ​ ‖ ∇ 𝑾 l ℒ ‖ 2 ) = Θ ​ ( 1 n in ​ n out ​ 1 L ​ n in n out ) = Θ ​ ( 1 L ​ n out ) . \displaystyle\|\nabla_{\mathrm{Vec}({\bm{W}}_{l})}\mathcal{L}\|_{\mathrm{R}}=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}}\|\nabla_{{\bm{W}}_{l}}\mathcal{L}\|_{\mathrm{2}}\right)=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}}\frac{1}{L}\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\right)=\Theta(\frac{1}{Ln_{\mathrm{out}}}). |  |
+| --- | --- | --- |
+
+Therefore, we set
+
+|  | ε l = Θ ​ ( 1 L ​ n out ) , l ∈ [ L ] . \varepsilon_{l}=\Theta(\frac{1}{Ln_{\mathrm{out}}}),\quad l\in[L]. |  |
+| --- | --- | --- |
+
+For the output weights 𝑾 L + 1 {\bm{W}}_{L+1} , we have
+
+|  | ‖ ∇ Vec ​ ( 𝑾 L + 1 ) ℒ ‖ R = Θ ​ ( 1 n in ​ n out ​ ‖ ∇ 𝑾 L + 1 ℒ ‖ 2 ) = Θ ​ ( 1 n in ​ n out ​ 1 n in ​ n out ) = Θ ​ ( 1 n in ) . \displaystyle\|\nabla_{\mathrm{Vec}({\bm{W}}_{L+1})}\mathcal{L}\|_{\mathrm{R}}=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}}\|\nabla_{{\bm{W}}_{L+1}}\mathcal{L}\|_{\mathrm{2}}\right)=\Theta\left(\frac{1}{\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}}\sqrt{\frac{1}{n_{\mathrm{in}}n_{\mathrm{out}}}}\right)=\Theta(\frac{1}{n_{\mathrm{in}}}). |  |
+| --- | --- | --- |
+
+Therefore, we set
+
+|  | ε L + 1 = Θ ​ ( 1 n in ) , l ∈ [ L ] . \varepsilon_{L+1}=\Theta(\frac{1}{n_{\mathrm{in}}}),\quad l\in[L]. |  |
+| --- | --- | --- |
+
+Similarly, for the biases we have derived in Appendix C.3 that
+
+|  | ‖ ∇ 𝒃 l ℒ ‖ R = { Θ ​ ( 1 / n out ) , l = 0 , Θ ​ ( 1 / ( L ​ n out ) ) , l ∈ [ L ] . \displaystyle\|\nabla_{{\bm{b}}_{l}}\mathcal{L}\|_{\mathrm{R}}=\begin{cases}\Theta(1/{n_{\mathrm{out}}}),&l=0,\\
+\Theta(1/(Ln_{\mathrm{out}})),&l\in[L].\end{cases} |  |
+| --- | --- | --- |
+
+Therefore, we set the stabilization term as
+
+|  | ε 𝒃 l = { Θ ​ ( 1 / n out ) , l = 0 , Θ ​ ( 1 / ( L ​ n out ) ) , l ∈ [ L ] . \displaystyle\varepsilon_{{\bm{b}}_{l}}=\begin{cases}\Theta(1/{n_{\mathrm{out}}}),&l=0,\\
+\Theta(1/(Ln_{\mathrm{out}})),&l\in[L].\end{cases} |  |
+| --- | --- | --- |
+
+This completes the implementation of the update condition for AdamW, which is summarized in Table 5 .
+
+[FIGURE_CAPTION] Table 5 : μ \mu P implementation for AdamW [ 27 ] , Lion [ 7 ] , and Sophia [ 25 ] with weight decay under width–depth scaling. Entries in purple indicate differences between μ \mu P and SP [ 14 ] , while gray shows the corresponding SP choices.
+Here, r n r_{n} and r L r_{L} denote the width and depth scaling ratios relative to the base model.
+The variance of input weights is σ base 2 \sigma^{2}_{\mathrm{base}} for language and σ base 2 / d 0 \sigma^{2}_{\mathrm{base}}/d_{0} for image. The initial variance of input bias is σ base 2 \sigma^{2}_{\mathrm{base}} .
+
+### C.5 Shampoo
+
+記 ${\bm{G}}_{l}^{(t)}=\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}$，Shampoo 的更新規則為
+
+|  | $\displaystyle{\bm{W}}_{l}^{(t)}={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left(\left({\bm{L}}_{l}^{(t)}\right)^{-\frac{1}{4}}{\bm{G}}_{l}^{(t)}\left({\bm{R}}_{l}^{(t)}\right)^{-\frac{1}{4}}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right)$ | (32) |
+| --- | --- | --- |
+
+其中
+
+|  | $\displaystyle{\bm{L}}_{l}^{(t)}={\bm{L}}_{l}^{(t-1)}+{\bm{G}}_{l}^{(t)}{{\bm{G}}_{l}^{(t)}}^{\top},\quad{\bm{R}}_{l}^{(t)}={\bm{R}}_{l}^{(t-1)}+{{\bm{G}}_{l}^{(t)}}^{\top}{\bm{G}}_{l}^{(t)}$ | (33) |
+| --- | --- |
+
+我們透過省略動量來簡化完整更新規則，即設定 ${\bm{L}}_{l}^{(t-1)}=\boldsymbol{0}$ 和 ${\bm{R}}_{l}^{(t-1)}=\boldsymbol{0}$。那麼我們有
+
+|  | $\displaystyle{\bm{L}}_{l}^{(t)}={\bm{G}}_{l}^{(t)}{{\bm{G}}_{l}^{(t)}}^{\top},\quad{\bm{R}}_{l}^{(t)}={{\bm{G}}_{l}^{(t)}}^{\top}{\bm{G}}_{l}^{(t)}$ |
+| --- | --- |
+
+如同 Muon，對 ${\bm{G}}_{l}^{(t)}$ 應用 SVD，我們有
+
+|  | $\displaystyle{\bm{G}}_{l}^{(t)}={\bm{U}}_{l}^{(t)}{\bm{\Sigma}}_{l}^{(t)}{{\bm{V}}_{l}^{(t)}}^{\top}$ |
+| --- | --- |
+
+因此
+
+|  | $\displaystyle{\bm{L}}_{l}^{(t)}={\bm{U}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{2}{{\bm{U}}_{l}^{(t)}}^{\top},\quad{\bm{R}}_{l}^{(t)}={\bm{V}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{2}{{\bm{V}}_{l}^{(t)}}^{\top}$ |
+| --- | --- |
+
+隨後，Shampoo 簡化為：
+
+|  | $\displaystyle{\bm{W}}_{l}^{(t)}$ | $\displaystyle={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left(\left({\bm{U}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{2}{{\bm{U}}_{l}^{(t)}}^{\top}\right)^{-\frac{1}{4}}{\bm{U}}_{l}^{(t)}{\bm{\Sigma}}_{l}^{(t)}{{\bm{V}}_{l}^{(t)}}^{\top}\left({\bm{V}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{2}{{\bm{V}}_{l}^{(t)}}^{\top}\right)^{-\frac{1}{4}}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right)$ |  |
+| --- | --- | --- | --- |
+|  |  | $\displaystyle={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left({\bm{U}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{-\frac{1}{2}}{{\bm{U}}_{l}^{(t)}}^{\top}{\bm{U}}_{l}^{(t)}{\bm{\Sigma}}_{l}^{(t)}{{\bm{V}}_{l}^{(t)}}^{\top}{\bm{V}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{-\frac{1}{2}}{{\bm{V}}_{l}^{(t)}}^{\top}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right)$ |  |
+|  |  | $\displaystyle={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left({\bm{U}}_{l}^{(t)}{{\bm{V}}_{l}^{(t)}}^{\top}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right)$ |  |
+
+這與方程式 (21) 中 Muon 的更新規則完全一致。因此，Shampoo 與表 3 中 Muon 的參數化共享。
+
+注意，在 Qiu et al. [31, Table 1] 中衍生的隱藏層學習率參數化為 $\frac{(n_{\mathrm{out}}/n_{\mathrm{in}})^{1-(e_{L}+e_{R})}}{L^{2(e_{L}+e_{R})-1}n_{\mathrm{blk}}^{e_{L}+e_{R}}}$，其中 $e_{L}$ 和 $e_{R}$ 是方程式 (32) 中 ${\bm{L}}_{l}^{(t)}$ 和 ${\bm{R}}_{l}^{(t)}$ 的指數，在標準 Shampoo 中等於 $\frac{1}{4}$，而 $n_{\mathrm{blk}}$ 是分塊的數量，當未使用分塊時等於 $1$。在此情況下，$\frac{(n_{\mathrm{out}}/n_{\mathrm{in}})^{1-(e_{L}+e_{R})}}{L^{2(e_{L}+e_{R})-1}n_{\mathrm{blk}}^{e_{L}+e_{R}}}=\sqrt{n_{\mathrm{out}}/n_{\mathrm{in}}}=\Theta(1)$，與我們在表 3 中 Shampoo 的結果一致。
+
+### C.6 SOAP
+
+Denote the weight gradient as 𝑮 l ( t ) = ∇ 𝑾 l ( t ) ℒ ∈ ℝ n out × n in {\bm{G}}_{l}^{(t)}=\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{in}}} and its rank r = rank ​ ( 𝑮 l ( t ) ) r=\mathrm{rank}({\bm{G}}_{l}^{(t)}) .
+SOAP adopts a weighted version of Shampoo’s Equation ( 33 ) for 𝑳 l ( t ) {\bm{L}}_{l}^{(t)} and 𝑹 l ( t ) {\bm{R}}_{l}^{(t)} :
+
+|  | 𝑳 l ( t ) = β 3 ​ 𝑳 l ( t − 1 ) + ( 1 − β 3 ) ​ 𝑮 l ( t ) ​ 𝑮 l ( t ) ⊤ , 𝑹 l ( t ) = β 3 ​ 𝑹 l ( t − 1 ) + ( 1 − β 3 ) ​ 𝑮 l ( t ) ⊤ ​ 𝑮 l ( t ) . \displaystyle{\bm{L}}_{l}^{(t)}=\beta_{3}{\bm{L}}_{l}^{(t-1)}+(1-\beta_{3}){\bm{G}}_{l}^{(t)}{{\bm{G}}_{l}^{(t)}}^{\top},\quad{\bm{R}}_{l}^{(t)}=\beta_{3}{\bm{R}}_{l}^{(t-1)}+(1-\beta_{3}){{\bm{G}}_{l}^{(t)}}^{\top}{\bm{G}}_{l}^{(t)}. |  |
+| --- | --- | --- |
+
+By applying eigendecomposition to matrices 𝑳 l ( t ) ∈ ℝ n out × n out {\bm{L}}_{l}^{(t)}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{out}}} and 𝑹 l ( t ) ∈ ℝ n in × n in {\bm{R}}_{l}^{(t)}\in\mathbb{R}^{n_{\mathrm{in}}\times n_{\mathrm{in}}} , we get two orthogonal matrices 𝑸 𝑳 l ( t ) ∈ ℝ n out × n out {\bm{Q}}_{{\bm{L}}_{l}}^{(t)}\in\mathbb{R}^{n_{\mathrm{out}}\times n_{\mathrm{out}}} and 𝑸 𝑹 l ( t ) ∈ ℝ n in × n in {\bm{Q}}_{{\bm{R}}_{l}}^{(t)}\in\mathbb{R}^{n_{\mathrm{in}}\times n_{\mathrm{in}}} as:
+
+|  | 𝑳 l ( t ) = 𝑸 𝑳 l ( t ) ​ 𝚲 𝑳 l ( t ) ​ 𝑸 𝑳 l ( t ) ⊤ , 𝑹 l ( t ) = 𝑸 𝑹 l ( t ) ​ 𝚲 𝑹 l ( t ) ​ 𝑸 𝑹 l ( t ) ⊤ . \displaystyle{\bm{L}}_{l}^{(t)}={\bm{Q}}_{{\bm{L}}_{l}}^{(t)}\boldsymbol{\Lambda}_{{\bm{L}}_{l}}^{(t)}{{\bm{Q}}_{{\bm{L}}_{l}}^{(t)}}^{\top},\quad{\bm{R}}_{l}^{(t)}={\bm{Q}}_{{\bm{R}}_{l}}^{(t)}\boldsymbol{\Lambda}_{{\bm{R}}_{l}}^{(t)}{{\bm{Q}}_{{\bm{R}}_{l}}^{(t)}}^{\top}. |  | (34) |
+| --- | --- | --- | --- |
+
+This induces a rotated gradient:
+
+|  | 𝑮 l ′ ( t ) = 𝑸 𝑳 l ( t ) ⊤ ​ 𝑮 l ( t ) ​ 𝑸 𝑹 l ( t ) . \displaystyle{{\bm{G}}_{l}^{\prime}}^{(t)}={{\bm{Q}}_{{\bm{L}}_{l}}^{(t)}}^{\top}{\bm{G}}_{l}^{(t)}{\bm{Q}}_{{\bm{R}}_{l}}^{(t)}. |  |
+| --- | --- | --- |
+
+The full update rule of SOAP is
+
+|  | 𝑾 l ( t ) = 𝑾 l ( t − 1 ) − η ( t ) ​ ( 𝑸 𝑳 l ( t ) ​ AdamW ​ ( 𝑮 l ′ ( t ) ) ​ 𝑸 𝑹 l ( t ) ⊤ + λ l ​ 𝑾 l ( t ) ) , \displaystyle{\bm{W}}_{l}^{(t)}={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left({\bm{Q}}_{{\bm{L}}_{l}}^{(t)}\mathrm{AdamW}\left({{\bm{G}}_{l}^{\prime}}^{(t)}\right){{\bm{Q}}_{{\bm{R}}_{l}}^{(t)}}^{\top}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right), |  |
+| --- | --- | --- |
+
+where AdamW ​ ( ⋅ ) \mathrm{AdamW}\left(\cdot\right) is defined as in Equation ( 26 ).
+
+First, omit the momentum and the stabilization term in the AdamW operator. Then, AdamW ​ ( ⋅ ) \mathrm{AdamW}\left(\cdot\right) is reduced to sign ​ ( ⋅ ) \mathrm{sign}\left(\cdot\right) as discussed in Appendix C.4.1 .
+
+Then, omit the momentum term in 𝑳 l ( t ) {\bm{L}}_{l}^{(t)} and 𝑹 l ( t ) {\bm{R}}_{l}^{(t)} , i.e., set β 3 = 0 \beta_{3}=0 .
+Applying compact SVD to the weight matrix 𝑮 l ( t ) = 𝑼 l ( t ) ​ 𝚺 l ( t ) ​ 𝑽 l ( t ) ⊤ {\bm{G}}_{l}^{(t)}={\bm{U}}_{l}^{(t)}{\bm{\Sigma}}_{l}^{(t)}{{\bm{V}}_{l}^{(t)}}^{\top} , where 𝑼 l ( t ) ∈ ℝ n out × r {\bm{U}}_{l}^{(t)}\in\mathbb{R}^{n_{\mathrm{out}}\times r} , 𝚺 l ( t ) ∈ ℝ r × r {\bm{\Sigma}}_{l}^{(t)}\in\mathbb{R}^{r\times r} , and 𝑽 l ( t ) ∈ ℝ n in × r {\bm{V}}_{l}^{(t)}\in\mathbb{R}^{n_{\mathrm{in}}\times r} , we have
+
+|  | 𝑳 l ( t ) = 𝑮 l ( t ) ​ 𝑮 l ( t ) ⊤ = 𝑼 l ( t ) ​ 𝚺 l ( t ) 2 ​ 𝑼 l ( t ) ⊤ , 𝑹 l ( t ) = 𝑮 l ( t ) ⊤ ​ 𝑮 l ( t ) = 𝑽 l ( t ) ​ 𝚺 l ( t ) 2 ​ 𝑽 l ( t ) ⊤ . \displaystyle{\bm{L}}_{l}^{(t)}={\bm{G}}_{l}^{(t)}{{\bm{G}}_{l}^{(t)}}^{\top}={\bm{U}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{2}{{\bm{U}}_{l}^{(t)}}^{\top},\quad{\bm{R}}_{l}^{(t)}={{\bm{G}}_{l}^{(t)}}^{\top}{\bm{G}}_{l}^{(t)}={\bm{V}}_{l}^{(t)}{{\bm{\Sigma}}_{l}^{(t)}}^{2}{{\bm{V}}_{l}^{(t)}}^{\top}. |  |
+| --- | --- | --- |
+
+According to Equation ( 34 ), the eigenvectors corresponding to the non-zero eigenvalues match the singular vectors, i.e.,
+
+|  | 𝑸 𝑳 l ( t ) [ : , : r ] = 𝑼 l ( t ) , 𝑸 𝑹 l ( t ) [ : , : r ] = 𝑽 l ( t ) . \displaystyle{{\bm{Q}}_{{\bm{L}}_{l}}^{(t)}}_{[\mathrel{\mathop{\ordinarycolon}},\mathrel{\mathop{\ordinarycolon}}r]}={\bm{U}}_{l}^{(t)},\quad{{\bm{Q}}_{{\bm{R}}_{l}}^{(t)}}_{[\mathrel{\mathop{\ordinarycolon}},\mathrel{\mathop{\ordinarycolon}}r]}={\bm{V}}_{l}^{(t)}. |  |
+| --- | --- | --- |
+
+We can partition the orthogonal matrices as 𝑸 𝑳 l ( t ) = [ 𝑼 l ( t ) ​ 𝑼 ⟂ ( t ) ] {\bm{Q}}_{{\bm{L}}_{l}}^{(t)}=[{\bm{U}}_{l}^{(t)}\ {\bm{U}}_{\perp}^{(t)}] and 𝑸 𝑹 l ( t ) = [ 𝑽 l ( t ) ​ 𝑽 ⟂ ( t ) ] {\bm{Q}}_{{\bm{R}}_{l}}^{(t)}=[{\bm{V}}_{l}^{(t)}\ {\bm{V}}_{\perp}^{(t)}] . Substituting the eigendecomposition of 𝑮 l ( t ) {\bm{G}}_{l}^{(t)} , the rotated gradient becomes:
+
+|  | 𝑮 l ′ ( t ) \displaystyle{{\bm{G}}_{l}^{\prime}}^{(t)} | = 𝑸 𝑳 l ( t ) ⊤ ​ 𝑮 l ( t ) ​ 𝑸 𝑹 l ( t ) = [ 𝑼 l ( t ) ⊤ 𝑼 ⟂ ( t ) ⊤ ] ​ 𝑼 l ( t ) ​ 𝚺 l ( t ) ​ 𝑽 l ( t ) ⊤ ​ [ 𝑽 l ( t ) 𝑽 ⟂ ( t ) ] = [ 𝚺 l ( t ) 𝟎 𝟎 𝟎 ] . \displaystyle={{\bm{Q}}_{{\bm{L}}_{l}}^{(t)}}^{\top}{\bm{G}}_{l}^{(t)}{\bm{Q}}_{{\bm{R}}_{l}}^{(t)}=\begin{bmatrix}{{\bm{U}}_{l}^{(t)}}^{\top}\\
+{{\bm{U}}_{\perp}^{(t)}}^{\top}\end{bmatrix}{\bm{U}}_{l}^{(t)}{\bm{\Sigma}}_{l}^{(t)}{{\bm{V}}_{l}^{(t)}}^{\top}\begin{bmatrix}{\bm{V}}_{l}^{(t)}&{\bm{V}}_{\perp}^{(t)}\end{bmatrix}=\begin{bmatrix}{\bm{\Sigma}}_{l}^{(t)}&\mathbf{0}\\
+\mathbf{0}&\mathbf{0}\end{bmatrix}. |  |
+| --- | --- | --- | --- |
+
+Then, we find that SOAP is reduced to:
+
+|  | 𝑾 l ( t ) \displaystyle{\bm{W}}_{l}^{(t)} | = 𝑾 l ( t − 1 ) − η ( t ) ​ ( 𝑸 𝑳 l ( t ) ​ sign ​ ( [ 𝚺 l ( t ) 𝟎 𝟎 𝟎 ] ) ​ 𝑸 𝑹 l ( t ) ⊤ + λ l ​ 𝑾 l ( t ) ) \displaystyle={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left({\bm{Q}}_{{\bm{L}}_{l}}^{(t)}\mathrm{sign}\left(\begin{bmatrix}{\bm{\Sigma}}_{l}^{(t)}&\mathbf{0}\\
+\mathbf{0}&\mathbf{0}\end{bmatrix}\right){{\bm{Q}}_{{\bm{R}}_{l}}^{(t)}}^{\top}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right) |  |
+| --- | --- | --- | --- |
+|  |  | = 𝑾 l ( t − 1 ) − η ( t ) ​ ( 𝑸 𝑳 l ( t ) ​ [ 𝑰 r × r 𝟎 𝟎 𝟎 ] ​ 𝑸 𝑹 l ( t ) ⊤ + λ l ​ 𝑾 l ( t ) ) \displaystyle={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left({\bm{Q}}_{{\bm{L}}_{l}}^{(t)}\begin{bmatrix}{\bm{I}}_{r\times r}&\mathbf{0}\\
+\mathbf{0}&\mathbf{0}\end{bmatrix}{{\bm{Q}}_{{\bm{R}}_{l}}^{(t)}}^{\top}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right) |  |
+|  |  | = 𝑾 l ( t − 1 ) − η ( t ) ​ ( 𝑼 l ( t ) ​ 𝑽 l ( t ) ⊤ + λ l ​ 𝑾 l ( t ) ) , \displaystyle={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left({\bm{U}}_{l}^{(t)}{{\bm{V}}_{l}^{(t)}}^{\top}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right), |  |
+
+which, again, matches exactly the update rule of Muon in Equation ( 21 ).
+Therefore, SOAP shares Muon’s parameterizations in Table 3 .
+
+Note that the hidden layer learning rate parameterization derived in Qiu et al. [ 31 , Table 1] is n out e L / 2 ​ n in e R / 2 n in \frac{n_{\mathrm{out}}^{e_{L}/2}n_{\mathrm{in}}^{e_{R}/2}}{n_{\mathrm{in}}} , where the e L e_{L} and e R e_{R} are the indicators for left- and right-side preconditioners, which equals 1 1 for standard SOAP. In this case, n out e L / 2 ​ n in e R / 2 n in = n out ​ n in n in = Θ ​ ( 1 ) \frac{n_{\mathrm{out}}^{e_{L}/2}n_{\mathrm{in}}^{e_{R}/2}}{n_{\mathrm{in}}}=\frac{\sqrt{n_{\mathrm{out}}n_{\mathrm{in}}}}{n_{\mathrm{in}}}=\Theta(1) , consistent with our result for SOAP in Table 3 .
+
+### C.7 光譜球優化器 (SSO)
+
+#### C.7.1 更新規則
+
+SSO [ 40 ] 的目的是在光譜球上執行最陡下降（見原始論文中的第 3.1 節），其中更新遵循：
+
+|  | Δ 𝑾 l = − η l ( R ​ 𝚽 l ⏟ 𝑨 l + λ l 𝑾 l ) , \displaystyle\Delta{{\bm{W}}}_{l}=-\eta_{l}\bigl(\,\underbrace{R\boldsymbol{\Phi}_{l}}_{{\bm{A}}_{l}}+\lambda_{l}{{\bm{W}}}_{l}\bigl), |  |
+| --- | --- | --- |
+
+其中
+
+|  | R = Θ ​ ( n out n in ) , and 𝚽 l = arg ⁡ max 𝚽 ⁡ ⟨ ∇ 𝑾 l ℒ , 𝚽 ⟩ ​ s . t . ‖ 𝚽 ‖ 2 = 1 , ‖ 𝑾 l − η l ​ 𝚽 ‖ 2 = ‖ 𝑾 l ‖ 2 = R . \displaystyle R=\Theta\left(\sqrt{\frac{n_{\mathrm{out}}}{n_{\mathrm{in}}}}\right),\quad\text{and}\quad\boldsymbol{\Phi}_{l}=\arg\max_{\boldsymbol{\Phi}}\langle\nabla_{{\bm{W}}_{l}}\mathcal{L},\boldsymbol{\Phi}\rangle\ \mathrm{s.t.}\ \|\boldsymbol{\Phi}\|_{2}=1,\ \|{\bm{W}}_{l}-\eta_{l}\boldsymbol{\Phi}\|_{2}=\|{\bm{W}}_{l}\|_{2}=R. |  |
+| --- | --- | --- |
+
+因此我們有
+
+|  | ‖ 𝑨 l ‖ R = n in n out ​ ‖ 𝑨 l ‖ 2 = n in n out ​ R ​ ‖ 𝚽 l ‖ 2 = n in n out ​ Θ ​ ( n out n in ) = 1 . \displaystyle\|{\bm{A}}_{l}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\|{\bm{A}}_{l}\|_{2}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}R\|\boldsymbol{\Phi}_{l}\|_{2}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\Theta\left(\sqrt{\frac{n_{\mathrm{out}}}{n_{\mathrm{in}}}}\right)=1. |  | (35) |
+| --- | --- | --- | --- |
+
+#### C.7.2 參數化的推導
+
+輸入和輸出層。
+
+當 λ 0 = 0 \lambda_{0}=0 時，給定方程式 ( 3 ) 中的維度假設 d 0 , d L + 1 = Θ ​ ( 1 ) , n l = Θ ​ ( n ) d_{0},d_{L+1}=\Theta(1),n_{l}=\Theta(n) 、方程式 ( 9 ) 中的乘數參數化 α 0 = Θ ​ ( 1 ) , α L + 1 = Θ ​ ( 1 / n in ) \alpha_{0}=\Theta(1),\alpha_{L+1}=\Theta(1/n_{\mathrm{in}}) 以及方程式 ( 35 ) 中 ‖ 𝑨 l ‖ R \|{\bm{A}}_{l}\|_{\mathrm{R}} 的尺度，我們有
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ‖ R = α l ​ η l ​ ‖ 𝑨 l ‖ R = { Θ ​ ( η 0 ) , l = 0 , Θ ​ ( η L + 1 / n in ) , l = L + 1 . \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\alpha_{l}\eta_{l}\|{\bm{A}}_{l}\|_{\mathrm{R}}=\left\{\begin{array}[]{ll}\Theta(\eta_{0}),&l=0,\\
+\Theta(\eta_{L+1}/{n_{\mathrm{in}}}),&l=L+1.\end{array}\right. |  |
+| --- | --- | --- |
+
+如 ( Δ ​ 1 \Delta 1 ) 所示，為了滿足 ( C2.1 ) 即 α 0 ​ ‖ Δ ​ 𝑾 0 ‖ R , α L + 1 ​ ‖ Δ ​ 𝑾 L + 1 ‖ R = Θ ​ ( 1 ) \alpha_{0}\|\Delta{\bm{W}}_{0}\|_{\mathrm{R}},\alpha_{L+1}\|\Delta{\bm{W}}_{L+1}\|_{\mathrm{R}}=\Theta(1) ，我們需要設定
+
+|  | η 0 = Θ ​ ( 1 ) , η L + 1 = Θ ​ ( n in ) . \displaystyle\eta_{0}=\Theta(1),\quad\eta_{L+1}=\Theta({n_{\mathrm{in}}}). |  |
+| --- | --- | --- |
+
+當 λ l ≠ 0 \lambda_{l}\neq 0 時，給定方程式 ( 8 ) 中的 ‖ 𝑾 0 ‖ R = Θ ​ ( 1 ) \|{{\bm{W}}}_{0}\|_{\mathrm{R}}=\Theta(1) 和 ‖ 𝑾 L + 1 ‖ R = Θ ​ ( n in ) \|{{\bm{W}}}_{L+1}\|_{\mathrm{R}}=\Theta(n_{\mathrm{in}}) ，我們有
+
+|  | ‖ λ l ​ 𝑾 l ‖ R = { Θ ​ ( λ 0 ) , l = 0 , Θ ​ ( λ L + 1 ​ n in ) , l = L + 1 . \displaystyle\|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\left\{\begin{array}[]{ll}\Theta(\lambda_{0}),&l=0,\\
+\Theta(\lambda_{L+1}n_{\mathrm{in}}),&l=L+1.\end{array}\right. |  |
+| --- | --- | --- |
+
+為了滿足 ( Δ ​ 2 \Delta 2 ) 即 ‖ λ l ​ 𝑾 l ‖ R = Θ ​ ( ‖ 𝑨 l ‖ R ) \|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right) ，我們需要設定
+
+|  | λ 0 = Θ ​ ( 1 ) , λ L + 1 = Θ ​ ( 1 / n in ) , \displaystyle\lambda_{0}=\Theta(1),\quad\lambda_{L+1}=\Theta(1/{n_{\mathrm{in}}}), |  |
+| --- | --- | --- |
+
+隱藏層（一階）。
+
+當 λ l = 0 \lambda_{l}=0 時，給定方程式 ( 3 ) 中的維度假設 d 0 , d L + 1 = Θ ​ ( 1 ) , n l = Θ ​ ( n ) d_{0},d_{L+1}=\Theta(1),n_{l}=\Theta(n) 、方程式 ( 8 ) 中的權重範數 ‖ 𝑾 l ‖ R = Θ ​ ( 1 ) \|{{\bm{W}}}_{l}\|_{\mathrm{R}}=\Theta(1) 、方程式 ( 10 ) 中的乘數參數化 α l = Θ ​ ( 1 / L ) \alpha_{l}=\Theta(1/L) 以及方程式 ( 35 ) 中 ‖ 𝑨 l ‖ R \|{\bm{A}}_{l}\|_{\mathrm{R}} 的尺度，我們有
+
+|  | α l ​ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( 1 / L ) ⋅ η l ( 2 ) ​ ‖ 𝑨 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( η l ( 2 ) / L ) . \displaystyle\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L)\cdot\eta_{l}^{(2)}\|{\bm{A}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(\eta_{l}^{(2)}/L). |  |
+| --- | --- | --- |
+
+如 ( Δ ​ 1 \Delta 1 ) 所示，為了滿足隱藏權重上的一階更新條件 ( C2.2 ) 即 α l ​ ‖ Δ ​ 𝑾 l ( 2 ) ‖ R ​ ‖ 𝑾 l ( 1 ) ‖ R = Θ ​ ( 1 / L ) \alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\,\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\Theta(1/L) ，我們需要設定
+
+|  | η l ( 2 ) = Θ ​ ( 1 ) . \displaystyle\eta_{l}^{(2)}=\Theta(1). |  |
+| --- | --- | --- |
+
+當 λ l ≠ 0 \lambda_{l}\neq 0 時，給定權重範數 ‖ 𝑾 l ‖ R = Θ ​ ( 1 ) \|{{\bm{W}}}_{l}\|_{\mathrm{R}}=\Theta(1) 方程式 ( 8 )，我們有
+
+|  | ‖ λ l ( 2 ) ​ 𝑾 l ( 2 ) ‖ R = Θ ​ ( λ l ( 2 ) ) . \displaystyle\|\lambda_{l}^{(2)}{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\Theta(\lambda_{l}^{(2)}). |  |
+| --- | --- | --- |
+
+為了滿足 ( Δ ​ 2 \Delta 2 ) 即 ‖ λ l ​ 𝑾 l ‖ R = Θ ​ ( ‖ 𝑨 l ‖ R ) \|\lambda_{l}{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{A}}_{l}\|_{\mathrm{R}}\right) ，我們需要設定
+
+|  | λ l ( 2 ) = Θ ​ ( 1 ) . \displaystyle\lambda_{l}^{(2)}=\Theta(1). |  |
+| --- | --- | --- |
+
+對稱地，我們對 𝑾 l ( 1 ) {\bm{W}}_{l}^{(1)} 有相同的選擇：
+
+|  | η l ( 1 ) = Θ ​ ( 1 ) , λ l ( 1 ) = Θ ​ ( 1 ) . \displaystyle\eta_{l}^{(1)}=\Theta(1),\quad\lambda_{l}^{(1)}=\Theta(1). |  |
+| --- | --- | --- |
+
+隱藏層（二階）。
+
+如第 3 節或附錄 C.2 中針對 Muon 的說明所示，一旦初始條件和一階更新條件得到滿足，二階更新條件就會自動滿足。
+
+這完成了具有權重衰減的 SSO 更新條件的實現，總結在表 6 中。
+
+[FIGURE_CAPTION] 表 6：在寬度-深度縮放下，SSO [ 40 ] 具有權重衰減的 μ \mu P 實現。紫色標示的項表示 μ \mu P 與 SP [ 14 ] 之間的差異，而灰色顯示相應的 SP 選擇。此處，r n r_{n} 和 r L r_{L} 分別表示相對於基礎模型的寬度和深度縮放比率。輸入權重的方差對於語言是 σ base 2 \sigma^{2}_{\mathrm{base}} ，對於圖像是 σ base 2 / d 0 \sigma^{2}_{\mathrm{base}}/d_{0} 。
+
+### C.8 Lion
+
+Lion [ 7 ] 的完整更新規則為
+
+|  | $\displaystyle{\bm{W}}_{l}^{(t)}={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left({\bm{u}}_{l}^{(t)}+\lambda_{l}{\bm{W}}_{l}^{(t)}\right),$ |  |
+| --- | --- | --- |
+
+其中
+
+|  | $\displaystyle{\bm{u}}_{l}^{(t)}=\mathrm{sign}\left(\beta_{1}{{\bm{m}}}_{l}^{(t-1)}+(1-\beta_{1})\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}\right),$ |  |
+| --- | --- | --- |
+|  | $\displaystyle{{\bm{m}}}_{l}^{(t)}=\beta_{2}{{\bm{m}}}_{l}^{(t-1)}+(1-\beta_{2})\nabla_{{\bm{W}}_{l}^{(t)}}\mathcal{L}.$ |  |
+
+若忽略動量項，即設定 $\beta_{1}=0$ 和 $\beta_{2}=0$，且 $\varepsilon_{l}=0$，Lion 會簡化為符號梯度下降，與 AdamW 的更新規則（方程式 ( 27 )）相同。
+因此，我們為 Lion 重複使用表格 5 中 AdamW 的參數化設定。
+
+### C.9 Sophia
+
+Sophia [ 25 ] 的完整更新規則為
+
+|  | $\displaystyle{\bm{W}}_{l}^{(t)}={\bm{W}}_{l}^{(t-1)}-\eta^{(t)}\left(\mathrm{clip}\left(\frac{{\bm{m}}_{l}^{(t)}}{\max\{\gamma{\bm{h}}_{l}^{(t)},\varepsilon\}},1\right)+\lambda_{l}{\bm{W}}_{l}^{(t)}\right)$ |  |
+| --- | --- | --- |
+
+其中
+
+|  | $\displaystyle{\bm{m}}_{l}^{(t)}=\beta_{1}{\bm{m}}_{l}^{(t-1)}+(1-\beta_{1}){\bm{G}}_{l}^{(t)}$ |  |
+| --- | --- | --- |
+
+且 ${\bm{h}}_{l}^{(t)}$ 每 $k$ 次迭代更新一次
+
+|  | $\displaystyle{\bm{h}}_{l}^{(t)}=\left\{\begin{array}[]{ll}\beta_{2}{\bm{h}}_{l}^{(t-1)}+(1-\beta_{2})\hat{{\bm{h}}}_{l}^{(t)},&t\ \mathrm{mod}\ k=1,\\{\bm{h}}_{l}^{(t-1)},&t\ \mathrm{mod}\ k\neq 1.\end{array}\right.$ |  |
+| --- | --- | --- |
+
+其中 $\hat{{\bm{h}}}_{l}^{(t)}$ 的元素是關於 ${\bm{W}}_{l}^{(t)}$ 的二階導數，定義為 $\left(\hat{{\bm{h}}}_{l}^{(t)}\right)_{ij}=\frac{\partial^{2}\mathcal{L}}{\partial{({\bm{W}}_{l}^{(t)})}_{ij}^{2}}$。
+
+令 ${\bm{A}}_{l}^{(t)}=\mathrm{clip}\left(\frac{{\bm{m}}_{l}^{(t)}}{\max\{\gamma{\bm{h}}_{l}^{(t)},\varepsilon\}},1\right)$，我們基於 Ngom 等人 [ 29 ] 的方法使用下列上界來估計其範數，他們在寬度縮放下推導了 Sophia 的參數化：
+
+|  | $\displaystyle\|{\bm{A}}_{l}^{(t)}\|_{\mathrm{R}}\leq\|\boldsymbol{1}_{n_{\mathrm{out}}\times n_{\mathrm{in}}}\|_{\mathrm{R}}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\|\boldsymbol{1}_{n_{\mathrm{out}}\times n_{\mathrm{in}}}\|_{2}=\sqrt{\frac{n_{\mathrm{in}}}{n_{\mathrm{out}}}}\sqrt{n_{\mathrm{in}}n_{\mathrm{out}}}=n_{\mathrm{in}}$ |  |
+| --- | --- | --- |
+
+所得的寬度縮放參數化在 Ngom 等人 [ 29 ] 的實驗中被驗證為有效。
+
+觀察到 $\|{\bm{A}}_{l}^{(t)}\|_{\mathrm{R}}$ 的量級等同於方程式 ( 31 ) 中 AdamW 的量級，因此 Sophia 與 AdamW 在表 5 中共享相同的參數化。
+
+## 附錄 D 額外的實驗細節和結果
+
+在本節中，我們呈現了主文本中省略的額外實驗細節和結果。
+
+### D.1 資源和許可證
+
+所有使用的資源（資料集和代碼）及其許可證列在表 7 中。
+
+[FIGURE_CAPTION] 表 7：使用的資源及其許可證。
+
+### D.2 Additional Details of Feature Learning Experiments
+
+The feature learning stability results in Figure 1 are averaged over three independent runs with different random seeds. The base initialization variance for matrix weights and biases is set to 0.02 2 0.02^{2} and 0 , respectively. All models are trained using a constant learning rate of 2 − 7 2^{-7} , a batch size of 8 8 , a gradient clipping of 1 1 , for 10 10 training steps.
+
+### D.3 HP 轉移實驗的額外細節
+
+#### D.3.1 實驗設置
+
+對於圖 1 中顯示的所有 HP 轉移結果，矩陣權重和偏差的基礎初始化方差分別設置為 $0.02^{2}$ 和 $0$。所有模型使用批次大小 $240$ 訓練，總共進行 $1221$ 次迭代（對應 $300$ M 個 token），使用 $120$ 次迭代的預熱期，隨後採用餘弦基礎學習率衰減至 $3 \times 10^{-5}$，並進行 $1$ 的梯度裁剪。
+
+#### D.3.2 寬度相關 HP 轉移的額外結果
+
+基礎學習率在不同寬度間的可轉移性完整結果分別在表 8 和表 9 中針對 SP 和 $\mu P$ 進行呈現。
+
+[FIGURE_CAPTION] 表 8：SP 未能在寬度間轉移最優基礎學習率。此表報告與圖 1 對應的數值結果，其中每個寬度的最佳驗證損失以粗體突出顯示。在 SP 下，最優基礎學習率無法在不同寬度間轉移。
+
+[FIGURE_CAPTION] 表 9：$\mu P$ 成功在寬度間轉移最優基礎學習率。此表報告與圖 1 對應的數值結果，其中每個寬度的最佳驗證損失以粗體突出顯示。在 $\mu P$ 下，最優基礎學習率（大約）在不同寬度間轉移。
+
+#### D.3.3 帶有 LayerNorm 的深度相關 HP 轉移的額外結果
+
+使用 LayerNorm 時，基礎學習率在不同深度間的可轉移性完整結果分別在表 10 和表 11 中針對 SP 和 $\mu P$ 進行呈現。
+
+[FIGURE_CAPTION] 表 10：使用 LayerNorm 時，SP 成功在深度間轉移最優基礎學習率。此表報告與圖 1 對應的數值結果，其中每個深度的最佳驗證損失以粗體突出顯示。在 SP 下，最優基礎學習率在不同深度間轉移。
+
+[FIGURE_CAPTION] 表 11：使用 LayerNorm 時，$\mu P$ 成功在深度間轉移最優基礎學習率。此表報告與圖 1 對應的數值結果，其中每個深度的最佳驗證損失以粗體突出顯示。在 $\mu P$ 下，最優基礎學習率在不同深度間轉移。
+
+#### D.3.4 不使用 LayerNorm 的深度相關 HP 轉移的額外結果
+
+不使用 LayerNorm 時，SP 和 $\mu P$ 的基礎學習率在不同深度間的可轉移性分別在圖 2 中呈現，完整數值結果分別在表 12 和表 13 中針對 SP 和 $\mu P$ 進行呈現。
+
+[FIGURE:x5.png] 圖 2：不使用 LayerNorm 的 SP 和 $\mu P$ 下的特徵學習和 HP 轉移。我們沿著兩個維度比較 SP 和 $\mu P$。首先，在訓練穩定性方面，隨著深度增加，SP 在沒有 LayerNorm 的情況下越來越容易發生損失發散，而 $\mu P$ 能夠實現穩定訓練。
+其次，與 SP 不同，$\mu P$ 在沒有 LayerNorm 的大深度情況下保持 HP 可轉移性。
+
+[FIGURE_CAPTION] 表 12：不使用 LayerNorm 時，SP 無法保持穩定訓練或在深度間轉移最優基礎學習率。NaN 數據點表示訓練不穩定，其中損失爆炸。
+每個深度的最佳驗證損失以粗體突出顯示。在 SP 下，最優基礎學習率不會在大深度間轉移。
+
+[FIGURE_CAPTION] 表 13：不使用 LayerNorm 時，$\mu P$ 成功保持穩定訓練並在深度間轉移最優基礎學習率。NaN 數據點表示訓練不穩定，其中損失爆炸。
+每個深度的最佳驗證損失以粗體突出顯示。在 $\mu P$ 下，最優基礎學習率在大於 32 的不同深度間轉移。
+
+## 附錄 E 上界估計的正當性
+
+在第 3 節的推導中，我們隱含地依賴一個假設，即在標準神經網路初始化和訓練動態下，整個分析中使用的次可加性和次乘性不等式是緊的。
+
+在此假設下，控制 $\|{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}$ 和 $\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}$ 的上界足以表徵 $\|{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}$ 和 $\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}$ 本身的實際縮放行為，至多相差常數因子。
+
+在本節中，我們為此假設的有效性提供更具體的正當性。
+
+### E.1 子加性不等式
+
+子加性不等式用於推導更新條件，以控制累積特徵更新的範數。
+例如，通過將 $\Delta{\bm{h}}_{s}({\bm{x}})$ 分解為多個逐層貢獻，我們得到
+
+|  | $\displaystyle\Delta{\bm{h}}_{s}({\bm{x}})$ | $= \Delta{\bm{h}}_{0}({\bm{x}})+\underbrace{\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}\Delta{\bm{h}}_{l-1}({\bm{x}})}_{{\bm{\epsilon}}_{0}(s)}+\underbrace{\sum_{l=1}^{s}\alpha_{l}{\bm{W}}_{l}^{(2)}\Delta{\bm{W}}_{l}^{(1)}({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))}_{{\bm{\epsilon}}_{1}^{(1)}(s)}$ |  |
+| --- | --- | --- | --- |
+|  |  | $\displaystyle+\underbrace{\sum_{l=1}^{s}\alpha_{l}\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))}_{{\bm{\epsilon}}_{1}^{(2)}(s)}+\underbrace{\sum_{l=1}^{s}\alpha_{l}\Delta{\bm{W}}_{l}^{(2)}\Delta{\bm{W}}_{l}^{(1)}({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}}))}_{{\bm{\epsilon}}_{2}(s)}$ |  | (36) |
+
+這導致方程式 (5) 中的上界：
+
+|  | $\displaystyle\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}\leq\|\Delta{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{0}(L)\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{1}^{(2)}(L)\|_{\mathrm{R}}+\|{\bm{\epsilon}}_{2}(L)\|_{\mathrm{R}}.$ |  |
+| --- | --- | --- |
+
+類似的子加性論證進一步應用於每一項，例如：
+
+|  | $\displaystyle\|{\bm{\epsilon}}_{1}^{(1)}(L)\|_{\mathrm{R}}\leq\sum_{l=1}^{L}\alpha_{l}\big\|{\bm{W}}_{l}^{(2)}\Delta{\bm{W}}_{l}^{(1)}\big({\bm{h}}_{l-1}({\bm{x}})+\Delta{\bm{h}}_{l-1}({\bm{x}})\big)\big\|_{\mathrm{R}}.$ |  |
+| --- | --- | --- |
+
+原則上，當求和項指向大幅不同或相互抵消的方向時，這類子加性邊界可能過於寬鬆。
+然而，由於反向傳播中的鏈式法則，不同層之間的參數更新 $\{\Delta{\bm{W}}_{l}\}_{l=1}^{L}$ 強烈相關（例如，參見 Dey 等人 [10]）。
+更準確地說，每個 $\Delta{\bm{W}}_{l}$ 與前向特徵 ${\bm{h}}_{l-1}({\bm{x}})$ 和反向傳播的誤差信號的乘積成正比，而誤差信號本身是通過重複相乘上游 Jacobian 矩陣得到的。
+因此，對 $\Delta{\bm{h}}_{L}({\bm{x}})$ 的逐層更新貢獻在特徵空間中傾向於具有相似的方向，而不是表現為獨立或對抗性向量。
+
+因此，定義 ${\bm{\epsilon}}_{0}(L)$、${\bm{\epsilon}}_{1}^{(1)}(L)$ 和 ${\bm{\epsilon}}_{1}^{(2)}(L)$ 的求和中出現的項趨向於正對齊，且不同層之間的相消是非典型的 [10]。
+在這種情況下，和的範數與範數之和成比例地縮放，這意味著子加性不等式提供了對 $\Delta{\bm{h}}_{L}({\bm{x}})$ 的大小的準確刻畫，精確到常數因子。
+因此，在標準訓練動態下，控制子加性上界足以捕捉特徵更新的真實縮放行為。
+
+### E.2 次乘性不等式
+
+次乘性不等式在初始條件和更新條件的分析中被廣泛應用。在本節中，我們分別討論這兩種情景，並澄清為何在標準神經網路初始化和訓練動力學下，所得的上界通常是緊的。我們的推理與 Yang 等人 [ 46 ] 的推理密切相關，他們在推導寬度縮放的譜條件時採用了類似的觀點。
+
+#### E.2.1 初始化條件
+
+在初始化條件的推導中，次乘性不等式被應用於輸入層、隱藏層和輸出層。對於輸入層和輸出層，分析與寬度縮放設定相同，因為每一層都涉及單一線性變換（例如，我們使用了 $\|{\bm{h}}_{0}({\bm{x}})\|_{\mathrm{R}}\leq\alpha_{0}\|{\bm{W}}_{0}\|_{\mathrm{R}}\|{\bm{x}}\|_{\mathrm{R}}$）。因此，相應界的緊性直接來自 Yang 等人 [ 46 ] 中的聲明 1。相比之下，我們設定中的隱藏層需要額外的論證，因為每個殘差塊由兩個或多個堆疊的線性變換組成，而不是單一映射（例如，我們使用了 $\|\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\leq\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}$）。因此，在下面的部分中，我們重點關注為這些多層殘差塊建立次乘性界的緊性。
+
+固定特徵向量 ${\bm{h}}_{l-1}({\bm{x}})\in\mathbb{R}^{n}$。回想 ${\bm{W}}_{l}^{(1)}\in\mathbb{R}^{n_{l}\times n},{\bm{W}}_{l}^{(2)}\in\mathbb{R}^{n\times n_{l}}$ 初始化為 $({\bm{W}}_{l}^{(1)})_{ij},({\bm{W}}_{l}^{(2)})_{ij}\overset{\mathrm{i.i.d.}}{\sim}\mathcal{N}(0,\sigma_{l}^{2})$。若 $n_{l}=\Theta(n)$，則以高概率：
+
+|  | $\|{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta\Big(\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\Big)$, |  |
+| --- | --- | --- |
+
+這意味著初始化體制中使用的次乘性不等式是緊的。
+
+我們首先考慮中間特徵 ${\bm{z}}_{l}\mathrel{\mathop{\ordinarycolon}}={\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\in\mathbb{R}^{n_{l}}$。由於 ${\bm{W}}_{l}^{(1)}$ 具有零均值和方差 $\sigma_{l}^{2}$ 的獨立同分佈高斯項，根據大數法則，我們有
+
+|  | $\displaystyle\|{\bm{z}}_{l}\|_{\mathrm{R}}=\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\approx\sigma_{l}\sqrt{n}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}.$ |  |
+| --- | --- | --- |
+
+同時，根據隨機矩陣的標準集中不等式 [ 38 ]，我們以高概率有 $\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}=\sqrt{n/n_{l}}\cdot\sigma_{l}(\sqrt{n}+\sqrt{n_{l}})=\Theta(\sigma_{l}\sqrt{n})$。因此，我們得到
+
+|  | $\displaystyle\|{\bm{z}}_{l}\|_{\mathrm{R}}=\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}).$ | (37) |
+| --- | --- | --- |
+
+接下來，我們將 ${\bm{W}}_{l}^{(2)}$ 應用於 ${\bm{z}}_{l}$。再次，${\bm{W}}_{l}^{(2)}$ 是一個方差為 $\sigma_{l}^{2}$ 的獨立同分佈高斯矩陣，所以根據大數法則，我們有
+
+|  | $\|{\bm{W}}_{l}^{(2)}{\bm{z}}_{l}\|_{\mathrm{R}}\approx\sigma_{l}\sqrt{n_{l}}\|{\bm{z}}_{l}\|_{\mathrm{R}}.$ |  |
+| --- | --- | --- |
+
+同時，根據隨機矩陣的標準集中不等式 [ 38 ]，我們以高概率有 $\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}=\sqrt{n_{l}/n}=\sigma_{l}(\sqrt{n}+\sqrt{n_{l}})=\Theta(\sigma_{l}\sqrt{n_{l}})$。因此，我們得到
+
+|  | $\displaystyle\|{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\|{\bm{W}}_{l}^{(2)}{\bm{z}}_{l}\|_{\mathrm{R}}=\Theta(\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{z}}_{l}\|_{\mathrm{R}})=\Theta(\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}),$ |  |
+| --- | --- | --- |
+
+這表明用於推導初始條件的次乘性 $\|\alpha_{l}{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\leq\alpha_{l}\|{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}$ 是緊的。
+∎
+
+#### E.2.2 更新條件
+
+我們現在證明次乘性不等式在更新體制中的使用是合理的，並論證所得的 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|$ 的上界在縮放方面是緊的。對於輸入層和輸出層，分析與寬度縮放體制中的分析相同。因此，相應界的緊性直接遵循 Yang 等人 [ 46 ] 中的聲明 2。相比之下，我們設定中的隱藏層需要額外的論證，因為每個殘差塊由多個堆疊的線性變換組成，並且由於殘差連接的存在而產生更複雜的更新結構。類似於 Yang 等人 [ 46 ] 中的聲明 2，我們因此首先建立以下觀察。
+
+對於任何 $l\in[L]$，由批量大小為 1 的梯度下降給出的更新 $\Delta{\bm{W}}_{l}^{(2)}$，我們有
+
+|  | $\|\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta\left(\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{{\bm{h}}_{l-1}({\bm{x}})}\|_{\mathrm{R}}\right).$ |  |
+| --- | --- | --- |
+
+根據鏈式法則，我們可以將 $\Delta{\bm{W}}_{l}^{(2)}$ 寫為
+
+|  | $\displaystyle\Delta{\bm{W}}_{l}^{(2)}=-\eta_{l}^{(2)}\nabla_{{\bm{h}}_{l}({\bm{x}})}\mathcal{L}\cdot({\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}}))^{\top},$ |  |
+| --- | --- | --- |
+
+這是秩一的並與傳入特徵對齊。因此，我們有
+
+|  | $\displaystyle\|\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}$ | $=\|\eta_{l}^{(2)}\nabla_{{\bm{h}}_{l}({\bm{x}})}\mathcal{L}\cdot({\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}}))^{\top}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}$ |  |
+| --- | --- | --- | --- |
+|  |  | $=\eta_{l}^{(2)}\|\nabla_{{\bm{h}}_{l}({\bm{x}})}\mathcal{L}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{2}^{2}$ |  |
+|  |  | $=\sqrt{\frac{n_{l}}{n}}\cdot\eta_{l}^{(2)}\sqrt{n}\|\nabla_{{\bm{h}}_{l}({\bm{x}})}\mathcal{L}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{2}\cdot\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}$ |  |
+|  |  | $=\sqrt{\frac{n_{l}}{n}}\cdot\eta_{l}^{(2)}\|\nabla_{{\bm{h}}_{l}({\bm{x}})}\mathcal{L}\|_{2}\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{2}\cdot\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}$ |  |
+|  |  | $=\sqrt{\frac{n_{l}}{n}}\cdot\|\Delta{\bm{W}}_{l}^{(2)}\|_{2}\cdot\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}$ |  |
+|  |  | $=\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\cdot\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}.$ |  |
+
+此外，根據初始對齊 $\|{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta(\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}})（方程 ( 37 ) 中），我們得到
+
+|  | $\|\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}=\Theta\left(\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{{\bm{h}}_{l-1}({\bm{x}})}\|_{\mathrm{R}}\right),$ |  |
+| --- | --- | --- |
+
+這完成了證明。
+
+∎
+
+基於聲明 E.2，我們證明了這種次乘性不等式的緊性如何直接導致 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}$ 在縮放方面的緊上界。特別是，該聲明確保了分層更新貢獻的範數被其次乘性估計準確捕捉，因此對這些界求和會產生一個上界，其忠實地反映了累積特徵更新的真實大小。我們可以將方程 ( 36 ) 中隱藏層更新的表達式重寫為
+
+|  | $\displaystyle\Delta{\bm{h}}_{L}({\bm{x}})=\sum_{l=1}^{L}\alpha_{l}\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})+\cdots$ |  |
+| --- | --- | --- |
+
+因此，只要項 $\sum_{l=1}^{s}\alpha_{l}\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})$ 不與其他項完全相消，我們有
+
+|  | $\displaystyle\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}$ | $=\Omega\left(\|\sum_{l=1}^{L}\alpha_{l}\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\right)=\Omega\left(\sum_{l=1}^{L}\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}{\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}}\right)$ |  |
+| --- | --- | --- | --- |
+|  |  | $=\Omega\left(\sum_{l=1}^{L}\alpha_{l}\|\Delta{\bm{W}}_{l}^{(2)}\|_{\mathrm{R}}\|{\bm{W}}_{l}^{(1)}\|_{\mathrm{R}}\|{{\bm{h}}_{l-1}({\bm{x}})}\|_{\mathrm{R}}\right)$ |  |
+|  |  | $=\Omega(1),$ |  |
+
+其中第二個等式使用附錄 E.1 中的原理下的次可加性不等式的緊性。因此，第 3 節中使用次乘性不等式對 $\|\Delta{\bm{h}}_{L}({\bm{x}})\|_{\mathrm{R}}$ 的估計是緊的。
+
+## 附錄 F 擴展至通用訓練設定
+
+如主文中所推導，我們的理論框架主要探討一個簡化的情景：在單一資料點上對線性殘差 MLP 進行單步更新。在本節中，我們討論其對通用實踐設定的擴展：在一批資料點上對非線性殘差 MLP 進行多步更新。
+
+這個擴展依賴於三個關鍵假設，如寬度縮放文獻中所論證的 [46]。下面，我們正式重述這些假設，並使用附錄 F.2 中詳細說明的實驗設定，在寬度-深度縮放背景下根據經驗驗證其有效性。
+
+### F.1 擴展的假設
+
+多步訓練。在主文本中，我們推導了一個參數化，確保權重矩陣 ${\bm{W}}_{l}$ 及其第一步更新 $\Delta{\bm{W}}_{l}$（也包括 $\|{\bm{h}}_{l}\|_{\mathrm{R}}$ 和 $\|\Delta{\bm{h}}_{l}\|_{\mathrm{R}}$）隨深度正確縮放以實現特徵學習。為了確保這些性質在多步訓練中始終成立，更新後的參數必須維持與第一步相同的縮放階數。這在假設 F.1 中正式化。
+
+對於任何層 $l$，更新後的權重和特徵向量滿足：
+
+|  | $\displaystyle\|{\bm{W}}_{l}+\Delta{\bm{W}}_{l}\|_{\mathrm{R}}=\Theta\left(\|{\bm{W}}_{l}\|_{\mathrm{R}}+\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}\right)$ |  |
+| --- | --- | --- |
+|  | $\displaystyle\|{\bm{h}}_{l}({\bm{x}})+\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}=\Theta\left(\|{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}+\|\Delta{\bm{h}}_{l}({\bm{x}})\|_{\mathrm{R}}\right)$ |  |
+
+在假設 F.1 中，左邊的階數的上界由右邊界定（或稱為 $O(\cdot)$）是由次可加性保證的。核心約束是階數的下界（或稱為 $\Omega(\cdot)$），這意味著更新 $\Delta{\bm{W}}_{l}$ 不會破壞性地抵消現有的權重 ${\bm{W}}_{l}$（即，更新不會導致範數消失）。如 Yang et al. [46] 所討論的，這種精確抵消在實際神經網路訓練中極其罕見。
+我們在圖 3 和圖 4 中從經驗驗證了這個假設，其中範數比例在不同深度保持常數。
+
+[FIGURE:x6.png] 圖 3：假設 F.1 的驗證（權重更新）。比值 $\frac{\|{\bm{W}}_{l}+\Delta{\bm{W}}_{l}\|_{\mathrm{R}}}{\|{\bm{W}}_{l}\|_{\mathrm{R}}+\|\Delta{\bm{W}}_{l}\|_{\mathrm{R}}}$ 在輸入層和殘差區塊層的深度方向上保持接近 1 的常數，顯示整個多步訓練中更新不消失。
+
+[FIGURE:x7.png] 圖 4：假設 F.1 的驗證（特徵更新）。比值 $\frac{\|{\bm{h}}_{l}+\Delta{\bm{h}}_{l}\|_{\mathrm{R}}}{\|{\bm{h}}_{l}\|_{\mathrm{R}}+\|\Delta{\bm{h}}_{l}\|_{\mathrm{R}}}$ 在不同深度保持接近 1 的常數，顯示整個多步訓練中更新不消失。
+
+非線性性。為了將分析擴展到非線性架構，我們將線性變換 ${\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})$ 替換為 $\phi\left({\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\right)$，其中 $\phi(\cdot)$ 是啟動函數（例如，ReLU）。所得架構如方程 (38) 所示，而線性情況如方程 (2)。
+我們假設啟動函數保持特徵範數的漸近階數，確保為前啟動導出的縮放性質對後啟動保持有效。
+
+啟動函數 $\phi$ 滿足：
+
+|  | $\displaystyle\|\phi({\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}}))\|_{\mathrm{R}}=\Theta(\|{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}})\|_{\mathrm{R}})$ |  |
+| --- | --- | --- |
+
+圖 5 從經驗驗證了 ReLU 啟動的這個假設，顯示後啟動到前啟動範數的比值在深度方向上穩定。
+
+[FIGURE:x8.png] 圖 5：假設 F.2 的驗證（穩定啟動）。後啟動到前啟動範數的比值 $\frac{\|\phi({\bm{W}}_{l}{\bm{h}}_{l-1})\|_{\mathrm{R}}}{\|{\bm{W}}_{l}{\bm{h}}_{l-1}\|_{\mathrm{R}}}$ 在不同深度保持穩定，確認 ReLU 啟動在非線性網路中不會讓範數崩潰。
+
+迷你批次訓練。最後，為了擴展到單樣本設定之外，我們考慮在一批資料 $\{{\bm{x}}^{(i)},{\bm{y}}^{(i)}\}_{i=1}^{B}$ 上計算的更新。令 $\Delta{\bm{W}}_{l}^{(i)}$ 表示第 $i$ 個資料點的更新貢獻（例如，對於 SGD，$\Delta{\bm{W}}_{l}^{(i)}=-\eta_{l}\nabla_{{\bm{W}}_{l}}\mathcal{L}({\bm{x}}^{(i)},{\bm{y}}^{(i)})$），使得總批次更新為 $\Delta{\bm{W}}_{l}=\frac{1}{B}\sum_{i=1}^{B}\Delta{\bm{W}}_{l}^{(i)}$。
+我們期望來自不同樣本的梯度貢獻不會破壞性地相互抵消。這在假設 F.3 中正式化。
+
+批次更新範數與單樣本更新範數一致地縮放：
+
+|  | $\displaystyle\|\Delta{\bm{W}}_{l}{\bm{h}}_{l-1}({\bm{x}}^{(i)})\|_{\mathrm{R}}=\Theta\left(\frac{1}{B}\|\Delta{\bm{W}}_{l}^{(i)}{\bm{h}}_{l-1}({\bm{x}}^{(i)})\|_{\mathrm{R}}\right)$ |  |
+| --- | --- | --- |
+
+我們在圖 6 中驗證了這一點，其中對齊比例保持為 $\Theta(1)$，表明批次平均更新保持了單樣本更新的縮放性質。
+
+[FIGURE:x9.png] 圖 6：假設 F.3 的驗證（單樣本更新對齊）。我們報告了 $\frac{\|\Delta{\bm{W}}_{l}{\bm{h}}_{l-1}\|_{\mathrm{R}}}{\frac{1}{B}\sum_{i}\|\Delta{\bm{W}}_{l}^{(i)}{\bm{h}}_{l-1}\|_{\mathrm{R}}}$ 的平均比值跨資料批次。這些值在不同深度保持 $\Theta(1)$，表明批次更新不會改變單樣本更新的深度方向縮放。
+
+### F.2 實驗細節
+
+我們進行模擬實驗以實證假設 F.1 – F.3。
+我們的實驗設置在很大程度上遵循 [46]，但強調深度縮放而不是寬度縮放。
+詳細信息如下所述。
+
+資料集。我們使用 CIFAR-10 的子集構建二元分類資料集，從「飛機」和「汽車」類別中各選擇 100 個樣本。輸入是展平的影像向量 $\mathbb{R}^{3072}$，關聯的二元標籤在 $\{0,1\}$ 中。
+
+架構與訓練。該架構是具有 ReLU 激活函數的深層殘差 MLP，包含一個輸入層、$L$ 個殘差塊和一個最終線性輸出層：
+
+|  |  | $\displaystyle{\bm{h}}_{0}({\bm{x}})=\alpha_{0}\phi\left({\bm{W}}_{0}{\bm{x}}\right)$ |  | (38) |
+| --- | --- | --- | --- | --- |
+|  |  | $\displaystyle{\bm{h}}_{l}({\bm{x}})={\bm{h}}_{l-1}({\bm{x}})+\alpha_{l}\phi\left({\bm{W}}_{l}^{(2)}\phi\left({\bm{W}}_{l}^{(1)}{\bm{h}}_{l-1}({\bm{x}})\right)\right),\quad l\in[L]$ |  |
+|  |  | $\displaystyle{\bm{h}}_{L+1}({\bm{x}})=\alpha_{L+1}{\bm{W}}_{L+1}{\bm{h}}_{L}({\bm{x}})$ |  |
+
+其中 $\phi$ 表示 ReLU 激活函數。維度設定為：輸入維度 $d_{0}=3072$、模型寬度 $n=256$、殘差塊寬度 $n_{l}=n$ 和輸出維度 $d_{L+1}=1$。
+這與主文本中討論的簡化設置相符（第 3.1 節）。
+模型使用全批次梯度下降（GD）訓練以最小化二元交叉熵損失，進行 $T=200$ 步。
+
+參數化。我們實現附錄 C.3 中推導的寬度-深度 $\mu$ P 參數化方案（見表 4），如下所示：
+
+|  | $\displaystyle\alpha_{0}$ | $\displaystyle=\alpha_{\mathrm{base}},\quad\alpha_{l}=\frac{\alpha_{\mathrm{base}}}{L},\quad\alpha_{L+1}=\frac{\alpha_{\mathrm{base}}}{n}$ |  |
+| --- | --- | --- | --- |
+|  | $\displaystyle\sigma^{2}_{0}$ | $\displaystyle=\frac{\sigma^{2}_{\mathrm{base}}}{d_{0}},\quad\sigma^{2}_{l}=\frac{\sigma^{2}_{\mathrm{base}}}{n},\quad\sigma^{2}_{L+1}=\sigma^{2}_{\mathrm{base}}$ |  |
+|  | $\displaystyle\eta_{0}$ | $\displaystyle=\eta_{\mathrm{base}}n,\quad\eta_{l}=\eta_{\mathrm{base}}{L},\quad\eta_{L+1}=\eta_{\mathrm{base}}n$ |  |
+
+基礎常數設定為：
+
+|  | $\displaystyle\alpha_{\mathrm{base}}=1,\quad\sigma^{2}_{\mathrm{base}}=2,\quad\eta_{\mathrm{base}}=0.001$ |  |
+| --- | --- | --- |
+
+Verification of Assumptions. We perform a depth scaling analysis by training networks with depths L ∈ { 4 , 8 , 16 , 32 , 64 , 128 , 256 } L\in\{4,8,16,32,64,128,256\} . We track the metrics corresponding to the assumptions above at three distinct training phases : initialization ( t = 0 t=0 ), intermediate training ( t = T / 2 t=T/2 ), and the end of training ( t = T t=T ), and different layers : the input layer ( l = 0 l=0 ) and the internal layers of the final residual block (here, we denote them by l = L ( 1 ) l=L^{(1)} and l = L ( 2 ) l=L^{(2)} ), as representatives.

@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "CV",
+    "NLP",
+    "Multimodal"
+  ],
+  "method": [
+    "Vision-Language Models",
+    "RAG",
+    "Prompt Engineering",
+    "Conflict Resolution"
+  ],
+  "task": [
+    "Visual Question Answering",
+    "Knowledge Integration"
+  ],
+  "dataset": [
+    "E-VQA",
+    "InfoSeek",
+    "OK-VQA"
+  ],
+  "open_source": true
+}

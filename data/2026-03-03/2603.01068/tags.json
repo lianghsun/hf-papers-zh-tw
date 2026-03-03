@@ -1,0 +1,22 @@
+{
+  "domain": [
+    "CV",
+    "NLP",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion",
+    "Mixture of Experts",
+    "Attention",
+    "Masked Diffusion"
+  ],
+  "task": [
+    "Text-to-Image Generation",
+    "Multimodal Understanding",
+    "Multimodal Generation"
+  ],
+  "dataset": [
+    "DPG-Bench"
+  ],
+  "open_source": true
+}

@@ -1,0 +1,1012 @@
+# 半真會破壞相似度的檢索
+
+當文本描述被添加額外的細節時，如果該細節是錯誤的，圖像-文本相似度應該會下降。
+我們展示 CLIP 風格的雙編碼器經常違反這種直覺：在原本正確的描述後附加一個看似合理但不正確的物體或關係，可能會增加相似度分數。
+我們將這類情況稱為**半真**。
+在 COCO 上，CLIP 僅在 40.6% 的時間內偏好正確的較短描述，當添加的細節是關係時，性能下降到 32.9%。
+我們將此漏洞追溯到對標題部分的弱監督：對比訓練對齊完整句子，但不明確地強制個別實體和關係被基礎化。
+我們提出 CS-CLIP（Component-Supervised CLIP），它將標題分解為實體和關係單位，為每個單位構建最小編輯的對比樣本，並微調模型使其對正確單位的評分高於其對比樣本，同時保留標準的雙編碼器推論。
+CS-CLIP 將半真準確率提高到 69.3%，並在已建立的組合基準上平均性能提高 5.7 個百分點，表明減少半真錯誤與組合理解方面更廣泛的進步相一致。程式碼公開於：https://github.com/kargibora/CS-CLIP/ 。
+
+## 1 介紹
+
+描述影像時，加入錯誤的細節應該會降低描述的相關性，而非提高。
+如果「一隻狗」正確地描述了一張影像，那麼當狗並不在滑板上時，「一隻狗在滑板上」應該得到更低的相似度分數。
+我們展示 CLIP 風格的雙編碼器（Radford et al., 2021）違反了這一原則：追加單一個不正確但看似合理的細節往往會增加相似度。
+
+[FIGURE:x1.png] 圖 1：半真實漏洞。從一個簡短的、有圖說支持的描述（錨點）開始，我們透過新增一個現實但不正確的細節形成半真實描述：要麼是錯誤的實體描述，要麼是實體之間的錯誤關係。
+CLIP（Radford et al., 2021）和 NegCLIP（Yuksekgonul et al., 2023）對半真實描述指派了更高的相似度，而 CS-CLIP（我們的方法）正確地對不正確的新增部分進行了懲罰。
+
+我們將這一失敗形式化為**半真實漏洞**。
+給定一張影像，我們從一個簡短的、有圖說支持的錨點描述開始。
+然後我們透過追加恰好一個在上下文中流暢且看似合理但對該影像不正確的額外單位來形成半真實描述。
+被追加的單位要麼是實體單位（錯誤的實體描述），要麼是關係單位（涉及錨點實體的錯誤關係）。
+圖 1 展示了兩種情況：不正確的實體新增（log $\rightarrow$ log 和 zebras）和不正確的關係新增（elephants away from the log 而非 near），其中 CLIP（Radford et al., 2021）和 NegCLIP（Yuksekgonul et al., 2023）對半真實描述的評分高於錨點，而 CS-CLIP 正確地傾向於錨點。
+
+這個漏洞很常見。
+在 MS-COCO（Lin et al., 2014）上，CLIP 在總體情況下只有 $40.6\%$ 的時間內將錨點排在半真實描述之上，在不正確新增為關係時僅有 $33.2\%$。
+SigLIP（Zhai et al., 2023）達到總體 $45.7\%$，SigLIP2（Tschannen et al., 2025）達到 $54.6\%$，兩者都接近或低於隨機機率。
+即使使用句子級困難負樣本進行訓練也只能適度改進：
+NegCLIP 在總體上達到 $56.5\%$，但在關係新增時仍低於機率水平（$48.3\%$）。
+單一個錯誤的細節，尤其是關係型的，並未被可靠地懲罰。
+
+這種模式類似於合取謬誤，其中新增一個看似合理的細節會增加感知的可能性，儘管合取在邏輯上更具限制性（Tversky & Kahneman, 1983）；
+這裡新增的細節是看似合理但錯誤的，然而相似度仍然上升。與先前關於組合理解的工作的關鍵區別是操作本身：
+現有的基準測試模型是否能區分互換或重新排列資訊的圖說（例如「紅貓和藍狗」vs.「藍貓和紅狗」）（Yuksekgonul et al., 2023；Thrush et al., 2022），
+而半真實測試則考驗模型是否對不正確的新增進行懲罰。
+
+為什麼會發生這種情況？
+
+對比訓練將影像與完整圖說對齐。
+這在句子級別提供了強有力的監督，但對於組成圖說含義的各個單位則是較弱的監督。
+因此，相似度可能由粗粒度的重疊支配（例如，偵測到正確的物體），而額外的看似合理的單位可能會增加相似度，即使它是不正確的，尤其是對於需要驗證實體如何組合的關係和角色敏感的結構。
+
+我們的方法：單位級監督。
+
+我們提出 CS-CLIP（Component-Supervised CLIP），在微調期間對圖說單位添加顯式監督。
+我們將每個圖說解析為實體單位（帶有綁定屬性的名詞短語）和關係單位（實體之間的有向關係）。
+對於每個單位，我們生成一個最小編輯的對比項，在保持流暢性和上下文的同時改變含義（例如，「brown horse」$\to$ 「white horse」，或
+「horse near barn」$\to$ 「horse inside barn」）。
+在訓練期間，我們將每個正確的單位與其對比項進行對比，教導模型對細粒度的組合差異進行回應。
+至關重要的是，這個監督**僅在訓練期間應用**，在測試時，
+CS-CLIP 使用與標準 CLIP 相同的雙編碼器架構和相同的檢索評分方式。
+
+CS-CLIP 在 COCO 上達到 $69.3\%$ 的半真實準確度，相比之下 CLIP 為 $40.6\%$，NegCLIP 為 $56.5\%$。
+它還在 16 個已確立的組合基準上進行了改進，在評估的模型中達到了最佳的平均影像到文本準確度（$57.8\%$）和組準確度。
+
+我們的貢獻包括：
+
+- **診斷**。我們引入半真實診斷，該診斷測試添加一個不正確的細節是否會增加相似度。
+CLIP 在 $59.4\%$ 的情況下未通過此測試。
+- **方法**。CS-CLIP 透過單位級監督對 CLIP 進行微調：每個實體和關係單位都與一個相應的對比項進行對比。
+這實現了 $69.3\%$ 的半真實準確度（相比 CLIP 的 $40.6\%$），同時保留了標準雙編碼器推論。
+- **組合基準**。CS-CLIP 在 16 個組合基準上達到了最佳的平均 I2T 準確度（$57.8\%$）和組準確度，比 CLIP 超越了 $5.7$ 個百分點。
+
+**診斷**。我們引入半真實診斷，該診斷測試添加一個不正確的細節是否會增加相似度。
+CLIP 在 $59.4\%$ 的情況下未通過此測試。
+
+**方法**。CS-CLIP 透過單位級監督對 CLIP 進行微調：每個實體和關係單位都與一個相應的對比項進行對比。
+這實現了 $69.3\%$ 的半真實準確度（相比 CLIP 的 $40.6\%$），同時保留了標準雙編碼器推論。
+
+**組合基準**。CS-CLIP 在 16 個組合基準上達到了最佳的平均 I2T 準確度（$57.8\%$）和組準確度，比 CLIP 超越了 $5.7$ 個百分點。
+
+## 2 相關工作
+
+對比式視覺語言預訓練與組合敏感性。對比式雙編碼器（如 CLIP 和 ALIGN）學習影像和文本的共享嵌入空間，透過單一相似度分數實現有效檢索（Radford et al., 2021；Jia et al., 2021）。一個反覆出現的關切是，此分數可能會低估語言結構的使用：CLIP 風格的模型在包含屬性綁定、詞序和關係等改變意義的最小編輯下，表現得像詞袋模型（Yuksekgonul et al., 2023；Thrush et al., 2022）。最近的分析表明，這在很大程度上是跨模態的問題：綁定線索可能存在於單一模態內，但在餘弦相似度對齐中並未被可靠地反映（Koishigarina et al., 2025）；其他工作報告了偏好中心物體或頻繁屬性物體配對的評分偏差（Schrodi et al., 2025；Tang et al., 2023）。為了評估這一點，控制編輯基準（controlled-edit benchmarks）測試模型是否能區分正確的影像文本配對和最小編輯替代方案，包括 ARO、Winoground、SugarCrepe 和 VALSE（Yuksekgonul et al., 2023；Thrush et al., 2022；Hsieh et al., 2023；Parcalabescu et al., 2022），以及針對特定現象的目標測試（Burapacheep et al., 2024；Kamath et al., 2023；Paiss et al., 2023）。
+
+新增資訊與我們的診斷方法。除了交換和重新排序，多項工作研究了當更多資訊被添加到輸入時模型信心如何變化。HiMo-CLIP 以正確新增為條件來目標單調對齐（Wu et al., 2025），而大語言模型推理中的信心膨脹模式顯示，添加的可信內容可在具誤導性的輸入下膨脹信心（Suri et al., 2023；Richardson et al., 2025；Jiang et al., 2024a）。我們的工作是補充性的：我們透過半真半假診斷（half-truth diagnostic）測試相似度是否能恰當地懲罰不正確的新增，該診斷會在正確描述中附加一項真實但不正確的細節（第 3 節）。
+
+組合敏感性的訓練方法。許多方法通過資料層級的信號來強化敏感性：編輯物體、屬性或關係的句級難負例（Yuksekgonul et al., 2023；Zhang et al., 2024；Peleg et al., 2025；Singh et al., 2025；Patel et al., 2024）、場景圖擾動（Singh et al., 2023）或標題合成（Fan et al., 2023；Doveh et al., 2023a；Castro et al., 2024；Doveh et al., 2023b；Nayak et al., 2023）。其他方法添加架構元件或輔助目標，例如區域對齐（Zhong et al., 2022；Huang et al., 2024）、輔助模組（Yao et al., 2021；Goel et al., 2022；Abdollah et al., 2024；Oh et al., 2024；Kwon et al., 2025）或多階段訓練（Hu et al., 2025），而有些則透過分解來修改推理（Jiang et al., 2024b；Miranda et al., 2025；Menon & Vondrick, 2022）。我們建立在句級負例之上，但添加了有針對性的單位級監督：對於每個標題，我們解析實體和關係單位，並將每個單位與最小編輯的對照項進行對比。這在保持標準雙編碼器架構的同時，對各別標題部分施加了直接的組合壓力（第 4 節）。
+
+## 3 半真實漏洞
+
+### 3.1 動機
+
+先前關於 CLIP 風格模型中組合敏感性的研究主要關注最小編輯，這些編輯交換或重新排列現有資訊（例如，「紅色貓和藍色狗」與「藍色貓和紅色狗」）(Yuksekgonul et al., 2023 ; Thrush et al., 2022)。我們研究一個互補的失敗模式：添加不正確的資訊。直觀地，添加合理但不正確的細節應該會降低相似度，因為描述變得不夠準確。然而，如果相似度依賴於匹配個別詞彙或概念，而不驗證組合的正確性，添加的細節可能不會受到懲罰，甚至可能增加相似度。
+
+### 3.2 半真理診斷：指標與構造
+
+錨點 vs. 半真理。
+
+給定一張影像 I I ，我們比較一個簡短描述，即錨點 A A ，與一個半真理 A − A^{-} ，後者是通過附加恰好一個額外細節形成的。
+錨點是一個單一實體單位：描述影像中存在的物體的名詞短語，可能帶有屬性或數量。
+添加的細節在上下文中是合理的，但對於該影像是不正確的。
+我們將半真理準確度報告為模型偏好錨點而非半真理的案例比例：
+
+|  | Acc HT = Pr ⁡ [ s ​ ( I , A ) > s ​ ( I , A − ) ] , \text{Acc}_{\mathrm{HT}}\;=\;\Pr\big[s(I,A)>s(I,A^{-})\big], |  | (1) |
+| --- | --- | --- | --- |
+
+其中 s ​ ( ⋅ , ⋅ ) s(\cdot,\cdot) 是影像-文本相似度分數（越高越好）。
+隨機選擇對應於 50 % 50\% 。
+低於 50 % 50\% 的值意味著模型經常為半真理分配比錨點更高的相似度。
+
+COCO 上的診斷構造。
+
+我們在 Karpathy 分區（Karpathy & Fei-Fei, 2015）下的 MS-COCO 驗證集上實例化此診斷。
+除非另有說明，我們抽樣 5,000 張影像並為每張影像構造半真理，產生 N = 25 , 606 N=25{,}606 個錨點/半真理比較。
+
+我們使用僅文本 LLM 管道（附錄 C.1）將每個標題 T T 解析為兩種類型的文本單位：
+
+- • 實體單位 ℰ ​ ( T ) \mathcal{E}(T) ：來自標題的名詞短語，包括屬性和量詞（例如，「棕色馬」、「三隻狗」）。
+- • 關係單位 ℛ ​ ( T ) \mathcal{R}(T) ：兩個實體之間的有向關係（例如，「人騎馬」、「球在公園裡」）。
+
+實體單位 ℰ ​ ( T ) \mathcal{E}(T) ：來自標題的名詞短語，包括屬性和量詞（例如，「棕色馬」、「三隻狗」）。
+
+關係單位 ℛ ​ ( T ) \mathcal{R}(T) ：兩個實體之間的有向關係（例如，「人騎馬」、「球在公園裡」）。
+
+對於每個單位，相同的管道提出最少編輯的匹配假對照，即在上下文中合理但不正確的變體。
+對於實體單位，假對照改變物體（例如，「棕色馬」→ \rightarrow 「棕色長頸鹿」）或屬性（例如，「棕色馬」→ \rightarrow 「白色馬」）。
+對於關係單位，假對照改變謂語、交換論元或替換一個實體。
+錨點 A A 從實體單位 ℰ ​ ( T ) \mathcal{E}(T) 中抽樣。
+半真理 A − A^{-} 是通過將恰好一個來自 ℰ ​ ( T ) \mathcal{E}(T) 或 ℛ ​ ( T ) \mathcal{R}(T) 的假對照附加到錨點形成的。
+當附加關係單位時，該關係引入第二個實體並描述它與錨點實體之間的互動或空間關係。
+此構造確保半真理與錨點僅相差一個目標化的錯誤。
+
+[FIGURE:x2.png] 圖 2 ：半真理構造。(i) 將標題解析為單位並通過最少編輯生成假對照。(ii) 抽樣一個錨點 A A 並附加一個假對照以形成半真理 A − A^{-} 。(iii) CLIP 風格的模型可以為 A − A^{-} 分配比 A A 更高的相似度，激勵單位級監督。
+
+### 3.3 Half-Truth Vulnerability on COCO
+
+Figure 3 reports Acc HT \text{Acc}_{\mathrm{HT}} when the added
+detail is based on either (i) an entity unit or (ii) a relation unit.
+We find that similarity often fails to reject incorrect additions.
+For standard CLIP, performance is close to chance for entity additions ( 52.9 % 52.9\% ),
+and drops below chance for relation additions ( 32.9 % 32.9\% ), meaning incorrect relation
+details are frequently preferred over the anchor.
+
+[FIGURE:x3.png] Figure 3 : Half-Truth Accuracy ( Acc HT \text{Acc}_{\mathrm{HT}} ), entity vs. relation
+additions. Higher is better; dashed line indicates random chance.
+Sentence-level negatives improve the easier case, but relation additions remain
+difficult to reject.
+
+Sentence-level fine-tuning improves both categories but leaves a substantial gap.
+NegCLIP (Yuksekgonul et al., 2023 ) raises entity accuracy to 69.8 % 69.8\% and relation
+accuracy to 48.3 % 48.3\% , bringing relation additions closer to random chance.
+Stronger pre-training variants show a similar pattern: SigLIP achieves 56.9 % 56.9\% (entity)
+and 38.8 % 38.8\% (relation), while SigLIP2 reaches 69.9 % 69.9\% (entity) and 45.2 % 45.2\% (relation).
+Overall, incorrect relation additions remain consistently harder to penalize than incorrect
+entity additions across models.
+
+Why unit-level supervision?
+
+Since half-truths differ from anchors by exactly one unit, we hypothesize that explicit
+unit-level supervision, contrasting each correct unit against a minimally edited foil, will
+make similarity more sensitive to the specific detail that changed.
+
+## 4 方法：CS-CLIP
+
+半真診斷揭示了當錯誤訊息被添加到正確描述中時，模型會遇到困難。
+為了解決這個問題，我們在微調期間引入了單位級別的監督。
+與其直接在錨點對比半真的訓練上進行，我們在單位級別提供監督：對於每個標題單位，我們將正確的單位與最小編輯的負例進行對比（例如，「褐色馬」對比「白色馬」）。
+這針對性地解決了潛在的弱點，即對組合結構的敏感性，使該方法在半真設定之外具有通用性。
+
+標準 CLIP 訓練使用全局對比目標將每個影像與其完整標題對齐，這可能使相似度分數對個別標題部分不夠敏感（第 3 節）。
+為了解決這個問題，我們提出了 CS-CLIP（Component-Supervised CLIP），它在微調期間添加了有針對性的單位級別監督，同時在測試時保持雙編碼器架構和標準餘弦相似度評分不變。
+
+對於每個影像標題對，我們將標題解析為實體單位和關係單位（在第 3 節中定義），取樣一個單位及其匹配的負例，並訓練影像嵌入使其對正確單位的評分高於負例。
+這種對標題部分的直接監督使相似度對個別細節更加敏感，同時通過並行的句子級別損失保持全標題對齐。
+圖 4 說明了完整的訓練流程。
+
+[FIGURE:x4.png] 圖 4：CS-CLIP 訓練流程。(i) 單位提取與負例生成。給定標題 $T_j$，僅文本的 LLM 提取實體單位和關係單位，然後通過最小的、逼真的編輯為每個單位生成匹配的負例（例如，「褐色馬」→「白色馬」）。(ii) 單位取樣與編碼。我們為每個影像取樣一個單位負例對 $(U_j, \tilde{U}_j)，用 $f_\phi$ 編碼影像 $I_j$ 和用 $g_\phi$ 編碼單位文本。(iii) 單位級別監督。單位損失 $\mathcal{L}_{\mathrm{unit}}$ 將影像嵌入 $i_j$ 拉向正確的單位 $u_j$ 並推開匹配的負例 $\tilde{u}_j$ 和其他批內單位。句子級別對比訓練並行應用（未顯示）。
+
+### 4.1 單位採樣和編碼
+
+我們重複使用第 3 節的純文字解析管道，從每個標題 $T$ 中提取實體單位 $\mathcal{E}(T)$ 和關係單位 $\mathcal{R}(T)$，以及每個單位的匹配對照樣本（附錄 B 提供實作細節）。
+
+採樣策略。針對每個影像-標題配對，我們從實體或關係中採樣一個單位 $U$。
+以機率 $p_{\mathrm{rel}}$ 採樣一個關係單位 $U\in\mathcal{R}(T)$；
+否則，我們採樣一個實體單位 $U\in\mathcal{E}(T)$，可選地形成最多 $K{=}2$ 個實體的連接。
+我們採樣該單位的匹配對照樣本 $\tilde{U}$，並使用文字編碼器 $g_{\phi}(\cdot)$ 將兩者編碼為名詞短語（實體）或述詞短語（關係），產生正規化嵌入。
+我們在附錄 F 中調查其他採樣策略。
+
+### 4.2 訓練目標
+
+句子級損失（ℒ global \mathcal{L}_{\mathrm{global}} ）。我們使用標準的全局圖像-標題對比目標，結合 NegCLIP 風格的困難負樣本（Yuksekgonul et al., 2023）（附錄 A），將其與單位級監督相結合，以提高對組合結構的敏感性。
+
+單位級損失（ℒ unit \mathcal{L}_{\mathrm{unit}} ）。對於單位監督，我們使用與 CLIP 相同的余弦評分，具有可學習的溫度參數 τ \tau。由於嵌入已歸一化，余弦相似度等於點積。我們定義
+
+|  | κ ​ ( 𝐱 , 𝐲 ) = exp ⁡ ( 𝐱 ⊤ ​ 𝐲 τ ) . \kappa(\mathbf{x},\mathbf{y})=\exp\!\left(\frac{\mathbf{x}^{\top}\mathbf{y}}{\tau}\right). |  | (2) |
+| --- | --- | --- | --- |
+
+對於每個圖像 I i I_{i}，我們採樣 N u N_{u} 個單位/假樣本對 { ( U i , k , U ~ i , k ) } k = 1 N u \{(U_{i,k},\tilde{U}_{i,k})\}_{k=1}^{N_{u}}。設 𝐯 i \mathbf{v}_{i} 表示歸一化的圖像嵌入，設 𝐮 i , k \mathbf{u}_{i,k} 和 𝐮 ~ i , k \tilde{\mathbf{u}}_{i,k} 表示第 k k 個單位及其對應假樣本的歸一化嵌入，對應於圖像 i i。
+
+對於固定的單位索引 k k，圖像到單位的損失為：
+
+|  | ℒ I → U ( k ) = − 1 B ​ ∑ i = 1 B log ⁡ κ ​ ( 𝐯 i , 𝐮 i , k ) ∑ j = 1 B κ ​ ( 𝐯 i , 𝐮 j , k ) + κ ​ ( 𝐯 i , 𝐮 ~ i , k ) . \mathcal{L}^{(k)}_{I\rightarrow U}=-\frac{1}{B}\sum_{i=1}^{B}\log\frac{\kappa(\mathbf{v}_{i},\mathbf{u}_{i,k})}{\sum_{j=1}^{B}\kappa(\mathbf{v}_{i},\mathbf{u}_{j,k})+\kappa(\mathbf{v}_{i},\tilde{\mathbf{u}}_{i,k})}. |  | (3) |
+| --- | --- | --- | --- |
+
+此損失訓練圖像給正確的單位 U i , k U_{i,k} 打出更高的分數，相比於（i）其對應的假樣本 U ~ i , k \tilde{U}_{i,k} 和（ii）來自其他圖像的批次內單位。
+
+我們也包括對稱的單位到圖像項：
+
+|  | ℒ U → I ( k ) = − 1 B ​ ∑ i = 1 B log ⁡ κ ​ ( 𝐯 i , 𝐮 i , k ) ∑ j = 1 B κ ​ ( 𝐯 j , 𝐮 i , k ) . \mathcal{L}^{(k)}_{U\rightarrow I}=-\frac{1}{B}\sum_{i=1}^{B}\log\frac{\kappa(\mathbf{v}_{i},\mathbf{u}_{i,k})}{\sum_{j=1}^{B}\kappa(\mathbf{v}_{j},\mathbf{u}_{i,k})}. |  | (4) |
+| --- | --- | --- | --- |
+
+我們在公式 4 中排除假樣本，因為每個假樣本都與特定的圖像-單位對相綁定；公式 4 提供雙向正則化。
+
+我們對採樣的 N u N_{u} 個單位索引進行平均：
+
+|  | ℒ unit = 1 2 ​ N u ​ ∑ k = 1 N u ( ℒ I → U ( k ) + ℒ U → I ( k ) ) . \mathcal{L}_{\mathrm{unit}}=\frac{1}{2N_{u}}\sum_{k=1}^{N_{u}}\Big(\mathcal{L}^{(k)}_{I\rightarrow U}+\mathcal{L}^{(k)}_{U\rightarrow I}\Big). |  | (5) |
+| --- | --- | --- | --- |
+
+最終目標。我們將全局對齊與單位級監督相結合：
+
+|  | ℒ CS = ℒ global + λ u ​ ℒ unit . \mathcal{L}_{\mathrm{CS}}=\mathcal{L}_{\mathrm{global}}+\lambda_{u}\,\mathcal{L}_{\mathrm{unit}}. |  | (6) |
+| --- | --- | --- | --- |
+
+此目標保持標準 CLIP 推理不變，但通過訓練模型區分正確的標題單位與其對應的假樣本，使學習的相似度對標題結構更敏感。通過提供單位級監督而非直接在錨點對半真值比較上進行訓練，此方法針對一般組合弱點，並改善了超越半真值診斷的性能（第 5.2 節）。
+
+## 5 Experiments
+
+[FIGURE_CAPTION] Table 1 : Half-truth results on COCO. We report Half-Truth Accuracy ( Acc HT \mathrm{Acc}_{\mathrm{HT}} , %) and mean similarity gap Δ = s ​ ( I , A ) − s ​ ( I , A − ) \Delta=s(I,A)-s(I,A^{-}) (higher indicates better penalization of incorrect additions)
+for entity additions, relation additions, and overall.
+Green parentheses show absolute Acc HT \mathrm{Acc}_{\mathrm{HT}} improvement of CS-CLIP over zero-shot CLIP.
+Full results are in Appendix C .
+
+We evaluate CS-CLIP in three settings.
+First, we measure robustness to incorrect additions using the half-truth diagnostic (Section 3 ).
+Second, we evaluate compositional generalization on established controlled-edit benchmarks.
+Third, we report downstream zero-shot classification and image–text retrieval results, and we include ablations to isolate the effect of each design choice.
+
+Implementation and training. We fine-tune CLIP using the OpenCLIP codebase (Cherti et al., 2023 ) with OpenAI CLIP initialization.
+Unless stated otherwise, we use ViT-B/32 (Radford et al., 2021 ) . We fine-tune on MS-COCO under the Karpathy split (Karpathy & Fei-Fei, 2015 ) for 25 epochs with batch size 128 on 8 × \times A100 GPUs, using AdamW (lr 5 × 10 − 6 5\times 10^{-6} , weight decay 10 − 2 10^{-2} ).
+We use cosine warm-up for the first epoch followed by cosine decay.
+For the unit-level objective, we sample N u = 2 N_{u}=2 unit/foil pairs per image per step and use a learnable temperature τ \tau initialized from the pretrained CLIP temperature.
+We report results from the final training checkpoint.
+
+Training objective. We set the unit-loss weight to λ u = 0.5 \lambda_{u}=0.5 . For global caption-level negatives we follow NegCLIP-style training (Yuksekgonul et al., 2023 ) ,
+using in-batch captions plus shuffled synthetic hard negatives.
+Caption parsing and unit sampling follow Section 4.1 ; implementation details are in Appendix C.1 .
+
+### 5.1 COCO 上的半真相脆弱性
+
+表 1 使用第 3 節的診斷方法報告了 MS-COCO 驗證集上的半真相準確度。
+
+**整體結果。** CS-CLIP 在評估方法中達到最高的整體 $\mathrm{Acc}_{\mathrm{HT}}$（69.3%）和最大的平均相似度差距（$\Delta=+0.017$），表明對不正確新增的懲罰更加可靠。相比於零樣本 CLIP（40.6%），CS-CLIP 提升了 28.7 個百分點，證明單元級監督能顯著降低半真相脆弱性。
+
+**訓練訊號的比較。** 多個基準方法通過句子級負樣本加強訓練。NegCLIP 使用打亂或不匹配的標題，而 CE-CLIP 和 DeGLA（Zhang et al., 2024；Hu et al., 2025）使用最小編輯的句子負樣本來改變意義同時重複使用大量標題。這些方法相比零樣本 CLIP 有所改進，但仍留有較小的改進空間，特別是對於關係新增。輔助目標微調方法如 FSC-CLIP 和 ReadCLIP（Oh et al., 2024；Kwon et al., 2025）也改進了整體準確度，但在此診斷上仍低於 CS-CLIP。
+
+**關係新增最具挑戰性。** 關係新增在所有方法中都構成最大的挑戰。回顧第 3 節，零樣本 CLIP 在關係新增上僅達到 32.9% 的準確度，遠低於隨機水平，意味著不正確的關係新增通常被偏好超過真實標籤。對於多個微調基準方法，關係相似度差距 $\Delta$ 仍為負值，表明具有不正確關係的半真相在平均而言仍然得分高於錨點。CS-CLIP 扭轉了這一趨勢，在關係新增上達到 65.5% 的 $\mathrm{Acc}_{\mathrm{HT}}$，具有正相似度差距（$\Delta=+0.014$），證明單元級監督成功解決了這一弱點。
+
+**實體新增。** 實體新增相對容易，大多數微調模型達到高於隨機的性能。CS-CLIP 在實體新增上達到 75.4% 的準確度，與 FSC-CLIP 並列最佳實體性能，同時維持顯著更強的關係準確度（65.5% 對比 47.9%）。
+
+[FIGURE:x5.png] 圖 5：組合基準準確度 vs. 半真相準確度（$\mathrm{Acc}_{\mathrm{HT}}$）。每個點代表一個模型。x 軸顯示組合基準的平均圖像到文本準確度；y 軸顯示半真相準確度 $\mathrm{Acc}_{\mathrm{HT}}$（第 3 節）。CS-CLIP 改進了兩個指標。
+
+[FIGURE:x6.png] 圖 6：相對於 CLIP（I2T）的組合基準改進。上圖：跨受控對照基準的圖像到文本組合準確度相對於零樣本 CLIP 的各基準變化。下圖：跨基準的平均改進。CS-CLIP 在大多數基準上顯示一致的正收益，而不是由小子集驅動的改進。
+
+### 5.2 組合式理解
+
+半真相診斷隔離了對單一不正確添加細節的敏感性。
+我們現在評估 CS-CLIP 的單元級監督是否在已建立的基準上更廣泛地改進了組合式理解，這些基準測試屬性綁定、關係和其他受控的語言變異。
+
+我們在一套基於受控對比的組合式基準上評估 CS-CLIP，包括
+ARO（Yuksekgonul et al., 2023）、SugarCrepe（Hsieh et al., 2023）、Winoground（Thrush et al., 2022）和其他廣泛使用的基準。
+在這些基準中，模型必須對正確的圖像-文本對分配比最小編輯的替代方案更高的相似度。
+我們報告圖像到文本（I2T）和文本到圖像（T2I）的準確度。對於配對資料集（如 Winoground），我們也報告群組準確度（Grp），
+這要求 I2T 和 T2I 都正確。
+完整的基準詳情和協議在附錄 E.1 中提供。
+
+整體組合式性能。圖 5 繪製了不同模型的平均組合式 I2T 準確度與半真相準確度的對比。
+CS-CLIP 在兩個指標上都達到最佳性能：57.8% 組合式 I2T（表 11）和 69.3% $\mathrm{Acc}_{\mathrm{HT}}$ 在 COCO 上。
+模型間的正相關驗證了單元級監督解決的是一般組合式弱點，而不是對半真相設置的過度擬合。
+
+資料集分解。CS-CLIP 在 14/16 個基準上改進了 NegCLIP（圖 6）
+並超越了最近的基準方法（FSC-CLIP 57.4%、ReadCLIP 56.9%、DeGLA 56.2%）。
+與這些添加架構組件或多階段訓練的方法不同，
+CS-CLIP 僅通過額外的單元級監督實現收益，無需修改
+雙編碼器架構或測試時評分。
+CS-CLIP 達到了最佳 VL Checklist（Zhao et al., 2022）得分（79.2%），
+該得分是對物體、屬性和關係的系統審計。
+
+[FIGURE:x7.png] 圖 7：配對組合式基準上的 T2I 和群組準確度。我們報告配對組合式資料集上的平均文本到圖像（T2I）準確度和群組準確度（Grp）。
+
+配對基準。圖 7 總結了配對組合式資料集在 T2I 方向和群組準確度下的性能。
+CS-CLIP 相對於 CLIP 和 NegCLIP 改進了 T2I 準確度和群組準確度。
+值得注意的是，CS-CLIP 在評估的模型中達到了最佳的平均群組準確度，表明兩個檢索方向（I2T 和 T2I）都受益於單元級監督。
+這表明收益不是以相反方向的配對更弱為代價的。
+
+### 5.3 下游任務性能
+
+我們使用 CLIPBench（Cherti & Beaumont, 2022）評估下游任務性能，評估項目包括零樣本分類（ImageNet 變體和標準識別資料集）以及圖像文字檢索（COCO 和 Flickr8k（Plummer et al., 2015））。
+完整的各資料集結果和評估細節見附錄 5.3。
+
+零樣本分類。表 14 顯示零樣本分類結果。
+與 CLIP 相比，CS-CLIP 改變了平均準確度（Acc@1: 63.6 → \rightarrow 59.9；Acc@5: 86.5 → \rightarrow 84.6）。
+這個下降幅度與其他 COCO 微調基線相當（NegCLIP: 58.2%，FSC-CLIP: 61.2%），表明單位級別監督與其他微調方法一樣會權衡零樣本準確度。
+這在於較小資料集（COCO）上進行微調與原始 CLIP 預訓練資料相比是在預期之內。
+
+檢索任務。表 15 報告 COCO 和 Flickr8k（Plummer et al., 2015）上的 Recall@1。
+由於 CS-CLIP 在 COCO 上進行微調，我們將檢索視為 COCO 微調模型之間的內部比較。
+CS-CLIP 達到最佳平均 T2I Recall@1（71.7 對比 NegCLIP 65.9，FSC-CLIP 69.8），並在最佳平均 I2T（56.8）上並列第一，證明單位級別監督改進了檢索對齊，同時在兩個方向上保持競爭力的性能。
+
+### 5.4 消融研究
+
+我們研究了 CS-CLIP 如何依賴於模型規模、微調策略和單元級訓練信號。
+我們報告三組指標：組合性（I2T/T2I/Group 準確度）、半真（整體、實體和關係準確度），
+以及下游任務（零樣本分類和檢索）。數值越高越好。
+除非另有說明，否則我們使用與主要模型相同的訓練設置並保持評估協議固定。
+
+[FIGURE_CAPTION] 表 2：骨幹網路縮放和微調策略。對於 ViT-B/32，我們將全量微調（Full FT，更新兩個編碼器）與僅文本微調和僅圖像微調進行比較。
+我們也在全量微調下報告骨幹網路縮放的結果。
+
+凍結一個編碼器會損害關係識別。表 2 顯示，僅更新雙編碼器的一側主要會降低半真準確度，特別是對於關係新增的情況。
+僅文本微調將 Rel 降至 41.9，而僅圖像微調達到 49.3；兩者都低於全量微調（65.5）。
+縮放骨幹網路改善了組合性、半真和下游任務指標，其中 ViT-L/14 整體表現最佳。
+
+[FIGURE_CAPTION] 表 3：單元損失權重 $\lambda_{u}$ 的影響。我們在保持所有其他設置固定的情況下改變 $\lambda_{u}$。
+
+$\lambda_{u}$ 主要影響半真行為。表 3 顯示組合性和下游任務指標在 $\lambda_{u}$ 的各個值上保持穩定，
+而半真準確度隨著 $\lambda_{u}$ 增加而改善，特別是對於關係新增（當 $\lambda_{u}$ 從 0.10 增加到 0.75 時，61.3% $\rightarrow$ 67.8%）。
+這表明 $\lambda_{u}$ 主要控制對單一不正確細節的敏感性，而不會破壞更廣泛的組合理解。
+
+[FIGURE_CAPTION] 表 4：消融訓練信號。信號表示使用了哪些分量：G = 全局句子負例，U = 單元級監督，F = 匹配的單元反例。
+變體 1 代表 COCO 上的標準 CLIP 微調，沒有困難負例，變體 2 代表 NegCLIP。
+
+匹配的單元反例驅動半真收益。表 4 隔離了每個訓練信號的效果。
+僅使用全局句子負例（變體 2）改善了組合 I2T（52.8 $\rightarrow$ 55.3），但半真關係準確度仍然受限（48.3），仍低於隨機水平。
+新增匹配的單元反例（變體 4：單元 + 反例，不含全局負例）產生最大的半真改善（全部 68.3；Rel 63.7），直接針對單一不正確新增的拒絕。
+結合所有三個信號（變體 6）產生最佳的組合 I2T（57.8）和最強的半真結果（全部 69.3；Rel 65.5），
+同時保持具有競爭力的零樣本和檢索性能。
+
+我們在附錄 F 中包含了額外的消融研究，涵蓋優化和構建選擇，如學習率、批次大小，
+以及相關的訓練超參數。
+
+## 6 結論
+
+我們研究了 CLIP 風格模型中的一個簡單檢索失敗現象：將一個現實但不正確的細節附加到正確的描述中可能會增加相似度，使得半真實性描述的排名超過錨點。
+
+為了解決這個問題，我們引入了 CS-CLIP，它在微調期間通過將標題解析為實體和關係單位，並將每個單位與最小編輯的反例進行對比，從而添加單位級監督。
+
+這在保持標準雙編碼器架構的同時，提供了直接的組合壓力。
+
+CS-CLIP 達成了 69.3% 的半真實性準確度（相比 CLIP 的 40.6%）、最佳的組合圖文檢索準確度（57.8%），以及在評估方法中最高的群組準確度，證明了針對標題部分的有針對性監督使檢索對組合變化更敏感。
+
+**局限性和未來工作**。我們的方法依賴於純文本 LLM 解析，這可能會引入偽影或遺漏標題中未表達的視覺細節，且在 COCO 上微調會在零樣本準確度和組合敏感性之間進行權衡。
+
+雖然 CS-CLIP 減少了半真實性失敗，但它不能保證事實正確性或人口統計公平性；模型可能仍然反映訓練資料中存在的偏見。
+
+未來的工作可以探索圖像端的半真實性（向正確的圖像添加不正確的視覺元素）、利用視覺基礎的聯合圖像文本解析，或在大規模預訓練期間應用單位級監督以減少零樣本權衡。
+
+## 致謝
+
+作者 B. K. 感謝 Zuse School ELIZA 的支持，該機構提供了使他們能夠為本工作做出貢獻的必要資金。
+
+## 影響聲明
+
+本工作解決了視覺語言檢索中的一個失敗模式，其中向查詢添加不正確的細節可能會逆向性地增加相似度分數。
+
+預期的影響是使檢索在查詢改進下更加可靠，通過減少虛假的高置信度匹配來使用戶面向的搜尋、無障礙工具和資料集監管受益。
+
+潛在風險反映了視覺語言模型廣泛存在的風險。改進的組合敏感性可以增強用於監視或內容定向的系統。此外，減少半真實性失敗並不能保證事實正確性、人口統計群體之間的公平性，或在下遊部署中的安全性。我們將 CS-CLIP 作為研究貢獻呈現，並鼓勵在安全關鍵應用中評估人口統計公平性和誤用情景。
+
+## 參考文獻
+
+- Abdollah et al. (2024) Abdollah, A., Izadi, A., Saghafian, A., Vahidimajd, R., Mozafari, M., Mirzaei, A., Samiei, M., and Baghshah, M. S. Comalign: Compositional alignment in vision-language models, 2024. URL https://arxiv.org/abs/2409.08206 .
+- Alhamoud et al. (2025) Alhamoud, K., Alshammari, S., Tian, Y., Li, G., Torr, P., Kim, Y., and Ghassemi, M. Vision-language models do not understand negation. arXiv preprint arXiv:2501.09425 , 2025.
+- Awal et al. (2024) Awal, R., Zhang, L., and Agrawal, A. Vismin: Visual minimal-change understanding. In Advances in Neural Information Processing Systems , 2024. URL https://arxiv.org/pdf/2407.16772 .
+- Burapacheep et al. (2024) Burapacheep, J., Gaur, I., Bhatia, A., and Thrush, T. ColorSwap: A color and word order dataset for multimodal evaluation. In Ku, L.-W., Martins, A., and Srikumar, V. (eds.), Findings of the Association for Computational Linguistics: ACL 2024 , pp.  1716–1726, Bangkok, Thailand, August 2024. Association for Computational Linguistics. doi: 10.18653/v1/2024.findings-acl.99 . URL https://aclanthology.org/2024.findings-acl.99/ .
+- Castro et al. (2024) Castro, S., Ziai, A., Saluja, A., Yuan, Z., and Mihalcea, R. CLoVe: Encoding compositional language in contrastive vision-language models. arXiv:2402.15021, February 2024. URL https://arxiv.org/abs/2402.15021 .
+- Chen et al. (2023) Chen, X., Fernández, R., and Pezzelle, S. The BLA benchmark: Investigating basic language abilities of pre-trained multimodal models. In Bouamor, H., Pino, J., and Bali, K. (eds.), Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , pp.  5817–5830, Singapore, December 2023. Association for Computational Linguistics. doi: 10.18653/v1/2023.emnlp-main.356 . URL https://aclanthology.org/2023.emnlp-main.356/ .
+- Cherti & Beaumont (2022) Cherti, M. and Beaumont, R. Clip benchmark, November 2022. URL https://doi.org/10.5281/zenodo.15403103 .
+- Cherti et al. (2023) Cherti, M., Beaumont, R., Wightman, R., Wortsman, M., Ilharco, G., Gordon, C., Schuhmann, C., Schmidt, L., and Jitsev, J. Reproducible scaling laws for contrastive language-image learning. In 2023 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp.  2818–2829. IEEE, June 2023. doi: 10.1109/cvpr52729.2023.00276 . URL http://dx.doi.org/10.1109/CVPR52729.2023.00276 .
+- Deng et al. (2009) Deng, J., Dong, W., Socher, R., Li, L.-J., Li, K., and Fei-Fei, L. Imagenet: A large-scale hierarchical image database. 2009 IEEE Conference on Computer Vision and Pattern Recognition , pp.  248–255, 2009. URL https://api.semanticscholar.org/CorpusID:57246310 .
+- Doveh et al. (2023a) Doveh, S., Arbelle, A., Harary, S., Herzig, R., Kim, D., Cascante-Bonilla, P., Alfassy, A., Panda, R., Giryes, R., Feris, R., Ullman, S., and Karlinsky, L. Dense and aligned captions (dac) promote compositional reasoning in vl models. In Oh, A., Naumann, T., Globerson, A., Saenko, K., Hardt, M., and Levine, S. (eds.), Advances in Neural Information Processing Systems , volume 36, pp.  76137–76150, 2023a. URL https://openreview.net/pdf?id=ARrwf7Ev2T .
+- Doveh et al. (2023b) Doveh, S., Arbelle, A., Harary, S., Panda, R., Herzig, R., Schwartz, E., Kim, D., Giryes, R., Feris, R., Ullman, S., and Karlinsky, L. Teaching structured vision & language concepts to vision & language models. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp.  2657–2668, 2023b. URL https://openaccess.thecvf.com/content/CVPR2023/papers/Doveh_Teaching_Structured_Vision__Language_Concepts_to_Vision__Language_CVPR_2023_paper.pdf .
+- Dumpala et al. (2024) Dumpala, S. H., Jaiswal, A., Sastry, C., Milios, E., Oore, S., and Sajjad, H. Sugarcrepe++ dataset: Vision-language model sensitivity to semantic and lexical alterations, 2024.
+- Fan et al. (2023) Fan, L., Krishnan, D., Isola, P., Katabi, D., and Tian, Y. Improving clip training with language rewrites. In NeurIPS , 2023.
+- Fei-Fei et al. (2004) Fei-Fei, L., Fergus, R., and Perona, P. Learning generative visual models from few training examples: An incremental bayesian approach tested on 101 object categories. In 2004 Conference on Computer Vision and Pattern Recognition Workshop , pp.  178–178, 2004. doi: 10.1109/CVPR.2004.383 .
+- Goel et al. (2022) Goel, S., Bansal, H., Bhatia, S., Rossi, R. A., Vinay, V., and Grover, A. Cyclip: Cyclic contrastive language-image pretraining, 2022. URL https://arxiv.org/abs/2205.14459 .
+- Hendrycks et al. (2021) Hendrycks, D., Zhao, K., Basart, S., Steinhardt, J., and Song, D. Natural adversarial examples, 2021. URL https://arxiv.org/abs/1907.07174 .
+- Hsieh et al. (2023) Hsieh, C.-Y., Zhang, J., Ma, Z., Kembhavi, A., and Krishna, R. Sugarcrepe: Fixing hackable benchmarks for vision-language compositionality. In Thirty-Seventh Conference on Neural Information Processing Systems Datasets and Benchmarks Track , 2023.
+- Hu et al. (2025) Hu, X., Yang, K., Wang, J., Xu, H., Feng, Z., and Wang, Y. Decoupled global-local alignment for improving compositional understanding, 2025. URL https://arxiv.org/abs/2504.16801 .
+- Huang et al. (2024) Huang, Y., Tang, J., Chen, Z., Zhang, R., Zhang, X., Chen, W., Zhao, Z., Zhao, Z., Lv, T., Hu, Z., and Zhang, W. Structure-clip: Towards scene graph knowledge to enhance multi-modal structured representations. Proceedings of the AAAI Conference on Artificial Intelligence , 38(3):2417–2425, Mar. 2024. doi: 10.1609/aaai.v38i3.28017 . URL https://ojs.aaai.org/index.php/AAAI/article/view/28017 .
+- Jia et al. (2021) Jia, C., Yang, Y., Xia, Y., Chen, Y.-T., Parekh, Z., Pham, H., Le, Q. V., Sung, Y., Li, Z., and Duerig, T. Scaling up visual and vision-language representation learning with noisy text supervision. In Proceedings of the 38th International Conference on Machine Learning , volume 139. PMLR, 2021.
+- Jiang et al. (2024a) Jiang, B., Xie, Y., Hao, Z., Wang, X., Mallick, T., Su, W. J., Taylor, C. J., and Roth, D. A peek into token bias: Large language models are not yet genuine reasoners. In Al-Onaizan, Y., Bansal, M., and Chen, Y.-N. (eds.), Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing , pp.  4722–4756, Miami, Florida, USA, November 2024a. Association for Computational Linguistics. doi: 10.18653/v1/2024.emnlp-main.272 . URL https://aclanthology.org/2024.emnlp-main.272/ .
+- Jiang et al. (2024b) Jiang, K., He, X., Xu, R., and Wang, X. ComCLIP: Training-free compositional image and text matching. In Duh, K., Gomez, H., and Bethard, S. (eds.), Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pp.  6639–6659, Mexico City, Mexico, June 2024b. Association for Computational Linguistics. doi: 10.18653/v1/2024.naacl-long.370 . URL https://aclanthology.org/2024.naacl-long.370/ .
+- Kamath et al. (2023) Kamath, A., Hessel, J., and Chang, K.-W. What's "up" with vision-language models? investigating their struggle with spatial reasoning. In Bouamor, H., Pino, J., and Bali, K. (eds.), Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , pp.  9161–9175, Singapore, December 2023. Association for Computational Linguistics. doi: 10.18653/v1/2023.emnlp-main.568 . URL https://aclanthology.org/2023.emnlp-main.568/ .
+- Karpathy & Fei-Fei (2015) Karpathy, A. and Fei-Fei, L. Deep visual-semantic alignments for generating image descriptions. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) , pp.  3128–3137, 2015.
+- Koishigarina et al. (2025) Koishigarina, D., Uselis, A., and Oh, S. J. Clip behaves like a bag-of-words model cross-modally but not uni-modally. arXiv preprint arXiv:2502.03566 , 2025. URL https://arxiv.org/abs/2502.03566 .
+- Krishna et al. (2017) Krishna, R., Zhu, Y., Groth, O., Johnson, J., Hata, K., Kravitz, J., Chen, S., Kalantidis, Y., Li, L.-J., Shamma, D. A., Bernstein, M. S., and Fei-Fei, L. Visual genome: Connecting language and vision using crowdsourced dense image annotations. International Journal of Computer Vision , 123:32–73, 2017. doi: 10.1007/s11263-016-0981-7 . URL https://link.springer.com/article/10.1007/s11263-016-0981-7 .
+- Krizhevsky (2009) Krizhevsky, A. Learning multiple layers of features from tiny images. Technical report, University of Toronto, 2009.
+- Kwon et al. (2025) Kwon, J., Min, K., and Sohn, J.-y. Enhancing compositional reasoning in clip via reconstruction and alignment of text descriptions. arXiv preprint arXiv:2510.16540 , 2025. URL https://arxiv.org/abs/2510.16540 .
+- Le et al. (2023) Le, T., Lal, V., and Howard, P. COCO-counterfactuals: Automatically constructed counterfactual examples for image-text pairs. In Thirty-seventh Conference on Neural Information Processing Systems Datasets and Benchmarks Track , 2023. URL https://openreview.net/forum?id=7AjdHnjIHX .
+- Lin et al. (2014) Lin, T.-Y., Maire, M., Belongie, S., Bourdev, L., Girshick, R., Hays, J., Perona, P., Ramanan, D., Zitnick, C. L., and Dollár, P. Microsoft coco: Common objects in context. In European Conference on Computer Vision , pp.  740–755. Springer, 2014.
+- Menon & Vondrick (2022) Menon, S. and Vondrick, C. Visual classification via description from large language models, 2022. URL https://arxiv.org/abs/2210.07183 .
+- Miranda et al. (2025) Miranda, I., Salaberria, A., Agirre, E., and Azkune, G. Adding simple structure at inference improves vision-language compositionality, 2025. URL https://arxiv.org/abs/2506.09691 .
+- Nayak et al. (2023) Nayak, N. V., Yu, P., and Bach, S. H. Learning to compose soft prompts for compositional zero-shot learning. In International Conference on Learning Representations , 2023.
+- Oh et al. (2024) Oh, Y., Cho, J. W., Kim, D.-J., Kweon, I. S., and Kim, J. Preserving multi-modal capabilities of pre-trained vlms for improving vision-linguistic compositionality. arXiv preprint arXiv:2410.05210 , 2024.
+- Paiss et al. (2023) Paiss, R., Ephrat, A., Tov, O., Zada, S., Mosseri, I., Irani, M., and Dekel, T. Teaching clip to count to ten. arXiv preprint arXiv:2302.12066 , 2023.
+- Parcalabescu et al. (2022) Parcalabescu, L., Cafagna, M., Muradjan, L., Frank, A., Calixto, I., and Gatt, A. VALSE: A task-independent benchmark for vision and language models centered on linguistic phenomena. In Muresan, S., Nakov, P., and Villavicencio, A. (eds.), Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pp.  8253–8280, Dublin, Ireland, May 2022. Association for Computational Linguistics. doi: 10.18653/v1/2022.acl-long.567 . URL https://aclanthology.org/2022.acl-long.567/ .
+- Patel et al. (2024) Patel, M., Kusumba, A., Cheng, S., Kim, C., Gokhale, T., Baral, C., and Yang, Y. Tripletclip: Improving compositional reasoning of clip via synthetic vision-language negatives. Advances in neural information processing systems , 2024.
+- Peleg et al. (2025) Peleg, A., Singh, N. D., and Hein, M. Advancing compositional awareness in clip with efficient fine-tuning. In NeurIPS , 2025.
+- Peng et al. (2024) Peng, W., Xie, S., You, Z., Lan, S., and Wu, Z. Synthesize diagnose and optimize: Towards fine-grained vision-language understanding. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp.  13279–13288, 2024.
+- Plummer et al. (2015) Plummer, B. A., Wang, L., Cervantes, C. M., Caicedo, J. C., Hockenmaier, J., and Lazebnik, S. Flickr30k entities: Collecting region-to-phrase correspondences for richer image-to-sentence models. In Proceedings of the IEEE International Conference on Computer Vision , pp.  2641–2649, 2015.
+- Radford et al. (2021) Radford, A., Kim, J. W., Hallacy, C., Ramesh, A., Goh, G., Agarwal, S., Sastry, G., Askell, A., Mishkin, P., Clark, J., Krueger, G., and Sutskever, I. Learning transferable visual models from natural language supervision. In Proceedings of the 38th International Conference on Machine Learning (ICML 2021) , volume 139 of Proceedings of Machine Learning Research , pp.  8748–8763. PMLR, 2021. URL http://proceedings.mlr.press/v139/radford21a.html .
+- Ray et al. (2023) Ray, A., Radenovic, F., Dubey, A., Plummer, B. A., Krishna, R., and Saenko, K. Cola: A benchmark for compositional text-to-image retrieval. In Advances in Neural Information Processing Systems , 2023. URL https://arxiv.org/abs/2305.03689 .
+- Recht et al. (2019) Recht, B., Roelofs, R., Schmidt, L., and Shankar, V. Do imagenet classifiers generalize to imagenet? In International Conference on Machine Learning , 2019. URL https://api.semanticscholar.org/CorpusID:67855879 .
+- Richardson et al. (2025) Richardson, A. K., Kearns, R. O., Moss, S., Wang-Mascianica, V., and Koralus, P. Theory-grounded evaluation of human-like fallacy patterns in llm reasoning, 2025. URL https://arxiv.org/abs/2506.11128 .
+- Samin et al. (2025) Samin, A. M., Ahmed, M. F., and Rafee, M. M. S. ColorFoil: Investigating color blindness in large vision and language models. In Ebrahimi, A., Haider, S., Liu, E., Haider, S., Leonor Pacheco, M., and Wein, S. (eds.), Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 4: Student Research Workshop) , pp.  294–300, Albuquerque, USA, April 2025. Association for Computational Linguistics. ISBN 979-8-89176-192-6. doi: 10.18653/v1/2025.naacl-srw.29 . URL https://aclanthology.org/2025.naacl-srw.29/ .
+- Schrodi et al. (2025) Schrodi, S., Hoffmann, D. T., Argus, M., Fischer, V., and Brox, T. Two effects, one trigger: On the modality gap, object bias, and information imbalance in contrastive vision-language models. In The Thirteenth International Conference on Learning Representations , 2025. URL https://openreview.net/forum?id=uAFHCZRmXk .
+- Singh et al. (2023) Singh, H., Zhang, P., Wang, Q., Wang, M., Xiong, W., Du, J., and Chen, Y. Coarse-to-fine contrastive learning in image-text-graph space for improved vision-language compositionality. In Bouamor, H., Pino, J., and Bali, K. (eds.), Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , pp.  869–893, Singapore, December 2023. Association for Computational Linguistics. doi: 10.18653/v1/2023.emnlp-main.56 . URL https://aclanthology.org/2023.emnlp-main.56/ .
+- Singh et al. (2025) Singh, J., Shrivastava, I., Vatsa, M., Singh, R., and Bharati, A. Learning the power of "no": Foundation models with negations. In Proceedings of the Winter Conference on Applications of Computer Vision (WACV) , pp.  7991–8001, February 2025.
+- Suri et al. (2023) Suri, G., Slater, L. R., Ziaee, A., and Nguyen, M. Do large language models show decision heuristics similar to humans? a case study using gpt-3.5, 2023. URL https://arxiv.org/abs/2305.04400 .
+- Tang et al. (2023) Tang, Y., Yamada, Y., Zhang, Y., and Yildirim, I. When are lemons purple? the concept association bias of vision-language models. In Bouamor, H., Pino, J., and Bali, K. (eds.), Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing , pp.  14333–14348, Singapore, December 2023. Association for Computational Linguistics. doi: 10.18653/v1/2023.emnlp-main.886 . URL https://aclanthology.org/2023.emnlp-main.886/ .
+- Thrush et al. (2022) Thrush, T., Jiang, R., Bartolo, M., Singh, A., Williams, A., Kiela, D., and Ross, C. Winoground: Probing vision and language models for visio-linguistic compositionality. In CVPR , 2022.
+- Tong et al. (2024) Tong, S., Liu, Z., Zhai, Y., Ma, Y., LeCun, Y., and Xie, S. Eyes wide shut? exploring the visual shortcomings of multimodal LLMs. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , pp.  9568–9578, 2024.
+- Tschannen et al. (2025) Tschannen, M., Gritsenko, A., Wang, X., Naeem, M. F., Alabdulmohsin, I., Parthasarathy, N., Evans, T., Beyer, L., Xia, Y., Mustafa, B., Hénaff, O., Harmsen, J., Steiner, A., and Zhai, X. Siglip 2: Multilingual vision-language encoders with improved semantic understanding, localization, and dense features. arXiv preprint arXiv:2502.14786 , 2025. URL https://arxiv.org/abs/2502.14786 .
+- Tversky & Kahneman (1983) Tversky, A. and Kahneman, D. Extensional versus intuitive reasoning: The conjunction fallacy in probability judgment. Psychological Review , 90(4):293–315, 1983. doi: 10.1037/0033-295X.90.4.293 .
+- Wang et al. (2019) Wang, H., Ge, S., Lipton, Z., and Xing, E. P. Learning robust global representations by penalizing local predictive power. In Advances in Neural Information Processing Systems , pp.  10506–10518, 2019.
+- Wu et al. (2025) Wu, R., Chen, P., Shen, F., Zhao, S., Hui, Q., Gao, H., Lu, T., Liu, Z., Zhao, F., Wang, K., and Lian, S. Himo-clip: Modeling semantic hierarchy and monotonicity in vision-language alignment, 2025. URL https://arxiv.org/abs/2511.06653 .
+- Xiao et al. (2010) Xiao, J., Hays, J., Ehinger, K. A., Oliva, A., and Torralba, A. Sun database: Large-scale scene recognition from abbey to zoo. In 2010 IEEE Computer Society Conference on Computer Vision and Pattern Recognition , pp.  3485–3492, 2010. doi: 10.1109/CVPR.2010.5539970 .
+- Yao et al. (2021) Yao, L., Huang, R., Hou, L., Lu, G., Niu, M., Xu, H., Liang, X., Li, Z., Jiang, X., and Xu, C. Filip: Fine-grained interactive language-image pre-training, 2021. URL https://arxiv.org/abs/2111.07783 .
+- Yuksekgonul et al. (2023) Yuksekgonul, M., Bianchi, F., Kalluri, P., Jurafsky, D., and Zou, J. When and why vision-language models behave like bags-of-words, and what to do about it? In Proceedings of the International Conference on Learning Representations (ICLR 2023) , 2023. URL https://arxiv.org/abs/2210.01936 .
+- Zhai et al. (2023) Zhai, X., Mustafa, B., Kolesnikov, A., and Beyer, L. Sigmoid loss for language image pre-training. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , 2023. URL https://openaccess.thecvf.com/content/ICCV2023/papers/Zhai_Sigmoid_Loss_for_Language_Image_Pre-Training_ICCV_2023_paper.pdf .
+- Zhang et al. (2024) Zhang, L., Awal, R., and Agrawal, A. Contrasting intra-modal and ranking cross-modal hard negatives to enhance visio-linguistic compositional understanding. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 2024. URL https://openaccess.thecvf.com/content/CVPR2024/papers/Zhang_Contrasting_Intra-Modal_and_Ranking_Cross-Modal_Hard_Negatives_to_Enhance_Visio-Linguistic_CVPR_2024_paper.pdf .
+- Zhao et al. (2022) Zhao, T., Zhang, T., Zhu, M., Shen, H., Lee, K., Lu, X., and Yin, J. Vl-checklist: Evaluating pre-trained vision-language models with objects, attributes and relations, 2022. URL https://arxiv.org/abs/2207.00221 .
+- Zhong et al. (2022) Zhong, Y., Yang, J., Zhang, P., Li, C., Codella, N., Li, L. H., Zhou, L., Dai, X., Yuan, L., Li, Y., et al. Regionclip: Region-based language-image pretraining. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp.  16793–16803, 2022.
+
+## 附錄 A 句子級全局目標函數
+
+本附錄定義了來自方程式 6（第 4.2 節）的句子級對比目標函數 $\mathcal{L}_{\mathrm{global}}$，並總結了 NegCLIP（Yuksekgonul et al., 2023）如何透過合成困難負例標題來修改分母。
+
+我們使用來自方程式 2 的評分記號，其中所有嵌入都經過 $\ell_{2}$ 歸一化，使得餘弦相似度等於點積。
+
+### A.1 CLIP 全局對比損失函數
+
+考慮一個大小為 $B$ 的小批次，包含 $B$ 個配對的圖像–標題對 $\{(I_{i},T_{i})\}_{i=1}^{B}$。
+令 $\mathbf{v}_{i}$ 為歸一化的圖像嵌入，$\mathbf{t}_{i}$ 為歸一化的標題嵌入。
+圖像到文本（I2T）損失函數為
+
+|  | $\mathcal{L}_{I\rightarrow T}=-\frac{1}{B}\sum_{i=1}^{B}\log\frac{\kappa(\mathbf{v}_{i},\mathbf{t}_{i})}{\sum_{j=1}^{B}\kappa(\mathbf{v}_{i},\mathbf{t}_{j})}$ |  | (7) |
+| --- | --- | --- | --- |
+
+對稱的文本到圖像（T2I）損失函數為
+
+|  | $\mathcal{L}_{T\rightarrow I}=-\frac{1}{B}\sum_{i=1}^{B}\log\frac{\kappa(\mathbf{v}_{i},\mathbf{t}_{i})}{\sum_{j=1}^{B}\kappa(\mathbf{v}_{j},\mathbf{t}_{i})}$ |  | (8) |
+| --- | --- | --- | --- |
+
+我們將全局 CLIP 目標函數定義為
+
+|  | $\mathcal{L}_{\mathrm{CLIP}}=\frac{1}{2}\Big(\mathcal{L}_{I\rightarrow T}+\mathcal{L}_{T\rightarrow I}\Big)$ |  | (9) |
+| --- | --- | --- | --- |
+
+### A.2 NegCLIP-style hard negative captions
+
+NegCLIP (Yuksekgonul et al., 2023 ) augments each training example with a shuffled-caption hard negative.
+Given a caption T i T_{i} , it constructs a foil T ~ i \tilde{T}_{i} by shuffling or swapping
+content words (e.g., nouns, adjectives) so that the new sentence reuses nearly the
+same vocabulary but changes the sentence-level meaning.
+Let 𝐭 ~ i \tilde{\mathbf{t}}_{i} denote the normalized embedding of the shuffled caption T ~ i \tilde{T}_{i} .
+
+NegCLIP then adds these shuffled negatives to the image-to-text denominator. With a
+minibatch of B B pairs, the I2T loss becomes
+
+|  | ℒ I → T Neg = − 1 B ​ ∑ i = 1 B log ⁡ κ ​ ( 𝐯 i , 𝐭 i ) ∑ j = 1 B κ ​ ( 𝐯 i , 𝐭 j ) + ∑ j = 1 B κ ​ ( 𝐯 i , 𝐭 ~ j ) . \mathcal{L}_{I\rightarrow T}^{\mathrm{Neg}}=-\frac{1}{B}\sum_{i=1}^{B}\log\frac{\kappa(\mathbf{v}_{i},\mathbf{t}_{i})}{\sum_{j=1}^{B}\kappa(\mathbf{v}_{i},\mathbf{t}_{j})\;+\;\sum_{j=1}^{B}\kappa(\mathbf{v}_{i},\tilde{\mathbf{t}}_{j})}. |  | (10) |
+| --- | --- | --- | --- |
+
+That is, each image 𝐯 i \mathbf{v}_{i} is contrasted against all B B in-batch captions { 𝐭 j } \{\mathbf{t}_{j}\} plus all B B shuffled-caption foils { 𝐭 ~ j } \{\tilde{\mathbf{t}}_{j}\} from the same batch.
+
+The text-to-image term remains unchanged from Eq. 8 (i.e., no
+hard negatives are added in the T2I direction).
+We define the NegCLIP objective as
+
+|  | ℒ NegCLIP = 1 2 ​ ( ℒ I → T Neg + ℒ T → I ) . \mathcal{L}_{\mathrm{NegCLIP}}=\frac{1}{2}\Big(\mathcal{L}_{I\rightarrow T}^{\mathrm{Neg}}+\mathcal{L}_{T\rightarrow I}\Big). |  | (11) |
+| --- | --- | --- | --- |
+
+Relation to CS-CLIP.
+
+Unless otherwise stated, CS-CLIP uses the NegCLIP-style objective
+(Eq. 11 ) as ℒ global \mathcal{L}_{\mathrm{global}} .
+In our ablation studies (Appendix F ), we also explore using the
+standard CLIP objective (Eq. 9 ) without hard negatives.
+We then add λ u ​ ℒ unit \lambda_{u}\,\mathcal{L}_{\mathrm{unit}} (Eq. 6 ) to
+provide supervision on individual caption units and their matched foils.
+
+## 附錄 B 單元解析和 Foil 生成管道
+
+本附錄描述了文本 LLM 管道，用於 (i) 將字幕解析為實體單元和關係單元，以及 (ii) 通過最小編輯生成匹配的 foils。同一管道用於 CS-CLIP 訓練（第 4.1 節）和構造半真實診斷（第 3 節）。LLM 僅對字幕文本進行操作，永遠不會看到圖像。
+
+**單元和 foils。**
+
+給定字幕 $T$，我們提取兩種類型的單元：
+
+- • 實體單元 $\mathcal{E}(T)$：描述視覺基礎實體的名詞短語，包括綁定屬性和量詞（例如，"three dogs"、"a brown horse"、"a man in a blue shirt"）。
+- • 關係單元 $\mathcal{R}(T)$：兩個實體單元之間的有向關係，寫作 $(e_s,p,e_o)$ 並呈現為短語（例如，"person riding horse"、"ball in park"）。
+
+實體單元 $\mathcal{E}(T)$：描述視覺基礎實體的名詞短語，包括綁定屬性和量詞（例如，"three dogs"、"a brown horse"、"a man in a blue shirt"）。
+
+關係單元 $\mathcal{R}(T)$：兩個實體單元之間的有向關係，寫作 $(e_s,p,e_o)$ 並呈現為短語（例如，"person riding horse"、"ball in park"）。
+
+對於每個單元，我們生成一個或多個匹配的 foils $\tilde{U}$，這些 foils 經過最小編輯（恰好改變一個分量）且在語境中是真實的，同時改變單元的含義。
+實體 foils 改變物體類別或一個屬性/量詞。
+關係 foils 改變單一關係分量（謂詞或一個論元），或在謂詞非對稱時交換論元。
+
+### B.1 模型和推理配置
+
+我們使用由 vLLM 提供的 Qwen3-8B-AWQ 來生成結構化 JSON 輸出。
+表 5 總結了配置。
+
+[FIGURE_CAPTION] 表 5：文本 LLM 管道的模型和推理配置。
+
+### B.2 管道概述
+
+對於每個字幕 $T$，管道運行三個階段：
+
+- 1. 提取單元：生成實體單元 $\mathcal{E}(T)$ 和關係單元 $\mathcal{R}(T)$。
+- 2. 生成實體 foils：對於每個 $e\in\mathcal{E}(T)$，生成最小編輯 foils $\tilde{e}$。
+- 3. 生成關係 foils：對於每個 $r\in\mathcal{R}(T)$，生成最小編輯 foils $\tilde{r}$。
+
+提取單元：生成實體單元 $\mathcal{E}(T)$ 和關係單元 $\mathcal{R}(T)$。
+
+生成實體 foils：對於每個 $e\in\mathcal{E}(T)$，生成最小編輯 foils $\tilde{e}$。
+
+生成關係 foils：對於每個 $r\in\mathcal{R}(T)$，生成最小編輯 foils $\tilde{r}$。
+
+我們應用輕量級的基於規則的篩選器來去除格式不正確的輸出並避免退化的 foils（例如，近似同義詞或重複）。
+
+### B.3 實體和關係抽取
+
+此階段將標題解析為實體單位和關係單位。
+
+#### B.3.1 系統提示（抽取）
+
+#### B.3.2 使用者提示範本（抽取）
+
+#### B.3.3 抽取約束
+
+我們應用以下約束：
+
+- • 屬性綁定：保持修飾語附著到名詞片語的中心詞（例如，"three dogs"，而非"dogs"）。
+- • 接地性：篩選通用佔位符（例如，"thing"）和非視覺短語。
+- • 關係接地：要求關係引數與抽取的實體字符串完全匹配。
+
+屬性綁定：保持修飾語附著到名詞片語的中心詞（例如，"three dogs"，而非"dogs"）。
+
+接地性：篩選通用佔位符（例如，"thing"）和非視覺短語。
+
+關係接地：要求關係引數與抽取的實體字符串完全匹配。
+
+### B.4 實體單位的匹配干擾項
+
+對於每個實體單位，我們生成恰好改變一個元件同時保持現實性的干擾項。
+
+#### B.4.1 系統提示（實體干擾項）
+
+#### B.4.2 使用者提示範本（實體干擾項）
+
+### B.5 關係單位的匹配干擾項
+
+對於每個關係單位 $(e_{s},p,e_{o})$，我們生成改變一個元件同時保持引數接地的干擾項。
+
+#### B.5.1 系統提示（關係干擾項）
+
+#### B.5.2 使用者提示範本（關係干擾項）
+
+### B.6 後處理和篩選
+
+我們應用輕量級篩選器以移除無效的輸出：
+
+- • 重複移除：捨棄與原始單位相同或在同一標題內重複的干擾項。
+- • 近同義詞篩選：捨棄保留意義的明顯釋義。
+- • 最小編輯檢查：偏好單一元件編輯；當偵測到多編輯字符串時拒絕。
+- • 交換有效性：對稱述詞（例如，next to、near、with）的交換被阻止。
+
+重複移除：捨棄與原始單位相同或在同一標題內重複的干擾項。
+
+近同義詞篩選：捨棄保留意義的明顯釋義。
+
+最小編輯檢查：偏好單一元件編輯；當偵測到多編輯字符串時拒絕。
+
+交換有效性：對稱述詞（例如，next to、near、with）的交換被阻止。
+
+### B.7 在訓練和評估中的使用
+
+CS-CLIP 訓練。
+
+對於每個影像-標題對 $(I,T)$，我們從 $\mathcal{E}(T)\cup\mathcal{R}(T)$ 中採樣一個單位 $U$ 和一個由此流程產生的匹配干擾項 $\tilde{U}$（第 4.1 節）。
+
+半真診斷。
+
+給定一個錨實體單位 $A\in\mathcal{E}(T)$，我們通過附加來自不同單位的恰好一個干擾項形成半真 $A^{-}$（第 3 節）。
+
+## 附錄 C 半真診斷：構造和額外結果
+
+### C.1 建構和記號
+
+本附錄詳細說明如何建構用於半真診斷的文本（第 3 節）。建構遵循一個簡單的細化模板：從一個有說明文字支持的錨點實體描述開始，並恰好添加一條額外的信息。
+
+**經解析的說明文字結構。**
+
+對於每個評估對 $(I, T)$，我們在說明文字 $T$ 上運行純文本解析管道（附錄 B），並獲得：
+(i) 一組實體單位 $\mathcal{E}(T)$（帶有約束屬性/量詞的名詞短語，例如 "red car"、"three dogs"），以及
+(ii) 一組關係單位 $\mathcal{R}(T)$ 作為三元組 $r=\langle e_{s},p,e_{o}\rangle$，其中 $e_{s},e_{o}\in\mathcal{E}(T)$ 且 $p$ 是視覺化基礎的謂詞。
+對於每個單位，我們還構造了配對的最小對照項：實體單位的 $\tilde{\mathcal{E}}(e)$ 和關係單位的 $\tilde{\mathcal{R}}(r)$。
+
+**文本序列化。**
+
+所有比較都定義在文本字符串上。我們使用單一序列化運算子 $\operatorname{txt}(\cdot)$：
+
+- • 實體：$\operatorname{txt}(e)$ 是實體單位 $e$ 的表面字符串。
+- • 實體連接：$\operatorname{txt}(e_{a},e_{b})=\operatorname{txt}(e_{a})\texttt{ and }\operatorname{txt}(e_{b})$。
+- • 關係：對於 $r=\langle e_{s},p,e_{o}\rangle$，$\operatorname{txt}(r)=\operatorname{txt}(e_{s})\;p\;\operatorname{txt}(e_{o})$。
+
+**實體：** $\operatorname{txt}(e)$ 是實體單位 $e$ 的表面字符串。
+
+**實體連接：** $\operatorname{txt}(e_{a},e_{b})=\operatorname{txt}(e_{a})\texttt{ and }\operatorname{txt}(e_{b})$。
+
+**關係：** 對於 $r=\langle e_{s},p,e_{o}\rangle$，$\operatorname{txt}(r)=\operatorname{txt}(e_{s})\;p\;\operatorname{txt}(e_{o})$。
+
+**錨點（短描述）。**
+
+我們採樣一個錨點實體單位 $e_{a}\in\mathcal{E}(T)$ 並定義錨點文本
+
+|  | $A\;=\;\operatorname{txt}(e_{a})$。 |  |
+| --- | --- | --- |
+
+錨點在該意義上有說明文字支持，即它是從 $T$ 中提取的。
+
+**真實相對於半真的添加。**
+
+我們考慮通過添加一個單位來細化錨點的兩種方式：
+
+- • 真實添加使用與說明文字一致的單位（另一個實體單位或涉及錨點的關係單位），該單位從同一說明文字中提取。
+- • 半真使用相同的細化模板，但將添加的單位替換為通過最小編輯產生的配對對照項。
+
+**真實添加** 使用與說明文字一致的單位（另一個實體單位或涉及錨點的關係單位），該單位從同一說明文字中提取。
+
+**半真** 使用相同的細化模板，但將添加的單位替換為通過最小編輯產生的配對對照項。
+
+根據建構，錨點及其真實/半真細化共享大多數詞語，隔離模型是否驗證添加的單位。圖 8 視覺化了一個完整的細化實例，並列舉了實體和關係添加的相應半真條件。
+
+#### C.1.1 實體添加：添加一個更多的實體
+
+**真實實體添加和半真。**
+
+我們採樣第二個實體單位 $e^{+}\in\mathcal{E}(T)\setminus\{e_{a}\}$ 並形成真實細化
+
+|  | $A^{+}_{e}\;=\;\operatorname{txt}(e_{a},e^{+})\;=\;\operatorname{txt}(e_{a})\texttt{ and }\operatorname{txt}(e^{+})$。 |  |
+| --- | --- | --- |
+
+然後我們保持錨點固定，只將添加的實體單位替換為配對對照項：
+
+|  | $A^{-}_{e}\;=\;\operatorname{txt}(e_{a},e^{-}),\qquad e^{-}\in\tilde{\mathcal{E}}(e^{+})$。 |  |
+| --- | --- | --- |
+
+[FIGURE:x8.png] **圖 8：** 半真條件展示。從有說明文字支持的錨點開始，我們添加恰好一個單位（實體或關係）以形成真實細化或半真。該圖按損壞類型列舉半真變體：實體添加（錯誤物件/屬性/隨機分心物）和關係添加（謂詞更改、角色交換、論證損壞）。
+
+**實體對照項類型（+Obj、+Attr、+Rand）。**
+
+我們按添加的實體單位的損壞方式對實體半真進行分組：
+
+- • +Obj（錯誤物件）：替換 $e^{+}$ 的主要名詞，同時保持修飾詞流暢（例如，"red car" $\rightarrow$ "red truck"）。
+- • +Attr（錯誤屬性）：替換屬性/修飾詞，同時保持主要名詞（例如，"red car" $\rightarrow$ "blue car"）。
+- • +Rand（隨機分心物）：將 $e^{+}$ 替換為從不同實例採樣的實體單位，產生主題相關的錨點與無關的添加實體。
+
+**+Obj（錯誤物件）：** 替換 $e^{+}$ 的主要名詞，同時保持修飾詞流暢（例如，"red car" $\rightarrow$ "red truck"）。
+
+**+Attr（錯誤屬性）：** 替換屬性/修飾詞，同時保持主要名詞（例如，"red car" $\rightarrow$ "blue car"）。
+
+**+Rand（隨機分心物）：** 將 $e^{+}$ 替換為從不同實例採樣的實體單位，產生主題相關的錨點與無關的添加實體。
+
+圖 8 包含每種實體損壞類型的具體示例。
+
+#### C.1.2 關係添加：添加一個涉及錨點的關係
+
+**真實關係添加和半真。**
+
+我們採樣一個關係單位 $r^{+}\in\mathcal{R}(T)，其中錨點實體參與（作為主詞或賓詞）。
+我們通過將此關係附加到錨點來形成真實細化：
+
+|  | $A^{+}_{r}\;=\;\operatorname{txt}(e_{a})\texttt{ and }\operatorname{txt}(r^{+})$。 |  |
+| --- | --- | --- |
+
+然後我們通過替換配對對照項關係來形成半真：
+
+|  | $A^{-}_{r}\;=\;\operatorname{txt}(e_{a})\texttt{ and }\operatorname{txt}(r^{-}),\qquad r^{-}\in\tilde{\mathcal{R}}(r^{+})$。 |  |
+| --- | --- | --- |
+
+**關係對照項類型（Ant、Swap、Subj/Obj 和論證內部損壞）。**
+
+我們按擾動的組件對關係半真進行分組：
+
+- • Ant（謂詞更改）：將 $p$ 替換為對立關係（例如，on $\rightarrow$ under、in front of $\rightarrow$ behind）。
+- • Swap（角色交換）：交換主詞和賓詞（$\langle e_{s},p,e_{o}\rangle\rightarrow\langle e_{o},p,e_{s}\rangle$），保留謂詞但改變方向性。
+- • Subj/Obj（論證損壞）：用配對對照項替換恰好一個論證實體，保持其餘部分固定（例如，$\langle e_{s},p,e_{o}\rangle\rightarrow\langle\tilde{e}_{s},p,e_{o}\rangle$）。
+- • Attr/Obj（論證內部）：損壞序列化關係文本中論證實體內的屬性或主要名詞（例如，"red car on road" $\rightarrow$ "blue car on road" 或 "truck on road"）。
+
+**Ant（謂詞更改）：** 將 $p$ 替換為對立關係（例如，on $\rightarrow$ under、in front of $\rightarrow$ behind）。
+
+**Swap（角色交換）：** 交換主詞和賓詞（$\langle e_{s},p,e_{o}\rangle\rightarrow\langle e_{o},p,e_{s}\rangle$），保留謂詞但改變方向性。
+
+**Subj/Obj（論證損壞）：** 用配對對照項替換恰好一個論證實體，保持其餘部分固定（例如，$\langle e_{s},p,e_{o}\rangle\rightarrow\langle\tilde{e}_{s},p,e_{o}\rangle$）。
+
+**Attr/Obj（論證內部）：** 損壞序列化關係文本中論證實體內的屬性或主要名詞（例如，"red car on road" $\rightarrow$ "blue car on road" 或 "truck on road"）。
+
+圖 8 中顯示了每種關係損壞類型的示例。
+
+**編輯為何最小化。**
+
+所有半真變體都通過單一的局部擾動生成，因此錨點及其細化共享大多數詞語。
+這使比較專注於驗證添加的單位，而不是主題漂移。
+圖 9 提供了額外的定性示例，比較 CLIP、NegCLIP 和 CS-CLIP 相似度分數跨越多個半真條件。
+
+[FIGURE:x10.png] **圖 9：** 帶有模型分數的額外半真示例。多個錨點及其半真細化，以及來自 CLIP、NegCLIP 和 CS-CLIP 的相似度分數。某些基準為不正確的細化分配可比或更高的相似度，而 CS-CLIP 更一致地降低半真的相似度。
+
+### C.2 按條件的半真準確度（COCO）
+
+表 6 按腐敗類型分解了實體和關係添加的半真準確度。主論文報告了聚合結果（表 1）；此表本地化了哪些編輯驅動了整體差距。出現了兩個一致的模式：（i）隨機干擾實體（+Rand）相對較容易，而屬性/物體編輯需要更緊密的綁定；以及（ii）關係編輯對許多基線來說實質上更困難，特別是謂詞變化（Ant）和角色/論證擾動（Swap/Subj）。
+
+[FIGURE_CAPTION] 表 6：按條件的半真準確度（COCO，越高越好）。我們報告實體添加（+Obj：錯誤物體，+Attr：錯誤屬性，+Rand：隨機干擾）和關係添加（Rel:Attr/Rel:Obj：腐敗關係論證內的屬性/頭名詞，Ant：改變謂詞，Swap：交換主語/賓語角色，Subj：腐敗一個關係論證）的 Acc（%）。
+
+### C.3 真實完成與匹配對照
+
+主論文重點關注錨點對比半真的比較（$A > A^{-}$），這直接測試了精化直覺：添加一個不正確的細節不應該使描述比較短的正確錨點更相似。這裡我們報告了一個更接近我們訓練信號的互補診斷。
+
+度量：真實完成對比匹配對照（$A^{+} > A^{-}$）。
+
+我們比較一個真實完成 $A^{+}$（錨點加上與標題一致的添加實體/關係）與一個半真完成 $A^{-}$，後者僅在添加的內容通過匹配的最小對照不同。我們報告贏率 $\Pr[s(I,A^{+})>s(I,A^{-})]$（越高越好）。與半真準確度不同，此診斷不測試模型是否相對於錨點懲罰不正確的添加；相反，它測試模型是否偏好正確添加的單位超過其最小編輯的替代方案，這是我們單位級監督明確鼓勵的行為（第 4 節）。
+
+[FIGURE_CAPTION] 表 7：真實完成對比匹配對照（$A^{+} > A^{-}$）按腐敗類型劃分（COCO，越高越好）。$\Pr[s(I,A^{+})>s(I,A^{-})]$ 的贏率（%），其中 $A^{+}$ 附加與標題一致的實體/關係，而 $A^{-}$ 僅將添加的內容替換為匹配的對照。
+
+半真準確度的比較。
+
+經驗上，許多模型在仍然失敗 $A > A^{-}$ 的同時達到高 $A^{+} > A^{-}$ 的比率，表明區分兩個較長的完成不保證精化下的約束單調行為。CS-CLIP 改進了兩項診斷，在關係敏感的腐敗上特別有強大的收益（例如，謂詞變化和角色/論證編輯），與我們使相似性對組成結構更敏感的目標一致。
+
+## 附錄 D 組合基準測試套件與能力分類體系
+
+我們使用一個包含 16 個異質基準的套件來評估組合穩健性，該套件通過控制擾動來測試實體內容、關係結構、屬性綁定和語言現象。
+為了能夠進行超越彙總分數的細粒度分析，我們將基準子集組織成一個具有四個頂層類別和十個子能力的共享能力分類體系。
+
+### D.1 基準測試套件
+
+表 8 概括了我們的組合基準測試套件。
+大多數基準提供箔紙標題，這些標題保留主題內容同時改變目標語義因素（例如，交換屬性、改變謂詞或改變詞序）。
+多個基準還額外提供箔紙圖像以進行更嚴格的跨模態一致性檢查。
+
+[FIGURE_CAPTION] 表 8：組合基準測試套件。文本：提供箔紙標題；圖：提供箔紙圖像。
+
+### D.2 能力分類法
+
+為了分析不同方法改進了哪些組合式技能，我們將基準子集分類為一個共用的分類法。
+對於每個子集，我們根據區分正確圖片說明和干擾項所需的最小語義變化，分配一個頂級類別和一個子能力。
+這使得能夠在類別級別進行巨集平均報告，並在子能力級別進行細粒度分析。
+
+**頂級類別。**
+
+我們定義四個類別（表 9）：
+
+- • **Entity Content（實體內容）**：識別物件、屬性、數量和存在性。
+- • **Relational Structure（關聯結構）**：理解關聯中的謂詞和角色指派。
+- • **Binding（綁定）**：將屬性與正確的物件相關聯。
+- • **Linguistic（語言）**：處理句法、共指和否定。
+
+**Entity Content（實體內容）**：識別物件、屬性、數量和存在性。
+
+**Relational Structure（關聯結構）**：理解關聯中的謂詞和角色指派。
+
+**Binding（綁定）**：將屬性與正確的物件相關聯。
+
+**Linguistic（語言）**：處理句法、共指和否定。
+
+類別得分透過在每個類別內對子集準確度進行巨集平均來計算。
+
+**子能力。**
+
+我們為細粒度分析定義了十個子能力：
+
+- • **Object Recognition（物件識別）**：正確的物件類別（例如，狗 vs. 貓）。
+- • **Attribute Recognition（屬性識別）**：正確的屬性（例如，紅色 vs. 藍色）。
+- • **Existence（存在性）**：物件是否存在。
+- • **Counting（計數）**：正確的物件數量（例如，四匹 vs. 三匹馬）。
+- • **Predicate Sensitivity（謂詞敏感度）**：正確的關聯謂詞（例如，左邊 vs. 右邊）。
+- • **Role Sensitivity（角色敏感度）**：哪個實體扮演哪個角色（例如，狗追貓 vs. 貓追狗）。
+- • **Attribute Binding（屬性綁定）**：哪個屬性綁定到哪個物件（例如，紅色汽車和藍色貓 vs. 藍色汽車和紅色貓）。
+- • **Syntax（句法）**：字序改變意思。
+- • **Coreference（共指）**：解析跨短語的引用。
+- • **Negation（否定）**：理解否定（例如，有 A 但沒有 B）。
+
+**Object Recognition（物件識別）**：正確的物件類別（例如，狗 vs. 貓）。
+
+**Attribute Recognition（屬性識別）**：正確的屬性（例如，紅色 vs. 藍色）。
+
+**Existence（存在性）**：物件是否存在。
+
+**Counting（計數）**：正確的物件數量（例如，四匹 vs. 三匹馬）。
+
+**Predicate Sensitivity（謂詞敏感度）**：正確的關聯謂詞（例如，左邊 vs. 右邊）。
+
+**Role Sensitivity（角色敏感度）**：哪個實體扮演哪個角色（例如，狗追貓 vs. 貓追狗）。
+
+**Attribute Binding（屬性綁定）**：哪個屬性綁定到哪個物件（例如，紅色汽車和藍色貓 vs. 藍色汽車和紅色貓）。
+
+**Syntax（句法）**：字序改變意思。
+
+**Coreference（共指）**：解析跨短語的引用。
+
+**Negation（否定）**：理解否定（例如，有 A 但沒有 B）。
+
+[FIGURE_CAPTION] 表 9：能力分類法摘要。
+
+### D.3 基準子集對應
+
+表 LABEL:tab:subset_capability_map 提供了從基準子集到我們的分類法的完整映射，按類別組織。
+
+[FIGURE_CAPTION] 表 10：基準子集到能力的對應。
+
+## 附錄 E 組合基準套件：額外分析
+
+本附錄為第 5.2 節中的組合評估提供詳細的分項說明。
+在主文中，我們報告了套件級的彙總效能，顯示 CS-CLIP 在 16 個基準中達到 57.8% 的平均 I2T 準確度（圖 6）。
+在此我們提供：（i）各基準結果（表 11），
+（ii）各子集視覺化（圖 10–11），
+（iii）各能力分項說明（表 12），以及（iv）下游任務效能，顯示組合改進不會損害標準檢索和分類（第 E.6 節）。
+
+所有分析均使用與主文相同的模型和評估協議。
+能力分類法和基準子集映射在附錄 D 中提供。
+
+### E.1 評估協議和指標
+
+組合基準測試呈現對比集合，其中一項是正確的，一項或多項干擾項因最小語義變化而不同（例如，交換角色、改變屬性或改變詞序）。
+令 $s(I,T)$ 表示模型的圖像－文本相似度分數。
+
+**圖像到文本 (I2T) 準確度。**
+
+對於每個圖像 $I_i$，基準測試提供候選標題集合 $\mathcal{T}_{i}=\{T_{i,1},\ldots,T_{i,m_{i}}\}，其中包含單一正確標題 $T_{i}^{\star}\in\mathcal{T}_{i}$。
+I2T 準確度是正確標題排名高於所有干擾項的案例比例：
+
+|  | $\mathrm{Acc}_{\mathrm{I2T}}=\frac{1}{N}\sum_{i=1}^{N}\mathbb{I}\Big[s(I_{i},T_{i}^{\star})\;>\;\max_{T\in\mathcal{T}_{i}\setminus\{T_{i}^{\star}\}}s(I_{i},T)\Big].$ |  | (12) |
+| --- | --- | --- | --- |
+
+當 $\mathcal{T}_{i}$ 恰好包含一個干擾項時，這簡化為成對勝率。
+
+**文本到圖像 (T2I) 準確度。**
+
+對於每個文本查詢 $T_i$，基準測試提供候選圖像集合 $\mathcal{I}_{i}=\{I_{i,1},\ldots,I_{i,n_{i}}\}，其中包含單一正確圖像 $I_{i}^{\star}\in\mathcal{I}_{i}$。
+T2I 準確度是正確圖像排名高於所有干擾項的案例比例：
+
+|  | $\mathrm{Acc}_{\mathrm{T2I}}=\frac{1}{N}\sum_{i=1}^{N}\mathbb{I}\Big[s(I_{i}^{\star},T_{i})\;>\;\max_{I\in\mathcal{I}_{i}\setminus\{I_{i}^{\star}\}}s(I,T_{i})\Big].$ |  | (13) |
+| --- | --- | --- | --- |
+
+**群組準確度。**
+
+某些基準測試提供包含 $n$ 對匹配圖像－標題對的群組 $\{(I_{i,1},T_{i,1}),\ldots,(I_{i,n},T_{i,n})\}$。
+群組準確度是模型在雙向上為匹配對分配最高相似度相比所有不匹配對的群組比例：
+
+|  | $\mathrm{Acc}_{\mathrm{Grp}}=\frac{1}{N_{g}}\sum_{i=1}^{N_{g}}\mathbb{I}\Big[\forall j\in\{1,\ldots,n\}:\;s(I_{i,j},T_{i,j})>\max\Big(\max_{k\neq j}s(I_{i,k},T_{i,j}),\max_{\ell\neq j}s(I_{i,j},T_{i,\ell})\Big)\Big].$ |  | (14) |
+| --- | --- | --- | --- |
+
+**平均化。**
+
+我們報告每個基準測試的準確度和套件級平均值，計算方式為基準測試級準確度的未加權平均。
+針對能力方面的分析，我們計算每個基準測試子集的準確度，然後在各能力類別內進行巨觀平均（附錄 D.2）。
+
+### E.2 Per-Benchmark Results
+
+[FIGURE_CAPTION] Table 11 : Compositional benchmark results (I2T accuracy, %). Each benchmark averaged over all subsets. Rows grouped by training dataset and sorted
+by overall average within each group. Bold : best; underline : second best.
+
+Analysis.
+
+Table 11 reveals several patterns.
+First, fine-tuning on COCO consistently improves compositional robustness: the top-performing
+models (CS-CLIP, FSC-CLIP, ReadCLIP, DeGLA) all fine-tune on COCO and achieve 56–58%
+average accuracy, compared to 52% for zero-shot CLIP.
+However, this advantage is partly due to dataset overlap : many compositional benchmarks
+(ARO, What’sUp, VALSE, VL-CheckList) use images sampled from or derived from COCO and
+Visual Genome ( Krishna et al. , 2017 ) , creating favorable conditions for COCO-trained models.
+Figure 6 in the main paper shows that COCO-trained models achieve
+larger gains on COCO-derived benchmarks, confirming this bias.
+Despite this overlap, COCO fine-tuning also improves performance on benchmarks with
+independent image sources (e.g., ColorFoil, ColorSwap, SugarCrepe), suggesting genuine
+compositional improvements beyond memorization.
+
+Second, CS-CLIP achieves the highest overall average (57.8%) while excelling on benchmarks
+that require tight binding (ARO 86.9%, VL-CheckList 79.2%) and spatial reasoning
+(What’sUp 43.5%, SPEC 36.1%).
+Third, performance varies substantially across benchmarks: models generally perform well on
+color attributes (ColorFoil 84–93%) but struggle on spatial relations (What’sUp 39–44%,
+MMVP 4–16%) and group-level consistency (Winoground 20–33%).
+Finally, training on larger datasets (CC3M, LAION) does not consistently improve
+compositional robustness compared to COCO fine-tuning, suggesting dataset quality and
+alignment signal matter more than scale alone.
+
+### E.3 Per-Subset Visualization
+
+[FIGURE:x11.png] Figure 10: Per-subset compositional I2T accuracy (Part 1/2). Green: improvement over CLIP; red: degradation.
+
+[FIGURE:x12.png] Figure 11: Per-subset compositional I2T accuracy (Part 2/2). Continuation of Figure 10 .
+
+Figures 10 and 11 visualize I2T accuracy differences relative to CLIP across all benchmark subsets, providing
+a comprehensive view of each model’s strengths and weaknesses beyond aggregate scores.
+
+### E.4 Per-Capability Results
+
+[FIGURE_CAPTION] Table 12 : Performance by sub-capability (I2T accuracy, %). Scores macro-averaged within each sub-capability. Bold : best; underline : second best.
+
+Analysis.
+
+Table 12 shows capability-level performance patterns.
+CS-CLIP achieves the best Role Sensitivity (40.1%), substantially outperforming CLIP
+(34.6%) and matching or exceeding all other COCO-trained methods.
+This aligns with our approach: unit-level supervision explicitly targets relational
+structure by contrasting entities in different roles (e.g., ”dog chasing cat” vs.
+”cat chasing dog”).
+CS-CLIP also ranks second on Attribute Binding (43.8%), Object Recognition (71.3%),
+Existence (30.7%), and Syntax (54.3%), demonstrating broad improvements.
+
+The capability breakdown reveals systematic weaknesses across all models.
+Counting remains challenging (24–39%), likely because numerical information is poorly
+grounded in bag-of-visual-features representations.
+Negation understanding is similarly weak (26–37%), consistent with prior findings that
+CLIP-style models struggle with linguistic negation.
+Object Recognition shows the highest absolute performance (55–72%), suggesting entity-level
+grounding is more robust than relational or linguistic phenomena.
+
+Comparing COCO-trained models to larger-dataset variants, we observe that COCO fine-tuning
+generally produces better compositional capabilities than training on CC3M or LAION.
+For example, CS-CLIP (COCO) achieves 47.6% average across capabilities, while FSC-CLIP
+(CC3M) achieves 44.5% despite being trained on 30× more data.
+This suggests compositional robustness depends more on alignment signal quality than raw
+dataset size.
+
+### E.5 Bidirectional Performance on Paired Datasets
+
+[FIGURE_CAPTION] Table 13 : Bidirectional performance on paired compositional datasets (accuracy, %). I2T = Image-to-Text, T2I = Text-to-Image, Grp = Group accuracy (requires correctness in both directions). Bold : best; underline : second best.
+
+Analysis.
+
+Table 13 reports bidirectional performance on seven paired compositional
+datasets that provide both image and text foils.
+CS-CLIP achieves the best average Group Accuracy (27.3%), indicating strong
+performance when both retrieval directions must succeed simultaneously.
+This confirms that unit-level supervision benefits both I2T and T2I matching rather than
+improving one direction at the expense of the other.
+
+Among COCO-trained models, CS-CLIP and FSC-CLIP achieve comparable average I2T (45.2% vs. 45.6%)
+and T2I (39.8% vs. 39.9%) accuracy, but CS-CLIP leads on Group Accuracy (27.3% vs. 27.2%).
+Notably, CS-CLIP achieves the best Winoground T2I score (13.0%) among all models,
+demonstrating improved role sensitivity in the T2I direction.
+Performance on MMVP remains challenging across all models (Group Accuracy below 5%),
+suggesting that fine-grained visual attribute distinctions require further advances
+beyond compositional training signals.
+
+### E.6 下游零樣本分類與檢索
+
+我們評估組合改進是否會損害標準視覺-語言任務的性能。
+表 14 報告了 ImageNet 變體和細粒度資料集上的零樣本分類，而表 15 報告了 Flickr8k 和 MS-COCO 上的圖像-文本檢索。
+
+**零樣本分類。**
+
+給定圖像 $I$ 和類別提示 $\{T_{c}\}$，我們計算相似度 $s(I, T_{c})$ 並預測得分最高的類別。
+我們在七個資料集上報告 Acc@1 和 Acc@5。
+
+**圖像-文本檢索。**
+
+給定圖像（或文本）查詢和候選文本（或圖像）的庫，我們按相似度排序候選項，並報告兩個方向上的 Recall@1：I2T（圖像到文本）和 T2I（文本到圖像）。
+
+[FIGURE_CAPTION] 表 14：零樣本分類（Acc@1 / Acc@5，%）。IN1k：ImageNet-1k（Deng et al., 2009）；INv2：ImageNetV2（Recht et al., 2019）；Sketch：ImageNet-Sketch（Wang et al., 2019）；IN-O：ImageNet-O（Hendrycks et al., 2021）；Cal101：Caltech101（Fei-Fei et al., 2004）；C10：CIFAR-10（Krizhevsky, 2009）；SUN：SUN397（Xiao et al., 2010）。**粗體：最佳；底線：第二佳。**
+
+[FIGURE_CAPTION] 表 15：圖像-文本檢索（Recall@1，%）。I2T：圖像到文本；T2I：文本到圖像。**粗體：最佳；底線：第二佳。**
+
+**分析。**
+
+CS-CLIP 在實現最佳組合魯棒性的同時，保持了具有競爭力的下游性能。
+在零樣本分類上，CS-CLIP 達到 59.9% Acc@1 和 84.6% Acc@5，相比之下 CLIP 的成績為 63.6% 和 86.5%。
+3.7 點的 Acc@1 差距代表了相對溫和的折衷，以換取實質性的組合收益（+5.7 點在組合套件上，+28.7 點在半真值準確率上）。
+值得注意的是，CS-CLIP 在 Caltech101 Acc@5 上達到最佳成績（97.9%），這表明單元級監督並不會統一地損害識別性能。
+
+在檢索方面，CS-CLIP 在所有評估模型中達到最佳性能：56.8% I2T 和 71.7% T2I，分別優於 CLIP 達 +11.6 和 +9.0 點。
+這表明組合改進直接有利於檢索任務，其中細粒度匹配至關重要。
+收益在 Flickr8k 上尤為顯著（67.3% I2T，81.5% T2I），其中說明文字更具描述性，組合結構更加突出。
+
+比較 COCO 訓練的模型，我們觀察到實現強大組合魯棒性的方法（CS-CLIP、FSC-CLIP、ReadCLIP）在檢索上也表現優異，而零樣本分類性能各不相同。
+這表明檢索和組合評估測量相關的能力，兩者都需要細粒度的文本-圖像對齊，而零樣本分類更多地取決於粗粒度類別識別。
+
+## Appendix F Additional Ablations
+
+This appendix reports extended ablations covering optimization hyperparameters and unit construction choices not included in the main paper due to space constraints.
+The main ablations (Section 5.4 ) cover backbone scaling, fine-tuning strategy, unit-loss weight λ u \lambda_{u} , and training signal components (global negatives, unit positives, matched foils).
+
+All metrics are accuracies (%) and higher is better.
+We report three groups: (i) Compositionality (I2T/T2I/Group averaged across 16 benchmarks), (ii) Half-Truth Accuracy (All/Entity/Relation), and (iii) Downstream (zero-shot classification averaged across 7 datasets and retrieval on Flickr8k/COCO).
+
+[FIGURE_CAPTION] Table 16: Unit construction hyperparameters. We vary the number of units per caption N N , the fraction of relation-type units, and the fraction of swap-style foils. Gray : baseline configuration.
+
+Unit construction choices. Table 16 shows that unit construction hyperparameters primarily affect Half-Truth accuracy while compositional and downstream metrics remain relatively stable.
+Using N = 1 N{=}1 unit per caption slightly improves Half-Truth accuracy (69.8 overall, 66.0 relations) but reduces retrieval performance (70.7 I2T), suggesting that single units provide insufficient training signal.
+Larger N N (3-4 units) shows diminishing returns, as additional units may introduce noise or redundancy.
+
+The fraction of relation-type units ( p p ) has a clear trade-off: using only entity units ( p = 0.0 p{=}0.0 ) achieves the highest entity accuracy (78.7) but poor relation accuracy (55.2), while higher p p improves relation understanding at the cost of entity performance.
+We use p = 1.0 p{=}1.0 (all relations) to maximize relational grounding, as entity-level understanding is already strong in the CLIP initialization.
+
+Swap-style foils (where two entities or relations exchange roles) versus add/replace foils (where incorrect units are inserted or substituted) show similar overall Half-Truth accuracy, but swap foils substantially improve retrieval (71.7 vs. 69.4 I2T).
+This suggests swap operations teach the model to distinguish role assignments, which benefits fine-grained matching in retrieval tasks.
+
+[FIGURE_CAPTION] Table 17: Optimization hyperparameters. We vary learning rate, weight decay, and batch size. Gray : baseline configuration.
+
+# 最佳化超參數
+
+表 17 顯示了學習率在 Half-Truth 準確度和下游性能之間的權衡。較大的學習率（LR = 2 × 10^{-5}）達到最高的 Half-Truth 準確度（整體 73.6、關係 70.8），但降低了零樣本分類（56.5）和檢索（69.0 I2T）性能。這表明激進的微調提高了組合敏感性，但有過度擬合 COCO 分佈的風險，代價是犧牲了通用識別能力。我們使用 LR = 5 × 10^{-6}，因為它平衡了 Half-Truth 的增益（69.3）與具競爭力的下游性能（59.9 零樣本、71.7 檢索）。
+
+權重衰減的整體影響微乎其微，WD = 10^{-3} 到 WD = 5 × 10^{-2} 範圍內的所有數值都產生類似的結果（各項指標相差 ±0.5 分）。基線 WD = 10^{-2} 提供了略好的檢索性能。
+
+批次大小主要影響 Half-Truth 準確度：較小的批次（BS = 32）改善了 Half-Truth（整體 70.0、關係 66.3）和零樣本分類（60.4），但降低了檢索性能（69.8 I2T）。較大的批次穩定了訓練並改善了檢索，可能是由於對比目標中有更多樣化的負樣本。我們使用 BS = 128，因為它在保持具競爭力的 Half-Truth 和零樣本準確度的同時，實現了最佳的檢索性能。

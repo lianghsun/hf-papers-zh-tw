@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026-03-03 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="date-nav">
+  
+  <a href="../2026-03-02/index.html">← 2026-03-02</a>
+  
+  <span class="current">2026-03-03</span>
+  
+</div>
+
+<h1 class="page-title">2026-03-03</h1>
+<p class="page-subtitle">8 篇論文</p>
+
+<div class="paper-list">
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.00912</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.00912/index.html" style="color:inherit;">
+        VGGT-Det：為無感應器幾何約束的多視角室內3D物體檢測挖掘VGGT內部先驗
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">VGGT-Det: Mining VGGT Internal Priors for Sensor-Geometry-Free Multi-View Indoor 3D Object Detection</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+當前的多視角室內 3D 物體偵測器依賴於成本昂貴的感測器幾何資訊（即精確校準的多視角相機姿態）來將多視角資訊融合成全域場景表示，這限制了在真實場景中的部署。我們針對一個更實用的設定：無感測器幾何（SG-Free）多視角室內 3D 物體偵測，其中沒有感測器提供的幾何輸入（多視角姿態或深度）。最近的 Visual Geometry Grounded Transformer (VGGT) 表明強大的 3D 線索可以直接從影像中推斷出來。基於這個發現，我們提出 VGGT-Det，這是第一個專為 SG-Free 多視角室內 3D 物體偵測量身定製的框架。我們的方法不是僅僅使用 VGGT 預測，而是將 VGGT 編碼器整合到一個基於 transformer 的管線中。為了有效地利用 VGGT 內部的語義和幾何先驗，我們引入了兩個新穎的關鍵元件：(i) 注意力引導查詢生成（AG）：利用 VGGT 注意力圖作為語義先驗來初始化物體查詢，通過聚焦於物體區域同時保留全域空間結構來改進定位；(ii) 查詢驅動特徵聚合（QD）：一個可學習的 See-Query 與物體查詢互動以「看到」它們所需要的資訊，然後動態聚合 VGGT 各層之間的多層級幾何特徵，逐步將 2D 特徵提升為 3D。實驗表明，VGGT-Det 在 SG-Free 設定中顯著超越表現最佳的方法，在 ScanNet 和 ARKitScenes 上分別達到 4.4 和 8.6 mAP@0.25 的改進。消融研究表明 VGGT 內部學習的語義和幾何先驗可以被我們的 AG 和 QD 有效地利用。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span>
+        <span class="tag method">Transformer</span><span class="tag method">Vision Transformer</span><span class="tag method">Attention Mechanism</span>
+        <span class="tag task">3D Object Detection</span><span class="tag task">Multi-view Indoor Scene Understanding</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.00912/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.00912" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.00541</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.00541/index.html" style="color:inherit;">
+        寬度-深度縮放下 μP 的頻譜條件
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Spectral Condition for μP under Width-Depth Scaling</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+生成式基礎模型在寬度和深度上都不斷擴展，這對穩定的特徵學習和跨模型大小的可靠超參數（HP）遷移帶來了重大挑戰。儘管最大更新參數化（μP）為寬度擴展的兩個問題都提供了一個原理性的解決方案，但現有對聯合寬度-深度擴展制度的擴展仍然存在分散、特定於架構和優化器，並且往往依賴於技術上複雜的理論。在這項工作中，我們為聯合寬度-深度擴展下的 μP 開發了一個簡單且統一的譜框架。考慮具有不同塊深度的殘差網絡，我們首先引入了一個譜 μP 條件，精確表徵了權重的範數及其逐步更新應如何隨寬度和深度而縮放，將先前不同的 μP 公式統一為特例。基於這一條件，我們隨後推導了一個通用配方，通過將譜約束對應到具體的 HP 參數化，在廣泛的優化器類別中實現 μP。這種方法不僅恢復了現有的 μP 公式（例如，適用於 SGD 和 AdamW），而且自然地擴展到更廣泛的優化器範圍。最後，在 GPT-2 風格語言模型上的實驗證明了所提出的譜 μP 條件保留了穩定的特徵學習，並在寬度-深度擴展下實現了穩健的 HP 遷移。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Theory</span>
+        <span class="tag method">μP</span><span class="tag method">Spectral Analysis</span><span class="tag method">Residual Networks</span>
+        <span class="tag task">Hyperparameter Transfer</span><span class="tag task">Feature Learning</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.00541/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.00541" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.01068</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.01068/index.html" style="color:inherit;">
+        LLaDA-o：一個有效且長度自適應的全能擴散模型
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">LLaDA-o: An Effective and Length-Adaptive Omni Diffusion Model</div>
+    
+    <div class="paper-card-abstract">我們提出 LLaDA-o，一個有效且長度自適應的全模態擴散模型，用於多模態理解和生成。LLaDA-o 建立在 Mixture of Diffusion (MoD) 框架之上，該框架將用於文本理解的離散遮罩擴散與用於視覺生成的連續擴散進行解耦，同時通過共享的簡單且高效的注意力骨幹網絡將它們耦合在一起，該骨幹網絡可減少固定條件下的冗餘計算。在 MoD 的基礎上，我們進一步引入了一種以數據為中心的長度自適應策略，在不改變架構的情況下實現多模態設定中的彈性長度解碼。廣泛的實驗表明，LLaDA-o 在多模態理解和生成基準測試中的全模態擴散模型中達到了最先進的性能，並在文本到圖像生成方面在 DPG-Bench 上達到 87.04，驗證了統一全模態擴散建模的有效性。程式碼可在 https://github.com/ML-GSAI/LLaDA-o 取得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">NLP</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion</span><span class="tag method">Mixture of Experts</span><span class="tag method">Attention</span><span class="tag method">Masked Diffusion</span>
+        <span class="tag task">Text-to-Image Generation</span><span class="tag task">Multimodal Understanding</span><span class="tag task">Multimodal Generation</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.01068/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.01068" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.21320</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.21320/index.html" style="color:inherit;">
+        Tool-R0：從零數據進行工具學習的自我進化 LLM 代理
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Tool-R0: Self-Evolving LLM Agents for Tool-Learning from Zero Data</div>
+    
+    <div class="paper-card-abstract">Large language models (LLMs) are becoming the foundation for autonomous agents that can use tools to solve complex tasks. Reinforcement learning (RL) has emerged as a common approach for injecting such agentic capabilities, but typically under tightly controlled training setups. It often depends on carefully constructed task-solution pairs and substantial human supervision, which creates a fundamental obstacle to open-ended self-evolution toward superintelligent systems. In this paper, we propose Tool-R0 framework for training general purpose tool-calling agents from scratch with self-play RL, under a zero-data assumption. Initialized from the same base LLM, Tool-R0 co-evolves a Generator and a Solver with complementary rewards: one proposes targeted challenging tasks at the other&#39;s competence frontier and the other learns to solve them with real-world tool calls. This creates a self-evolving cycle that requires no pre-existing tasks or datasets. Evaluation on different tool-use benchmarks show that Tool-R0 yields 92.5 relative improvement over the base model and surpasses fully supervised tool-calling baselines under the same setting. Our work further provides empirical insights into self-play LLM agents by analyzing co-evolution, curriculum dynamics, and scaling behavior.</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+        <span class="tag method">Self-play RL</span><span class="tag method">LLM</span><span class="tag method">Co-evolution</span><span class="tag method">Reinforcement Learning</span>
+        <span class="tag task">Tool-calling</span><span class="tag task">Tool-learning</span><span class="tag task">Agent training</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.21320/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.21320" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.23906</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.23906/index.html" style="color:inherit;">
+        半真半假的資訊破壞相似性基礎的檢索
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Half-Truths Break Similarity-Based Retrieval</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+當文字描述附加了額外的細節時，如果該細節是錯誤的，圖像文字相似度應該會下降。我們展示 CLIP 風格的雙編碼器經常違反這個直觀認知：在原本正確的描述中附加一個看似合理但實際錯誤的物體或關係，反而可能提高相似度分數。我們稱這類情況為半真實（half-truths）。在 COCO 上，CLIP 只在 40.6% 的時間內偏好正確的較短描述，當附加的細節是關係時，性能下降到 32.9%。我們將此脆弱性追溯到標題部分的弱監督：對比學習對齊完整句子，但沒有明確強制個別實體和關係被正確接地。我們提出 CS-CLIP（Component-Supervised CLIP），它將標題分解為實體和關係單位，為每個單位構造最小編輯的對比樣本，並微調模型使其對正確單位的評分高於對應的對比樣本，同時保持標準雙編碼器推理。CS-CLIP 將半真實準確度提升到 69.3%，並在已確立的組成性基準上平均性能提升 5.7 個百分點，表明減少半真實錯誤與更廣泛的組成性理解進展相一致。程式碼公開於：https://github.com/kargibora/CS-CLIP</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span><span class="tag domain">NLP</span>
+        <span class="tag method">Contrastive Learning</span><span class="tag method">Dual Encoders</span><span class="tag method">Fine-tuning</span>
+        <span class="tag task">Image-Text Retrieval</span><span class="tag task">Compositional Understanding</span><span class="tag task">Similarity Matching</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.23906/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.23906" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.01710</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.01710/index.html" style="color:inherit;">
+        法律 RAG 基準測試：端到端的法律 RAG 基準
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Legal RAG Bench: an end-to-end benchmark for legal RAG</div>
+    
+    <div class="paper-card-abstract"># Legal RAG Bench 法律 RAG 基準測試
+
+我們介紹 Legal RAG Bench，一個用於評估法律 RAG 系統端到端性能的基準測試和評估方法論。作為基準測試，Legal RAG Bench 包含來自維多利亞州刑事罪名手冊的 4,876 個段落，以及 100 個複雜的、手工精製的問題，這些問題需要刑法和程序方面的專家知識。同時提供長文本形式的答案和支持段落。作為評估方法論，Legal RAG Bench 利用完全因子設計和新穎的分層錯誤分解框架，能夠在 RAG 中對檢索模型和推理模型的貢獻進行公正比較。我們評估了三個最先進的嵌入模型（Isaacus&#39; Kanon 2 Embedder、Google 的 Gemini Embedding 001 和 OpenAI 的 Text Embedding 3 Large）以及兩個前沿 LLM（Gemini 3.1 Pro 和 GPT-5.2），發現信息檢索是法律 RAG 性能的主要驅動因素，LLM 對正確性和根據性的影響相對較溫和。特別是 Kanon 2 Embedder 對性能的正面影響最大，將平均正確性提高 17.5 分，根據性提高 4.5 分，檢索準確度提高 34 分。我們發現許多在法律 RAG 系統中被歸因於幻覺的錯誤實際上是由檢索失敗觸發的，因此得出結論：檢索為許多現代法律 RAG 系統的性能設定了上限。我們記錄了我們為什麼以及如何構建 Legal RAG Bench 的過程，以及我們評估的結果。我們還開放發布了我們的程式碼和資料，以協助重現我們的發現。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">RAG</span><span class="tag method">Embedding Models</span><span class="tag method">LLM</span>
+        <span class="tag task">Question Answering</span><span class="tag task">Information Retrieval</span><span class="tag task">Legal Document Analysis</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.01710/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.01710" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.01562</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.01562/index.html" style="color:inherit;">
+        RubricBench：使模型生成的評分標準與人類標準保持一致
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">RubricBench: Aligning Model-Generated Rubrics with Human Standards</div>
+    
+    <div class="paper-card-abstract">隨著大型語言模型（LLM）對齐從簡單的生成任務演進到複雜、高度精密的生成，獎勵模型越來越多地轉向基於量表的評估，以減輕表面層級的偏差。然而，該領域缺乏統一的基準來評估這一評估範例，因為現有基準缺乏進行嚴格分析所需的判別複雜性和地面真實量表註釋。為了縮小這一差距，我們引入 RubricBench，一個精選基準，包含 1,147 個成對比較，專門設計用於評估基於量表的評估的可靠性。我們的構建採用多維篩選管道來針對具有細微輸入複雜性和誤導性表面偏差的困難樣本，並使用從指令嚴格衍生的專家標註原子量表對每個樣本進行擴增。綜合實驗揭示了人工標註量表與模型生成量表之間存在實質性的能力差距，表明即使是最先進的模型也在自主指定有效評估標準方面苦苦掙扎，在性能上遠遠落後於人工引導的方法。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Reward Models</span><span class="tag method">Rubric-guided Evaluation</span>
+        <span class="tag task">Model Evaluation</span><span class="tag task">LLM Alignment Assessment</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.01562/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.01562" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.23952</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.23952/index.html" style="color:inherit;">
+        CC-VQA：用於緩解基於知識的視覺問答中知識衝突的衝突與相關性感知方法
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">CC-VQA: Conflict- and Correlation-Aware Method for Mitigating Knowledge Conflict in Knowledge-Based Visual Question Answering</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+知識基礎視覺問答（KB-VQA）在處理知識密集型任務中展現出顯著潛力。然而，視覺語言模型（VLMs）中的靜態參數知識與動態檢索信息之間產生衝突，這源於預訓練的靜態模型知識。輸出結果要麼忽略檢索上下文，要麼與參數知識表現出不一致的整合，對 KB-VQA 造成實質性挑戰。現有知識衝突緩解方法主要改編自基於語言的方法，通過設計提示策略或上下文感知解碼機制來關注上下文層級的衝突。然而，這些方法忽視了視覺信息在衝突中的關鍵作用，並受到冗餘檢索上下文的影響，這不利於準確的衝突識別和有效的衝突緩解。為解決這些局限性，我們提出 CC-VQA：一種新穎的免訓練、衝突和相關性感知的 KB-VQA 方法。我們的方法包含兩個核心組件：（1）以視覺為中心的上下文衝突推理，在內部和外部知識上下文中執行視覺語義衝突分析；及（2）相關性引導編碼和解碼，針對低相關性語句的位置編碼壓縮和使用相關性加權衝突評分的自適應解碼。在 E-VQA、InfoSeek 和 OK-VQA 基準上的廣泛評估表明，CC-VQA 達到最先進的性能，與現有方法相比精確度絕對提升達 3.3% 至 6.4%。程式碼可在 https://github.com/cqu-student/CC-VQA 獲得。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">NLP</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Vision-Language Models</span><span class="tag method">RAG</span><span class="tag method">Prompt Engineering</span><span class="tag method">Conflict Resolution</span>
+        <span class="tag task">Visual Question Answering</span><span class="tag task">Knowledge Integration</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.23952/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.23952" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

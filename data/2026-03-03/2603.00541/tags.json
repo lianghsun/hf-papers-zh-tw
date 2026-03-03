@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP",
+    "Theory"
+  ],
+  "method": [
+    "μP",
+    "Spectral Analysis",
+    "Residual Networks"
+  ],
+  "task": [
+    "Hyperparameter Transfer",
+    "Feature Learning"
+  ],
+  "dataset": [],
+  "open_source": false
+}

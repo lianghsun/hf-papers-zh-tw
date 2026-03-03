@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CC-VQA：用於緩解基於知識的視覺問答中知識衝突的衝突與相關性感知方法 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-03/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-03 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">CC-VQA：用於緩解基於知識的視覺問答中知識衝突的衝突與相關性感知方法</h1>
+  
+  <div class="en-title">CC-VQA: Conflict- and Correlation-Aware Method for Mitigating Knowledge Conflict in Knowledge-Based Visual Question Answering</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Yuyang Hong, Jiaqi Gu, Yujin Lou, Lubin Fan, Qi Yang, Ying Wang, Kun Ding, Yue Wu, Shiming Xiang, Jieping Ye</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.23952" target="_blank">2602.23952</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.23952" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.23952" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.23952" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">NLP</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Vision-Language Models</span><span class="tag method">RAG</span><span class="tag method">Prompt Engineering</span><span class="tag method">Conflict Resolution</span>
+    <span class="tag task">Visual Question Answering</span><span class="tag task">Knowledge Integration</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+知識基礎視覺問答（KB-VQA）在處理知識密集型任務中展現出顯著潛力。然而，視覺語言模型（VLMs）中的靜態參數知識與動態檢索信息之間產生衝突，這源於預訓練的靜態模型知識。輸出結果要麼忽略檢索上下文，要麼與參數知識表現出不一致的整合，對 KB-VQA 造成實質性挑戰。現有知識衝突緩解方法主要改編自基於語言的方法，通過設計提示策略或上下文感知解碼機制來關注上下文層級的衝突。然而，這些方法忽視了視覺信息在衝突中的關鍵作用，並受到冗餘檢索上下文的影響，這不利於準確的衝突識別和有效的衝突緩解。為解決這些局限性，我們提出 CC-VQA：一種新穎的免訓練、衝突和相關性感知的 KB-VQA 方法。我們的方法包含兩個核心組件：（1）以視覺為中心的上下文衝突推理，在內部和外部知識上下文中執行視覺語義衝突分析；及（2）相關性引導編碼和解碼，針對低相關性語句的位置編碼壓縮和使用相關性加權衝突評分的自適應解碼。在 E-VQA、InfoSeek 和 OK-VQA 基準上的廣泛評估表明，CC-VQA 達到最先進的性能，與現有方法相比精確度絕對提升達 3.3% 至 6.4%。程式碼可在 https://github.com/cqu-student/CC-VQA 獲得。</p>
+  
+  <div class="abstract-en">Knowledge-based visual question answering (KB-VQA) demonstrates significant potential for handling knowledge-intensive tasks. However, conflicts arise between static parametric knowledge in vision language models (VLMs) and dynamically retrieved information due to the static model knowledge from pre-training. The outputs either ignore retrieved contexts or exhibit inconsistent integration with parametric knowledge, posing substantial challenges for KB-VQA. Current knowledge conflict mitigation methods primarily adapted from language-based approaches, focusing on context-level conflicts through engineered prompting strategies or context-aware decoding mechanisms. However, these methods neglect the critical role of visual information in conflicts and suffer from redundant retrieved contexts, which impair accurate conflict identification and effective mitigation. To address these limitations, we propose CC-VQA: a novel training-free, conflict- and correlation-aware method for KB-VQA. Our method comprises two core components: (1) Vision-Centric Contextual Conflict Reasoning, which performs visual-semantic conflict analysis across internal and external knowledge contexts; and (2) Correlation-Guided Encoding and Decoding, featuring positional encoding compression for low-correlation statements and adaptive decoding using correlation-weighted conflict scoring. Extensive evaluations on E-VQA, InfoSeek, and OK-VQA benchmarks demonstrate that CC-VQA achieves state-of-the-art performance, yielding absolute accuracy improvements of 3.3\% to 6.4\% compared to existing methods. Code is available at https://github.com/cqu-student/CC-VQA.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="cc-vqa">CC-VQA：用於緩解知識基礎視覺問答中知識衝突的衝突與相關性感知方法</h1>
+<p>知識基礎視覺問答（KB-VQA）在處理知識密集型任務中展現出顯著的潛力。然而，視覺語言模型（VLMs）中的靜態參數知識與動態檢索資訊之間會產生衝突，這是由預訓練的靜態模型知識所引起的。模型輸出要麼忽略檢索內容，要麼與參數知識的整合表現不一致，對 KB-VQA 構成實質性的挑戰。目前的知識衝突緩解方法主要改編自語言基礎方法，關注於透過工程化提示策略或上下文感知解碼機制進行內容級衝突處理。然而，這些方法忽略了視覺資訊在衝突中的關鍵作用，並受到冗餘檢索內容的困擾，這會影響準確的衝突識別與有效的衝突緩解。為了解決這些限制，我們提出 CC-VQA：一種新穎的無訓練、衝突與相關性感知的 KB-VQA 方法。我們的方法包含兩個核心組件：（1）視覺中心化的上下文衝突推理，在內部與外部知識上下文中進行視覺-語義衝突分析；以及（2）相關性引導的編碼與解碼，具有針對低相關性陳述的位置編碼壓縮和使用相關性加權衝突評分的自適應解碼。在 E-VQA、InfoSeek 和 OK-VQA 基準上的廣泛評估表明，CC-VQA 達到了最先進的效能，相較於現有方法，獲得了 3.3% 至 6.4% 的絕對準確度改進。程式碼可在 https://github.com/cqu-student/CC-VQA 取得。</p>
+<h2 id="1">1 介紹</h2>
+<p>視覺語言模型（Vision Language Models, VLMs）[1, 3, 43] 通過利用預訓練期間學習的廣泛參數知識，在視覺問答（Visual Question Answering, VQA）[2, 9] 中展現出卓越的性能。然而，由於訓練數據是靜態的、無法動態更新且可能包含不完整信息，知識基礎視覺問答（Knowledge-Based Visual Question Answering, KB-VQA）中仍然存在限制。雖然檢索增強生成（Retrieval-Augmented Generation, RAG）方法 [33, 6, 4, 10, 25] 通過引入領域特定知識而無需重新訓練來解決這一限制，但它們引入了外部知識與模型參數知識之間的知識衝突風險。圖 1 說明了 KB-VQA 中的知識衝突案例。隨著知識庫的擴展，知識衝突會加劇。主要原因是模型預測或檢索的知識的可靠性不足。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-03/2602.23952/fig_knowledge_conflict_v2.jpg" loading="lazy"></figure> 圖 1：KB-VQA 中知識衝突的示例。外部知識的引入可以增強知識密集型視覺問答任務的性能；然而，它同時引入了源於模型參數知識與外部來源之間衝突的錯誤風險。利用查詢影像和上下文（以紅色突出顯示）的視覺語義特徵可能會緩解知識衝突，並改進 KB-VQA 任務的回答準確性。</p>
+<p>知識衝突最初在基於知識的語言問答（Knowledge-Based Question Answering, KB-QA）[32, 23, 35, 36] 中被研究。最近的研究顯示，檢索增強生成（RAG）系統在知識衝突條件下表現出顯著的準確率下降。該模型要麼依賴於其內部知識而忽略檢索到的上下文，要麼被矛盾的檢索上下文所誤導，這反過來增加了最終答案的不確定性，最終導致整體性能下降。當前在 KB-QA 中緩解衝突的方法可以分為兩類：(1) 基於提示的方法 [37, 42, 39]，優化提示策略以使回答與上下文知識對齊；以及 (2) 基於解碼的方法 [36, 30, 12]，通過熵約束或對比解碼修改生成機制，在解碼期間加強外部上下文或內部知識的整合。</p>
+<p>多模態 RAG 系統在知識衝突方面面臨更高的複雜性，因為視覺輸入引入了額外的信息通道和潛在的不一致性。除了繼承單模態 RAG 系統的挑戰外，多模態知識衝突還因跨模態檢索限制、複雜的視覺理解需求和放大的模型幻覺而進一步增加。然而，很少有工作討論多模態 RAG 系統領域中的知識衝突問題。</p>
+<p>因此，我們提出了一個名為 CC-VQA 的衝突與相關性感知 KB-VQA 方法，以緩解多模態 RAG 系統中的知識衝突。我們的方法由兩個關鍵原則所啟發：
+(1) 以視覺為中心的分析可減少視覺歧義以及衝突引起的推理不確定性；
+(2) 對上下文的細粒度分析可導致更尖銳的衝突檢測和更準確的答案。
+CC-VQA 框架包含兩個組件。首先，上下文衝突推理模組將模型參數知識外化為參數上下文，然後與檢索知識進行以視覺為中心的衝突推理。該階段顯式推理與視覺語義特徵相關的上下文間衝突，生成帶有衝突註釋的增強上下文。其次，相關性引導的編碼和解碼模組對上下文之間進行句子級相關性評估。在編碼期間，位置編碼壓縮優先考慮低相關性語句；在解碼期間，自適應標記採樣根據相關性權重調整分佈。該生成機制在知識衝突條件下明顯改進了答案準確性。總結起來，本工作的主要貢獻如下：</p>
+<ul>
+<li>• 我們提出 CC-VQA，一個免訓練框架，通過以視覺為中心的上下文推理和相關性引導的生成來緩解 KB-VQA 中的知識衝突。該方法將參數知識外化用於衝突分析，在答案合成期間優先考慮核心衝突。</li>
+<li>• 我們引入針對低相關性內容的相關性感知位置壓縮和具有相關性加權衝突評分的自適應解碼。這些改進了衝突解決，同時降低了噪聲敏感性。</li>
+<li>• 廣泛的實驗證明了我們方法的效率和有效性，在 E-VQA、InfoSeek 和 OK-VQA 基準上達到了最先進的結果，以更高的效率超越了複雜的替代方案。</li>
+</ul>
+<p>我們提出 CC-VQA，一個免訓練框架，通過以視覺為中心的上下文推理和相關性引導的生成來緩解 KB-VQA 中的知識衝突。該方法將參數知識外化用於衝突分析，在答案合成期間優先考慮核心衝突。</p>
+<p>我們引入針對低相關性內容的相關性感知位置壓縮和具有相關性加權衝突評分的自適應解碼。這些改進了衝突解決，同時降低了噪聲敏感性。</p>
+<p>廣泛的實驗證明了我們方法的效率和有效性，在 E-VQA、InfoSeek 和 OK-VQA 基準上達到了最先進的結果，以更高的效率超越了複雜的替代方案。</p>
+<h2 id="2">2 相關工作</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-03/2602.23952/fig_observation_2_v0.jpg" loading="lazy"></figure> 圖 2：文脈句子與問題之間的相似度統計。</p>
+<h3 id="21">2.1 基於知識的視覺問答</h3>
+<p>基於知識的視覺問答（KB-VQA）[8]，作為視覺問答（VQA）[2, 9] 的關鍵分支，通過引導模型檢索實體知識來推理和回答視覺問題，從而增強模型效能。現有的 KB-VQA 方法遵循由檢索、重排序和生成組成的三階段管道 [25, 28, 18, 33, 4, 6, 34]。在檢索階段，目前的方法 [33, 34] 主要關注實現細粒度檢索，Wiki-LLaVA 通過分層檢索將外部多模態文件作為文脈納入其中，增強了模型的知識推理能力。最近，EchoSight [33] 基於圖像相似度檢索目標部分，然後使用訓練過的重排序模型對其進行重排。在生成階段，目前的 RAG 方法 [6, 10] 主要目標是處理檢索到的資訊以減少冗餘。ReflectiVA [6] 使用反射令牌讓模型通過兩階段訓練動態評估和管理外部知識，在外部知識不必要時保持效能。Wiki-PRF [10] 通過強化學習訓練模型以篩選檢索到的資訊並選擇最有用的內容。在本論文中，我們引導模型利用推理和相似度分數來處理冗餘的檢索資訊。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-03/2602.23952/fig_overview_v3.jpg" loading="lazy"></figure> 圖 3：CC-VQA 的概覽。CC-VQA 由兩個關鍵組件組成。(1) 視覺中心文脈衝突推理：CC-VQA 從參數化和外部文脈中提取語義視覺描述，然後使用摘要化的視覺中心資訊推理知識衝突。(2) 相關性引導的編碼和解碼：通過計算細粒度相關性，CC-VQA 在位置編碼期間動態壓縮低相關性資訊，並在解碼期間根據這些相關性調整輸出分佈。</p>
+<h3 id="22-kb-qa">2.2 KB-QA 中的知識衝突</h3>
+<p>KB-QA 中的知識衝突 [23, 35, 36, 21] 是指檢索到的外部知識與模型內部參數知識之間的差異。在早期研究中，Xie 等人 [32] 提出了一個框架來探究 LLMs 的參數記憶和反記憶，揭示了強烈的確認偏誤、對證據呈現方式的敏感性，以及產生令人信服的錯誤資訊的風險。最近，FaithfulRAG [37] 識別了事實衝突，並在回應生成之前使用自我反思流程來調和這些衝突。與依賴提示工程或訓練輔助判別器來處理 RAG 中知識衝突的這些方法 [42, 39] 相比，對比解碼方法 [26, 14, 19, 41, 30, 12] 因其無需訓練的特性而受到關注。AdaCAD [30] 根據上下文分布與參數分布之間的 Jensen-Shannon 散度動態調整解碼，提高了 QA 準確度和摘要真實性，同時在衝突和非衝突情況下都保持了穩健性。CoCoA [12] 在其解碼過程中採用 Rényi 散度和基於熵的置信度度量，以自適應地解決知識衝突並增強生成的真實性。然而，現有方法未考慮檢索資訊與查詢之間的相關性；在我們的方法中，我們明確地將句子相關性納入知識衝突。</p>
+<h2 id="3">3 問題與觀察</h2>
+<p><strong>知識型視覺問答（KB-VQA）</strong>。知識型視覺問答需要透過利用來自結構化知識庫 $\mathcal{KB}={(a_{1},I_{1}),\dots,(a_{n},I_{n})}$ 的外部知識，為輸入影像 $I$ 上的問題 $Q$ 生成答案 $A$，其中每個配對由一個實體文章 $a_{i}$ 及其關聯的影像 $I_{i}$ 組成。在多模態 Retrieval-Augmented Generation (RAG) 框架中，給定查詢 $(I,Q)$，系統透過多模態相似度函數檢索相關知識條目 ${(a_{j},I_{j})}$。從每個檢索到的文章 $a_{j}$ 中，選擇相關文本區段以構建知識上下文 $C$。最終答案 $A$ 是透過在輸入影像 $I$、問題 $Q$ 和聚合上下文 $C$ 上調節視覺語言模型而生成的。</p>
+<p><strong>KB-VQA 中的知識衝突</strong>。在基於 Retrieval-Augmented Generation (RAG) 的多模態 KB-VQA 系統中，嵌入在視覺語言模型中的參數知識 $\Theta$ 與從 $\mathcal{KB}$ 外部檢索的知識上下文 $\mathcal{C}$ 之間的衝突會降低答案品質，導致不準確或內部不一致。我們使用 Qwen2.5-VL-7B 多模態 RAG 框架分析了來自 InfoSeek 基準的 10K 個樣本。雖然此方法相比直接 VLM 回答實現了 $16.82\%$ 的準確度提升，但在之前由 VLM 單獨正確回答的 $10.53\%$ 案例中引入了錯誤。這種效能下降源於知識衝突，如圖 1 所示。因此，我們的目標是減輕檢索上下文與參數知識之間的知識衝突，從而改進 KB-VQA 答案準確度。</p>
+<p><strong>觀察 1</strong>。視覺語義特徵有助於識別上下文衝突。如圖 1 所示，在 RAG 框架中使用影像-文本特徵進行相似度搜尋可能會產生與參數知識衝突的不準確上下文，可能誤導答案生成。然而，檢索到的上下文無論其準確性如何，通常包含在查詢影像 $I$ 中發現的視覺屬性（例如空間關係、顏色、形狀）的文本描述。因此，$I$ 中的視覺信息可以被利用來驗證這些文本主張並解決衝突。</p>
+<p><strong>觀察 2</strong>。檢索到的上下文頻繁包含大量冗餘，因此需要進行細粒度分析。我們分析了來自 InfoSeek 基準的 10K 個隨機樣本，使用 BLIP 計算檢索上下文與查詢配對 $(Q,I)$ 之間的句子級相似度。圖 2 呈現了相似度分佈：(a) 顯示正態分佈的相似度（平均值 $\mu=0.4$，$\sigma=0.15$），少於 $0.3\%$ 的句子超過相似度 0.8。子圖 (b) 分析了每個問題的前 3 個檢索上下文，揭示每個上下文平均包含 107 個句子。當按相似度對句子進行排名時，$90\%$ 的問題的正確答案位於最高相似度的前 $25\%$ 句子中。</p>
+<h2 id="4">4 方法</h2>
+<h3 id="41">4.1 概述</h3>
+<p>為了解決 KB-VQA 中模型參數知識與外部知識之間的衝突，我們提出了衝突與關聯感知視覺問答（CC-VQA），其重點關注生成階段。如圖 3 所示，該方法首先執行視覺為中心的上下文衝突推理，以外化參數知識並明確推斷所有上下文來源間的衝突。這些分析的上下文隨後驅動關聯引導編碼和解碼過程，其中關聯感知位置編碼壓縮在編碼過程中關注查詢顯著語句，而自適應解碼根據關鍵關聯調整標記生成以解決衝突。通過表徵上下文級別的衝突並在生成過程中動態優先考慮相關語句，我們的方法減輕了由知識不一致引起的答案不準確性。</p>
+<h3 id="42">4.2 初步研究</h3>
+<p>與加法位置編碼不同，旋轉位置嵌入（RoPE）[27] 將絕對位置 $m$ 編碼為應用於嵌入向量的旋轉運算子。具體而言，對於位置 $m$ 處的輸入嵌入 $\mathbf{x}\in\mathbb{R}^{d}$，RoPE 變換的表示給出為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\text{RoPE}(\mathbf{x},m)=\mathbf{R}_{m}\mathbf{x},$</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>|  | $[\mathbf{R}<em>{m}]</em>{2i-1:2i}=\begin{bmatrix}\cos(m\theta_{i})&amp;-\sin(m\theta_{i})\
+\sin(m\theta_{i})&amp;\cos(m\theta_{i})\end{bmatrix},$ |  | (2) |
+| --- | --- | --- | --- |</p>
+<p>其中 $\theta_{i}=10000^{-2i/d}$，對於 $i=1,\dots,d/2$。基於 RoPE，位置插值（PI）[5, 24] 通過將輸入位置 $m$ 縮放為 $m/\alpha$（其中 $\alpha&gt;1$）來擴展超過預訓練限制的上下文長度。這確保所有有效位置都保持在原始預訓練範圍內，使得能夠有效地在更長序列上進行微調。</p>
+<h3 id="43-visual-centric-contextual-conflict-reasoning">4.3 Visual-Centric Contextual Conflict Reasoning</h3>
+<p>解決知識衝突根本上需要識別和分析檢索到的外部知識與模型參數知識之間的不一致性。與傳統衝突偵測方法不同，我們的方法在 KB-VQA 的上下文層級執行以視覺為中心的衝突分析，檢查知識差異如何與查詢中的視覺語義特徵相關聯。我們首先根據使用者查詢生成參數知識上下文。隨後，通過視覺分析，我們在查詢影像和問題的所有上下文中提取知識-視覺關聯。基於這些關聯，我們抽象化並泛化視覺語義模式以推斷衝突相關的視覺特徵。這種以視覺為導向的衝突特徵化為答案生成過程中的衝突解決提供了至關重要的指導。</p>
+<p>Parametric Context Generation. 與從知識庫檢索的上下文 ${C_{KB}}$ 不同，我們採用 VLM 生成與 $C_{KB}$ 類似的參數上下文。具體來說，給定包含影像 $I$ 和問題 $Q$ 的使用者查詢，我們提示 VLM 生成答案 $A$ 和相關的背景知識，構成參數上下文 $C_{M}$。這個 $C_{M}$ 代表模型參數知識的具體外化，包含支持證據和明確答案，同時保持與檢索上下文的結構一致性。我們隨後將 $C_{M}$ 和 $C_{KB}$ 合併成上下文集合 $\mathcal{C}={C_{M},C_{KB}}$ 以進行上下文層級的知識衝突推理。</p>
+<p>Visual Rationale Extraction. 基於上下文語料庫 $\mathcal{C}$，我們利用 VLM 分析每個上下文 $C$ 與查詢影像 $I$ 之間的邏輯關係。具體來說，我們識別哪些視覺語義特徵與上下文知識結論相關聯。此過程正式定義為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$R_{i}=\text{VLM}(I,Q,C_{i}),\quad\forall C_{i}\in\mathcal{C}$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $R_{i}$ 表示上下文 $C_{i}$ 的視覺推理輸出。目標是釐清與上下文知識關鍵相關的影像特徵，使模型能夠在答案生成過程中優先考慮這些視覺語義，並減輕因視覺誤解而產生的知識衝突。</p>
+<p>Visual-Centric Conflict Analysis. 基於從所有上下文衍生的視覺推理描述 ${R_{i}}$，我們抽象化表徵知識衝突的語義特徵，例如源於蘑菇不同莖部特徵的不同答案（圖 4）。此過程自適應性地總結了核心衝突點和關鍵視覺細節，為答案生成提供明確的視覺提示。正式來說，我們採用提示引導的 VLM 摘要化：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$R_{vis}=\text{VLM}(I,Q,{R_{i}})$</th>
+<th></th>
+<th>(4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $R_{vis}$ 在結構化推理標籤 <code>&lt;reason&gt;&lt;/reason&gt;</code> 中封裝關鍵視覺衝突資訊。圖 4 說明了一個範例。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-03/2602.23952/fig_visual-centric_v1.jpg" loading="lazy"></figure> 圖 4：Visual-Centric Contextual Conflict Reasoning 的示意圖。CC-VQA 明確提取模型的參數上下文以及所有上下文的視覺推理根據。透過視覺推理根據，CC-VQA 識別並總結視覺為中心的衝突 $R_{vis}$ 以解決衝突資訊。</p>
+<h3 id="44">4.4 關聯引導編碼與解碼</h3>
+<p>在前一階段，我們外化了模型參數知識，並通過整合檢索到的外部知識構建了上下文語料庫 $\mathcal{C}$。該語料庫作為最終答案生成的主要來源。然而，每個上下文 $C_{i}\in\mathcal{C}$ 都包含與答案相關的陳述和無關的內容。這些不相關的資訊充當雜訊，可能會損害模型解決知識衝突的能力。為了解決這一限制，我們提出了一種細粒度的關聯引導編碼-解碼方法。</p>
+<p>具體來說，我們的方法在所有 $C_{i}$ 上下文相對於使用者問題 $Q$ 的陳述級別進行關聯性評估。在編碼過程中，我們應用位置編碼壓縮來衰減低關聯性陳述，將注意力集中在關鍵衝突區域。在解碼過程中，我們使用陳述關聯性權重增強自適應令牌採樣，以在知識衝突情景中提高答案準確性。</p>
+<p><strong>細粒度關聯性。</strong> 對於每個上下文 $C_{i}$，我們通過將 $C_{i}$ 分解為組成陳述（即句子）來與使用者問題進行細粒度的關聯性分析。這使得能夠識別包含與問題相關的資訊、關鍵支持細節或需要在生成過程中優先關注的知識衝突關鍵來源的句子。形式上，給定包含 $N$ 個句子 ${s_{ij}}<em>{j=1}^{N}$ 的上下文 $C</em>{i}$，我們採用 EVA-CLIP 來估計每個句子 $s_{ij}$ 與圖像-問題對 $(I,Q)$ 之間的關聯性分數 $r_{ij}$。</p>
+<p>為了減輕原始使用者問題 $Q$ 中的抽象化和歧義，我們首先使用圖像基礎提示重寫 $Q$，該提示明確解決實體參考和視覺特徵，產生消歧問題 $Q^{*}$。句子級別的關聯性計算如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$r_{ij}=\frac{1}{2}\left({\text{EVA-CLIP}(Q^{*},s_{ij})+\text{EVA-CLIP}(I,s_{ij})}\right).$</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>因此，我們將所有上下文中的每個句子與一個關聯性指標相關聯，形式化為 $C_{i}^{*}={(s_{ij},r_{ij})\mid j=1,\ldots,N}$。</p>
+<h1 id="_1">相關性感知位置編碼</h1>
+<p>在生成過程中，我們將 $R_{vis}$ 和 $\mathcal{C}$ 與使用者查詢（圖像 $I$ 和問題 $Q$）整合為上下文輸入。$\mathcal{C^{*}}$ 作為補充資訊供後續使用。為了增強對高相關性陳述的關注，我們基於實證發現修改位置編碼：準確的答案主要位於高度相關的上下文陳述中，而低相關性陳述通常包含過渡性內容且核心資訊最少。我們的方法並非放大對關鍵陳述的注意力，而是壓縮低相關性陳述的相對長度，減少其注意力分配，並優先考慮核心衝突解決。</p>
+<p>具體來說，位置編碼按順序構建但根據陳述級別的相關性動態調整。首先，我們按降序 $r_k$ 排序所有句子對 ${(s_{k},r_{k})}$，將低相關性集合定義為底部 $\tau$ 百分位：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\tau}={s</em>{(N-b+1)},s_{(N-b+2)},\dots,s_{(N)}}$，</th>
+<th></th>
+<th>(6)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $b=\lfloor\tau\times N\rfloor$，$s_{(k)}$ 表示第 $k$ 個最高相關性句子。令 $\operatorname{sent}(t_{j})$ 表示包含 token $t_j$ 的句子。位置索引更新為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\operatorname{pos}(t_{j})=\begin{cases}\operatorname{pos}(t_{j-1})+\alpha&amp;\text{if }\operatorname{sent}(t_{j})\in\mathcal{L}<em>{\tau},\\operatorname{pos}(t</em>{j-1})+1&amp;\text{otherwise},\end{cases}$</th>
+<th></th>
+<th>(7)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\alpha=0.5$ 是低相關性 token 的位置增量縮放係數。由於 $R_{vis}$ 提供獨立於位置順序的視覺衝突分析，其 token 保留原始位置編碼。</p>
+<p>透過為高相關性句子保留完整的位置解析度，同時壓縮低相關性句子的位置空間，我們的方法在語義關鍵內容上保持有焦點的注意力，並為延伸序列提供高效的位置感知表示。</p>
+<h1 id="_2">相關性增強自適應解碼</h1>
+<p>在解碼過程中，我們增強高相關性上下文陳述對 token 採樣分佈的影響。這項設計源於我們的觀察，即此類陳述表明較高的知識衝突概率，因此施加更強的影響力。我們的相關性增強自適應解碼由細粒度的上下文相關性驅動，通過精確定位影響性句子，優於部分級別的調整，因為並非所有上下文內容都會影響答案。</p>
+<p>基於自適應對比解碼 [12]，我們利用超越分佈發散 ($D_t$) 和熵間隙 ($\Delta H_t$) 的細粒度相關性增強衝突評分。增強的衝突分數為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$s_t' = \sigma(D_t + \Delta H_t + K + \delta)$</th>
+<th></th>
+<th>(8)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\sigma$ 表示 sigmoid 函數，$K$ 結合平均相關性及其集中度，$\delta$ 為小的偏置項（例如 $\delta=0.1$）。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$K=1-\left(\frac{1}{N}\sum_{i=1}^{N}r_{i}\right)\cdot\left(1-\frac{H(\mathbf{r})}{\log M}\right)$</th>
+<th></th>
+<th>(9)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $H(\mathbf{r})=-\sum_{i=1}^{M}r_{i}\log r_{i}$。第一部分測量平均句子相關性，而第二部分量化相關性集中度（區分聚焦的強證據與分散的弱證據）。</p>
+<p>透過此程序，展現高發散、大熵間隙和低/分散相關性的樣本會獲得提升的衝突分數，最終調節混合輸出分佈。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-03/2602.23952/x1.png" loading="lazy"></figure> 表 1：E-VQA 和 InfoSeek 上的 VQA 準確度。我們的方法以淺藍色突出顯示。上標 * 表示使用前 3 個章節以刻意引發知識衝突，Gen.FT 表示生成過程是否進行微調。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

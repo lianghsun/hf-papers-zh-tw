@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VGGT-Det：為無感應器幾何約束的多視角室內3D物體檢測挖掘VGGT內部先驗 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-03/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-03 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">VGGT-Det：為無感應器幾何約束的多視角室內3D物體檢測挖掘VGGT內部先驗</h1>
+  
+  <div class="en-title">VGGT-Det: Mining VGGT Internal Priors for Sensor-Geometry-Free Multi-View Indoor 3D Object Detection</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Yang Cao, Feize Wu, Dave Zhenyu Chen, Yingji Zhong, Lanqing Hong, Dan Xu</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.00912" target="_blank">2603.00912</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.00912" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.00912" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.00912" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span>
+    <span class="tag method">Transformer</span><span class="tag method">Vision Transformer</span><span class="tag method">Attention Mechanism</span>
+    <span class="tag task">3D Object Detection</span><span class="tag task">Multi-view Indoor Scene Understanding</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+當前的多視角室內 3D 物體偵測器依賴於成本昂貴的感測器幾何資訊（即精確校準的多視角相機姿態）來將多視角資訊融合成全域場景表示，這限制了在真實場景中的部署。我們針對一個更實用的設定：無感測器幾何（SG-Free）多視角室內 3D 物體偵測，其中沒有感測器提供的幾何輸入（多視角姿態或深度）。最近的 Visual Geometry Grounded Transformer (VGGT) 表明強大的 3D 線索可以直接從影像中推斷出來。基於這個發現，我們提出 VGGT-Det，這是第一個專為 SG-Free 多視角室內 3D 物體偵測量身定製的框架。我們的方法不是僅僅使用 VGGT 預測，而是將 VGGT 編碼器整合到一個基於 transformer 的管線中。為了有效地利用 VGGT 內部的語義和幾何先驗，我們引入了兩個新穎的關鍵元件：(i) 注意力引導查詢生成（AG）：利用 VGGT 注意力圖作為語義先驗來初始化物體查詢，通過聚焦於物體區域同時保留全域空間結構來改進定位；(ii) 查詢驅動特徵聚合（QD）：一個可學習的 See-Query 與物體查詢互動以「看到」它們所需要的資訊，然後動態聚合 VGGT 各層之間的多層級幾何特徵，逐步將 2D 特徵提升為 3D。實驗表明，VGGT-Det 在 SG-Free 設定中顯著超越表現最佳的方法，在 ScanNet 和 ARKitScenes 上分別達到 4.4 和 8.6 mAP@0.25 的改進。消融研究表明 VGGT 內部學習的語義和幾何先驗可以被我們的 AG 和 QD 有效地利用。</p>
+  
+  <div class="abstract-en">Current multi-view indoor 3D object detectors rely on sensor geometry that is costly to obtain (i.e., precisely calibrated multi-view camera poses) to fuse multi-view information into a global scene representation, limiting deployment in real-world scenes. We target a more practical setting: Sensor-Geometry-Free (SG-Free) multi-view indoor 3D object detection, where there are no sensor-provided geometric inputs (multi-view poses or depth). Recent Visual Geometry Grounded Transformer (VGGT) shows that strong 3D cues can be inferred directly from images. Building on this insight, we present VGGT-Det, the first framework tailored for SG-Free multi-view indoor 3D object detection. Rather than merely consuming VGGT predictions, our method integrates VGGT encoder into a transformer-based pipeline. To effectively leverage both the semantic and geometric priors from inside VGGT, we introduce two novel key components: (i) Attention-Guided Query Generation (AG): exploits VGGT attention maps as semantic priors to initialize object queries, improving localization by focusing on object regions while preserving global spatial structure; (ii) Query-Driven Feature Aggregation (QD): a learnable See-Query interacts with object queries to &#39;see&#39; what they need, and then dynamically aggregates multi-level geometric features across VGGT layers that progressively lift 2D features into 3D. Experiments show that VGGT-Det significantly surpasses the best-performing method in the SG-Free setting by 4.4 and 8.6 mAP@0.25 on ScanNet and ARKitScenes, respectively. Ablation study shows that VGGT&#39;s internally learned semantic and geometric priors can be effectively leveraged by our AG and QD.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="vggt-det-3d-vggt">VGGT-Det: 為無感測器幾何之多視圖室內 3D 物體檢測開採 VGGT 內部先驗</h1>
+<p>當前多視圖室內 3D 物體檢測器依賴於獲得成本高昂的感測器幾何資訊——即精確標定的多視圖相機姿態——以將多視圖資訊融合為全局場景表示，這限制了在真實場景中的部署。我們針對一個更加實用的設定：無感測器幾何（SG-Free）多視圖室內 3D 物體檢測，其中沒有感測器提供的幾何輸入（多視圖姿態或深度）。最近的 Visual Geometry Grounded Transformer（VGGT）表明強大的 3D 線索可以直接從影像中推斷出來。基於此洞見，我們提出 VGGT-Det，首個專為 SG-Free 多視圖室內 3D 物體檢測量身訂製的框架。我們的方法不僅消費 VGGT 預測，而是將 VGGT 編碼器整合到一個基於 transformer 的管道中。為了有效利用 VGGT 內部的語義和幾何先驗，我們引入了兩個新穎的關鍵元件：（i）注意力引導查詢生成（AG）：利用 VGGT 注意力圖作為語義先驗來初始化物體查詢，透過關注物體區域同時保留全局空間結構來改進定位；（ii）查詢驅動特徵聚合（QD）：一個可學習的 See-Query 與物體查詢相互作用以「看到」它們所需的內容，然後動態聚合跨 VGGT 層的多層級幾何特徵，這些特徵逐步將 2D 特徵提升為 3D。實驗表明 VGGT-Det 在 SG-Free 設定中顯著超越表現最佳的方法，在 ScanNet 和 ARKitScenes 上分別達到 4.4 和 8.6 mAP@0.25。消融研究表明 VGGT 內部學習的語義和幾何先驗可以透過我們的 AG 和 QD 有效地被利用。原始碼和預訓練模型可在 GitHub 專案頁面取得。</p>
+<h2 id="1">1 介紹</h2>
+<p>多視角室內 3D 物體偵測是一項基礎任務，在機器人和擴增實境中具有廣泛的應用。目前的方法 [47, 46, 36, 3, 32] 主要依賴於感測器衍生的幾何輸入，即精確校準的多視角相機位姿或深度資訊。雖然這些方法取得了很好的效能，但它們對昂貴且通常難以取得的感測器衍生幾何輸入 [4, 5] 的依賴，嚴重限制了可擴展性和實際部署。</p>
+<p>圖 1：為了實現和改進無感測器幾何（SG-Free）多視角室內 3D 物體偵測，VGGT-Det 有效地利用了來自 VGGT [41] 的內部語義和幾何先驗，而不僅僅是消耗其預測結果。VGGT-Det 在 SG-Free 設定下明顯優於具有競爭力的方法。</p>
+<p>我們改為考慮一個更實用的設定：在沒有感測器衍生幾何輸入的情況下，從多視角影像執行室內 3D 偵測。我們將其稱為無感測器幾何（SG-Free）多視角室內 3D 物體偵測。這個設定非常具有挑戰性，因為它消除了感測器衍生的多視角相機位姿和深度資訊。近期在前饋式 3D 重建方面的進展表明，3D 結構可以直接從未經位姿的 2D 影像進行推斷 [43, 15, 49, 37, 50, 41]。這些進展為 SG-Free 多視角室內 3D 物體偵測帶來了新的機遇。除了從未經位姿的影像提供低成本的場景幾何估計外，前饋式模型還編碼了強大的學習先驗，這些先驗改進了對可靠偵測至關重要的 3D 推理能力。</p>
+<p>在本論文中，我們提出了 VGGT-Det，這是一個用於無感測器幾何（SG-Free）多視角室內 3D 物體偵測的框架，建立在 Visual Geometry Grounded Transformer (VGGT) [41] 的基礎上，VGGT 是一個代表性的前饋式 3D 重建模型。如圖 1 所示，我們的方法不只是消耗 VGGT 的預測結果，而是在基於 Transformer 的管線中整合了預訓練的 VGGT 編碼器。為了有效地利用 VGGT 內部學習的知識，我們對其中間表示進行了深入分析。我們發現 VGGT 編碼器中的注意力圖捕捉到了豐富的語義資訊，儘管該模型並未明確針對語義進行訓練。受這一有趣觀察的啟發，我們提出了注意力引導查詢生成（AG），它利用 VGGT 注意力圖來初始化和引導物體查詢，通過專注於語義區域同時保留全局空間結構來改進定位。此外，由於 VGGT 在其各層中逐步將 2D 特徵提升為 3D——每層編碼不同級別的幾何抽象——我們引入了查詢驅動特徵聚合（QD）。該模組引入了一個可學習的 See-Query，它與物體查詢互動以「看到」所需的資訊，然後動態地從 VGGT 層聚合多級幾何特徵，有效地捕捉分層表示。這些設計共同解鎖了 VGGT 在 SG-Free 多視角室內 3D 偵測中的更多潛力。廣泛的實驗表明，VGGT-Det 在 SG-Free 設定下明顯優於強大的方法，而消融研究證實了所提出的 AG 和 QD 有效地利用了 VGGT 內部學習的先驗。</p>
+<p>我們的貢獻總結如下：</p>
+<ul>
+<li>• 我們引入了一個更實用的設定——無感測器幾何（SG-Free）多視角室內 3D 偵測——它消除了對感測器衍生幾何輸入（即多視角相機位姿或深度圖）的需求。據我們所知，這是第一項明確針對這一具有挑戰性的設定的工作。基於此設定，我們引入了 VGGT-Det，第一個基於 Transformer 的 SG-Free 3D 物體偵測框架。</li>
+<li>• 我們提出了注意力引導查詢生成（AG），它利用編碼在 VGGT 編碼器注意力中的語義先驗來初始化物體查詢。這些查詢專注於物體區域，同時保留全局空間結構，改進了定位。</li>
+<li>• 我們開發了查詢驅動特徵聚合（QD），它引入了一個可學習的 See-Query，與物體查詢互動以「看到」它們的需求，並據此動態聚合多級幾何特徵。</li>
+<li>• 通過所提出的方法，VGGT-Det 取得了顯著的收益，在 SG-Free 設定下，與最佳表現的方法相比，在 ScanNet 和 ARKitScenes 上分別超越 4.4 和 8.6 mAP@0.25 點。</li>
+</ul>
+<p>我們引入了一個更實用的設定——無感測器幾何（SG-Free）多視角室內 3D 偵測——它消除了對感測器衍生幾何輸入（即多視角相機位姿或深度圖）的需求。據我們所知，這是第一項明確針對這一具有挑戰性的設定的工作。基於此設定，我們引入了 VGGT-Det，第一個基於 Transformer 的 SG-Free 3D 物體偵測框架。</p>
+<p>我們提出了注意力引導查詢生成（AG），它利用編碼在 VGGT 編碼器注意力中的語義先驗來初始化物體查詢。這些查詢專注於物體區域，同時保留全局空間結構，改進了定位。</p>
+<p>我們開發了查詢驅動特徵聚合（QD），它引入了一個可學習的 See-Query，與物體查詢互動以「看到」它們的需求，並據此動態聚合多級幾何特徵。</p>
+<p>通過所提出的方法，VGGT-Det 取得了顯著的收益，在 SG-Free 設定下，與最佳表現的方法相比，在 ScanNet 和 ARKitScenes 上分別超越 4.4 和 8.6 mAP@0.25 點。</p>
+<h2 id="2">2 相關工作</h2>
+<p><strong>多視圖戶外 3D 物體檢測</strong>。目前的戶外多視圖 3D 物體檢測 [ 42 , 45 , 7 , 10 ] 大致可分為兩類。
+第一類將 3D 查詢投影到 2D 影像以聚合視覺知識。
+受到 DETR [ 6 ] 的啟發，DETR3D [ 44 ] 使用稀疏 3D 物體查詢透過攝影機參數索引多視圖 2D 特徵。
+PETR 系列 [ 24 , 25 ] 引入位置嵌入變換，將 3D 座標資訊編碼到多視圖影像特徵中。
+Sparse4D 系列 [ 19 , 20 , 21 ] 和 SparseBEV [ 23 ] 透過探索稀疏策略來聚合多幀特徵，實現時間感知檢測。
+BEVFormer [ 18 ] 引入了使用時空 transformer 學習的統一 BEV 表示。
+第二類透過將 2D 特徵提升到 3D 空間來構建 BEV 表示。
+LSS [ 31 ] 引入了一個端到端的多視圖架構，將每張影像「提升」為特徵視錐體，並「濺潑」到 BEV 網格中以學習魯棒的場景表示。
+BEVDet [ 13 ] 使用標準模組，但透過量身訂製的資料增強和改進的 NMS 來提升效能。
+BEVDepth [ 17 ] 和 BEVStereo [ 16 ] 使用明確的深度監督來解決深度瓶頸。
+進一步超越上述方法，CorrBEV [ 48 ] 透過優雅的設計選擇（如輔助視覺和語言原型）來處理遮擋。
+我們的工作聚焦於室內檢測。不同於戶外設置中攝影機牢固地安裝在車輛上，室內攝影機通常是手持的或經常被重新定位。這使得獲取可靠的感測器姿態既成本高昂，通常也無法取得，因此促使我們為室內場景引入了 SG-Free 設置。</p>
+<p>圖 2：所提出的感測器-幾何-無關 (Sensor-Geometry-Free, SG-Free) 多視圖室內 3D 物體檢測框架 VGGT-Det 的概述。其建立在 VGGT 編碼器 [ 41 ] 之上，該編碼器從多視圖影像中提取 3D 感知特徵。解碼器處理一組物體查詢，這些查詢交叉關注所提取的特徵，並迭代更新查詢以進行最終檢測。
+為了有效地利用 VGGT 內部的語義和幾何先驗，我們仔細設計了兩個關鍵元件：注意力引導查詢生成 (Attention-Guided Query Generation, AG) 和查詢驅動特徵聚合 (Query-Driven Feature Aggregation, QD)。AG 利用 VGGT 編碼器注意力中的語義先驗來生成物體查詢，使這些查詢能夠聚焦於物體區域，同時保持全局空間結構。此外，QD 引入了一個可學習的 See-Query，它透過自注意力與物體查詢互動以「看見」其需求，並據此動態聚合多層級幾何特徵。</p>
+<p><strong>多視圖室內 3D 物體檢測</strong>。現有的多視圖室內 3D 物體檢測方法處理來自具有多視圖姿態的影像的 3D 物體檢測 [ 47 , 46 , 36 , 3 ]。
+值得注意的是，多視圖立體視覺 [ 51 , 52 ]、神經輻射場 (Neural Radiance Fields, NeRF) [ 29 ] 和 3D 高斯濺潑 (3D Gaussian Splatting, 3DGS) [ 14 ] 的最近進展增強了從帶有姿態的多視圖影像中恢復幾何的能力，使得利用體素 [ 46 , 12 ] 和濺潑 [ 3 ] 的 3D 線索實現有效 3D 檢測成為可能。
+ImVoxelNet [ 34 ] 以端到端的方式透過反投影將來自多視圖影像的 2D 特徵聚合到 3D 體素體積中。
+NeRF-Det [ 46 ] 將源自 NeRF 模組的多視圖幾何約束整合到 3D 物體檢測管線中。
+MVSDet [ 47 ] 用平面掃描取代 NeRF，並使用概率取樣搭配軟加權來正則化深度，使得能夠進行精確檢測。
+現有方法依賴於感測器衍生的幾何輸入（例如多視圖姿態或深度），這嚴重限制了它們在現實世界中的適用性。為了解決這個問題，我們研究了感測器-幾何-無關 (Sensor-Geometry-Free, SG-Free) 多視圖室內 3D 物體檢測，並提出了 VGGT-Det，它利用注意力引導查詢生成和查詢驅動特徵聚合，以有效地挖掘 VGGT 內部的語義和幾何先驗，而不僅僅消費其預測。</p>
+<p><strong>可泛化 3D 重建</strong>。給定未定位的多視圖影像，3D 重建 [ 11 , 15 ] 旨在估計影像的幾何和攝影機姿態。3D 重建的傳統管線涉及多個子任務，包括關鍵點檢測 [ 28 , 9 ]、匹配 [ 2 , 22 , 35 , 38 ]、多視圖立體視覺 [ 51 , 52 , 40 , 53 ] 等。
+最近，DUSt3R [ 43 ] 革新了這一範式，使用單一網路直接估計目標場景的幾何。
+MASt3R [ 15 ] 繼承了這一範式，並為匹配任務添加了一個輔助預測頭。
+DUSt3R 和 MASt3R 都限於成對輸入，這限制了上下文推理，導致重複的網路前向傳遞和耗時的全局座標對齊。
+Fast3R [ 50 ] 透過啟用長序列的單次前向傳遞並消除座標對齊的需求來改進效能。
+除了點圖之外，VGGT [ 41 ] 還預測攝影機姿態和其他 3D 相關屬性。
+在本文中，我們呈現了 VGGT-Det，它有效地利用 VGGT 內的先驗知識來推進 SG-Free 多視圖室內 3D 物體檢測。</p>
+<h2 id="3">3 方法</h2>
+<h3 id="31">3.1 概述</h3>
+<p>我們提出的無感測器幾何 3D 檢測框架的概述呈現於圖 2。
+VGGT-Det 以多視角影像作為輸入並輸出 3D 檢測結果，消除了感測器提供的幾何輸入（即多視角姿態和深度）。
+在下文中，我們將首先介紹
+我們的基本骨幹網路，詳見第 3.2 節，
+這是一個 transformer 基礎的管道，整合了 VGGT 編碼器 [ 41 ]。
+為了有效地利用 VGGT 內部的語義和幾何先驗，我們引入了兩個新穎的關鍵元件：
+(i) 注意力引導查詢生成（AG）旨在
+有效利用 VGGT 編碼器注意力中的語義先驗，
+詳見第 3.3 節。
+(ii) 查詢驅動特徵聚合（QD）設計用於
+根據物體查詢的需求自適應地聚合多層級幾何
+特徵，詳見
+第 3.4 節。</p>
+<h3 id="32">3.2 基礎骨幹網路</h3>
+<p>我們設計了一個編碼器-解碼器 transformer [ 39 ] 架構作為我們的骨幹網路。給定一組多視角影像 { I 1 , I 2 , … , I V } {I_{1},I_{2},\dots,I_{V}} ，我們採用 VGGT 編碼器 [ 41 ] 作為特徵提取器來提取 3D 感知特徵。對於每個視角，VGGT 編碼器輸出一系列 token，其中每個 token 對應於影像的一個空間區域或一個patch。所有視角提取的 token 表示為 { 𝐓 1 , 𝐓 2 , … , 𝐓 V } {\mathbf{T}<em>{1},\mathbf{T}</em>{2},\dots,\mathbf{T}<em>{V}} ，其中 𝐓 i ∈ ℝ M × C \mathbf{T}</em>{i}\in\mathbb{R}^{M\times C} 是第 i i 個視角的 token 序列，每個視角有 M M 個 token，C C 是 token 維度。這些 token 沿著 token 維度連接以形成統一的 token 表示：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝐓 concat = [ 𝐓 1 ; 𝐓 2 ; … ; 𝐓 V ] ∈ ℝ ( V ⋅ M ) × C . \mathbf{T}<em>{\text{concat}}=[\mathbf{T}</em>{1};\mathbf{T}<em>{2};\dots;\mathbf{T}</em>{V}]\in\mathbb{R}^{(V\cdot M)\times C}.</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-03/2603.00912/x1.png" loading="lazy"></figure> 圖 3：注意力引導查詢生成的計算流程。</p>
+<p>受到 3DETR [ 30 ] 的啟發，我們採用非參數化的查詢取樣來初始化物體查詢。具體地，我們對 VGGT 預測的點雲 𝐏 pred \mathbf{P}<em>{\text{pred}} 應用最遠點取樣（FPS）。FPS 選擇 K K 個點的子集 { 𝐩 1 , 𝐩 2 , … , 𝐩 K } ⊂ 𝐏 pred {\mathbf{p}</em>{1},\mathbf{p}<em>{2},\dots,\mathbf{p}</em>{K}}\subset\mathbf{P}<em>{\text{pred}} ，其中 K K 是物體查詢的數量。這些取樣的點使用位置嵌入 𝐄 pos ∈ ℝ K × C \mathbf{E}</em>{\text{pos}}\in\mathbb{R}^{K\times C} 進行編碼以初始化物體查詢：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝐐 0 = Embed ​ ( { 𝐩 1 , 𝐩 2 , … , 𝐩 K } ) + 𝐄 pos . \mathbf{Q}<em>{0}=\text{Embed}({\mathbf{p}</em>{1},\mathbf{p}<em>{2},\dots,\mathbf{p}</em>{K}})+\mathbf{E}_{\text{pos}}.</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>物體查詢 𝐐 0 \mathbf{Q}_{0} 隨後通過一系列 L L 層 transformer 解碼器。在每個解碼器層中，查詢首先進行查詢到查詢的自注意力以在彼此之間交換資訊，如下所示：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝐐 l self = SelfAttention ​ ( 𝐐 l − 1 ) , \mathbf{Q}<em>{l}^{\text{self}}=\text{SelfAttention}(\mathbf{Q}</em>{l-1}),</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 𝐐 l − 1 \mathbf{Q}<em>{l-1} 是第 l l 層解碼器的輸入，𝐐 l self \mathbf{Q}</em>{l}^{\text{self}} 是自注意力後的輸出。接下來，查詢通過交叉注意力關注統一的 token 表示 𝐓 concat \mathbf{T}_{\text{concat}} ：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝐐 l = CrossAttention ​ ( 𝐐 l self , 𝐓 concat ) . \mathbf{Q}<em>{l}=\text{CrossAttention}(\mathbf{Q}</em>{l}^{\text{self}},\mathbf{T}_{\text{concat}}).</th>
+<th></th>
+<th>(4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在通過所有 L L 層解碼器之後，更新的物體查詢 𝐐 L ∈ ℝ K × C \mathbf{Q}_{L}\in\mathbb{R}^{K\times C} 被饋入檢測頭以生成物體級別的預測，包括類別標籤 𝐜 ^ ∈ ℝ K \hat{\mathbf{c}}\in\mathbb{R}^{K} 和邊界框 𝐛 ^ ∈ ℝ K × 7 \hat{\mathbf{b}}\in\mathbb{R}^{K\times 7} ：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>{ 𝐜 ^ , 𝐛 ^ } = DetectionHead ​ ( 𝐐 L ) . {\hat{\mathbf{c}},\hat{\mathbf{b}}}=\text{DetectionHead}(\mathbf{Q}_{L}).</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>透過在視角間連接 token，該模型使物體查詢能夠直接與多視角 token 表示互動。這個管道有效地利用了 VGGT 編碼器提取的 3D 感知特徵，並透過 transformer 解碼器動態精煉物體查詢，實現了無感測器幾何的 3D 物體檢測。</p>
+<h3 id="33-attention-guided-query-generation">3.3 Attention-Guided Query Generation</h3>
+<p>Figure 4：所提出的 Attention-Guided Query Generation (AG) 受到以下有趣觀察的啟發：來自 VGGT encoder [41] 的注意力圖譜與語義內容表現出強烈的相關性，儘管 VGGT 並未針對語義任務進行明確訓練。例如，在左列中，物體區域傾向於獲得更高的注意力權重。在中間列中，AG 在注意力權重和點雲分佈資訊的指引下，從 VGGT 預測的點雲中進行採樣。在右列中，相比於沒有指引的最遠點採樣（紅色點），由 AG 採樣的點（綠色點）更集中在物體區域（用綠色框標記），導致這些區域中綠色點數多於紅色點數。為清晰起見，建議以彩色查看本圖並進行放大。</p>
+<p>由於 VGGT [41] 預測的點雲是場景的密集重建，因此無法區分物體和背景區域。因此，簡單地將 FPS 應用於從預測點雲中均勻選擇查詢點可能導致大量物體查詢點落在背景區域而非實際物體上。這種查詢點的錯誤放置根本上損害了檢測效能，因為位於背景的查詢點為檢測提供的有用資訊微乎其微。有趣的是，我們觀察到 VGGT encoder 中的注意力內在地捕獲了豐富的語義資訊，如圖 4 左列所示，儘管 VGGT 並未在語義任務上進行訓練。這一觀察激勵我們提出 Attention-Guided Query Generation (AG)，該方法利用 VGGT encoder 的注意力圖譜來促進物體查詢點定位於語義物體區域。所提出的 AG 不僅利用了來自 VGGT encoder 的語義指引，而且考慮了空間多樣性以使採樣的點充分覆蓋整個 3D 空間。</p>
+<p>形式上，VGGT 重建的點雲記為 $\mathbf{P}\in\mathbb{R}^{N\times 3}$，其中 $N$ 是點的數量，每個點由其 3D 座標表示。我們將 VGGT encoder 的注意力權重記為 $\mathbf{A}\in\mathbb{R}^{N}$，其中每個權重表示一個點的語義重要性。目標是從 $\mathbf{P}$ 中採樣 $K$ 個查詢點 ${\mathbf{P}<em>{1},\mathbf{P}</em>{2},\dots,\mathbf{P}_{K}}$，同時受到來自注意力權重的語義資訊和空間分佈的指引。為確保數值穩定性和與基於距離特徵的相容性，注意力權重進行歸一化：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{A}_{\text{norm}}=\frac{\mathbf{A}-\min(\mathbf{A})}{\max(\mathbf{A})-\min(\mathbf{A})+\epsilon}$</th>
+<th></th>
+<th>(6)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\epsilon$ 是用於數值穩定性的小常數，$\mathbf{A}_{\text{norm}}\in\mathbb{R}^{N}$。第一個查詢點 $\mathbf{I}[1]$ 的索引選為具有最高注意力分數的點：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{I}[1]=\arg\max\mathbf{A}_{\text{norm}}$</th>
+<th></th>
+<th>(7)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>後續點透過融合優先級進行迭代選擇，該優先級平衡語義注意力和空間分散度：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\text{Priority}=\mathbf{A}<em>{\text{norm}}+\lambda</em>{\text{dist}}\cdot\mathbf{D}_{\text{norm}}$</th>
+<th></th>
+<th>(8)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\lambda_{\text{dist}}\in[0,1]$ 是控制空間分散度相對影響的權衡係數，$\mathbf{D}<em>{\text{norm}}$ 是點 $\mathbf{P}$ 與已採樣集合 ${\mathbf{P}</em>{\mathbf{I}[1]},\dots,\mathbf{P}<em>{\mathbf{I}[k-1]}}$ 之間的歸一化最小歐幾里得距離。具體而言，我們令 $\mathbf{D}</em>{\text{min}}$ 表示從 $\mathbf{P}$ 到所有先前選定點的最小歐幾里得距離：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{D}<em>{\text{min}}=\min</em>{j\in{1,\dots,k-1}}\lVert\mathbf{P}-\mathbf{P}<em>{\mathbf{I}[j]}\rVert</em>{2}$</th>
+<th></th>
+<th>(9)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbf{D}_{\text{min}}\in\mathbb{R}^{N}$。歸一化距離定義為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{D}<em>{\text{norm}}=\frac{\mathbf{D}</em>{\text{min}}-\min(\mathbf{D}<em>{\text{min}})}{\max(\mathbf{D}</em>{\text{min}})-\min(\mathbf{D}_{\text{min}})+\epsilon}$</th>
+<th></th>
+<th>(10)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbf{D}_{\text{norm}}\in\mathbb{R}^{N}$。在每次迭代中，隨後選擇具有最高優先級的點：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{I}[k]=\arg\max_{i\notin\mathcal{S}}\text{Priority}$</th>
+<th></th>
+<th>(11)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathcal{S}={\mathbf{I}[1],\mathbf{I}[2],...,\mathbf{I}[k-1]}$ 表示前面迭代中選定的樣本的索引集。在此步驟中，如圖 4 中間列所示，選擇具有高注意力分數和較大距離的點。此設計促使物體查詢點關注語義上有意義的物體區域，同時保持空間多樣性，確保對整個 3D 空間的覆蓋。計算流程如圖 3 所示，其呈現了我們所提出的 Attention-Guided Query Generation (AG) 的逐步實現。如圖 4 右列所示，儘管 FPS 傾向於在前景和背景區域上無差別地分佈採樣點，AG 透過利用來自 VGGT 的內部語義先驗，策略性地將採樣查詢集中在物體區域上，有利於更有效的 3D 物體檢測。</p>
+<p>Table 1：ScanNet 上不同方法的 mAP@0.25 比較。為實現 Sensor-Geometry-Free (SG-Free) 設定並確保公平比較，FCAF3D 使用由 VGGT 預測的點雲進行了重新訓練。ImVoxelNet、NeRF-Det 和 MVSDet 使用由 VGGT 預測的多視圖相機位姿進行了重新訓練。我們的方法明顯優於競爭方法。</p>
+<h3 id="34">3.4 查詢驅動特徵聚合</h3>
+<p>認識到 VGGT 編碼器 [41] 在其各層中逐步將 2D 影像特徵轉換為 3D 表示，每個階段捕捉不同層級的幾何資訊，我們提出了一種查詢驅動特徵聚合 (Query-Driven Feature Aggregation, QD) 策略。
+此方法引入了一個可學習的 See-Query，它與物件查詢交互以「看到」它們的需求，並據此動態聚合多層級特徵。
+形式上，設 VGGT 編碼器從 L 個中間層產生一組特徵圖，記為 ${\mathbf{F}<em>{1},\mathbf{F}</em>{2},\dots,\mathbf{F}<em>{L}}$，其中 $\mathbf{F}</em>{i}\in\mathbb{R}^{N\times C}$ 是第 $i$ 層的特徵圖，具有 $N$ 個空間元素和 $C$ 個特徵維度。為了聚合這些多層級幾何特徵，我們引入一個可學習的 See-Query 令牌 $\mathbf{q}_{\text{see}}\in\mathbb{R}^{C}$，在所有解碼器層中共享。首先，我們展示 See-Query 如何聚合多層級特徵。See-Query 令牌首先由多層感知機 (MLP) 轉換，然後進行 softmax 歸一化，在 $L$ 個特徵圖上產生注意力權重 $\mathbf{w}\in\mathbb{R}^{L}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{w}=\textrm{Softmax}\left(\text{MLP}(\mathbf{q}<em>{\text{see}})\right),\ \mathbf{w}</em>{i}\geq 0,\ \sum_{i=1}^{L}\mathbf{w}_{i}=1.$</th>
+<th></th>
+<th>(12)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>聚合特徵 $\mathbf{F}_{\text{agg}}$ 隨後計算為多層級幾何編碼特徵的加權和：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{F}<em>{\text{agg}}=\sum</em>{i=1}^{L}\mathbf{w}<em>{i}\cdot\mathbf{F}</em>{i},$</th>
+<th></th>
+<th>(13)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbf{F}<em>{\text{agg}}\in\mathbb{R}^{N\times C}$ 作為解碼器的交叉注意力區塊的鍵和值輸入。
+接著，我們展示 See-Query 如何與物件查詢交互並被更新。
+See-Query 令牌 $\mathbf{q}</em>{\text{see}}$ 在解碼器中扮演雙重角色。首先，它與物件查詢 ${\mathbf{q}<em>{1},\mathbf{q}</em>{2},\dots,\mathbf{q}_{K}}$ 進行串接，形成統一的查詢集進行解碼：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{Q}<em>{\text{input}}=[\mathbf{q}</em>{\text{see}},\mathbf{q}<em>{1},\mathbf{q}</em>{2},\dots,\mathbf{q}_{K}]\in\mathbb{R}^{(K+1)\times C}.$</th>
+<th></th>
+<th>(14)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>此統一查詢集進行自注意力運算以在查詢間交換資訊：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{Q}<em>{\text{self}}=\text{SelfAttention}(\mathbf{Q}</em>{\text{input}}),$</th>
+<th></th>
+<th>(15)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbf{Q}<em>{\text{self}}\in\mathbb{R}^{(K+1)\times C}$。透過此步驟，See-Query 與物件查詢交互以「看到」它們的需求，然後據此從 $\mathbf{F}</em>{\text{agg}}$ 中以相關的全局多尺度上下文豐富它們。
+具體來說，See-Query 和物件查詢參與交叉注意力運算，關注聚合的幾何編碼特徵 $\mathbf{F}_{\text{agg}}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{Q}<em>{\text{cross}}=\text{CrossAttention}(\mathbf{Q}</em>{\text{self}},\mathbf{F}_{\text{agg}}),$</th>
+<th></th>
+<th>(16)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\mathbf{Q}<em>{\text{cross}}\in\mathbb{R}^{(K+1)\times C}$。此為 See-Query 和物件查詢基於階層式編碼器特徵產生更新的表示。
+在交叉注意力運算之後，更新的 See-Query 令牌 $\mathbf{q}</em>{\text{see}}^{(l)}$ 和物件查詢被傳遞到下一個解碼器層，其中過程從方程 (12) 開始重複。
+See-Query 的反覆細化實現了跨解碼器層的動態、上下文感知的多層級幾何特徵聚合引導，促進細粒度 3D 檢測。</p>
+<h2 id="4-experiments">4 Experiments</h2>
+<h3 id="41-experimental-setup">4.1 Experimental Setup</h3>
+<p>Datasets and Settings. We evaluate our method on the widely-used ScanNet [ 8 ] and ARKitScenes [ 1 ] . They cover diverse indoor environments like homes, offices, and classrooms. ScanNet includes 18 standard object categories.
+ARKitScenes consists of 17 categories. For evaluation, we report mAP@0.25, where the Mean Average Precision (mAP) is computed to assess the model’s detection performance across all categories comprehensively.</p>
+<p>Implementation Details. The pretrained VGGT encoder is frozen during training to preserve its original capabilities. In our experiments, we use 256 object queries. The model is optimized using the AdamW optimizer [ 26 ] with an initial learning rate of 2.5 × 10 − 4 2.5\times 10^{-4} and a weight decay of 1 × 10 − 4 1\times 10^{-4} . To ensure stable training, gradient clipping is applied with a maximum norm of 35 and a norm type of 2. For learning rate scheduling, we adopt a cosine annealing strategy [ 27 ] , where the learning rate gradually decays to 1 × 10 − 6 1\times 10^{-6} , facilitating smooth convergence and mitigating instability caused by abrupt changes in the learning rate. The training loss setting follows 3DETR [ 30 ] .
+In our basic backbone, we employ a naive encoded feature aggregation method, where the encoded features from the 4th, 11th, 17th, and 23rd layers (following the VGGT architecture) are sequentially queried in the decoder. These features, arranged from shallow to deep, are queried step by step to progressively refine the object representations.
+We train our models on 8×H800 GPUs, requiring approximately two days to complete.</p>
+<h3 id="42-method-analysis">4.2 Method Analysis</h3>
+<p>In this section, we present an ablation study to thoroughly analyze the contributions of our proposed designs. We progressively incorporate each design into our basic backbone to evaluate their individual effectiveness.</p>
+<p>Effect of Attention-Guided Query Generation . As shown in Tab. 2(a) , our Attention-Guided Query Generation (the second row) significantly improves the performance of the basic backbone (the first row), achieving a +2.8 point gain. This demonstrates the superiority of our Attention-Guided Query Generation compared to the FPS Sampling Generation. The gains suggest that our Attention-Guided Query Generation effectively leverages the internal semantic priors of VGGT, guiding the object queries to focus on object regions while preserving the global spatial structure of the scene.</p>
+<p>(a)</p>
+<p>Figure 5 : Visualization of validation losses. In the left subfigure, after applying AG, the GIoU loss is significantly lower than that of the baseline backbone, indicating that AG effectively improves object localization during training.
+In the right subfigure, as See-Query progressively learns, within a few epochs, to interact with object queries and to aggregate encoded geometric features effectively, the loss for ‘AG+QD’ becomes significantly lower than that for ‘AG’, highlighting the effectiveness of the proposed QD strategy.</p>
+<p>Effect of Query-Driven Feature Aggregation .
+Considering both the first and second rows in  Tab. 2(a) , which utilize the naive encoded feature aggregation strategy, the encoded features from the 4th, 11th, 17th, and 23rd layers (following the default setting of VGGT [ 41 ] ) are sequentially queried in the decoder. This straightforward strategy aggregates multi-level geometric features in a simple manner.
+In contrast, our proposed Query-Driven Feature Aggregation adaptively aggregates multi-level
+geometric features through interactions with object queries. This method achieves a notable improvement, increasing mAP@0.25 by 2.7 points, showcasing the effectiveness of the See-Query mechanism. By interacting with object queries across different decoder layers, the See-Query learns to identify which levels of encoded features are most relevant at each stage, leading to precise aggregation and significant performance gains.</p>
+<p>Figure 6 : Qualitative comparison.
+Compared with MVSDet [ 47 ] ,
+our VGGT-Det detects more objects
+with higher precision.</p>
+<p>Validating the Motivation Through Loss Dynamics .
+To deeply validate the motivation behind our technical contributions,
+we analyze the validation
+loss dynamics during training.
+Specifically, we evaluate the effects of Attention-Guided Query Generation (‘AG’)
+and its combination with Query-Driven Feature Aggregation (‘AG+QD’).
+As shown in the left subfigure of Fig. 5 , the GIoU loss with ‘AG’
+is consistently lower than that of the baseline backbone. This supports our motivation
+that attention maps effectively help object queries focus on semantic regions,
+thereby improving object localization accuracy.
+In the right subfigure, we further examine how Query-Driven Feature Aggregation (‘AG+QD’) complements ‘AG’.
+During the initial epochs, the losses of ‘AG’ and ‘AG+QD’ are similar,
+as the See-Query module is still learning to interact with object queries.
+However, after a few epochs, the loss for ‘AG+QD’ becomes significantly lower than that for ‘AG’.
+This demonstrates that the See-Query module learns to effectively aggregate encoded geometric features.
+These validation loss dynamics provide strong evidence validating our motivation and confirm
+the effectiveness of both ‘AG’ and ‘AG+QD’ in improving the model’s training.</p>
+<p>Time and Memory Analysis .
+We conducted the time and memory analysis in Tab. 2(d) . For fairness, all experiments used 40 input frames on a 1×H800 GPU, with evaluation performed on ScanNet. The table breaks down the time required to process a 3D scene.
+For methods like MVSDet [ 47 ] that are not inherently sensor-geometry-free (SG-Free), we adapt them to an SG-Free setting by using predictions (e.g., multi-view poses) from VGGT as input for training and evaluation. Thus, for MVSDet, the time and memory overhead related to the shared VGGT components are included in the analysis. VGGT computation is listed in the first row of the table, while the additional time and memory consumption of each method are shown in subsequent rows.
+Our method ‘w/ Ours’ achieve comparable time consumption to ‘w/ MVSDet’ while significantly reducing memory usage. For instance, ‘w/ Ours’ consumes only 3.57 GB of memory compared to 13.81 GB for ‘w/ MVSDet’. Moreover, our method achieves a significant 5.6 points performance improvement with 40 input frames.</p>
+<p>Performance Varies with the Number of Frames .
+We conduct an ablation study on ScanNet by feeding different numbers of frames into our model during evaluation, as shown in the Tab. 2(b) . The results demonstrate that more frames provide richer information, enabling the model to achieve higher performance. Performance saturates around 80 frames, suggesting that 80 frames are sufficient to capture most of the information needed to represent a 3D scene.</p>
+<p>Table 3 : Comparison of mAP@0.25 on ARKitScenes. To achieve Sensor-Geometry-Free (SG-Free) setting and ensure a fair comparison, ImVoxelNet [ 34 ] , NeRF-Det [ 46 ] and MVSDet [ 47 ] are retrained with multi-view camera poses predicted by VGGT. Methods lacking both results and code support for ARKitScenes (e.g., FCAF3D) are not included. Our method significantly outperforms the competitive methods.</p>
+<p>Performance under Different Feature Aggregation Methods .
+We analyze the performance of our Query-Driven Feature Aggregation by comparing it with alternative feature aggregation strategies. The results are summarized in Tab. 2(c) .
+We consider three feature aggregation methods.
+(i) In the ‘Vanilla-v1’ method, only the encoded features from the last layer of the VGGT encoder [ 41 ] are fed into the decoder. (ii) In the ‘Vanilla-v2’ method, the encoded features from four specific layers of the VGGT encoder—namely, the 4th, 11th, 17th, and 23rd layers (following VGGT [ 41 ] )—are sequentially fed into the decoder.
+(iii) Our Query-Driven Feature Aggregation (‘QD’ in Tab. 2(c) ) employs a See-Query to adaptively interact with object queries across decoder layers, thereby determining and aggregating the most relevant encoded geometric features.
+As shown in Tab. 2(c) , ‘Vanilla-v2’ achieves better performance than ‘Vanilla-v1’, demonstrating that incorporating multi-level features provides richer information. Furthermore, our Query-Driven Feature Aggregation outperforms ‘Vanilla-v2’ by 2.7 points.
+This improvement highlights the effectiveness of our design.</p>
+<p>By interacting with object queries, the See-Query learns to adaptively aggregate the most relevant geometric features, leading to significant performance gains.</p>
+<h3 id="43">4.3 與替代方案的比較</h3>
+<p>定量比較。
+表 1 展示了在 ScanNet 資料集 [ 8 ] 上不同方法的 mAP@0.25 的定量比較。值得注意的是，我們提出的 VGGT-Det 相比基準模型和具有競爭力的多視圖室內 3D 物體檢測方法 [ 32 , 46 , 47 ] 實現了顯著的效能改進。
+具體而言，通過逐步納入注意力引導查詢生成（AG）和查詢驅動特徵聚合（QD），我們的方法展示了整體 mAP 的持續上升趨勢，最終達到 46.9 的結果，比 MVSDet [ 47 ] 高 +4.4。這突顯了我們方法的有效性。
+請注意，為了將具有競爭力的方法適應相同的 SG-Free 設置以進行公平的比較，我們使用 VGGT 預測的多視圖姿態重新訓練 ImVoxelNet、NeRF-Det 和 MVSDet 的模型。
+為提供更全面的分析，我們另外與一個有代表性的點雲基礎方法 FCAF3D [ 33 ] 進行比較。
+為了將其適應相同的 SG-Free 設置以進行公平的比較，我們使用 VGGT [ 41 ] 預測的點雲重新訓練 FCAF3D 的模型。
+VGGT-Det 顯著優於 FCAF3D，提高 6.3 個百分點。
+總之，VGGT-Det 的優異效能驗證了所提設計能夠有效利用 VGGT 內部學習的先驗知識的能力。</p>
+<p>我們也在 ARKitScenes [ 1 ] 上與具有競爭力的多視圖室內 3D 物體檢測器 [ 46 , 47 ] 進行了比較，如表 3 所示。VGGT-Det 超越了最先進的 MVSDet [ 47 ]，提高 8.6 個百分點，進一步證明了我們方法的優越性。
+我們還發現，在某些類別的物體中，例如電視，通常尺寸很小、形狀細薄，或嵌入在櫥櫃或牆壁內。在沒有準確的感測器幾何作為先驗資訊的情況下，此類實例極易出現定位錯誤，導致所有現有模型的效能普遍低下。
+請注意，為了將具有競爭力的方法適應相同的 SG-Free 設置以進行公平的比較，我們使用 VGGT 預測的多視圖姿態重新訓練 ImVoxelNet、NeRF-Det 和 MVSDet 的模型。</p>
+<p>定性比較。
+定性比較結果如圖 6 所示。
+這些結果突顯了我們 VGGT-Det 的明顯優勢：相比最先進的 MVSDet [ 47 ]，它能夠一致性地檢測到更多的物體，並實現更高的檢測精度，受益於我們 AG 和 QD 模組對內部 VGGT 先驗的有效利用。</p>
+<h2 id="5">5 結論</h2>
+<p>在這項工作中，我們引入了一個更實用的設定：無感測器-幾何 3D 物件偵測（Sensor-Geometry-Free 3D object detection），該設定消除了對感測器衍生幾何輸入的依賴。
+為了應對這個設定，我們利用 VGGT encoder 來構建基於 transformer 的骨幹網路。隨後，我們提出了兩項關鍵創新：注意力引導查詢生成（Attention-Guided Query Generation）和查詢驅動特徵聚合（Query-Driven Feature Aggregation）。前者利用 VGGT 注意力機制中的內在語義先驗來生成物件查詢，有效地聚焦於物件區域，同時保持全局空間結構。
+後者透過與物件查詢的動態互動，自適應地聚合多層級的幾何特徵。
+大量實驗表明，我們的 VGGT-Det 在 ScanNet 和 ARKitScenes 上的 SG-Free 設定中明顯優於強基準方法。
+消融研究確認了我們的 AG 和 QD 有效地利用了預訓練 VGGT 中的學習先驗。</p>
+<h2 id="_1">參考文獻</h2>
+<ul>
+<li>[1] G. Baruch, Z. Chen, A. Dehghan, T. Dimry, Y. Feigin, P. Fu, T. Gebauer, B. Joffe, D. Kurz, A. Schwartz, and E. Shulman (2021) ARKitScenes - a diverse real-world dataset for 3d indoor scene understanding using mobile rgb-d data . In NeurIPS , External Links: Link Cited by: §4.1 , §4.3 .</li>
+<li>[2] E. Brachmann and C. Rother (2019) Neural-guided ransac: learning where to sample model hypotheses . In ICCV , Cited by: §2 .</li>
+<li>[3] Y. Cao, Y. Jv, and D. Xu (2024) 3dgs-det: empower 3d gaussian splatting with boundary guidance and box-focused sampling for 3d object detection . arXiv preprint arXiv:2410.01647 . Cited by: §1 , §2 .</li>
+<li>[4] Y. Cao, Y. Zeng, H. Xu, and D. Xu (2023) CoDA: collaborative novel box discovery and cross-modal alignment for open-vocabulary 3d object detection . In NeurIPS , Cited by: §1 .</li>
+<li>[5] Y. Cao, Y. Zeng, H. Xu, and D. Xu (2025) Collaborative novel object discovery and box-guided cross-modal alignment for open-vocabulary 3d object detection . TPAMI . Cited by: §1 .</li>
+<li>[6] N. Carion, F. Massa, G. Synnaeve, N. Usunier, A. Kirillov, and S. Zagoruyko (2020) End-to-end object detection with transformers . In ECCV , Cited by: §2 .</li>
+<li>[7] D. Chen, J. Li, V. Guizilini, R. A. Ambrus, and A. Gaidon (2023) Viewpoint equivariance for multi-view 3d object detection . In CVPR , Cited by: §2 .</li>
+<li>[8] A. Dai, A. X. Chang, M. Savva, M. Halber, T. Funkhouser, and M. Nießner (2017) Scannet: richly-annotated 3D reconstructions of indoor scenes . In CVPR , Cited by: §4.1 , §4.3 , §8 .</li>
+<li>[9] D. DeTone, T. Malisiewicz, and A. Rabinovich (2018) Superpoint: self-supervised interest point detection and description . In CVPRW , Cited by: §2 .</li>
+<li>[10] C. Feng, Z. Jie, Y. Zhong, X. Chu, and L. Ma (2023) Aedet: azimuth-invariant multi-view 3d object detection . In CVPR , Cited by: §2 .</li>
+<li>[11] R. Hartley and A. Zisserman (2003) Multiple view geometry in computer vision . Cambridge university press . Cited by: §2 .</li>
+<li>[12] B. Hu, J. Huang, Y. Liu, Y. Tai, and C. Tang (2023) Nerf-rpn: a general framework for object detection in nerfs . In CVPR , Cited by: §2 .</li>
+<li>[13] J. Huang, G. Huang, Z. Zhu, Y. Ye, and D. Du (2021) Bevdet: high-performance multi-camera 3d object detection in bird-eye-view . arXiv preprint arXiv:2112.11790 . Cited by: §2 .</li>
+<li>[14] B. Kerbl, G. Kopanas, T. Leimkühler, and G. Drettakis (2023) 3d gaussian splatting for real-time radiance field rendering . ACM Transactions on Graphics 42 ( 4 ), pp. 1–14 . Cited by: §2 .</li>
+<li>[15] V. Leroy, Y. Cabon, and J. Revaud (2024) Grounding image matching in 3d with mast3r . In ECCV , Cited by: §1 , §2 .</li>
+<li>[16] Y. Li, H. Bao, Z. Ge, J. Yang, J. Sun, and Z. Li (2023) Bevstereo: enhancing depth estimation in multi-view 3d object detection with temporal stereo . In AAAI , Cited by: §2 .</li>
+<li>[17] Y. Li, Z. Ge, G. Yu, J. Yang, Z. Wang, Y. Shi, J. Sun, and Z. Li (2023) Bevdepth: acquisition of reliable depth for multi-view 3d object detection . In AAAI , Cited by: §2 .</li>
+<li>[18] Z. Li, W. Wang, H. Li, E. Xie, C. Sima, T. Lu, Q. Yu, and J. Dai (2024) Bevformer: learning bird's-eye-view representation from lidar-camera via spatiotemporal transformers . TPAMI . Cited by: §2 .</li>
+<li>[19] X. Lin, T. Lin, Z. Pei, L. Huang, and Z. Su (2022) Sparse4d: multi-view 3d object detection with sparse spatial-temporal fusion . arXiv preprint arXiv:2211.10581 . Cited by: §2 .</li>
+<li>[20] X. Lin, T. Lin, Z. Pei, L. Huang, and Z. Su (2023) Sparse4d v2: recurrent temporal fusion with sparse model . arXiv preprint arXiv:2305.14018 . Cited by: §2 .</li>
+<li>[21] X. Lin, Z. Pei, T. Lin, L. Huang, and Z. Su (2023) Sparse4d v3: advancing end-to-end 3d detection and tracking . arXiv preprint arXiv:2311.11722 . Cited by: §2 .</li>
+<li>[22] P. Lindenberger, P. Sarlin, and M. Pollefeys (2023) Lightglue: local feature matching at light speed . In ICCV , Cited by: §2 .</li>
+<li>[23] H. Liu, Y. Teng, T. Lu, H. Wang, and L. Wang (2023) Sparsebev: high-performance sparse 3d object detection from multi-camera videos . In ICCV , Cited by: §2 .</li>
+<li>[24] Y. Liu, T. Wang, X. Zhang, and J. Sun (2022) Petr: position embedding transformation for multi-view 3d object detection . In ECCV , Cited by: §2 .</li>
+<li>[25] Y. Liu, J. Yan, F. Jia, S. Li, A. Gao, T. Wang, and X. Zhang (2023) Petrv2: a unified framework for 3d perception from multi-camera images . In ICCV , Cited by: §2 .</li>
+<li>[26] I. Loshchilov and F. Hutter (2017) Decoupled weight decay regularization . arXiv preprint arXiv:1711.05101 . Cited by: §4.1 .</li>
+<li>[27] I. Loshchilov and F. Hutter (2017) SGDR: stochastic gradient descent with warm restarts . In ICLR , Cited by: §4.1 .</li>
+<li>[28] D. G. Lowe (2004) Distinctive image features from scale-invariant keypoints . IJCV 60 , pp. 91–110 . Cited by: §2 .</li>
+<li>[29] B. Mildenhall, P. P. Srinivasan, M. Tancik, J. T. Barron, R. Ramamoorthi, and R. Ng (2020) NeRF: representing scenes as neural radiance fields for view synthesis . In ECCV , Cited by: §2 .</li>
+<li>[30] I. Misra, R. Girdhar, and A. Joulin (2021) An end-to-end transformer model for 3d object detection . In ICCV , Cited by: §3.2 , §4.1 .</li>
+<li>[31] J. Philion and S. Fidler (2020) Lift, splat, shoot: encoding images from arbitrary camera rigs by implicitly unprojecting to 3d . In ECCV , Cited by: §2 .</li>
+<li>[32] C. R. Qi, X. Chen, O. Litany, and L. J. Guibas (2020) ImVoteNet: boosting 3D object detection in point clouds with image votes . In CVPR , Cited by: §1 , §4.3 , §6 , §6 .</li>
+<li>[33] D. Rukhovich, A. Vorontsova, and A. Konushin (2022) Fcaf3d: fully convolutional anchor-free 3d object detection . In ECCV , Cited by: Table 1 , Table 1 , §4.3 , Table 5 , Table 5 , §6 .</li>
+<li>[34] D. Rukhovich, A. Vorontsova, and A. Konushin (2022) Imvoxelnet: image to voxels projection for monocular and multi-view general-purpose 3d object detection . In WACV , Cited by: §2 , Table 1 , Table 1 , Table 3 , Table 3 .</li>
+<li>[35] P. Sarlin, D. DeTone, T. Malisiewicz, and A. Rabinovich (2020) Superglue: learning feature matching with graph neural networks . In CVPR , Cited by: §2 .</li>
+<li>[36] G. Shen, J. Huang, Z. Hu, and B. Wang (2024-06) CN-rma: combined network with ray marching aggregation for 3d indoor object detection from multi-view images . In CVPR , Cited by: §1 , §2 .</li>
+<li>[37] B. Smart, C. Zheng, I. Laina, and V. A. Prisacariu (2024) Splatt3r: zero-shot gaussian splatting from uncalibrated image pairs . arXiv preprint arXiv:2408.13912 . Cited by: §1 .</li>
+<li>[38] J. Sun, Z. Shen, Y. Wang, H. Bao, and X. Zhou (2021) LoFTR: detector-free local feature matching with transformers . In CVPR , Cited by: §2 .</li>
+<li>[39] A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez, Ł. Kaiser, and I. Polosukhin (2017) Attention is all you need . In NeurIPS , Cited by: §3.2 .</li>
+<li>[40] F. Wang, S. Galliani, C. Vogel, P. Speciale, and M. Pollefeys (2021) Patchmatchnet: learned multi-view patchmatch stereo . In CVPR , Cited by: §2 .</li>
+<li>[41] J. Wang, M. Chen, N. Karaev, A. Vedaldi, C. Rupprecht, and D. Novotny (2025) VGGT: visual geometry grounded transformer . In CVPR , Cited by: Figure 1 , Figure 1 , §1 , §1 , Figure 2 , Figure 2 , §2 , Figure 4 , Figure 4 , §3.1 , §3.2 , §3.3 , §3.4 , §4.2 , §4.2 , §4.3 , §6 , §7 , Figure 8 , Figure 8 .</li>
+<li>[42] S. Wang, Y. Liu, T. Wang, Y. Li, and X. Zhang (2023) Exploring object-centric temporal modeling for efficient multi-view 3d object detection . In ICCV , Cited by: §2 .</li>
+<li>[43] S. Wang, V. Leroy, Y. Cabon, B. Chidlovskii, and J. Revaud (2024) Dust3r: geometric 3d vision made easy . In CVPR , Cited by: §1 , §2 .</li>
+<li>[44] Y. Wang, V. C. Guizilini, T. Zhang, Y. Wang, H. Zhao, and J. Solomon (2022) Detr3d: 3d object detection from multi-view images via 3d-to-2d queries . In CoRL , pp. 180–191 . Cited by: §2 .</li>
+<li>[45] K. Xiong, S. Gong, X. Ye, X. Tan, J. Wan, E. Ding, J. Wang, and X. Bai (2023) Cape: camera view position embedding for multi-view 3d object detection . In CVPR , Cited by: §2 .</li>
+<li>[46] C. Xu, B. Wu, J. Hou, S. Tsai, R. Li, J. Wang, W. Zhan, Z. He, P. Vajda, K. Keutzer, et al. (2023) Nerf-det: learning geometry-aware volumetric representation for multi-view 3d object detection . In ICCV , Cited by: §1 , §2 , Table 1 , Table 1 , §4.3 , §4.3 , Table 3 , Table 3 , §6 , §6 .</li>
+<li>[47] Y. Xu, C. Li, and G. H. Lee (2024) MVSDet: multi-view indoor 3d object detection via efficient plane sweeps . In NeurIPS , Cited by: §1 , §2 , Table 1 , Table 1 , Figure 6 , Figure 6 , §4.2 , §4.3 , §4.3 , §4.3 , 2(d) , Table 3 , Table 3 , Table 6 , §6 , §6 , §7 , Figure 8 , Figure 8 .</li>
+<li>[48] Z. Xue, M. Guo, H. Fan, S. Zhang, and Z. Zhang (2025) CorrBEV: multi-view 3d object detection by correlation learning with multi-modal prototypes . In CVPR , Cited by: §2 .</li>
+<li>[49] C. Yan, D. Qu, D. Xu, B. Zhao, Z. Wang, D. Wang, and X. Li (2024) Gs-slam: dense visual slam with 3d gaussian splatting . In CVPR , Cited by: §1 .</li>
+<li>[50] J. Yang, A. Sax, K. J. Liang, M. Henaff, H. Tang, A. Cao, J. Chai, F. Meier, and M. Feiszli (2025) Fast3R: towards 3d reconstruction of 1000+ images in one forward pass . arXiv preprint arXiv:2501.13928 . Cited by: §1 , §2 .</li>
+<li>[51] Y. Yao, Z. Luo, S. Li, T. Fang, and L. Quan (2018) Mvsnet: depth inference for unstructured multi-view stereo . In ECCV , Cited by: §2 , §2 .</li>
+<li>[52] Y. Yao, Z. Luo, S. Li, T. Shen, T. Fang, and L. Quan (2019) Recurrent mvsnet for high-resolution multi-view stereo depth inference . In CVPR , Cited by: §2 , §2 .</li>
+<li>[53] J. Zhang, Y. Yao, S. Li, Z. Luo, and T. Fang (2020) Visibility-aware multi-view stereo network . arXiv preprint arXiv:2008.07928 . Cited by: §2 .</li>
+</ul>
+<p>補充材料</p>
+<h2 id="6-more-ablation-studies">6 More Ablation Studies</h2>
+<p>Performance under different λ dist \lambda_{\text{dist}} .
+In this subsection, we study the impact of varying λ dist \lambda_{\text{dist}} in Eqn. ( 8 ) on the performance of our proposed Attention-Guided Query Generation (AG).
+As shown in Tab. 4 ,
+the best performance in our evaluation is obtained around λ dist = 0.8 \lambda_{\text{dist}}=0.8 .
+Intuitively, λ dist \lambda_{\text{dist}} modulates the balance between attention guidance and spatial dispersion. When λ dist \lambda_{\text{dist}} is too small, the model relies heavily on attention guidance, leading to excessive focus on specific high-attention regions while neglecting the global spatial structure. When λ dist \lambda_{\text{dist}} is too large, the spatial dispersion term dominates, reducing the influence of attention guidance.
+In summary, λ dist \lambda_{\text{dist}} controls an intuitive balance between attention guidance and spatial dispersion. The observed optimal performance around λ dist = 0.8 \lambda_{\text{dist}}=0.8 in our ablations
+aligns well with our goal of initializing queries that focus on semantic regions while preserving the
+global spatial structure.</p>
+<p>Table 4 : Performance under different λ dist \lambda_{\text{dist}} in Eqn. ( 8 ).</p>
+<p>The impact of varying levels of noise .
+In this subsection, we evaluate the robustness of our method to noise in VGGT-predicted point clouds. Because the quality of the pretrained VGGT [ 41 ] outputs is not directly controllable, we introduce controlled noise by adding Gaussian noise to the VGGT point clouds.
+Specifically, the noise is sampled from a normal distribution n ∼ 𝒩 ​ ( 0 , σ 2 ) n\sim\mathcal{N}(0,\sigma^{2}) ,
+where σ \sigma represents the standard deviation of the noise. To ensure precise and scalable noise
+intensities, σ \sigma is defined as: σ = range ⋅ noise_level \sigma=\mathrm{range}\cdot\text{noise_level} ,
+where range = max ⁡ ( P ) − min ⁡ ( P ) \mathrm{range}=\max(P)-\min(P) represents the value range of the point clouds, and noise_level ∈ [ 0 , 1 ] \text{noise_level}\in[0,1] is a user-defined parameter controlling the noise intensity.
+The noisy point cloud is generated as: P ′ = P + N P^{\prime}=P+N , where N N is the noise matrix.
+This method enables fine-grained noise control, facilitating precise evaluation of noise effects.
+We evaluate VGGT-Det on ScanNet using noisy point clouds. To provide a fair comparison, we also evaluate the representative point cloud–based method FCAF3D [ 33 ] , which likewise takes noisy point clouds as input. The results are summarized in Tab. 5 .
+As expected, the performance of both
+methods degrades as the
+noise level increases, confirming the adverse impact of noise on detection.
+However, FCAF3D starts
+to degrade significantly at a noise level of 0.001 and drops to 0.0 mAP@0.25 at 0.1,
+whereas VGGT-Det
+maintains robustness and only starts degrading at 0.1, achieving 34.1 mAP@0.25
+even at 0.3.
+At the same noise level of 0.01, VGGT-Det significantly outperforms FCAF3D by 28.3 points (47.0 vs. 18.7), demonstrating its superior robustness.</p>
+<p>This robustness stems from our Attention-Guided Query Generation, which efficiently leverages VGGT’s internal
+semantic priors to generate object queries that focus on semantically relevant regions, as illustrated
+in Fig. 7 . By reducing reliance on the precise geometric details of the predicted point clouds from VGGT,
+this mechanism effectively mitigates the impact of noise. In contrast, FCAF3D relies
+heavily on the geometric integrity of the input point clouds to extract features, making it significantly
+more susceptible to noise, as evidenced by its rapid performance degradation
+in Tab. 5 .</p>
+<p>Table 5 : Robustness under different noise levels: comparison between FCAF3D [ 33 ] and our VGGT-Det.</p>
+<p>Performance across different numbers of input frames .
+For a fair comparison, we follow the standard practice in indoor multi‑view 3D object detection (e.g., the official MVSDet implementation) by using 80 input frames. Nevertheless, our approach is not restricted to this configuration. Across different numbers of input frames, it consistently surpasses the strongest competing method, MVSDet, as shown in Tab. 6 .</p>
+<p>Table 6 : Performance across different numbers of input frames</p>
+<p>Performance gap to methods that utilize sensor geometry .
+In Tab. 8 , M1, M2, and M3 correspond to ImVoxelNet [ 32 ] , NeRF‑Det [ 46 ] , and MVSDet [ 47 ] , respectively, while “+SG” indicates methods that leverage sensor geometry. Our method achieves the highest performance in both settings—SG‑Free and SG‑Based. A noticeable gap remains between the two, which is expected since sensor‑provided geometric priors offer strong cues for detection. Nevertheless, we regard the SG‑Free setting as an important and practical regime, given that sensor geometry is often unavailable or impractical in real‑world scenarios.</p>
+<p>Table 7 : Performance gap to methods that leverage sensor geometry.</p>
+<p>More methods in efficiency analysis .
+To ensure fair comparison under the same SG‑Free setting, we train and evaluate SG‑Free variants of all models, rather than their original sensor‑geometry‑dependent versions. Specifically, multi‑view RGB images are first processed by VGGT to estimate camera poses, which are then provided to each detector. Consequently, the SG‑Free pipeline inherently includes VGGT’s runtime and memory costs, ensuring fairness in comparison.
+In Tab. 8 , M1, M2, and M3 represent ImVoxelNet [ 32 ] , NeRF‑Det [ 46 ] , and MVSDet [ 47 ] , respectively.
+As shown, our designs (+Ours) achieve inference time comparable to the strongest competitor (+MVSDet), while attaining the lowest GPU memory usage among all methods.</p>
+<p>Table 8 : Efficiency comparison with different mothods in SG-Free setting with 40 input frames.</p>
+<p>Impact of view number on efficiency .
+As shown in Tab. 9 , the time and GPU memory cost increase with more views, which is a common challenge in multi-view 3D detection.</p>
+<p>Table 9 : Efficiency comparison under different input numbers.</p>
+<p>Visualization analysis .
+To further study the effectiveness of our Attention-Guided Query Generation, we conduct a visualization analysis of both the attention maps and the positions of the generated object queries.
+As shown in Fig. 7 , the 2nd column illustrates the attention maps, which clearly highlight the object regions. This observation supports our motivation: attention can provide semantic guidance for query generation.
+In the 3rd column, we compare the generated object query positions. The red points represent the object queries generated without attention guidance, while the green points correspond to the queries generated by our Attention-Guided Query Generation. Notably, within the object regions (highlighted by green boxes), our method generates significantly more object queries (green points) compared to the baseline (red points). This demonstrates that our Attention-Guided Query Generation effectively focuses on object regions, leading to a more accurate query distribution.
+The effectiveness of our approach is further reflected in an improvement of 2.8 points in mAP@0.25, as reported in Tab. 2a of the main paper. This result highlights the direct contribution of Attention-Guided Query Generation to the overall performance.</p>
+<h2 id="7">7 與替代方案的比較</h2>
+<p>定性比較。
+我們提供與性能最佳的競爭方法 MVSDet [47] 的定性比較。為了適應無感測器幾何（Sensor-Geometry-Free, SG-Free）設定並確保公平比較，MVSDet 使用 VGGT [41] 預測的多視圖姿態進行訓練和測試。如圖 8 所示，我們的 VGGT-Det 以更高的精度檢測更多物體，這與主論文表 1 中報告的 4.4 分的顯著性能改進一致。更高的性能得益於所提出的注意力引導查詢生成（Attention-Guided Query Generation, AG）和查詢驅動特徵聚合（Query-Driven Feature Aggregation, QD）模組對內部 VGGT 先驗的有效利用。</p>
+<h2 id="8">8 訓練和測試時間</h2>
+<p>所有消融實驗均在八個 H800 GPU 上進行。在 ScanNet 資料集 [8] 上訓練我們的模型需要約 2 天的時間。在測試方面，整個 ScanNet 測試集可以在約 1 分鐘內完成處理。</p>
+<h2 id="9">9 侷限性與未來工作</h2>
+<p>儘管 VGGT-Det 相比強大的替代方法取得了顯著改進，但仍存在需要進一步探索的多個侷限性。在當前的 SG-free 管道中，VGGT 會產生明顯的執行時間和記憶體開銷。此外，由於 VGGT 產生的是標準化預測，所有當前 SG-free 管道中都利用資料集的尺度對 VGGT 的預測進行反標準化。展望未來，引入具有度量尺度預測的更輕量級的 VGGT 類似模型可以進一步推進這一方向。</p>
+<p>圖 7：注意力和生成物體查詢位置的視覺化。與沒有引導的最遠點採樣（紅點）相比，由 AG 採樣的點（綠點）更集中在物體區域（由綠色框標註），導致這些區域中綠點比紅點更多。為清楚起見，我們建議以彩色檢視圖像並放大。</p>
+<p>圖 8：與 MVSDet [47] 的定性比較。為了實現無感測器幾何（Sensor-Geometry-Free, SG-Free）設定並確保公平比較，MVSDet 使用 VGGT [41] 預測的多視圖姿態進行訓練。此處的網格未被這些方法利用，僅用於視覺化。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

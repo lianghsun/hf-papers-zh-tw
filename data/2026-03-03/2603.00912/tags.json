@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "CV"
+  ],
+  "method": [
+    "Transformer",
+    "Vision Transformer",
+    "Attention Mechanism"
+  ],
+  "task": [
+    "3D Object Detection",
+    "Multi-view Indoor Scene Understanding"
+  ],
+  "dataset": [
+    "ScanNet",
+    "ARKitScenes"
+  ],
+  "open_source": false
+}

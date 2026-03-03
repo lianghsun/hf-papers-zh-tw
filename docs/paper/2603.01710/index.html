@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>法律 RAG 基準測試：端到端的法律 RAG 基準 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-03/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-03 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">法律 RAG 基準測試：端到端的法律 RAG 基準</h1>
+  
+  <div class="en-title">Legal RAG Bench: an end-to-end benchmark for legal RAG</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Abdur-Rahman Butler, Umar Butler</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.01710" target="_blank">2603.01710</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：PDF + DotsOCR
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.01710" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.01710" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.01710" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">RAG</span><span class="tag method">Embedding Models</span><span class="tag method">LLM</span>
+    <span class="tag task">Question Answering</span><span class="tag task">Information Retrieval</span><span class="tag task">Legal Document Analysis</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># Legal RAG Bench 法律 RAG 基準測試
+
+我們介紹 Legal RAG Bench，一個用於評估法律 RAG 系統端到端性能的基準測試和評估方法論。作為基準測試，Legal RAG Bench 包含來自維多利亞州刑事罪名手冊的 4,876 個段落，以及 100 個複雜的、手工精製的問題，這些問題需要刑法和程序方面的專家知識。同時提供長文本形式的答案和支持段落。作為評估方法論，Legal RAG Bench 利用完全因子設計和新穎的分層錯誤分解框架，能夠在 RAG 中對檢索模型和推理模型的貢獻進行公正比較。我們評估了三個最先進的嵌入模型（Isaacus&#39; Kanon 2 Embedder、Google 的 Gemini Embedding 001 和 OpenAI 的 Text Embedding 3 Large）以及兩個前沿 LLM（Gemini 3.1 Pro 和 GPT-5.2），發現信息檢索是法律 RAG 性能的主要驅動因素，LLM 對正確性和根據性的影響相對較溫和。特別是 Kanon 2 Embedder 對性能的正面影響最大，將平均正確性提高 17.5 分，根據性提高 4.5 分，檢索準確度提高 34 分。我們發現許多在法律 RAG 系統中被歸因於幻覺的錯誤實際上是由檢索失敗觸發的，因此得出結論：檢索為許多現代法律 RAG 系統的性能設定了上限。我們記錄了我們為什麼以及如何構建 Legal RAG Bench 的過程，以及我們評估的結果。我們還開放發布了我們的程式碼和資料，以協助重現我們的發現。</p>
+  
+  <div class="abstract-en">We introduce Legal RAG Bench, a benchmark and evaluation methodology for assessing the end-to-end performance of legal RAG systems. As a benchmark, Legal RAG Bench consists of 4,876 passages from the Victorian Criminal Charge Book alongside 100 complex, hand-crafted questions demanding expert knowledge of criminal law and procedure. Both long-form answers and supporting passages are provided. As an evaluation methodology, Legal RAG Bench leverages a full factorial design and novel hierarchical error decomposition framework, enabling apples-to-apples comparisons of the contributions of retrieval and reasoning models in RAG. We evaluate three state-of-the-art embedding models (Isaacus&#39; Kanon 2 Embedder, Google&#39;s Gemini Embedding 001, and OpenAI&#39;s Text Embedding 3 Large) and two frontier LLMs (Gemini 3.1 Pro and GPT-5.2), finding that information retrieval is the primary driver of legal RAG performance, with LLMs exerting a more moderate effect on correctness and groundedness. Kanon 2 Embedder, in particular, had the largest positive impact on performance, improving average correctness by 17.5 points, groundedness by 4.5 points, and retrieval accuracy by 34 points. We observe that many errors attributed to hallucinations in legal RAG systems are in fact triggered by retrieval failures, concluding that retrieval sets the ceiling for the performance of many modern legal RAG systems. We document why and how we built Legal RAG Bench alongside the results of our evaluations. We also openly release our code and data to assist with reproduction of our findings.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="legal-rag-bench-rag">Legal RAG Bench：法律 RAG 的端到端基準測試</h1>
+<p>Abdur-Rahman Butler</p>
+<p>Umar Butler</p>
+<p>Isaacus</p>
+<p>2026 年 3 月 2 日</p>
+<p><strong>摘要</strong></p>
+<p>我們引入 Legal RAG Bench，一個用於評估法律 RAG 系統端到端性能的基準測試和評估方法。作為基準測試，Legal RAG Bench 包含來自維多利亞州刑事罪名彙編的 4,876 個段落，以及 100 個複雜的手工設計問題，這些問題需要刑法和程序的專家知識。同時提供長篇形式的答案和支持性段落。作為評估方法，Legal RAG Bench 利用完全因子設計和新穎的分層錯誤分解框架，使得能夠對 RAG 中檢索和推理模型的貢獻進行逐項比較。我們評估了三個最先進的嵌入模型（Isaacus 的 Kanon 2 Embedder、Google 的 Gemini Embedding 001 和 OpenAI 的 Text Embedding 3 Large）以及兩個前沿 LLM（Gemini 3.1 Pro 和 GPT-5.2），發現信息檢索是法律 RAG 性能的主要驅動力，而 LLM 對正確性和有根據性的影響較為溫和。特別是 Kanon 2 Embedder 對性能的正面影響最大，將平均正確性提高了 17.5 點，有根據性提高了 4.5 點，檢索準確度提高了 34 點。我們觀察到，許多在法律 RAG 系統中歸因於幻覺的錯誤實際上是由檢索失敗引發的，因此得出結論，檢索設定了許多現代法律 RAG 系統性能的上限。我們詳細記錄了我們為什麼以及如何建立 Legal RAG Bench，以及我們評估結果。我們也開放發布了我們的程式碼和資料，以協助再現我們的發現。</p>
+<h1 id="1">1 介紹</h1>
+<p>檢索增強生成（Retrieval-augmented generation, RAG）涉及在從語料庫檢索的當前上下文上對 LLM 進行條件化。近年來，RAG 已成為將新資訊注入到 AI 系統中最受歡迎的方法之一，尤其是在法律 AI 系統中，這些系統通常需要提高的扎根度和可驗證性。儘管法律科技業界對 RAG 的採用度很高，但適用於法律 RAG 應用的高品質端到端基準仍然相對稀缺。大多數公開基準要么針對一般應用，要么僅評估法律 RAG 的一個組件，通常是檢索或文本生成中的其中之一。更廣泛地說，許多法律 AI 基準存在標籤品質不佳、方法論和設計缺陷，以及它們聲稱要評估的內容與實際評估的內容之間普遍不匹配的問題。</p>
+<p>這種缺乏高品質端到端法律 RAG 評估的狀況意味著應用開發者往往被迫依賴只是弱相關（如果有相關的話）於現實世界性能的評估，進而降低其應用對律師和終端用戶的價值。相應地，低品質的法律基準可能導致模型開發者為了追求不切實際的「優質法律 AI」模型而犧牲現實世界的性能。</p>
+<p>因此，為了解決大多數法律 RAG 基準的不足，並提升基於法律基準構建的法律應用的整體品質，我們推出了 Legal RAG Bench，這是一個用於評估法律 RAG 系統端到端性能的新資料集和評估方法。作為資料集，Legal RAG Bench 包含來自維多利亞刑事罪名簿（Victorian Criminal Charge Book）[7] 的 4,876 段文章，以及 100 個由專家精心設計、具有實質性挑戰性的問題，這些問題需要維多利亞刑法及程序方面的專家級知識。每個問題都配有長篇答案和相應段落，能夠對檢索和答案生成性能進行聯合評估。作為方法論，Legal RAG Bench 在多個前沿檢索和生成模型上運行完全因式分解實驗，利用新穎的錯誤分類法將錯誤分解為幻覺、檢索失敗和推理失敗，然後將這些錯誤歸因於特定的模型。我們的分析確定地發現，檢索品質是端到端法律 RAG 性能的主要驅動因素，而生產法律 RAG 系統中的大多數幻覺都是由檢索失敗引起的。我們公開發布了 Legal RAG Bench 背後的資料、程式碼和結果，以支持可重複的評估。</p>
+<h1 id="2">2 相關工作</h1>
+<p>相比其他領域，法律 AI 評估仍然相對稀缺。在存在的評估中，許多存在標籤品質不佳、方法論缺陷和對其現實世界價值的有缺陷假設的問題。這些問題的根本原因往往是在基準的設計和標註中未能適當涉及和依賴法律主題專家知識的更嚴重失敗。</p>
+<h1 id="21">2.1 檢索基準</h1>
+<p>法律檢索評估領域近期沒有太大變化，除了 Massive Legal Embedding Benchmark (MLEB) [2] 在 2025 年 10 月發布之外。迄今為止，MLEB 仍然是最大、最多樣化且最全面的開源法律檢索模型基準。在介紹 MLEB 時，我們將 MLEB 的構建方式與其他流行的檢索基準進行了對比，強調了各個領域的嚴重缺陷，包括 Massive Text Embedding Benchmark (MTEB) [8] 的法律分割。</p>
+<p>例如，考慮 MTEB 中包含的 AILA Casedocs 和 AILA Statutes [1] 資料集。我們發現這些資料集是使用「自動化方法論」建立的，該方法將「某些[印度]最高法院案件中陳述的事實」與「為這些案件進行辯護的律師引用的案件和法規」配對 [1]。根據作者的說法，「實際上讓法律專家參與（例如，尋找相關的先例案件/法規）將需要大量的財務資源和時間」[1，第 4 頁]。根據對判決書撰寫方式和法律引用如何運作的基本理解，顯然在大多數情況下，僅根據引用該案件的判決書文本檢索案件的事實是不可能的，即使可能，也幾乎沒有實際價值。作為說明，儘管 <em>Donoghue v Stevenson</em> [5] 案件在事實上涉及一位梅·多諾霍夫人在飲用含有分解蝸牛的薑汁啤酒後生病的事件，但該案件已被引用並繼續在世界各地的判決書中被引用，以支持法律要點，客觀地說，這些要點與蝸牛、薑汁啤酒或多諾霍夫人絕對沒有任何關聯。</p>
+<h2 id="22-llm-rag">2.2 LLM 和 RAG 基準</h2>
+<p>類似的缺陷甚至在最流行的文本生成和 RAG 基準中也能觀察到，例如 Humanity's Last Exam (HLE) [9]，據說是「具有廣泛主題覆蓋範圍的最終閉式學術基準」，已被「由主題專家在全球開發」，成本至少為 $500,000。我們對 HLE 的法律</p>
+<hr />
+<p>子集的審查顯示，大多數示例要么不適當、框架不當，要么標籤錯誤。下面所示的問答對是一個典型例子 [3]。</p>
+<h2 id="humanitys-last-exam-6736f7bc980211368f0f94eb">Humanity's Last Exam 示例 #6736f7bc980211368f0f94eb</h2>
+<h3 id="question">Question:</h3>
+<p>Tommy brought a plot of land after retirement. Tommy split the land with his brother James in 2016.</p>
+<p>The lawyer filed and recorded 2 Deeds. There's two trailers on the land. There's two different Tax Map Numbers for the land and trailers.</p>
+<p>The land now has Lot A filed and recorded legally owned by Tommy and Lot B filed and recorded legally owned by James. Tommy number is 1234567890 and trailer 1234567890.1. Lot A</p>
+<p>James number is 0987654321 and 0987654321.1. Lot B</p>
+<p>Tommy died in 2017. Tommy's Estate had to correct Tommy' Deed as Lot A was incorrectly filed. Tommy Deed was filed and re-recorded to Lot B in 2017.</p>
+<p>Now Tommy number is 1234567890 and trailer 1234567890.1 Lot B.</p>
+<p>James took a lien out with his Deed in 2016, for Lot B.</p>
+<p>James never corrected his Deed to Lot A, as advised by his lawyer in 2017. James needed his original Deed Lot B for correction.</p>
+<p>Neither Tommy or James trailers never moved.</p>
+<p>Who owns Lot A and Lot B with what number?</p>
+<h3 id="_1">答案：</h3>
+<p>Tommy 擁有地塊 A 和地塊 B，數額為 1234567890。</p>
+<p>不僅這個問題有缺陷，而且所謂的答案也是不正確的。首先，該問題沒有提供足夠的背景資訊使其能夠被完全回答。不同司法管轄區對於財產所有權的轉讓和確認方式有不同的規則。然而，該問題既沒有說明適用的司法管轄區，也沒有提供應據以解釋的規則。其次，所謂的答案無論如何幾乎肯定是錯誤的。由於 Tommy 的遺產已更正其契約以記錄地塊 B 而非地塊 A 與其地塊相對應，Tommy 不可能同時擁有兩個地塊。</p>
+<p>未能根據提供給模型的全部背景合理推斷答案所依賴的假設，這種情況在開源法律評估資料集中普遍存在。但即使沒有明顯的標籤或方法論錯誤，基準測試所聲稱的評估內容與其實際評估內容之間仍可能存在致命的不匹配。LegalBench [6] 和 LegalBench-RAG [10] 都遭受後者的問題。儘管被宣傳為大語言模型推理和檢索能力的有價值壓力測試，但其資料中絕大多數實際上</p>
+<hr />
+<p>是由低價值、相對瑣碎的文本分類和情感分析任務組成，這些任務只需要簡單的是或否答案，其中的例子包括諸如「該條款是否描述了授予被授權人（包括再授權人）及其被授權人/再授權人的關聯企業的許可證授予？」以及「考慮 Exact Sciences Corporation 和輝瑞公司之間的 Cologuard 推廣協議；該合約是否包含任何優先購買權、優先出價權或優先談判權？」等問題。</p>
+<p>同樣地，Stanford RegLab 的 HousingQA 和 BarExamQA [12] 評估，儘管遠比 LegalBench [6] 和 LegalBench-RAG [10] 更具有意義上的挑戰性，但仍然未能實際評估其聲稱的能力。特別地，通過僅在閉式問題上評估模型，它們無法模擬真實世界法律 RAG 系統中遠為混亂的條件，在該系統中，大語言模型不僅可能無法生成連貫的答案，有時還可能產生幻覺出正確但根本上無根據的答案。作者本身在以下陳述中承認了這一不足：「我們的資料集受限於特定主題領域，並限於多項選擇答案形式，以便對下游任務進行自動評估。它們可能無法代表法律問題全部自然分佈的『現實』近似值」[12]。</p>
+<h1 id="3-dataset">3 Dataset</h1>
+<p>To address the full spectrum of problems plaguing contemporary legal RAG evaluations, we are
+introducing Legal RAG Bench, a benchmark and evaluation methodology for the robust evaluation
+of the real-world end-to-end performance of legal RAG systems.</p>
+<p>As a dataset, Legal RAG Bench consists of 4,876 passages sampled from the Judicial College of Victoria's Criminal Charge Book [7] paired with 100 complex, meaningfully challenging, hand-crafted questions demanding expert-level knowledge of Victorian criminal law and procedure to be answered correctly. In this respect, Legal RAG Bench represents the first evaluation set to assess the performance of retrieval and generative models in larger RAG systems aimed at providing practical, real-world legal advice, particularly in an under-resourced but vitally important domain, namely, criminal law.</p>
+<p>Uniquely, subject-matter expertise in law and AI informed and guided every stage of Legal RAG Bench's design and development, from the crafting of a diverse set of realistic hypothetical scenarios all the way to the selection of Victoria's Criminal Charge Book as the foundation of the benchmark given its central relevance to the day-to-day work of criminal lawyers.</p>
+<p>In constructing Legal RAG Bench, we downloaded each section of the Criminal Charge Book [7] as Microsoft Word documents and converted them into Markdown. We leveraged a complex set of heuristics to break sections up into their full hierarchy, such as chapters and subchapters, and then, where necessary, we further chunked sections using the semchunk [11] semantic chunking algorithm such that no chunk was over 512 tokens in length as determined by the Kanon legal tokenizer.</p>
+<p>After building our corpus of 4,876 passages, we randomly sampled passages, hand-crafting 100 com-
+plex, meaningfully challenging questions that, to the maximum extent possible, would require each
+of those passages alone to be answered correctly. In drafting questions, we made them as lexically
+dissimilar from relevant passages as possible in order to stress test the semantic understanding of
+evaluated models.</p>
+<p>Long-form answers were also hand-crafted for each question by subject-matter experts, yielding
+question-answer-evidence triplets for each example in Legal RAG Bench. This unique structure
+allows for the retrieval and generative components of legal RAG systems to be evaluated both in</p>
+<hr />
+<p>isolation and jointly.</p>
+<h1 id="4-evaluation">4 Evaluation</h1>
+<p>As a methodology, Legal RAG Bench constitutes the first full factorial experiment evaluating the retrieval accuracy, correctness, and groundedness of legal RAG systems, enabling empirical apples-to-apples assessments of the relative impact of retrieval and generative models on performance. Specifically, we evaluate every combination of three state-of-the-art embedding models, Isacus' Kanon 2 Embedder, Google's Gemini Embedding 001, and OpenAI's Text Embedding 3 Large, and two frontier LLMs, Gemini 3.1 Pro and GPT-5.2. These models were selected based on their popularity and purported performance at legal retrieval and reasoning. To minimize confounding variables, we use the same barebones Langchain-based [4] RAG pipeline across all models without modifying any hyperparameters from their defaults. We leverage GPT-5.2 in high reasoning mode as a “judge” to grade the performance of LLMs against answers and retrieved contexts. Our internal review of our LLM-as-a-Judge evaluation pipeline found that using GPT-5.2 in high reasoning mode as a judge resulted in 99% accuracy, which we assessed to be tolerable. We were able to achieve such high accuracy by providing our judge with a clear evaluation rubric and a simple set of binary outcomes to predict that were as unambiguous as possible.</p>
+<p>In particular, for each question i, embedding model e, and LLM l, we assessed the following evaluation dimensions:</p>
+<ol>
+<li>
+<p><strong>Correctness</strong> (<em>c</em><sub>eli</sub>): <strong>1</strong> if the model’s answer entails the reference answer; <strong>0</strong> otherwise.</p>
+</li>
+<li>
+<p><strong>Groundedness</strong> (<em>g</em><sub>eli</sub>): <strong>1</strong> if the answer is supported by the retrieved passages provided to the model (irrespective of whether those passages are actually relevant); <strong>0</strong> otherwise.</p>
+</li>
+<li>
+<p><strong>Retrieval accuracy</strong> (<em>r</em><sub>ei</sub>): <strong>1</strong> if the annotated supporting passage is retrieved by the embedding model; <strong>0</strong> otherwise.</p>
+</li>
+</ol>
+<p>Together, these three signals give visibility into the effectiveness of each component of a RAG system, making it possible to detect failure modes that would be obscured by looking only at overall RAG accuracy, such as hallucinations. Indeed, any serious evaluation of RAG performance must account for hallucinations, including hallucinations that nevertheless produce correct answers. Legal research and analysis is very much evidence-driven—the verifiability of legal conclusions is often just as important as the veracity of those conclusions, if not more so. Untrue but verifiable conclusions can always be proved to be false, yet true but unverifiable conclusions can never be proven to be true.</p>
+<p>Thus, to account for failure modes such as hallucinations that happen to yield correct answers, we further introduce a new hierarchical error decomposition taxonomy consisting of the following error types:</p>
+<ol>
+<li>
+<p><strong>Hallucination:</strong> where a generative model invents facts not in its provided context (<em>g</em><sub>eli</sub> = 0).</p>
+</li>
+<li>
+<p><strong>Retrieval error:</strong> where an embedding model fails to retrieve a relevant passage, yielding a grounded but incorrect answer from the generative model (<em>g</em><sub>eli</sub> = 1 ∧ <em>c</em><sub>eli</sub> = 0 ∧ <em>r</em><sub>ei</sub> = 0).</p>
+</li>
+<li>
+<p><strong>Reasoning error:</strong> where an embedding model retrieves a relevant passage, but the generative model nevertheless generates an incorrect answer (<em>g</em><sub>eli</sub> = 1 ∧ <em>c</em><sub>eli</sub> = 0 ∧ <em>r</em><sub>ei</sub> = 1).</p>
+</li>
+</ol>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-03/2603.01710/fig1.png" loading="lazy" alt="Figure 1"></figure>
+<p><strong>Figure 1:</strong> A flow chart representing our hierarchical RAG error decomposition taxonomy.</p>
+<p>In our taxonomy, hallucinations are deliberately treated as the first possible failure mode in a RAG pipeline, ahead even of retrieval failures, because, as previously mentioned, in the real world, hallucinated or ungrounded answers make it impossible to verify the correctness of those answers on their own. We also only recognize retrieval failures that have yielded incorrect answers because, logically, if a generative model’s response is grounded exclusively in its retrieved context and that response is a correct answer, then it follows that the retrieved context is likely to be relevant, even if it does not happen to include the specific passage Legal RAG Bench labels as most relevant given that it is possible for other passages to also be relevant.</p>
+<h1 id="5-results">5 Results</h1>
+<h2 id="51-evaluation-dimensions">5.1 Evaluation dimensions</h2>
+<p>Table 1 reports the mean correctness, groundedness, and retrieval accuracy of each evaluated combination of embedding model and LLM. Table 2 reports corresponding model-level averages where the scores of embedding models have been averaged across LLMs and vice versa for LLMs.</p>
+<hr />
+<table><thead><tr><th>LLM</th><th>Embedder</th><th>Correct. (%)</th><th>Grounded. (%)</th><th>Retrieval acc. (%)</th></tr></thead><tbody><tr><td rowspan="3">Gemini 3.1 Pro</td><td>Kanon 2 Emb.</td><td><strong>95.0</strong></td><td>95.0</td><td><strong>86.0</strong></td></tr><tr><td>Text Emb. 3 L.</td><td>77.0</td><td><strong>96.0</strong></td><td>52.0</td></tr><tr><td>Gem. Emb. 001</td><td>75.0</td><td>92.0</td><td>53.0</td></tr><tr><td rowspan="3">GPT-5.2</td><td>Kanon 2 Emb.</td><td><strong>93.0</strong></td><td><strong>97.0</strong></td><td><strong>86.0</strong></td></tr><tr><td>Text Emb. 3 L.</td><td>76.0</td><td>87.0</td><td>52.0</td></tr><tr><td>Gem. Emb. 001</td><td>73.0</td><td>82.0</td><td>53.0</td></tr></tbody></table>
+
+<p>Table 1: Dimension scores by LLM by embedding model.</p>
+<table><thead><tr><th>Model</th><th>Correctness (%)</th><th>Groundedness (%)</th><th>Retrieval accuracy (%)</th></tr></thead><tbody><tr><td><strong>Embedders</strong></td><td></td><td></td><td></td></tr><tr><td>Kanon 2 Embedder</td><td><strong>94.0</strong></td><td><strong>96.0</strong></td><td><strong>86.0</strong></td></tr><tr><td>Text Embedding 3 Large</td><td>76.5</td><td>91.5</td><td>52.0</td></tr><tr><td>Gemini Embedding 001</td><td>74.0</td><td>87.0</td><td>53.0</td></tr><tr><td><strong>LLMs</strong></td><td></td><td></td><td></td></tr><tr><td>Gemini 3.1 Pro</td><td><strong>82.3</strong></td><td><strong>94.3</strong></td><td><strong>63.7</strong></td></tr><tr><td>GPT-5.2</td><td>80.7</td><td>88.7</td><td><strong>63.7</strong></td></tr></tbody></table>
+
+<p>Table 2: Average embedding model and LLM dimension scores.</p>
+<p>From these results, it is clear that choice of embedding model, not LLM, dominates the performance of legal RAG systems. Kanon 2 Embedder, the best-performing embedding model, in particular, achieves 11.7 points higher correctness, 1.7 points higher groundedness, and 22.3 points higher retrieval accuracy than Gemini 3.1 Pro, the best-performing LLM. Switching to OpenAI’s Text Embedding 3 Large correspondingly drops correctness by 17.5 points, groundedness by 4.5 points, and retrieval accuracy by 34 points.</p>
+<p>We further observe that choice of LLM has a moderate effect on correctness and groundedness. Gemini 3.1 Pro on average achieves 1.6 points higher correctness than GPT-5.2 and 5.6 points higher groundedness. Notably, when Kanon 2 Embedder is deployed alongside Gemini 3.1 Pro and GPT-5.2, the gap in groundedness closes significantly—GPT-5.2 ends up coming 2 points ahead of Gemini 3.1 Pro. This suggests that GPT-5.2 may be much more likely to hallucinate when provided with irrelevant context.</p>
+<h2 id="52">5.2 錯誤分解</h2>
+<p>利用我們新穎的錯誤分解框架，我們超越了僅報告正確性、基礎性和檢索準確度，進一步將錯誤分解為幻覺、推理失敗和檢索失敗，如圖 2 所示。此分解允許我們三角定位錯誤的確切來源。</p>
+<h2 id="2-llm">圖 2：每個嵌入模型和 LLM 組合的分解錯誤率</h2>
+<p>我們評估中最重要的發現之一是，檢索效能不佳傾向於與幻覺增加有強烈的相關性。相對於 Text Embedding 3 Large，Gemini Embedding 001 在幻覺上平均導致 4.5 個百分點的增加。Kanon 2 Embedder 相比之下相對於其通用替代方案平均導致 6.75 個百分點的幻覺減少。我們從中推斷出，生成模型可能能夠判斷某段落何時更可能是正確的或至少是相關的，在這些情況下，它們不太可能憑空捏造新事實來幫助它們提供答案。</p>
+<p>切換生成模型對幻覺也有中等程度的影響，Gemini 3.1 Pro 的平均幻覺率為 5.7%，而 GPT-5.2 的幻覺率為 11.3%。</p>
+<p>Kanon 2 Embedder 的生成錯誤在比例上更高；然而，這可能是因為上游檢索錯誤的大幅減少將失敗轉移到 RAG 管道的生成層。換句話說，與其是檢索效能不佳的模型損害生成模型的端到端 RAG 效能，現在是效能不佳的生成模型損害高品質檢索模型的端到端 RAG 效能。</p>
+<p>我們也測量了每個模型的平均 RAG 準確度，如圖 3 所示，使得嵌入和生成模型之間的比較能夠進行等量比較。我們將 RAG 準確度定義為所有錯誤總和的補集。據我們所知，這項分析構成了迄今為止對嵌入和生成模型對端到端法律 RAG 效能影響最穩健的比較。</p>
+<hr />
+<figure class="paper-figure"><img src="../../figures/2026-03-03/2603.01710/fig3.png" loading="lazy" alt="Figure 3"></figure>
+<p>圖 3：相對於樣本平均值的模型對 RAG 準確度的影響</p>
+<p>我們的結果顯示 Kanon 2 Embedder 相對於樣本平均值提供 18% 更好的整體 RAG 準確度。GPT-5.2 和 Gemini 3.1 Pro 相比之下，分別對準確度造成 -3% 和 +3% 的影響。這些結果進一步強化了嵌入模型的選擇是 RAG 效能背後的主要驅動因素，當考慮到誤報幻覺時揭示了更為明顯的影響。</p>
+<p><strong>5.3 統計顯著性和交互效應</strong></p>
+<p>實驗可能會揭示正相關性，但沒有確立該關係是因果關係或統計上顯著的。在像我們這樣的析因實驗中，存在另一個問題：分數差異可能是由交互效應而非各個模型的獨立效能驅動的。</p>
+<p>這種交互的一個似是而非的管道在於我們樣本中所包括的嵌入和生成模型的選擇。例如，Gemini Embedding 001 可能與 Gemini 3.1 Pro 異常契合，因為兩者都是同一個模型開發商 Google 的產品。如果是這樣，我們不能簡單因為 Gemini 3.1 Pro 在該實驗中表現更好就宣稱它在 Legal RAG Bench 上普遍優於 GPT-5.2。在不同的實驗中——例如，將 Gemini Embedding 001 替換為 Cohere Embed v4 的實驗——GPT-5.2 可能反而優於 Gemini 3.1 Pro。</p>
+<p>儘管交互效應對法律評估的外部有效性構成威脅，但大多數評估者既不測試也不報告交互效應。我們獨特地恰好做到了這一點。</p>
+<p>為了量化主效應、檢驗交互效應並解釋估計不確定性，我們為 $y \in {c_{eli}, g_{eli}, b_{eli}}$ 擬合線性概率模型，其中 $b_{eli} = 1$ 如果 $c_{eli} \wedge g_{eli}$：</p>
+<p>$$
+y_{eli} = \alpha_i + \beta_e + \gamma_l + \delta_{el} + \varepsilon_{eli}.
+$$</p>
+<p>其中 $\alpha_i$ 表示問題固定效應，$\beta_e$ 和 $\gamma_l$ 是嵌入模型和 LLM 指示符，$\delta_{el}$ 捕捉嵌入器-LLM 交互效應。我們使用普通最小平方法估計我們的模型，並報告按問題聚類的聚類穩健標準誤。</p>
+<p>我們進一步報告與我們的析因設計一致的 ANOVA 風格 Wald 檢驗：</p>
+<p>• <strong>交互效應：</strong> 測試 <em>H</em>₀: <em>δ</em><sub><em>el</em></sub> = 0 適用於所有嵌入器-LLM 交互項。在我們的基準下，這是一個聯合檢驗，即非基準嵌入模型（Gemini Embedding 001 和 Kanon 2 Embedder）的 GPT-5.2 交互係數為零。</p>
+<hr />
+<p>• <strong>LLM 主效應：</strong> 在所有嵌入模型中測試從 Gemini 3.1 Pro 切換到 GPT-5.2 的平均簡單效應。</p>
+<p>• <strong>嵌入模型主效應：</strong> 相對於基準嵌入模型（Text Embedding 3 Large）並在 LLM 上平均的嵌入模型對比。具體而言，對於每個非基準嵌入模型 <em>e</em>，我們在這個平均方案下測試 <em>β</em><sub><em>e</em></sub> 是否不同於零。</p>
+<p>表 3 報告了具有問題固定效應和按問題聚類的聚類穩健標準誤的線性概率模型的 ANOVA 風格 Wald 檢驗。在所有三個結果中，嵌入模型主效應在統計上都是顯著的，表明嵌入模型的選擇佔效能變異的實質性份額。相比之下，LLM 主效應對於正確性或正確性和基礎性都無法統計上與零區分開。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>正確</th>
+<th>有根據</th>
+<th>兩者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>交互效應</td>
+<td>χ²(2) = 0.08<br>(p = 0.962)</td>
+<td>χ²(2) = <strong>8.12</strong><br>(p = <strong>0.017</strong>*)</td>
+<td>χ²(2) = 1.47<br>(p = 0.479)</td>
+</tr>
+<tr>
+<td>LLM 主效應</td>
+<td>χ²(1) = 0.46<br>(p = 0.499)</td>
+<td>χ²(1) = <strong>5.36</strong><br>(p = <strong>0.021</strong>*)</td>
+<td>χ²(1) = 2.43<br>(p = 0.119)</td>
+</tr>
+<tr>
+<td>嵌入器主效應</td>
+<td>χ²(2) = <strong>28.63</strong><br>(p &lt; <strong>0.001</strong>*)</td>
+<td>χ²(2) = <strong>8.95</strong><br>(p = <strong>0.011</strong>*)</td>
+<td>χ²(2) = <strong>32.00</strong><br>(p &lt; <strong>0.001</strong>*)</td>
+</tr>
+</tbody>
+</table>
+<p>注：星號：<em><strong>p &lt; 0.001, </strong>p &lt; 0.01, </em>p &lt; 0.05, †p &lt; 0.1。粗體表示 p &lt; 0.05。</p>
+<p>表 3：線性概率模型 $y_{eli} = \alpha_i + \beta_e + \gamma_l + \delta_{el} + \varepsilon_{eli}$ 的 ANOVA 風格 Wald χ² 檢驗，包含問題固定效應和按問題聚類的聚類穩健標準誤，分別針對 $c_{eli}$（正確）、$g_{eli}$（有根據）和 $b_{eli}$（兩者；$b_{eli} = 1$ 當且僅當 $c_{eli} = g_{eli} = 1$）報告。</p>
+<p>唯一 LLM 的選擇在平均意義上重要的結果是有根據性，其中 LLM 主效應是顯著的。有趣的是，表 3 也顯示有根據性是唯一具有可檢測嵌入模型-LLM 交互效應的指標。這意味著有根據性的差異在嵌入模型間不穩定，不應由單一全局 LLM 排名來總結。更廣泛地說，這些結果在對 RAG 管道進行基準測試時建議在主效應旁報告交互檢驗。</p>
+<table>
+<thead>
+<tr>
+<th>效應</th>
+<th>對比</th>
+<th>估計值 (pp) (SE)</th>
+<th>p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ΔLLM</td>
+<td>使用 Text Emb. 3 L.</td>
+<td><strong>-9.0 (4.2)</strong>*</td>
+<td><strong>0.031</strong></td>
+</tr>
+<tr>
+<td>ΔLLM</td>
+<td>使用 Gem. Emb. 001</td>
+<td><strong>-10.0 (4.8)</strong>*</td>
+<td><strong>0.038</strong></td>
+</tr>
+<tr>
+<td>ΔLLM</td>
+<td>使用 Kanon 2 Emb.</td>
+<td>2.0 (2.7)</td>
+<td>0.459</td>
+</tr>
+<tr>
+<td>ΔΔ</td>
+<td>Kanon 2 Emb. - Text Emb. 3 L.</td>
+<td><strong>11.0 (5.2)</strong>*</td>
+<td><strong>0.033</strong></td>
+</tr>
+<tr>
+<td>ΔΔ</td>
+<td>Kanon 2 Emb. - Gem. Emb. 001</td>
+<td><strong>12.0 (5.0)</strong>*</td>
+<td><strong>0.017</strong></td>
+</tr>
+<tr>
+<td>ΔΔ</td>
+<td>Gem. Emb. 001 - Text Emb. 3 L.</td>
+<td>-1.0 (6.2)</td>
+<td>0.871</td>
+</tr>
+</tbody>
+</table>
+<p><em>注</em>：ΔLLM 是在嵌入器內從 Gemini 3.1 Pro 切換生成器到 GPT-5.2 的簡單效應。ΔΔ 是相對於基準嵌入器（Text Embedding 3 L.）的對應差異中差異。星號：<em><strong>p &lt; 0.001, </strong>p &lt; 0.01, </em>p &lt; 0.05, †p &lt; 0.1。粗體表示 p &lt; 0.05。</p>
+<p>表 4：有根據性（$g_{eli}$）的簡單 LLM 效應和嵌入器-LLM 交互對比。</p>
+<hr />
+<p>表 4 進一步解析有根據性交互效應，通過報告每個嵌入模型的切換生成模型的簡單效應，以及相對於基準的交互對比。從 Gemini 3.1 Pro 切換到 GPT-5.2 在與 Text Embedding 3 Large 搭配時將有根據性降低 9.0 個百分點，與 Gemini Embedding 001 搭配時降低 10.0 個百分點，但與 Kanon 2 Embedder 搭配時沒有統計上可檢測的變化。交互對比表明這種異質性是由 Kanon 2 Embedder 驅動的。使用 Kanon 2 Embedder 的 LLM 切換效應比使用 Text Embedding 3 Large 的效應高出 11 個百分點，比使用 Gemini Embedding 001 的效應高出 12 個百分點，而 Text Embedding 3 Large 和 Gemini Embedding 001 沒有明顯差異。</p>
+<p>總的來說，表 3 和表 4 強化了我們的主要結論。嵌入模型的選擇是端到端法律 RAG 效能的主導和統計上最穩健的驅動因素。幻覺受檢索強烈塑造，儘管這種關係可能被嵌入模型-LLM 交互效應所掩蓋。最後，通過檢驗交互效應和主效應，我們獲得了元件級別的估計，並顯示對於正確性，嵌入模型和 LLM 效能增益在線性上是可加的。實際上，這意味著選擇在 Legal RAG Bench 上效能最佳的嵌入模型和 LLM 在分布相似的語料庫上部署這些元件時會產生可預測的改進。</p>
+<h1 id="6">6 結論</h1>
+<p>法律 RAG 系統被應用在一個地境中，其中有根據的回答與其說比正確性更重要，不如說同樣重要。可驗證的錯誤結論總是可以被証明為假的，而無法驗證的正確結論永遠無法被証明為真。隨著 RAG 變得日益不可或缺地應用於現代法律人工智慧應用中，因此從業人員依賴的法律基準不僅必須具有高品質並與真實世界的表現相關聯，而且必須評估最重要的失敗模式，包括幻覺和推理失敗。迄今為止，從業人員一直被品質不佳、方法論上不健全且與實際法律工作無關的基準所困擾。我們通過引入 Legal RAG Bench 來解決這一可靠法律 RAG 評估缺乏的問題。</p>
+<p>作為一個資料集，Legal RAG Bench 將來自維多利亞州刑事罪名簿 [7] 的 4,876 個段落與 100 個有意義且具挑戰性的專家精心設計的問題和長文本答案相配對。作為一個方法論，Legal RAG Bench 端到端地評估 RAG 管道，利用完全因子設計和新穎的分層錯誤分解分類法。實際上，Legal RAG Bench 構成了對法律 RAG 系統真實世界表現最有用和最穩健的評估之一。</p>
+<p>我們的結果明確地確立了在所有評估維度上，嵌入模型的選擇主導著 RAG 的表現。這一發現通過其統計顯著性和潛在交互效應的綜合分析得以具體體現。我們進一步確立了不佳的信息檢索往往會引發法律幻覺的增加，這表明生成模型可能察覺到何時它們正在編造事實以回答沒有相關事實的問題。因此，切換到高品質的領域調適法律嵌入模型（例如 Kanon 2 Embedder）可以將效能的上限提高到推理模型瓶頸管道的程度，而不是嵌入模型。</p>
+<p>為了透明起見，我們公開發佈了 Legal RAG Bench 的程式碼、資料和結果。我們也已將 Legal RAG Bench 加入 MLEB[2]，進一步改進了法律信息檢索評估的總體水平。我們鼓勵對我們的結果進行複製。</p>
+<hr />
+<h1 id="7">7 資料可用性</h1>
+<p>Legal RAG Bench 在 Hugging Face 上公開提供為一個資料集，網址為 https://huggingface.co/datasets/isaacus/legal-rag-bench。Legal RAG Bench 背後的程式碼可在 GitHub 上獲得，網址為 https://github.com/isaacus-dev/legal-rag-bench。最後，我們在宣佈它的部落格文章中的互動檢視器中呈現了 Legal RAG Bench 的所有結果：https://isaacus.com/blog/legal-rag-bench。</p>
+<h1 id="8">8 披露</h1>
+<p>Isaacus 是一家基礎性法律人工智慧研究公司，其創辦人為本文的作者。該公司創建了 Kanon 2 Embedder 並贊助了 Legal RAG Bench 和 MLEB [2] 的創建。</p>
+<p>參考文獻</p>
+<p>[1] Paheli Bhattacharya, Kripabandhu Ghosh, Saptarshi Ghosh, Arindam Pal, Parth Mehta, Arnab Bhattacharya, and Prasenjit Majumder. Overview of the FIRE 2019 AILA track: Artificial intelligence for legal assistance. In Parth Mehta, Paolo Rosso, Prasenjit Majumder, and Mandar Mitra, editors, Working Notes of FIRE 2019 - Forum for Information Retrieval Evaluation, Kolkata, India, December 12-15, 2019, volume 2517 of CEUR Workshop Proceedings, pages 1-12. CEUR-WS.org, 2019.</p>
+<p>[2] Umar Butler, Abdur-Rahman Butler, and Adrian Lucas Malec. The massive legal embedding benchmark (mleb), October 2025.</p>
+<p>[3] Center for AI Safety. cais/hle: Humanity's last exam (hle) dataset. Hugging Face Datasets. Accessed: 2026-03-02.</p>
+<p>[4] Harrison Chase. langchain (python package). PyPI, February 2026. Version 1.2.10.</p>
+<p>[5] Donoghue v Stevenson. Donoghue v Stevenson. Reported case, 1932. [1932] AC 562 (HL Sc].</p>
+<p>[6] Neel Guha, Julian Nyarko, Daniel E. Ho, Christopher Ré, Adam Chilton, Aditya Narayana, Alex Chohlas-Wood, Austin Peters, Brandon Waldon, Daniel N. Rockmore, Diego Zambrano, Dmitry Talisman, Enam Hoque, Faiz Surani, Frank Fagan, Galit Sarfaty, Gregory M. Dickinson, Haggai Porat, Jason Hegland, Jessica Wu, Joe Nudell, Joel Niklaus, John Nay, Jonathan H. Choi, Kevin Tobia, Margaret Hagan, Megan Ma, Michael Livermore, Nikon Rasumov-Rahe, Nils Holzenberger, Noam Kolt, Peter Henderson, Sean Rehaag, Sharad Goel, Shang Gao, Spencer Williams, Sunny Gandhi, Tom Zur, Varun Iyer, and Zehua Li. Legalbench: A collaboratively built benchmark for measuring legal reasoning in large language models, 2023.</p>
+<p>[7] Judicial College of Victoria. Victorian criminal charge book. https://resources.judicialcollege.vic.edu.au/article/1053858. Bench book. Accessed: 2025-11-27.</p>
+<p>[8] Niklas Muennighoff, Nouamane Tazi, Loïc Magne, and Nils Reimers. Mteb: Massive text embedding benchmark, 2023.</p>
+<p>[9] Long Phan et al. A benchmark of expert-level academic questions to assess ai capabilities. Nature, 649(8099):1139–1146, January 2026.</p>
+<p>[10] Nicholas Pipitone and Ghita Houir Alami. Legalbench-rag: A benchmark for retrieval-augmented generation in the legal domain, 2024.</p>
+<hr />
+<p>[{"bbox": [131, 144, 1098, 358], "category": "Text", "text": "[11] Umar Butler. semchunk: A fast, lightweight and easy-to-use python library for splitting text\ninto semantically meaningful chunks. GitHub repository, October 2025. Version v3.2.5 (commit\n6b796e3).\n\n[12] Lucia Zheng, Neel Guha, Javokhir Arifov, Sarah Zhang, Michal Skreta, Christopher D. Man-\nning, Peter Henderson, and Daniel E. Ho. A reasoning-focused legal retrieval benchmark. In\n<em>Proceedings of the Symposium on Computer Science and Law</em>, CSLAW ’25, page 169–193. ACM,\nMarch 2025."}]</p><hr><h2>圖表</h2><div class="figures-gallery"><figure class="paper-figure"><img src="../../figures/2026-03-03/2603.01710/fig2.png" loading="lazy" alt="fig2.png"></figure><figure class="paper-figure"><img src="../../figures/2026-03-03/2603.01710/fig4.png" loading="lazy" alt="fig4.png"></figure><figure class="paper-figure"><img src="../../figures/2026-03-03/2603.01710/fig5.png" loading="lazy" alt="fig5.png"></figure><figure class="paper-figure"><img src="../../figures/2026-03-03/2603.01710/fig6.png" loading="lazy" alt="fig6.png"></figure><figure class="paper-figure"><img src="../../figures/2026-03-03/2603.01710/fig7.png" loading="lazy" alt="fig7.png"></figure></div>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

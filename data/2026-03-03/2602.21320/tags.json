@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "NLP",
+    "RL"
+  ],
+  "method": [
+    "Self-play RL",
+    "LLM",
+    "Co-evolution",
+    "Reinforcement Learning"
+  ],
+  "task": [
+    "Tool-calling",
+    "Tool-learning",
+    "Agent training"
+  ],
+  "dataset": [],
+  "open_source": false
+}

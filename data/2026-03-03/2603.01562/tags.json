@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Reward Models",
+    "Rubric-guided Evaluation"
+  ],
+  "task": [
+    "Model Evaluation",
+    "LLM Alignment Assessment"
+  ],
+  "dataset": [
+    "RubricBench"
+  ],
+  "open_source": false
+}

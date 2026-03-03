@@ -1,0 +1,341 @@
+# LLaDA-o：一個有效且長度自適應的全能擴散模型
+
+我們提出 LLaDA-o，一個用於多模態理解和生成的有效且長度自適應全能擴散模型。LLaDA-o 建立在混合擴散（Mixture of Diffusion, MoD）框架之上，該框架將用於文本理解的離散遮蔽擴散與用於視覺生成的連續擴散解耦，同時通過一個共享的、簡單且高效的 attention 骨幹網路將它們耦合，該骨幹網路減少了固定條件下的冗餘計算。在 MoD 的基礎上，我們進一步引入了一個以數據為中心的長度自適應策略，使得在多模態設置中能夠進行靈活長度的解碼，而無需改變架構。廣泛的實驗表明，LLaDA-o 在多模態理解和生成基準中達到了全能擴散模型的最先進性能，並在 DPG-Bench 文本到圖像生成上達到 87.04，支持統一全能擴散建模的有效性。程式碼可在 https://github.com/ML-GSAI/LLaDA-o 取得。
+
+[FIGURE:x1.png] 圖 1：LLaDA-o 的功能概述。上圖：多模態理解範例。中圖：根據複雜提示生成的文本到圖像結果（提示詞見表 7）。下圖：與現有全能擴散模型的逐案例比較，其中 LLaDA-o 達到更強的理解性能，並生成遵循指示且具有更豐富細粒度細節的圖像。
+
+## 1 簡介
+
+遮罩擴散模型（MDMs）（Austin et al., 2021；Lou et al., 2024；Shi et al., 2024；Sahoo et al., 2024；Ou et al., 2024）最近作為自迴歸（AR）語言模型的一個有前景的替代方案而出現。
+通過並行迭代去噪遮罩標記，MDMs 展示了強大的語言建模性能（Nie et al., 2025；Ye et al., 2025；Cheng et al., 2025；Bie et al., 2025），並提供了具有吸引力的特性，例如雙向上下文建模和改進的推論並行性（Song et al., 2025；Khanna et al., 2025；Google, 2025），引起了對基於擴散的語言建模日益增長的關注。
+
+儘管取得了進展，但擴散語言模型作為多模態理解與生成全能模型的潛力仍然在很大程度上未被充分探索。
+一個關鍵挑戰是文本和圖像傾向於截然不同的擴散動力學：遮罩擴散自然地在離散語言標記上運作，而對於圖像，潛在空間中的連續擴散已成為事實上的標準（Sohl-Dickstein et al., 2015；Ho et al., 2020；Song et al., 2020b）。
+儘管存在一些嘗試（Pynadath et al., 2025；Chang et al., 2022），這些特定於模態的偏好不會輕易跨域轉移，這促使了一種混合設計，即在離散模式下建模文本，在連續模式下建模圖像。
+
+然而，在單個密集擴散模型中天真地共同訓練兩種模態通常是低效的。
+異質狀態空間和腐蝕過程可能會導致目標不匹配和梯度干擾，導致不穩定的優化和次優性能（Li et al., 2025c）。
+此外，現有的全能擴散模型（Xin et al., 2025；Li et al., 2025a；Yang et al., 2025a）通常假設固定的理解長度，限制了它們在開放式設置中的適用性。
+
+為了解決這些挑戰，我們提出了 LLaDA-o，一個基於擴散混合物（MoD）框架的有效且長度自適應的全能擴散模型。
+MoD 將特定於模態的擴散過程分解為專門的專家，同時維護一個共享的注意力主幹以進行跨模態互動。
+具體而言，它將遮罩擴散分配給文本和視覺編碼器標記的理解專家，並將連續擴散分配給視覺潛在標記的生成專家，緩解密集共同訓練中的優化衝突。
+在 MoD 的基礎上，我們進一步引入了一個高效的注意力機制和一個數據中心的長度自適應策略，在多模態設置中實現可擴展的推論和靈活長度的生成。
+
+我們從定性和定量的角度評估了 LLaDA-o。
+定性地，圖 1 顯示 LLaDA-o 實現了更強的多模態理解，並產生了比現有全能擴散模型（如 Lumina-DiMOO（Xin et al., 2025））具有更豐富的細粒度細節的圖像。
+定量地，我們在十個多模態理解基準上評估了 LLaDA-o（見表 1），其中在全能擴散模型和其他基於離散擴散的多模態方法中取得了最先進的結果。
+我們進一步在廣泛使用的 GenEval（Ghosh et al., 2023）和 DPG-Bench（Hu et al., 2024）基準上評估了文本到圖像生成，與強大的生成專用模型和統一的多模態模型相比，LLaDA-o 在 DPG-Bench 上取得了最先進的性能（87.04）。此外，我們為 LLaDA-o 提供了全面的分析。總體而言，這些結果證明了 LLaDA-o 作為統一全能擴散模型的有效性。
+
+## 2 基礎概念
+
+我們介紹擴散模型的基礎概念。
+
+### 2.1 連續擴散模型
+
+連續擴散模型（Continuous Diffusion Models, CDMs）（Sohl-Dickstein et al., 2015；Ho et al., 2020；Song et al., 2020b）構成了現代影像生成的核心典範，特別是當與擴散 Transformer（Peebles and Xie, 2023；Bao et al., 2023）結合時。概念上，CDM 指定一個前向隨機過程，逐漸將資料破壞成雜訊，並學習反轉此過程以從雜訊分佈生成樣本。此機制可以使用隨機微分方程（Song et al., 2020b）進行刻畫。在推論時，相同的動力學允許等價的常微分方程（ODE）表述，導致確定性採樣器（Song et al., 2020a；Lu et al., 2022）。此 ODE 視角進一步激發了一系列變體，包括 Rectified Flow（RF）（Liu, 2022）和 Flow Matching（Lipman et al., 2022）。
+
+特別是，RF（Liu, 2022）透過確定性線性路徑連接雜訊分佈 $\pi_{0}$ 和資料分佈 $\pi_{1}$。給定一個資料-雜訊對 $(\boldsymbol{x}_{0},\boldsymbol{x}_{1})$，時間 $t\in[0,1]$ 時的中間狀態定義為嚴格線性插值：
+
+|  | $\boldsymbol{x}_{t}=(1-t)\boldsymbol{x}_{0}+t\boldsymbol{x}_{1}.$ |  | (1) |
+| --- | --- | --- | --- |
+
+RF 學習速度場 $p_{\boldsymbol{\theta}}(\boldsymbol{x},t)$ 以匹配恆定流向 $\boldsymbol{x}_{1}-\boldsymbol{x}_{0}$，透過最小化下列目標函數：
+
+|  | $\mathcal{L}(\boldsymbol{\theta})=\mathbb{E}_{(\boldsymbol{x}_{0},\boldsymbol{x}_{1}),t}\Big[\big\|(\boldsymbol{x}_{1}-\boldsymbol{x}_{0})-p_{\boldsymbol{\theta}}(\boldsymbol{x}_{t},t)\big\|_{2}^{2}\Big].$ |  | (2) |
+| --- | --- | --- | --- |
+
+採樣對應於求解 ODE $d\boldsymbol{z}_{t}/dt=p_{\boldsymbol{\theta}}(\boldsymbol{z}_{t},t)，初始化自 $\boldsymbol{z}_{0}\sim\pi_{0}$。形式上，RF 在時間區間上對學習到的速度場進行以下積分的離散化（例如，透過 Euler 方法）：
+
+|  | $\boldsymbol{z}_{1}=\boldsymbol{z}_{0}+\int_{0}^{1}p_{\boldsymbol{\theta}}(\boldsymbol{z}_{t},t)\,dt.$ |  | (3) |
+| --- | --- | --- | --- |
+
+### 2.2 Diffusion 語言模型
+
+離散擴散模型（Discrete diffusion models）（Sohl-Dickstein et al., 2015；Austin et al., 2021）是針對離散數據（例如 token 序列）量身定製的生成模型。類似於 CDMs，它們定義了一個離散狀態的前向馬可夫過程，逐漸將數據損壞為簡單先驗，通常是 token 上的均勻分佈或吸收遮罩狀態。該模型隨後學習相應的反向動力學，以從該先驗生成離散數據。離散擴散的一個特例——遮罩擴散模型（Masked diffusion models, MDMs）（Lou et al., 2024；Shi et al., 2024；Sahoo et al., 2024；Ou et al., 2024），在語言建模中展現了強大的潛力和良好的縮放特性。
+
+[FIGURE:x2.png] 圖 2：LLaDA-o 概覽：擴散框架的混合。
+
+形式上，令 $\boldsymbol{x}_{0}=[\boldsymbol{x}^{i}]_{i=1}^{N}$ 表示 $N$ 個 token 的序列，令 [M] 表示特殊遮罩 token。在前向過程中，token 基於從 $[0,1]$ 均勻抽樣的時間步 $t$ 獨立損壞。令 $\alpha_t$ 為連續單調遞增函數，$\alpha_0=0$ 且 $\alpha_1=1$。每個 token 要麼以概率 $\alpha_t$ 保持不變，要麼以概率 $1-\alpha_t$ 被 [M] 替換，如下所示：
+
+| | $\displaystyle q_{t\|0}(\boldsymbol{x}_{t}\|\boldsymbol{x}_{0})$ | $\displaystyle=\prod_{i=0}^{N-1}q_{t\|0}(\boldsymbol{x}_{t}^{i}\|\boldsymbol{x}_{0}^{i})$ | | (4) |
+| --- | --- | --- | --- | --- |
+| | $\displaystyle q_{t\|0}(\boldsymbol{x}_{t}^{i}\|\boldsymbol{x}_{0}^{i})$ | $\displaystyle= \begin{cases} \alpha_t, & \boldsymbol{x}_{t}^{i}=\boldsymbol{x}_{0}^{i}, \\ 1-\alpha_t, & \boldsymbol{x}_{t}^{i}=\text{[M]} \end{cases}$ | | |
+
+反向過程迭代地重構序列。具體而言，考慮從時間 $t$ 到 $s$ 的轉換（其中 $0\leq s<t\leq 1$）。已預測的 token 保持固定。相反，遮罩 token 以概率 $\frac{1-\alpha_s}{1-\alpha_t}$ 保持遮罩，或以概率 $\frac{\alpha_s-\alpha_t}{1-\alpha_t}$ 基於模型預測 $p_{\boldsymbol{\theta}}(\boldsymbol{x}_{0}^{i}\|\boldsymbol{x}_{t})$ 被解碼：
+
+| | $\displaystyle q_{s\|t}(\boldsymbol{x}_{s}\|\boldsymbol{x}_{t})$ | $\displaystyle=\prod_{i=0}^{N-1}q_{s\|t}(\boldsymbol{x}_{s}^{i}\|\boldsymbol{x}_{t})$ | | (5) |
+| --- | --- | --- | --- | --- |
+| | $\displaystyle q_{s\|t}(\boldsymbol{x}_{s}^{i}\|\boldsymbol{x}_{t})$ | $\displaystyle= \begin{cases} 1, & \boldsymbol{x}_{t}^{i}\neq\text{[M]}, \boldsymbol{x}_{s}^{i}=\boldsymbol{x}_{t}^{i}, \\ \frac{1-\alpha_s}{1-\alpha_t}, & \boldsymbol{x}_{t}^{i}=\text{[M]}, \boldsymbol{x}_{s}^{i}=\text{[M]}, \\ \frac{\alpha_s-\alpha_t}{1-\alpha_t}p_{\boldsymbol{\theta}}(\boldsymbol{x}_{0}^{i}\|\boldsymbol{x}_{t}), & \boldsymbol{x}_{t}^{i}=\text{[M]}, \boldsymbol{x}_{s}^{i}\neq\text{[M]}, \\ 0, & \text{否則} \end{cases}$ | | |
+
+在推論過程中，MDM 通過迭代模擬此反向轉換來生成文本，逐漸將完全遮罩的序列轉換為連貫的文本。
+
+直觀地，MDM 充當遮罩預測器，旨在從觀察到的上文恢復遮罩 token。形式上，MDM 的訓練目標定義為：
+
+| | $\displaystyle\!\mathcal{L}(\boldsymbol{\theta})\!=\!\int_{0}^{1}\!\frac{1}{t}\mathbb{E}_{\boldsymbol{x}_{0},\boldsymbol{x}_{t}\sim q_{t\|0}}\Big[\!\sum_{i:\boldsymbol{x}_{t}^{i}=\text{[M]}}\!\!-\!\log p_{\boldsymbol{\theta}}(\boldsymbol{x}_{0}^{i}\|\boldsymbol{x}_{t})\Big]dt$ | | (6) |
+| --- | --- | --- |
+
+擴散大型語言模型（Diffusion large language models, dLLMs）（Nie et al., 2025；Ye et al., 2025）展示了遮罩擴散大規模應用的可行性，實現了具競爭力的效能，同時支持並行解碼和靈活的生成控制。
+
+## 3 方法
+
+受第 1 節討論的啟發，LLaDA-o 通過分離離散和連續模態、通過共享且高效的注意機制耦合它們，以及啟用自適應長度的訓練和推論，在單一擴散框架內統一多模態理解和生成，詳細說明如下。
+
+### 3.1 擴散混合框架
+
+LLaDA-o 的核心是一個混合擴散設計，針對離散令牌和連續視覺隱表示使用各自最優的參數化方式。
+然而，在單一密集模型中天真地共同訓練這些模態通常效果不佳（Li et al. , 2025c）：兩個分支在異質狀態空間和損壞過程上運行，這可能導致目標不匹配和梯度干擾，引發訓練衝突和次優性能。
+
+為了解決這些挑戰，我們提出了擴散混合（Mixture of Diffusion, MoD），這是一個統一的多模態擴散框架，如圖 2 所示。受模態因式分解設計的啟發（Liang et al. , 2024 ; Deng et al. , 2025），MoD 採用兩個擴散專家來解耦離散和連續模態的處理：一個理解專家，通過遮蔽擴散處理文本和視覺編碼器令牌；以及一個生成專家，通過連續擴散處理視覺隱令牌。雖然專家允許專門化處理，但它們共享同一個自注意力主幹（見第 3.2 節），以確保有效的跨模態交互。
+
+具體而言，理解專家依序整合了視覺編碼器（Zhai et al. , 2023）、輕量級雙層 MLP 和擴散語言模型（Nie et al. , 2025）。
+影像由編碼器編碼成語義視覺令牌，由 MLP 投影到語言令牌空間，並與提示令牌一起由語言模型處理。給定訓練樣本 $(\boldsymbol{v},\boldsymbol{p},\boldsymbol{r}_{0})$，其中 $\boldsymbol{v}$ 表示投影的影像令牌，$\boldsymbol{p}$ 表示提示，$\boldsymbol{r}_{0}$ 表示真實回應，整個專家被訓練以優化式（6）的變體如下：
+
+|  | $\displaystyle\mathcal{L}_{\textrm{und}}=\int_{0}^{1}\frac{1}{t}\mathbb{E}_{\begin{subarray}{c}\boldsymbol{v},\boldsymbol{p}\\
+\boldsymbol{r}_{0},\boldsymbol{r}_{t}\end{subarray}}\Bigg[\sum_{\begin{subarray}{c}i:\boldsymbol{r}_{t}^{i}=\text{[M]}\end{subarray}}-\log p_{\boldsymbol{\theta}}(\boldsymbol{r}_{0}^{i}|\boldsymbol{v},\boldsymbol{p},\boldsymbol{r}_{t})\Bigg]dt.$ |  | (7) |
+| --- | --- | --- | --- |
+
+平行地，生成專家由變分自動編碼器（VAE）（Kingma and Welling, 2013）和擴散 Transformer（Peebles and Xie, 2023）組成。
+VAE 在影像和視覺隱令牌之間映射，其參數在訓練期間保持凍結。
+給定相關變數 $(\boldsymbol{p},\boldsymbol{v}_{0},\boldsymbol{\epsilon})$，其中 $\boldsymbol{p}$ 表示提示，$\boldsymbol{v}_{0}$ 表示來自 VAE 的真實影像令牌，$\boldsymbol{\epsilon}$ 表示高斯雜訊，訓練目標遵循式（2）：
+
+|  | $\mathcal{L}_{\textrm{gen}}=\mathbb{E}_{\boldsymbol{p},\boldsymbol{\epsilon},\boldsymbol{v}_{0},\boldsymbol{v}_{t},\,t}\Big[\big\|(\boldsymbol{v}_{0}-\boldsymbol{\epsilon})-p_{\boldsymbol{\theta}}(\boldsymbol{p},\boldsymbol{v}_{t},t)\big\|_{2}^{2}\Big].$ |  | (8) |
+| --- | --- | --- | --- |
+
+值得注意的是，生成任務中的輸入影像和文本也由理解專家處理。因此，對應的參數被聯合訓練。多轉對話和交錯資料的詳細訓練協議在附錄 B.2 中提供。
+
+[FIGURE:x3.png] (a) 多模態理解
+
+### 3.2 Intra-Modality Bidirectional Attention
+
+Although MoD decouples modality-specific processing via different experts, they share a common attention backbone for cross-modality interaction. Using global attention in this setting is inefficient because it recomputes attention over the entire sequence at every denoising step, even when the condition (e.g., an input image or a text prompt) stays fixed.
+
+To this end, we propose intra-modality bidirectional attention , a simple yet efficient attention scheme tailored for MoD. In particular, we partition an input sequence into modality blocks, apply full attention within each block, and enforce causal attention across blocks. This design preserves rich intra-modality context while enabling efficient inference: conditional blocks form a fixed prefix whose Key-Value (KV) cache can be reused across denoising steps, avoiding redundant computation on long sequences.
+
+The proposed attention scheme can be implemented by introducing appropriate attention masks between modality blocks.
+As illustrated in Fig. 3 (a–c), this principle naturally accommodates different data types, including multimodal understanding, generation, and interleaved data. Besides, we use sample packing with strict isolation between samples (see Fig. 3(d) ) to prevent cross-sample interference.
+
+Compared to a representative baseline (You et al. , 2025a ) with globally bidirectional attention, our attention design achieves a 5.9 times speedup in practice (see Fig. 4 ).
+
+### 3.3 自適應長度擴增
+
+理解專家採用遮蔽擴散用於文本建模，通常在推論時假設固定的目標長度。為了實現靈活的生成而無需引入架構變更或違反樣本隔離，我們設計了一個以數據為中心的策略，稱為自適應長度擴增，與我們的注意力機制完全相容。
+
+如演算法 1 所總結的，在訓練期間，每個個別樣本中的目標回應以兩種互補的方式進行隨機擾動。概率為 $p_{\text{ext}}$ 時，會在原始回應後附加有限數量的 [EOS] 標記，使模型在不同位置接觸到明確的終止。概率為 $p_{\text{trunc}}$ 時，回應會被截斷為隨機前綴，促使模型學習從部分目標進行適當的續寫。重要的是，兩種操作都保留了嚴格的樣本隔離，不需要修改注意力結構或序列打包策略。
+
+在推論時（見附錄 B.5 中的演算法 2），我們在模態內雙向注意力下執行分塊生成（Arriola et al.，2025）：固定的條件塊（影像和提示）被快取一次，回應標記通過附加長度為 $L$ 的遮蔽塊並對其進行去噪而迭代地生成。若 [EOS] 以高信心出現，解碼終止；否則，完成的塊被快取，生成繼續進行到下一個塊。此策略在完全重用固定前綴的 KV 快取的同時，實現了高效的變長生成。
+
+相比於依賴架構修改或多樣本打包與全局雙向注意力來處理變長輸出的先前方法（Wu et al.，2025d；Kim et al.，2025；Yang et al.，2025b），我們的方法保持輕量級、與架構無關，且自然相容於樣本隔離和高效推論。
+
+[FIGURE_CAPTION] 演算法 1 自適應長度訓練
+
+[FIGURE_CAPTION] 表 1：多模態理解基準上的評估。符號 † 表示來自 LaViDa-O（Li et al.，2025a）的結果，⋆ 表示我們使用官方檢查點和推論腳本進行評估的結果。"-" 表示缺失數據，"Diff." 指擴散語言模型。值得注意的是，LLaDA-o 在基於擴散的統一多模態模型中取得了最先進的效能。
+
+## 4 實驗
+
+我們呈現實驗設置、結果和分析。
+
+### 4.1 實驗設置
+
+模型。針對理解專家，我們使用代表性的 LLaDA-8B-Instruct (Nie et al. , 2025 ) 來初始化語言模型。作為視覺編碼器，我們使用 SigLIP (Zhai et al. , 2023 )，它在許多多模態大型語言模型中展現出強大的性能，並採用隨機初始化的兩層 MLP 作為投影層。對於生成專家，我們使用與 LLaDA (Nie et al. , 2025 ) 中遮蔽預測器架構相同的 diffusion transformer 架構，並從其初始化，同時時間嵌入的額外條件參數進行隨機初始化。我們使用 FLUX (Labs, 2024 ) 的 VAE 作為生成的視覺編碼器，因為它具有強大的重建品質。
+
+訓練策略。我們分三個階段訓練 LLaDA-o，以逐步提升資料難度和生成保真度。在第一階段，我們使用大規模圖像理解資料與圖像生成資料，其中生成限制在 512 × 512 解析度以內以穩定訓練。在第二階段，我們加入多模態推理資料並重複使用第一階段的高品質圖像生成資料子集，同時將生成解析度提升至 1024 × 1024 以改進高解析度合成。值得注意的是，我們在前兩個階段不對多模態理解應用自適應長度增強。在第三階段，我們聯合應用自適應長度增強以激活理解專家的可變長度生成，並加入更多高品質圖像生成資料，使模型與靈活的文本解碼和更強的視覺生成相對齊。如需更多關於訓練策略和資料的詳細資訊，請參考附錄 B.1 。
+
+評估。我們在廣泛的基準集上評估 LLaDA-o，以反映統一多模態模型的主要需求：通用知識理解、推理和細粒度感知，以及圖像生成。對於多模態理解，我們涵蓋多學科知識 (MMMU (Yue et al. , 2024 ) 、MME (Fu et al. , 2023 ) 、SEED-Bench (Li et al. , 2023 ) 和 MMBench (Liu et al. , 2024 ) )、數學推理 (MathVerse (Zhang et al. , 2024 ) 和 MathVista (Lu et al. , 2023 ) ) 以及圖表/文件理解 (AI2D (Kembhavi et al. , 2016 ) 、ChartQA (Masry et al. , 2022 ) 、DocVQA (Mathew et al. , 2021 ) 和 InfoVQA (Mathew et al. , 2022 ) )。對於文本到圖像生成，我們使用兩個廣泛使用的基準來測試生成的互補方面：GenEval (Ghosh et al. , 2023 ) 通過物件中心檢測管道 (例如物件數量、空間關係和色彩綁定) 驗證細粒度組成屬性，以及 DPG-Bench (Hu et al. , 2024 ) 評估對冗長、資訊密集的提示的忠實呈現，具有複雜的實體關係和豐富的描述。
+
+### 4.2 基準測試結果
+
+多模態理解。我們在表 1 中將 LLaDA-o 與統一多模態模型和多模態大語言模型進行比較。值得注意的是，LLaDA-o 在全向擴散模型中取得了最先進的性能（例如 LaViDa-O (Li et al. , 2025a)），展示了 Mixture of Diffusion 的有效性。這一優勢在數學推理（例如 MathVista (Lu et al. , 2023)）和圖表/文件理解（例如 ChartQA (Masry et al. , 2022)）上尤為明顯。這些改進支持了我們的 MoD 框架的有效性。與最先進的自迴歸模型 BAGEL (Deng et al. , 2025) 相比，LLaDA-o 的整體性能較弱，這是預期的，因為 BAGEL 具有更強大的語言主幹。BAGEL 使用經過 18T tokens 訓練的 Qwen2.5-7B-Instruct (Team, 2024b)，而我們的 LLaDA-8B-Instruct (Nie et al. , 2025) 是在 2.3T tokens 上訓練的，這一差距反映在語言能力上（例如 HumanEval 上的 84.8 vs. 49.4）。儘管存在這一劣勢，LLaDA-o 仍縮小了差距；例如，在 MathVista 上，它達到了 66.1，超過了 LLaDA-V (You et al. , 2025a)（59.7）並接近 BAGEL（73.1）。我們相信隨著掩蔽擴散主幹的持續改進，MoD 將進一步提升。
+
+[FIGURE_CAPTION] 表 2：在 GenEval 基準測試上進行文本到影像生成的評估 (Ghosh et al. , 2023)。「Gen.」、「Obj.」和「Attr.」分別代表生成、物體和屬性，而「-」表示缺失資料。與最先進的統一多模態模型相比，LLaDA-o 展示了優異的性能，特別是在雙物體和顏色特定生成任務上。按照 BAGEL (Deng et al. , 2025) 和 Show-o2 (Xie et al. , 2025) 的協議，我們使用重寫的提示評估結果。
+
+[FIGURE_CAPTION] 表 3：在 DPG-Bench 上進行文本到影像生成的評估 (Hu et al. , 2024)。符號 † 表示來自 Lumina-DiMOO (Xin et al. , 2025) 的結果，「Gen.」代表生成，「-」表示缺失資料。值得注意的是，與之前僅生成和統一模型相比，LLaDA-o 取得了最先進的性能。
+
+文本到影像生成。我們在 GenEval (Ghosh et al. , 2023) 和 DPG-Bench (Hu et al. , 2024) 上針對最先進的僅生成模型和統一多模態模型評估 LLaDA-o（表 2 和 3）。在 GenEval 上，LLaDA-o 的性能優於大多數強大模型，例如 Janus-Pro (Chen et al. , 2025c) 和 SD3-Medium (Esser et al. , 2024)。儘管整體上略低於 Lumina-DiMOO (Xin et al. , 2025) 和 Mogao (Liao et al. , 2025)，但在雙物體生成和顏色綁定上表現更好。值得注意的是，在 DPG-Bench 上，LLaDA-o 取得了最先進的性能（87.04），超越了 Show-o2 (Xie et al. , 2025) 和 Lumina-DiMOO，表明對於長的、資訊密集的提示具有很強的生成品質。這些結果支持了我們的 MoD 框架在將連續擴散模型與基於 dLLM 的主幹結合以實現統一多模態生成的有效性。在定性上，圖 1 表明 LLaDA-o 相比 Lumina-DiMOO 和 LaViDa-O (Li et al. , 2025a) 生成了視覺上更具吸引力、細緻細節更豐富的影像，同時遵循了指示。
+
+我們還在附錄 C.1 中提供了額外的定性文本到影像樣本。
+
+[FIGURE_CAPTION] 表 4：置信度閾值對 MathVista 的影響。我們報告了在不同置信度閾值下的準確度（%）和吞吐量（tokens/s），塊長度固定為 64。
+
+[FIGURE:x7.png] 圖 4：MathVista 上推論效率的比較。我們通過改變 LLaDA-o 的置信度閾值和應用於 LLaDA-V 的 Fast-dLLM 的刷新間隔（$n$）來可視化吞吐量-準確度權衡。我們的方法優於 LLaDA-V，在具有可比性能的情況下實現了 $5.9\times$ 的加速。
+
+### 4.3 Further Analysis
+
+Tab. 4 and Fig. 4 analyze the inference efficiency and generation quality. Unlike autoregressive models, LLaDA-o offers the flexibility to regulate this trade-off via the confidence threshold: raising the threshold prioritizes accuracy by selecting only high-confidence tokens, while lowering it accelerates generation. Empirically, a threshold of 0.9 achieves the optimal balance. When comparing with state-of-the-art baselines on MathVista (Fig. 4 ), LLaDA-o demonstrates significant efficiency gains. Most notably, LLaDA-o delivers a 5.9 × 5.9\times speedup compared to LLaDA-V. This substantial improvement validates the effectiveness of our intra-modality bidirectional attention , which reduces computational redundancy and enables efficient inference.
+
+We provide comprehensive analysis of the variable-length behavior in Appendix C.2 , C.3 and Tab. 5 . Qualitatively, unlike LLaDA-V, which produces redundant or incomplete text depending on mismatched block settings, LLaDA-o generates content of appropriate length consistent across varying block sizes ( L ∈ { 16 , … , 128 } L\in\{16,\dots,128\} ). Quantitatively, Tab. 5 reveals that the generated length remains relatively stable: increasing the block length from 32 to 96 results in only a minor decrease in average token count (165 to 145) while improving accuracy (63.6% to 66.2%). These results demonstrate that the output length is mainly driven by the input content rather than the preset block size, confirming the effectiveness of our adaptive length augmentation .
+
+[FIGURE_CAPTION] Table 5 : Effect of block length on MathVista. We report the average number of generated tokens under different block lengths, with the confidence threshold fixed at 0.95.
+
+Finally, Tab. 6 studies the effect of each training stage on text-to-image generation. Results on GenEval and DPG-Bench improve from Stage 1 to Stage 3, with Stage 3 performing best (0.82 and 87.0), supporting the effectiveness of our multi-stage training pipeline. For completeness, we report the computational cost of our three-stage training pipeline in Appendix B.4 .
+
+[FIGURE_CAPTION] Table 6 : Text-to-image generation performance across training stages. We report the evaluation results on GenEval and DPG-Bench to demonstrate the performance progression. In this table, we use the original prompts of GenEval.
+
+## 5 Conclusion
+
+We presented LLaDA-o, a length-adaptive omni diffusion model for multimodal understanding and generation. Built on a Mixture of Diffusion framework with a shared efficient attention backbone and a data-centric adaptive length training strategy, LLaDA-o enables stable multimodal training and flexible-length generation. Experimental results demonstrate strong performance on multimodal understanding and text-to-image generation tasks. We believe that as masked diffusion models continue to advance in language modeling, LLaDA-o potentially provides a promising foundation for future omni diffusion approaches.
+
+## 參考文獻
+
+- X. An, Y. Xie, K. Yang, W. Zhang, X. Zhao, Z. Cheng, Y. Wang, S. Xu, C. Chen, D. Zhu, et al. (2025) Llava-onevision-1.5: fully open framework for democratized multimodal training . arXiv preprint arXiv:2509.23661 . 引用於: §B.1 .
+- M. Arriola, A. Gokaslan, J. T. Chiu, Z. Yang, Z. Qi, J. Han, S. S. Sahoo, and V. Kuleshov (2025) Block diffusion: interpolating between autoregressive and diffusion language models . arXiv preprint arXiv:2503.09573 . 引用於: §B.5 , §3.3 .
+- J. Austin, D. D. Johnson, J. Ho, D. Tarlow, and R. Van Den Berg (2021) Structured denoising diffusion models in discrete state-spaces . Advances in neural information processing systems 34 , pp. 17981–17993 . 引用於: §1 , §2.2 .
+- F. Bao, S. Nie, K. Xue, Y. Cao, C. Li, H. Su, and J. Zhu (2023) All are worth words: a vit backbone for diffusion models . In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 22669–22679 . 引用於: §2.1 .
+- J. Betker, G. Goh, L. Jing, T. Brooks, J. Wang, L. Li, L. Ouyang, J. Zhuang, J. Lee, Y. Guo, et al. (2023) Improving image generation with better captions . Computer Science. https://cdn. openai. com/papers/dall-e-3. pdf 2 ( 3 ), pp. 8 . 引用於: Table 2 , Table 3 .
+- T. Bie, M. Cao, K. Chen, L. Du, M. Gong, Z. Gong, Y. Gu, J. Hu, Z. Huang, Z. Lan, et al. (2025) Llada2. 0: scaling up diffusion language models to 100b . arXiv preprint arXiv:2512.15745 . 引用於: §1 .
+- H. Chang, H. Zhang, L. Jiang, C. Liu, and W. T. Freeman (2022) Maskgit: masked generative image transformer . In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 11315–11325 . 引用於: §1 .
+- J. Chen, Z. Xu, X. Pan, Y. Hu, C. Qin, T. Goldstein, L. Huang, T. Zhou, S. Xie, S. Savarese, et al. (2025a) Blip3-o: a family of fully open unified multimodal models-architecture, training and dataset . arXiv preprint arXiv:2505.09568 . 引用於: §B.1 , §B.1 .
+- J. Chen, C. Ge, E. Xie, Y. Wu, L. Yao, X. Ren, Z. Wang, P. Luo, H. Lu, and Z. Li (2024) Pixart- σ \sigma : weak-to-strong training of diffusion transformer for 4k text-to-image generation . In European Conference on Computer Vision , pp. 74–91 . 引用於: Table 3 .
+- J. Chen, J. Yu, C. Ge, L. Yao, E. Xie, Y. Wu, Z. Wang, J. Kwok, P. Luo, H. Lu, et al. (2023) Pixart- α \alpha : fast training of diffusion transformer for photorealistic text-to-image synthesis . arXiv preprint arXiv:2310.00426 . 引用於: Table 2 , Table 3 .
+- J. Chen, Z. Cai, P. Chen, S. Chen, K. Ji, X. Wang, Y. Yang, and B. Wang (2025b) ShareGPT-4o-image: aligning multimodal models with gpt-4o-level image generation . arXiv preprint arXiv:2506.18095 . 引用於: §B.1 , §B.1 .
+- X. Chen, Z. Wu, X. Liu, Z. Pan, W. Liu, Z. Xie, X. Yu, and C. Ruan (2025c) Janus-pro: unified multimodal understanding and generation with data and model scaling . arXiv preprint arXiv:2501.17811 . 引用於: Table 1 , §4.2 , Table 2 , Table 3 .
+- Z. Chen, X. Bai, Y. Shi, C. Fu, H. Zhang, H. Wang, X. Sun, Z. Zhang, L. Wang, Y. Zhang, et al. (2025d) Opengpt-4o-image: a comprehensive dataset for advanced image generation and editing . arXiv preprint arXiv:2509.24900 . 引用於: §B.1 , §B.1 .
+- S. Cheng, Y. Bian, D. Liu, L. Zhang, Q. Yao, Z. Tian, W. Wang, Q. Guo, K. Chen, B. Qi, et al. (2025) Sdar: a synergistic diffusion-autoregression paradigm for scalable sequence generation . arXiv preprint arXiv:2510.06303 . 引用於: §1 .
+- C. Deng, D. Zhu, K. Li, C. Gou, F. Li, Z. Wang, S. Zhong, W. Yu, X. Nie, Z. Song, et al. (2025) Emerging properties in unified multimodal pretraining . arXiv preprint arXiv:2505.14683 . 引用於: Appendix A , §3.1 , Table 1 , §4.2 , Table 2 , Table 2 , Table 2 , Table 3 .
+- P. Esser, S. Kulal, A. Blattmann, R. Entezari, J. Müller, H. Saini, Y. Levi, D. Lorenz, A. Sauer, F. Boesel, et al. (2024) Scaling rectified flow transformers for high-resolution image synthesis . In Forty-first international conference on machine learning , 引用於: §4.2 , Table 2 , Table 3 .
+- R. Fang, A. Yu, C. Duan, L. Huang, S. Bai, Y. Cai, K. Wang, S. Liu, X. Liu, and H. Li (2025) Flux-reason-6m & prism-bench: a million-scale text-to-image reasoning dataset and comprehensive benchmark . arXiv preprint arXiv:2509.09680 . 引用於: §B.1 .
+- C. Fu, P. Chen, Y. Shen, Y. Qin, M. Zhang, X. Lin, J. Yang, X. Zheng, K. Li, X. Sun, Y. Wu, and R. Ji (2023) MME: a comprehensive evaluation benchmark for multimodal large language models . arXiv preprint arXiv:2306.13394 . 引用於: §4.1 .
+- D. Ghosh, H. Hajishirzi, and L. Schmidt (2023) Geneval: an object-focused framework for evaluating text-to-image alignment . Advances in Neural Information Processing Systems 36 , pp. 52132–52152 . 引用於: §1 , §4.1 , §4.2 , Table 2 , Table 2 .
+- Google (2025) Gemini diffusion . External Links: Link 引用於: §1 .
+- S. Gu, J. Zhang, S. Zhou, K. Yu, Z. Xing, L. Wang, Z. Cao, J. Jia, Z. Zhang, Y. Wang, et al. (2024) Infinity-mm: scaling multimodal performance with large-scale and high-quality instruction data . arXiv preprint arXiv:2410.18558 . 引用於: §B.1 , §B.1 .
+- J. Guo, T. Zheng, Y. Li, Y. Bai, B. Li, Y. Wang, K. Zhu, G. Neubig, W. Chen, and X. Yue (2025) Mammoth-vl: eliciting multimodal reasoning with instruction tuning at scale . In Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , pp. 13869–13920 . 引用於: §B.1 .
+- J. Ho, A. Jain, and P. Abbeel (2020) Denoising diffusion probabilistic models . Advances in neural information processing systems 33 , pp. 6840–6851 . 引用於: §1 , §2.1 .
+- E. Hoogeboom, D. Nielsen, P. Jaini, P. Forré, and M. Welling (2021) Argmax flows and multinomial diffusion: learning categorical distributions . NeurIPS 34 , pp. 12454–12465 . 引用於: Appendix A .
+- X. Hu, R. Wang, Y. Fang, B. Fu, P. Cheng, and G. Yu (2024) Ella: equip diffusion models with llm for enhanced semantic alignment . arXiv preprint arXiv:2403.05135 . 引用於: §1 , §4.1 , §4.2 , Table 3 , Table 3 .
+- jackyhate (2024) Jackyhate/text-to-image-2m . 註記: https://huggingface.co/datasets/jackyhate/text-to-image-2M 引用於: §B.1 .
+- A. Kembhavi, M. Salvato, E. Kolve, M. Seo, H. Hajishirzi, and A. Farhadi (2016) A diagram is worth a dozen images . In Computer Vision–ECCV 2016: 14th European Conference, Amsterdam, The Netherlands, October 11–14, 2016, Proceedings, Part IV 14 , pp. 235–251 . 引用於: §4.1 .
+- S. Khanna, S. Kharbanda, S. Li, H. Varma, E. Wang, S. Birnbaum, Z. Luo, Y. Miraoui, A. Palrecha, S. Ermon, et al. (2025) Mercury: ultra-fast language models based on diffusion . arXiv preprint arXiv:2506.17298 1 . 引用於: §1 .
+- J. Kim, L. Cheuk-Kit, C. Domingo-Enrich, Y. Du, S. Kakade, T. Ngotiaoco, S. Chen, and M. Albergo (2025) Any-order flexible length masked diffusion . arXiv preprint arXiv:2509.01025 . 引用於: §3.3 .
+- D. P. Kingma and M. Welling (2013) Auto-encoding variational bayes . arXiv preprint arXiv:1312.6114 . 引用於: §3.1 .
+- B. F. Labs (2024) FLUX . 註記: https://github.com/black-forest-labs/flux 引用於: §4.1 , Table 2 , Table 3 .
+- B. Li, R. Wang, G. Wang, Y. Ge, Y. Ge, and Y. Shan (2023) Seed-bench: benchmarking multimodal llms with generative comprehension . arXiv preprint arXiv:2307.16125 . 引用於: §4.1 .
+- S. Li, J. Gu, K. Liu, Z. Lin, Z. Wei, A. Grover, and J. Kuen (2025a) Lavida-o: elastic large masked diffusion models for unified multimodal understanding and generation . arXiv preprint arXiv:2509.19244 . 引用於: Appendix A , Appendix A , §1 , Table 1 , Table 1 , Table 1 , §4.2 , §4.2 , Table 2 , Table 3 .
+- S. Li, K. Kallidromitis, H. Bansal, A. Gokul, Y. Kato, K. Kozuka, J. Kuen, Z. Lin, K. Chang, and A. Grover (2025b) Lavida: a large diffusion language model for multimodal understanding . arXiv preprint arXiv:2505.16839 . 引用於: Appendix A , §B.2 , Table 1 .
+- Z. Li, H. Li, Y. Shi, A. B. Farimani, Y. Kluger, L. Yang, and P. Wang (2025c) Dual diffusion for unified image generation and understanding . In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 2779–2790 . 引用於: §1 , §3.1 .
+- W. Liang, L. Yu, L. Luo, S. Iyer, N. Dong, C. Zhou, G. Ghosh, M. Lewis, W. Yih, L. Zettlemoyer, et al. (2024) Mixture-of-transformers: a sparse and scalable architecture for multi-modal foundation models . arXiv preprint arXiv:2411.04996 . 引用於: §3.1 .
+- Z. Liang, Y. Li, T. Yang, C. Wu, S. Mao, T. Nian, L. Pei, S. Zhou, X. Yang, J. Pang, et al. (2025) Discrete diffusion vla: bringing discrete diffusion to action decoding in vision-language-action policies . arXiv preprint arXiv:2508.20072 . 引用於: Appendix A .
+- C. Liao, L. Liu, X. Wang, Z. Luo, X. Zhang, W. Zhao, J. Wu, L. Li, Z. Tian, and W. Huang (2025) Mogao: an omni foundation model for interleaved multi-modal generation . arXiv preprint arXiv:2505.05472 . 引用於: Appendix A , §4.2 , Table 2 , Table 3 .
+- Y. Lipman, R. T. Chen, H. Ben-Hamu, M. Nickel, and M. Le (2022) Flow matching for generative modeling . arXiv preprint arXiv:2210.02747 . 引用於: §2.1 .
+- Q. Liu (2022) Rectified flow: a marginal preserving approach to optimal transport . arXiv preprint arXiv:2209.14577 . 引用於: §2.1 , §2.1 .
+- Y. Liu, H. Duan, Y. Zhang, B. Li, S. Zhang, W. Zhao, Y. Yuan, J. Wang, C. He, Z. Liu, et al. (2024) Mmbench: is your multi-modal model an all-around player? . In European conference on computer vision , pp. 216–233 . 引用於: §4.1 .
+- A. Lou, C. Meng, and S. Ermon (2024) Discrete diffusion modeling by estimating the ratios of the data distribution . In Forty-first International Conference on Machine Learning , 引用於: Appendix A , §1 , §2.2 .
+- C. Lu, Y. Zhou, F. Bao, J. Chen, C. Li, and J. Zhu (2022) Dpm-solver: a fast ode solver for diffusion probabilistic model sampling in around 10 steps . Advances in neural information processing systems 35 , pp. 5775–5787 . 引用於: §2.1 .
+- P. Lu, H. Bansal, T. Xia, J. Liu, C. Li, H. Hajishirzi, H. Cheng, K. Chang, M. Galley, and J. Gao (2023) Mathvista: evaluating math reasoning in visual contexts with gpt-4v, bard, and other large multimodal models . CoRR . 引用於: §4.1 , §4.2 .
+- J. Ma, X. Zhu, Z. Pan, Q. Peng, X. Guo, C. Chen, and H. Lu (2025) X2edit: revisiting arbitrary-instruction image editing through self-constructed data and task-aware representation learning . arXiv preprint arXiv:2508.07607 . 引用於: §B.1 , §B.1 .
+- A. Masry, D. X. Long, J. Q. Tan, S. Joty, and E. Hoque (2022) Chartqa: a benchmark for question answering about charts with visual and logical reasoning . arXiv preprint arXiv:2203.10244 . 引用於: §4.1 , §4.2 .
+- M. Mathew, V. Bagal, R. Tito, D. Karatzas, E. Valveny, and C. Jawahar (2022) Infographicvqa . In Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision , pp. 1697–1706 . 引用於: §4.1 .
+- M. Mathew, D. Karatzas, and C. Jawahar (2021) Docvqa: a dataset for vqa on document images . In Proceedings of the IEEE/CVF winter conference on applications of computer vision , pp. 2200–2209 . 引用於: §4.1 .
+- J. Meyer, N. Padgett, C. Miller, and L. Exline (2024) Public domain 12m: a highly aesthetic image-text dataset with novel governance mechanisms . arXiv preprint arXiv:2410.23144 . 引用於: §B.1 , §B.1 .
+- S. Nie, F. Zhu, Z. You, X. Zhang, J. Ou, J. Hu, J. Zhou, Y. Lin, J. Wen, and C. Li (2025) Large language diffusion models . arXiv preprint arXiv:2502.09992 . 引用於: Appendix A , Appendix A , §B.2 , §1 , §2.2 , §3.1 , §4.1 , §4.2 .
+- J. Ou, J. Han, M. Xu, S. Xu, J. Xie, S. Ermon, Y. Wu, and C. Li (2025) Principled rl for diffusion llms emerges from a sequence-level perspective . arXiv preprint arXiv:2512.03759 . 引用於: Appendix A .
+- J. Ou, S. Nie, K. Xue, F. Zhu, J. Sun, Z. Li, and C. Li (2024) Your absorbing discrete diffusion secretly models the conditional distributions of clean data . arXiv preprint arXiv:2406.03736 . 引用於: Appendix A , §1 , §2.2 .
+- W. Peebles and S. Xie (2023) Scalable diffusion models with transformers . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 4195–4205 . 引用於: §2.1 , §3.1 .
+- P. Pynadath, J. Shi, and R. Zhang (2025) Candi: hybrid discrete-continuous diffusion models . arXiv preprint arXiv:2510.22510 . 引用於: §1 .
+- S. S. Sahoo, M. Arriola, Y. Schiff, A. Gokaslan, E. Marroquin, J. T. Chiu, A. Rush, and V. Kuleshov (2024) Simple and effective masked diffusion language models . arXiv preprint arXiv:2406.07524 . 引用於: Appendix A , §1 , §2.2 .
+- J. Shi, K. Han, Z. Wang, A. Doucet, and M. K. Titsias (2024) Simplified and generalized masked diffusion for discrete data . arXiv preprint arXiv:2406.04329 . 引用於: Appendix A , §1 , §2.2 .
+- J. Sohl-Dickstein, E. Weiss, N. Maheswaranathan, and S. Ganguli (2015) Deep unsupervised learning using nonequilibrium thermodynamics . In International conference on machine learning , pp. 2256–2265 . 引用於: Appendix A , §1 , §2.1 , §2.2 .
+- J. Song, C. Meng, and S. Ermon (2020a) Denoising diffusion implicit models . arXiv preprint arXiv:2010.02502 . 引用於: §2.1 .
+- Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B. Poole (2020b) Score-based generative modeling through stochastic differential equations . arXiv preprint arXiv:2011.13456 . 引用於: §1 , §2.1 .
+- Y. Song, Z. Zhang, C. Luo, P. Gao, F. Xia, H. Luo, Z. Li, Y. Yang, H. Yu, X. Qu, et al. (2025) Seed diffusion: a large-scale diffusion language model with high-speed inference . arXiv preprint arXiv:2508.02193 . 引用於: §1 .
+- A. Swerdlow, M. Prabhudesai, S. Gandhi, D. Pathak, and K. Fragkiadaki (2025) Unified multimodal discrete diffusion . arXiv preprint arXiv:2503.20853 . 引用於: Appendix A .
+- C. Team (2024a) Chameleon: mixed-modal early-fusion foundation models . arXiv preprint arXiv:2405.09818 . 引用於: Appendix A .
+- Q. Team (2024b) Qwen2.5: a party of foundation models . External Links: Link 引用於: §4.2 .
+- S. Tong, D. Fan, J. Li, Y. Xiong, X. Chen, K. Sinha, M. Rabbat, Y. LeCun, S. Xie, and Z. Liu (2025) Metamorph: multimodal understanding and generation via instruction tuning . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 17001–17012 . 引用於: Appendix A , Table 1 .
+- X. Wang, X. Zhang, Z. Luo, Q. Sun, Y. Cui, J. Wang, F. Zhang, Y. Wang, Z. Li, Q. Yu, et al. (2024) Emu3: next-token prediction is all you need . arXiv preprint arXiv:2409.18869 . 引用於: Appendix A , Table 1 , Table 2 , Table 3 .
+- J. Wen, M. Zhu, J. Liu, Z. Liu, Y. Yang, L. Zhang, S. Zhang, Y. Zhu, and Y. Xu (2025a) Dvla: diffusion vision-language-action model with multimodal chain-of-thought . arXiv preprint arXiv:2509.25681 . 引用於: Appendix A .
+- Y. Wen, H. Li, K. Gu, Y. Zhao, T. Wang, and X. Sun (2025b) Llada-vla: vision language diffusion action models . arXiv preprint arXiv:2509.06932 . 引用於: Appendix A .
+- C. Wu, J. Li, J. Zhou, J. Lin, K. Gao, K. Yan, S. Yin, S. Bai, X. Xu, Y. Chen, et al. (2025a) Qwen-image technical report . arXiv preprint arXiv:2508.02324 . 引用於: §B.1 .
+- C. Wu, X. Chen, Z. Wu, Y. Ma, X. Liu, Z. Pan, W. Liu, Z. Xie, X. Yu, C. Ruan, et al. (2025b) Janus: decoupling visual encoding for unified multimodal understanding and generation . In Proceedings of the Computer Vision and Pattern Recognition Conference , pp. 12966–12977 . 引用於: Table 2 , Table 3 .
+- C. Wu, P. Zheng, R. Yan, S. Xiao, X. Luo, Y. Wang, W. Li, X. Jiang, Y. Liu, J. Zhou, et al. (2025c) OmniGen2: exploration to advanced multimodal generation . arXiv preprint arXiv:2506.18871 . 引用於: §B.1 .
+- Z. Wu, L. Zheng, Z. Xie, J. Ye, J. Gao, Y. Feng, Z. Li, V. W., G. Zhou, and L. Kong (2025d) DreamOn: diffusion language models for code infilling beyond fixed-size canvas . External Links: Link 引用於: §3.3 .
+- J. Xie, W. Mao, Z. Bai, D. J. Zhang, W. Wang, K. Q. Lin, Y. Gu, Z. Chen, Z. Yang, and M. Z. Shou (2024) Show-o: one single transformer to unify multimodal understanding and generation . arXiv preprint arXiv:2408.12528 . 引用於: Appendix A , Table 1 , Table 2 , Table 3 .
+- J. Xie, Z. Yang, and M. Z. Shou (2025) Show-o2: improved native unified multimodal models . arXiv preprint arXiv:2506.15564 . 引用於: Table 1 , §4.2 , Table 2 , Table 2 , Table 2 , Table 3 .
+- Y. Xin, Q. Qin, S. Luo, K. Zhu, J. Yan, Y. Tai, J. Lei, Y. Cao, K. Wang, Y. Wang, et al. (2025) Lumina-dimoo: an omni diffusion large language model for multi-modal generation and understanding . arXiv preprint arXiv:2510.06308 . 引用於: Appendix A , Appendix A , §1 , §1 , Table 1 , §4.2 , Table 2 , Table 3 , Table 3 , Table 3 .
+- L. Yang, Y. Tian, B. Li, X. Zhang, K. Shen, Y. Tong, and M. Wang (2025a) Mmada: multimodal large diffusion language models . arXiv preprint arXiv:2505.15809 . 引用於: Appendix A , Appendix A , §1 , Table 1 , Table 2 , Table 3 .
+- Y. Yang, C. Wang, S. Wang, Z. Wen, B. Qi, H. Xu, and L. Zhang (2025b) Diffusion llm with native variable generation lengths: let [eos] lead the way . arXiv preprint arXiv:2510.24605 . 引用於: §3.3 .
+- J. Ye, Z. Xie, L. Zheng, J. Gao, Z. Wu, X. Jiang, Z. Li, and L. Kong (2025) Dream 7b: diffusion large language models . arXiv preprint arXiv:2508.15487 . 引用於: Appendix A , Appendix A , §1 , §2.2 .
+- Z. You, S. Nie, X. Zhang, J. Hu, J. Zhou, Z. Lu, J. Wen, and C. Li (2025a) Llada-v: large language diffusion models with visual instruction tuning . arXiv preprint arXiv:2505.16933 . 引用於: Appendix A , §B.2 , §3.2 , Table 1 , §4.2 .
+- Z. You, J. Ou, X. Zhang, J. Hu, J. Zhou, and C. Li (2025b) Effective and efficient masked image generation models . arXiv preprint arXiv:2503.07197 . 引用於: Appendix A .
+- R. Yu, X. Ma, and X. Wang (2025) Dimple: discrete diffusion multimodal large language model with parallel decoding . arXiv preprint arXiv:2505.16990 . 引用於: Appendix A , §B.2 , Table 1 .
+- X. Yue, Y. Ni, K. Zhang, T. Zheng, R. Liu, G. Zhang, S. Stevens, D. Jiang, W. Ren, Y. Sun, et al. (2024) Mmmu: a massive multi-discipline multimodal understanding and reasoning benchmark for expert agi . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 9556–9567 . 引用於: §4.1 .
+- X. Zhai, B. Mustafa, A. Kolesnikov, and L. Beyer (2023) Sigmoid loss for language image pre-training . In Proceedings of the IEEE/CVF international conference on computer vision , pp. 11975–11986 . 引用於: §3.1 , §4.1 .
+- H. Zhang, Z. Duan, X. Wang, Y. Zhao, W. Lu, Z. Di, Y. Xu, Y. Chen, and Y. Zhang (2025a) Nexus-gen: a unified model for image understanding, generation, and editing . arXiv preprint arXiv:2504.21356 . 引用於: §B.1 .
+- R. Zhang, D. Jiang, Y. Zhang, H. Lin, Z. Guo, P. Qiu, A. Zhou, P. Lu, K. Chang, Y. Qiao, et al. (2024) Mathverse: does your multi-modal llm truly see the diagrams in visual math problems? . In European Conference on Computer Vision , pp. 169–186 . 引用於: §4.1 .
+- Y. Zhang, B. Ni, X. Chen, H. Zhang, Y. Rao, H. Peng, Q. Lu, H. Hu, M. Guo, and S. Hu (2025b) Bee: a high-quality corpus and full-stack suite to unlock advanced fully open mllms . arXiv preprint arXiv:2510.13795 . 引用於: §B.1 , §B.1 .
+- S. Zhao, D. Gupta, Q. Zheng, and A. Grover (2025) D1: scaling reasoning in diffusion large language models via reinforcement learning . arXiv preprint arXiv:2504.12216 . 引用於: Appendix A .
+- C. Zhou, L. Yu, A. Babu, K. Tirumala, M. Yasunaga, L. Shamis, J. Kahn, X. Ma, L. Zettlemoyer, and O. Levy (2024) Transfusion: predict the next token and diffuse images with one multi-modal model . arXiv preprint arXiv:2408.11039 . 引用於: Appendix
+
+## 附錄 A 相關工作
+
+**擴散大語言模型。** 最近，擴散大語言模型（dLLMs）（Nie et al. , 2025 ; Ye et al. , 2025 ; Zhu et al. , 2025b）基於遮蔽擴散模型（MDMs）（Ou et al. , 2024 ; Lou et al. , 2024 ; Shi et al. , 2024 ; Sahoo et al. , 2024 ; You et al. , 2025b）而出現，而遮蔽擴散模型是離散擴散模型的特殊情形（Sohl-Dickstein et al. , 2015 ; Hoogeboom et al. , 2021）。透過大規模預訓練和監督式微調，這些模型已達到與強大的自迴歸模型（例如 LLaMA3）相當的性能。這展示了 dLLMs 作為 ARMs 替代方案的實用性和強大潛力。除了文本生成之外，dLLMs 在各個領域也取得了顯著進展，包括多模態理解（You et al. , 2025a ; Yu et al. , 2025 ; Li et al. , 2025b）、音訊理解（Zhou et al. , 2025）、強化學習（Zhu et al. , 2025a ; Zhao et al. , 2025 ; Ou et al. , 2025）以及視覺語言行動任務（Wen et al. , 2025b , a ; Liang et al. , 2025）。與我們工作最相關的是統一多模態模型（Li et al. , 2025a ; Xin et al. , 2025 ; Yang et al. , 2025a）。然而，與這些依賴遮蔽擴散模型的方法不同，我們使用連續擴散模型進行影像生成，從而避免了影像離散化造成的資訊損失。
+
+統一多模態模型最初由自迴歸架構主導（Team, 2024a ; Wang et al. , 2024），該架構透過統一的下一個令牌預測利用與 LLMs 的結構一致性。隨後，混合方法結合了自迴歸文本處理與擴散型影像生成（Zhou et al. , 2024 ; Xie et al. , 2024 ; Tong et al. , 2025 ; Liao et al. , 2025 ; Deng et al. , 2025）。同時，擴散大語言模型（dLLMs）（Nie et al. , 2025 ; Ye et al. , 2025 ; Zhu et al. , 2025b）透過大規模預訓練和監督式微調達到了與強大自迴歸模型相當的性能。基於此成功，最近的基於 dLLM 的統一多模態模型（Li et al. , 2025a ; Xin et al. , 2025 ; Yang et al. , 2025a ; Swerdlow et al. , 2025）為多模態理解和生成都採用了遮蔽擴散機制。
+
+## 附錄 B 實驗詳情
+
+### B.1 訓練階段和資料設置
+
+LLaDA-o 的訓練包括一個初步對齐階段，隨後進行三個漸進式階段。
+
+投影機對齐。在主要訓練之前，我們聚焦於將視覺表示與理解專家對齐。我們使用來自 Infinity-MM（Gu et al., 2024）的第 1 階段資料訓練 MLP 投影機，同時保持所有其他元件凍結。
+
+**第 1 階段：基礎設置**。在此階段，我們使用大規模圖像理解和生成資料建立基準能力。我們將圖像生成限制在 512 × 512 的解析度，並且不針對多模態理解應用自適應長度增強。
+對於文字，我們使用一個內部的 1000 萬 SFT 資料集。
+對於多模態理解，我們利用來自 Infinity-MM（Gu et al., 2024）、MAmmoTH-VL-Instruct-12M（Guo et al., 2025）、LLaVA-OneVision-1.5（An et al., 2025）和 FineVision（An et al., 2025）的第 2-4 階段資料。
+對於文字轉圖像生成，我們結合圖像描述資料（來自 Infinity-MM（Gu et al., 2024）和 LLaVA-OneVision-1.5（An et al., 2025））與生成資料集，包括 PD12M（Meyer et al., 2024）、Text-to-Image-2M（jackyhate, 2024）、BLIP3o-Pretrain（Chen et al., 2025a）、Nexus-Gen（Zhang et al., 2025a）、FLUX-Reason-6M（Fang et al., 2025）和來自 Qwen-Image（Wu et al., 2025a）的合成資料。
+
+**第 2 階段：高解析度和推理**。我們進一步融入多模態推理資料，並將生成解析度增加到 1024 × 1024。自適應長度增強對於理解任務保持禁用。
+在資料方面，我們將理解來源切換至 Honey-Data-15M（Zhang et al., 2025b）。
+對於生成，我們透過移除圖像描述和 PD12M（Meyer et al., 2024）來精煉資料集，同時增加剩餘高品質資料的取樣比例。
+另外，我們引入來自 X2Edit（Ma et al., 2025）和 OmniGen2（Wu et al., 2025c）的交錯多模態資料，以及來自 ShareGPT-4o-Image（Chen et al., 2025b）和 OpenGPT-4o-Image（Chen et al., 2025d）的編輯資料。文字資料保持不變。
+
+**第 3 階段：可變長度精煉**。在最後階段，我們聯合應用自適應長度增強來啟用理解專家的可變長度生成，並使用高品質資料微調模型。
+對於理解，我們納入 Honey-Data-1M，並以較低的比例保留 Honey-Data-15M（Zhang et al., 2025b）。
+對於生成，我們新增高級資料集，包括 ShareGPT-4o-Image（Chen et al., 2025b）、OpenGPT-4o-Image（Chen et al., 2025d）、BLIP3o-60k（Chen et al., 2025a）和 GenRef（Zhuo et al., 2025），同時減少第 2 階段生成資料的比例。
+對於交錯資料，我們移除 X2Edit（Ma et al., 2025），並與第 2 階段保持其餘部分一致。
+
+### B.2 多轮對話數據和交錯多模態數據設置
+
+對於多轮對話，LLaDA（Nie et al., 2025）隨機選擇一個轮次進行訓練。它將前面的對話歷史（包括提示和回應）連接起來，作為該轮次的輸入上下文，並僅在所選轮次的回應上計算損失。這個設置也用於 LaViDa（Li et al., 2025b）和 Dimple（Yu et al., 2025）。相比之下，LLaDA-V（You et al., 2025a）在對話中每個轮次的回應上計算損失。在 LLaDA-o 中，我們遵循 LLaDA-V 策略，因為它在 LLaDA-V 中表現出色且展示了數據可擴展性。
+
+對於交錯多模態數據，我們將文本僅視為圖像生成的條件（即提示）。因此，我們僅在每個圖像標記轮次上計算連續擴散損失，並在文本標記上遮蔽損失，防止圖像目標干擾文本表示。
+
+### B.3 所選生成圖像的提示
+
+表 7 列出用於生成圖 1 中所示樣本的文本提示。表中的圖像 ID 對應於圖像的空間排列：ID 1–5 代表頂行（從左到右），ID 6–10 代表底行。
+
+[FIGURE_CAPTION] 表 7：生成樣本的提示。圖像 ID 對應於圖 1 中的圖像順序，按從左到右、從上到下的方式排列。
+
+### B.4 計算成本
+
+表 8 詳細說明了 LLaDA-o 每個訓練階段所需的計算資源和時間。主要訓練階段（第 1 和第 2 階段）在 256 個 NVIDIA H800 GPU 上進行，佔計算成本的大部分。最終精煉階段（第 3 階段）使用 64 個 NVIDIA A100 GPU 執行。
+
+[FIGURE_CAPTION] 表 8：計算資源和訓練成本。該表詳細說明了每個訓練階段消耗的 GPU 硬體和總 GPU 小時數。
+
+### B.5 LLaDA-o 的文本生成過程
+
+在推論期間，我們採用分塊採樣程序（Arriola et al., 2025）。如演算法 2 所示，我們首先快取固定前綴（圖像和提示）。隨後，我們通過附加長度為 $L$ 的塊來擴展序列，並用遮蔽標記進行初始化。在每個塊內，我們執行迭代去噪：預測置信度超過閾值 $\tau$ 的標記被接受，而其他標記在下一步保持遮蔽。如果檢測到 [EOS] 標記，我們截斷序列並終止；否則，我們使用已完成的塊更新快取，並繼續處理下一個遮蔽塊。
+
+[FIGURE_CAPTION] 演算法 2 LLaDA-o 的文本生成過程。
+
+## 附錄 C 其他結果
+
+### C.1 Additional Generated Images
+
+We provide additional qualitative examples generated by LLaDA-o in Fig. 5 . These samples further demonstrate the model’s capability to produce high-quality images that are semantically aligned with user prompts, exhibiting both high fidelity and diversity.
+
+[FIGURE:x8.png] Figure 5 : Additional generated samples. We present 12 randomly selected images generated by LLaDA-o. For each sample, the prompt used for generation is shown below the corresponding image. All results are produced under the same setting as in the main paper.
+
+### C.2 Qualitative Comparison with LLaDA-V under Mismatched Block Lengths
+
+In this section, we present qualitative samples demonstrating the variable-length text generation capability of LLaDA-o. As shown in Tab. 9 , we compare LLaDA-o with the state-of-the-art LLaDA-V in scenarios where the semantic requirement of the prompt conflicts with the pre-defined generation block length.
+
+First, as shown in the top row of Tab. 9 , when the user requests simple text extraction but provides a long block length (i.e., L = 64 L=64 ), LLaDA-V tends to fill the entire window with redundant content. In contrast, LLaDA-o accurately extracts the text and correctly terminates, adhering to the user’s intent. Second, as shown in the bottom row, when the user requests a detailed image description but assigns a short block length (i.e., L = 16 L=16 ), LLaDA-V is constrained by the fixed window, resulting in an overly brief response. Conversely, LLaDA-o automatically extends the generation by appending additional blocks if no End-of-Sequence (EOS) token is detected within the current block, continuing until the generation is complete.
+
+[FIGURE:und_3.jpg] Table 9 : Qualitative samples demonstrating variable-length generation. Top: Under a long block length setting ( L = 64 L=64 ), LLaDA-V generates redundant content for a simple prompt, while LLaDA-o correctly terminates. Bottom: Under a short block length setting ( L = 16 L=16 ), LLaDA-V produces an overly brief response for a detailed prompt, whereas LLaDA-o dynamically adapts the output length to the user prompt.
+
+### C.3 區塊長度對變長生成的影響
+
+在本節中，我們提供質性樣本來說明 LLaDA-o 的變長生成行為。如表 10 所示，我們保持相同的影像和提示詞，同時改變預定義的生成區塊長度 $L\in\{16,32,64,128\}$。在這些不同的設定中，生成的輸出在很大程度上保持一致，只有響應長度的輕微波動。這表明 LLaDA-o 不受特定區塊長度的嚴格限制，並且可以根據使用者提示詞和影像內容動態調整有效的輸出長度。
+
+[FIGURE:und_4.jpg] 表 10：展示變長生成的質性樣本。我們展示了 LLaDA-o 在不同區塊長度設定（$L\in\{16,32,64,128\}$）下針對相同影像和相同提示詞的生成結果。儘管改變了 $L$，輸出長度仍保持基本穩定，這表明 LLaDA-o 可以根據使用者提示詞和影像動態調整輸出長度。
