@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026-03-04 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="date-nav">
+  
+  <a href="../2026-03-03/index.html">← 2026-03-03</a>
+  
+  <span class="current">2026-03-04</span>
+  
+</div>
+
+<h1 class="page-title">2026-03-04</h1>
+<p class="page-subtitle">12 篇論文</p>
+
+<div class="paper-list">
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.03241</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.03241/index.html" style="color:inherit;">
+        UniG2U-Bench：統一模型是否推進多模態理解？
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">UniG2U-Bench: Do Unified Models Advance Multimodal Understanding?</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+統一的多模態模型最近展現了強大的生成能力，但是否以及何時生成能改進理解仍不清楚。現有基準缺乏對生成促進理解的具體任務的系統探索。為此，我們引入 UniG2U-Bench，一個綜合基準，將生成到理解（G2U）評估分為 7 個範式和 30 個子任務，需要不同程度的隱式或顯式視覺轉換。對超過 30 個模型的廣泛評估揭示了三個核心發現：1) 統一模型通常表現不如其基礎 Vision-Language Models（VLMs），而 Generate-then-Answer（GtA）推理通常會相對於直接推理而降低性能。2) 在空間智能、視覺錯覺或多輪推理子任務中出現一致的增強，其中增強的空間和形狀感知以及多步中間圖像狀態被證明是有益的。3) 具有相似推理結構的任務和共享架構的模型展現相關的行為，表明生成-理解耦合在任務、預訓練數據和模型架構上引發了類別一致的歸納偏置。這些發現突出了對更多樣化訓練數據和新穎範式的必要性，以充分解鎖統一多模態建模的潛力。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Vision-Language Models</span><span class="tag method">Generative Models</span>
+        <span class="tag task">Visual Question Answering</span><span class="tag task">Image Understanding</span><span class="tag task">Spatial Reasoning</span><span class="tag task">Multi-round Reasoning</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.03241/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.03241" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.01571</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.01571/index.html" style="color:inherit;">
+        超越長度擴展：為生成式獎勵模型協同廣度與深度
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Beyond Length Scaling: Synergizing Breadth and Depth for Generative Reward Models</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+生成式獎勵模型（Generative Reward Models, GRMs）的最近進展已証明，擴展思維鏈（Chain-of-Thought, CoT）推理的長度能夠顯著提升評估的可靠性。然而，現有研究主要依賴於無結構的長度擴展，忽視了不同推理機制的不同效能：廣度思維鏈（Breadth-CoT, B-CoT，即多維度原則涵蓋）和深度思維鏈（Depth-CoT, D-CoT，即實質性判斷的合理性）。為了解決這一問題，我們引入 Mix-GRM，一個框架，通過模組化綜合管道將原始推理重新配置為結構化的 B-CoT 和 D-CoT，隨後採用監督微調（Supervised Fine-Tuning, SFT）和可驗證獎勵的強化學習（Reinforcement Learning with Verifiable Rewards, RLVR）來內化和優化這些機制。綜合實驗表明，Mix-GRM 在五個基準上建立了新的最先進水平，比領先的開源 RMs 平均超越 8.2%。我們的結果揭示了推理中的清晰分歧：B-CoT 在主觀偏好任務中具有優勢，而 D-CoT 在客觀正確性任務中表現優異。因此，將推理機制與任務不對齐會直接降低性能。此外，我們證明 RLVR 充當切換放大器，引發一種突現的極化現象，其中模型自發地配置其推理風格以匹配任務需求。合成數據和模型發佈於 https://huggingface.co/collections/DonJoey/mix-grm{Hugging Face}，代碼發佈於 https://github.com/Don-Joey/Mix-GRM{Github}。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+        <span class="tag method">Chain-of-Thought</span><span class="tag method">Supervised Fine-Tuning</span><span class="tag method">Reinforcement Learning</span><span class="tag method">Reward Modeling</span>
+        <span class="tag task">Preference Evaluation</span><span class="tag task">Reward Modeling</span><span class="tag task">Text Evaluation</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.01571/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.01571" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.02578</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.02578/index.html" style="color:inherit;">
+        大型語言模型的可控性如何？跨行為粒度的統一評估
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">How Controllable Are Large Language Models? A Unified Evaluation across Behavioral Granularities</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+大型語言模型（LLMs）日益被部署在社會敏感領域，然而其不可預測的行為，從意圖不一致到人格矛盾，都構成了重大風險。我們引入 SteerEval，一個用於評估 LLM 可控性的階層式基準，涵蓋三個領域：語言特徵、情感和人格。每個領域結構化為三個規範等級：L1（要表達什麼）、L2（如何表達）和 L3（如何具現化），將高層級的行為意圖連結到具體的文本輸出。使用 SteerEval，我們系統地評估當代轉向方法，揭示控制在更細粒度的等級往往會退化。我們的基準為安全且可控的 LLM 行為提供了一個有原則且可解釋的框架，為未來研究奠定基礎。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">Steering Methods</span><span class="tag method">Behavioral Control</span>
+        <span class="tag task">Text Generation</span><span class="tag task">Controllability Evaluation</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.02578/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.02578" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.02802</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.02802/index.html" style="color:inherit;">
+        NOVA：稀疏控制、密集合成的無對應視頻編輯
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">NOVA: Sparse Control, Dense Synthesis for Pair-Free Video Editing</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+近期的影片編輯模型已取得令人印象深刻的成果，但大多數仍需要大規模的配對資料集。在規模上收集自然對齊的配對資料仍然極具挑戰性，且構成了一個關鍵瓶頸，特別是對於區域影片編輯資料而言。現有的因應方案透過全局運動控制將影像編輯轉移至影片以實現無配對影片編輯，但這類設計在背景和時間一致性方面存在困難。在本論文中，我們提出 NOVA：稀疏控制與密集合成，一個用於非配對影片編輯的新框架。具體而言，稀疏分支透過分佈在整個影片中由使用者編輯的關鍵幀提供語義引導，而密集分支持續納入原始影片中的運動和紋理資訊，以維持高保真度和一致性。此外，我們引入了一種降級模擬訓練策略，使模型能夠透過在人工降級影片上進行訓練來學習運動重建和時間一致性，從而消除對配對資料的需求。我們的大量實驗證明，NOVA 在編輯保真度、運動保留和時間一致性方面都優於現有方法。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion</span><span class="tag method">Motion Control</span><span class="tag method">Keyframe Guidance</span>
+        <span class="tag task">Video Editing</span><span class="tag task">Video Synthesis</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.02802/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.02802" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.02175</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.02175/index.html" style="color:inherit;">
+        Kiwi-Edit：通過指令和參考引導的多功能視頻編輯
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Kiwi-Edit: Versatile Video Editing via Instruction and Reference Guidance</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+基於指令的影片編輯已取得快速進展，然而目前的方法在精確視覺控制方面往往遇到困難，因為自然語言在描述複雜視覺細微差異時存在固有限制。儘管參考引導編輯提供了穩健的解決方案，但其潛力目前受到高品質配對訓練資料稀缺的瓶頸限制。為了彌補這一差距，我們引入了一個可擴展的資料生成管線，將現有的影片編輯配對轉換為高保真訓練四元組，利用影像生成模型來建立合成參考鷹架。使用此管線，我們構建了 RefVIE 這一大規模資料集，專為指令-參考追隨任務量身定製，並建立了 RefVIE-Bench 用於全面評估。此外，我們提出了一個統一的編輯架構 Kiwi-Edit，它將可學習的查詢和潛在視覺特徵結合用於參考語義引導。我們的模型通過漸進式多階段訓練課程在指令追隨和參考保真度方面取得顯著提升。廣泛的實驗表明，我們的資料和架構在可控影片編輯方面建立了新的最先進水準。所有資料集、模型和程式碼已發佈於 https://github.com/showlab/Kiwi-Edit。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion</span><span class="tag method">Transformer</span><span class="tag method">Query-based Architecture</span>
+        <span class="tag task">Video Editing</span><span class="tag task">Instruction Following</span><span class="tag task">Reference-guided Generation</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.02175/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.02175" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.03160</span>
+      <span>▲ 2</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.03160/index.html" style="color:inherit;">
+        Kling-MotionControl 技術報告
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Kling-MotionControl Technical Report</div>
+    
+    <div class="paper-card-abstract"># 角色動畫控制的統一框架：Kling-MotionControl
+
+角色動畫旨在通過從驅動視頻向參考圖像轉移動作動態來生成逼真的視頻。生成模型的最近進展為高保真角色動畫鋪平了道路。在本工作中，我們提出 Kling-MotionControl，一個專為強大、精確和富有表現力的整體角色動畫而設計的統一 DiT 框架。利用內聚系統中的分而治之策略，該模型協調異構動作表示，這些表示針對身體、面部和手部的不同特徵量身定制，有效地協調大規模結構穩定性與細粒度關節表達性。為確保強大的跨身份泛化，我們納入自適應身份無關學習，促進針對從逼真人類到風格化卡通角色等多樣角色的自然動作重定位。同時，我們通過精心的身份注入和融合設計確保忠實的外觀保留，進一步由利用綜合參考內容的主體庫機制支持。為確保實用性，我們實現了利用多階段蒸餾的高級加速框架，將推理速度提升超過 10 倍。Kling-MotionControl 通過智能語義動作理解和精確的文本響應性而與眾不同，允許超越視覺輸入的靈活控制。人類偏好評估表明，Kling-MotionControl 相比領先的商業和開源解決方案提供優異的性能，在整體動作控制、開放域泛化以及視覺品質和連貫性方面取得卓越保真度。這些結果將 Kling-MotionControl 確立為高質量、可控且逼真的角色動畫的穩健解決方案。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion</span><span class="tag method">DiT</span><span class="tag method">Motion Retargeting</span><span class="tag method">Identity Injection</span>
+        <span class="tag task">Character Animation</span><span class="tag task">Motion Transfer</span><span class="tag task">Video Generation</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.03160/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.03160" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.02573</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.02573/index.html" style="color:inherit;">
+        Track4World：前饋式世界中心密集3D追蹤所有像素
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Track4World: Feedforward World-centric Dense 3D Tracking of All Pixels</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+從單眼視訊估計每個像素的 3D 軌跡對於全面理解視訊的 3D 動態至關重要且前景廣闊。近期的單眼 3D 追蹤研究取得令人印象深刻的成果，但受限於要么追蹤第一幀上的稀疏點，要么採用緩慢的基於最佳化的密集追蹤框架。本論文提出了一個前饋模型 Track4World，能夠在世界中心坐標系統中高效進行每個像素的整體 3D 追蹤。Track4World 基於由 VGGT 風格 ViT 編碼的全域 3D 場景表示，應用了一個新穎的 3D 相關方案，同時估計任意幀對之間的像素級 2D 和 3D 密集光流。估計的場景光流連同重建的 3D 幾何資訊，使得該視訊中每個像素的後續高效 3D 追蹤成為可能。在多個基準資料集上的廣泛實驗表明，我們的方法在 2D/3D 光流估計和 3D 追蹤中始終優於現有方法，突出了其在實際 4D 重建任務中的魯棒性和可擴展性。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span>
+        <span class="tag method">ViT</span><span class="tag method">Transformer</span><span class="tag method">Correlation Network</span>
+        <span class="tag task">3D Tracking</span><span class="tag task">Scene Flow Estimation</span><span class="tag task">Dense Optical Flow</span><span class="tag task">3D Reconstruction</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.02573/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.02573" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.02684</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.02684/index.html" style="color:inherit;">
+        HateMirage: An Explainable Multi-Dimensional Dataset for Decoding Faux Hate and Subtle Online Abuse
+      </a>
+    </div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+細微且間接的仇恨言論仍然是線上安全研究中未充分探索的挑戰，特別是當有害意圖被嵌入在誤導性或操縱性敘事中時。現有的仇恨言論資料集主要捕捉明顯的毒性內容，代表性不足地呈現了虛假資訊煽動或規範化仇恨的細微方式。為了解決這一差距，我們提出 HateMirage，一個新穎的虛假仇恨評論資料集，旨在推進關於源自虛假或扭曲敘事的仇恨的推理和可解釋性研究。該資料集的構建方式是識別來自事實查核來源的廣泛被駁斥的虛假資訊聲稱，並追蹤相關的 YouTube 討論，最終產生 4,530 條使用者評論。每條評論都沿著三個可解釋的維度進行標註：目標（受影響者）、意圖（評論背後的潛在動機或目標）和含義（其潛在的社會影響）。與先前的可解釋性資料集（如 HateXplain 和 HARE）不同，後者提供的是代幣級別或單一維度的推理，HateMirage 引入了一個多維度解釋框架，捕捉虛假資訊、傷害和社會後果之間的相互作用。我們使用 ROUGE-L F1 和 Sentence-BERT 相似度在 HateMirage 上對多個開源語言模型進行了基準測試，以評估解釋的連貫性。結果表明，解釋品質可能更多取決於預訓練的多樣性和面向推理的資料，而不是單純的模型規模。通過將虛假資訊推理與傷害歸因相結合，HateMirage 為可解釋仇恨檢測和負責任 AI 研究建立了新的基準。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span>
+        <span class="tag method">ROUGE-L</span><span class="tag method">Sentence-BERT</span>
+        <span class="tag task">Hate Speech Detection</span><span class="tag task">Explainability</span><span class="tag task">Text Classification</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.02684/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.02684" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.02479</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.02479/index.html" style="color:inherit;">
+        PRISM：通過過程獎勵模型引導推理推進深度思考的前沿
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">PRISM: Pushing the Frontier of Deep Think via Process Reward Model-Guided Inference</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+DEEPTHINK 方法透過生成、精化和聚合候選解決方案的群體來改進推理，這使得在複雜的數學和科學任務上能夠取得強大的性能。然而，現有的框架在推理過程中往往缺乏可靠的正確性信號，這造成了群體增強的瓶頸，其中更深層的思考會放大錯誤、抑制正確的少數解決方案，並導致額外計算的回報較弱。在本文中，我們介紹了 DEEPTHINK 系統的功能分解，並提出 PRISM，一種由 Process Reward Model（PRM）引導的推理算法，它使用步驟級驗證來指導群體精化和解決方案聚合。在精化過程中，PRISM 將候選解決方案視為 PRM 定義的能量景觀中的粒子，並透過分數引導的重新採樣和隨機精化來重新塑造群體，這集中了概率質量在更高品質的推理上，同時保持多樣性。在數學和科學基準測試中，PRISM 與現有 DEEPTHINK 方法具有競爭力或表現更優，在 gpt-4o-20b 上分別在 AIME25、HMMT25 和 GPQA Diamond 上達到 90.0%、75.4% 和 71.4%，同時與 gpt-4o-120b 相當或超越它。此外，我們的分析表明 PRISM 在精化過程中產生一致的淨向性修正，當初始群體中包含很少正確候選時仍保持可靠，並且通常位於計算-準確度 Pareto 邊界上。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">NLP</span><span class="tag domain">Theory</span>
+        <span class="tag method">Process Reward Model</span><span class="tag method">Inference Algorithm</span><span class="tag method">Resampling</span><span class="tag method">Population-based Methods</span>
+        <span class="tag task">Mathematical Reasoning</span><span class="tag task">Scientific Problem Solving</span><span class="tag task">Question Answering</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.02479/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.02479" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2602.23496</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2602.23496/index.html" style="color:inherit;">
+        SGDC：用於醫學影像分割的結構引導動態卷積
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">SGDC: Structurally-Guided Dynamic Convolution for Medical Image Segmentation</div>
+    
+    <div class="paper-card-abstract">Spatially variant dynamic convolution provides a principled approach of integrating spatial adaptivity into deep neural networks. However, mainstream designs in medical segmentation commonly generate dynamic kernels through average pooling, which implicitly collapses high-frequency spatial details into a coarse, spatially-compressed representation, leading to over-smoothed predictions that degrade the fidelity of fine-grained clinical structures. To address this limitation, we propose a novel Structure-Guided Dynamic Convolution (SGDC) mechanism, which leverages an explicitly supervised structure-extraction branch to guide the generation of dynamic kernels and gating signals for structure-aware feature modulation. Specifically, the high-fidelity boundary information from this auxiliary branch is fused with semantic features to enable spatially-precise feature modulation. By replacing context aggregation with pixel-wise structural guidance, the proposed design effectively prevents the information loss introduced by average pooling. Experimental results show that SGDC achieves state-of-the-art performance on ISIC 2016, PH2, ISIC 2018, and CoNIC datasets, delivering superior boundary fidelity by reducing the Hausdorff Distance (HD95) by 2.05, and providing consistent IoU gains of 0.99\%-1.49\% over pooling-based baselines. Moreover, the mechanism exhibits strong potential for extension to other fine-grained, structure-sensitive vision tasks, such as small-object detection, offering a principled solution for preserving structural integrity in medical image analysis. To facilitate reproducibility and encourage further research, the implementation code for both our SGE and SGDC modules has been is publicly released at https://github.com/solstice0621/SGDC.</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Medical</span>
+        <span class="tag method">Dynamic Convolution</span><span class="tag method">Auxiliary Branch</span><span class="tag method">Structure Extraction</span>
+        <span class="tag task">Medical Image Segmentation</span><span class="tag task">Boundary Detection</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2602.23496/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2602.23496" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.02667</span>
+      
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.02667/index.html" style="color:inherit;">
+        DREAM：視覺理解與文本到圖像生成的交匯點
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">DREAM: Where Visual Understanding Meets Text-to-Image Generation</div>
+    
+    <div class="paper-card-abstract"># DREAM：統一視覺表徵學習與文本到圖像生成的框架
+
+在單一模型中統一視覺表徵學習和文本到圖像（T2I）生成仍然是多模態學習的核心挑戰。我們引入 DREAM，一個統一的框架，同時優化判別式和生成式目標，同時學習強大的視覺表徵。DREAM 建立在兩項關鍵技術之上：在訓練期間，Masking Warmup 是一個漸進式遮罩排程，從最小遮罩開始以建立表徵學習所需的對比對齊，然後逐漸過渡到完全遮罩以實現穩定的生成式訓練。在推理時，DREAM 採用 Semantically Aligned Decoding 將部分遮罩的圖像候選與目標文本對齐，並選擇最佳候選進行進一步解碼，在不需要外部重排序器的情況下改善文本圖像保真度（+6.3%）。僅在 CC12M 上訓練，DREAM 在 ImageNet 線性探測準確度上達到 72.7%（相比 CLIP 提升 +1.1%），FID 為 4.25（相比 FLUID 提升 +6.2%），在少樣本分類、語義分割和深度估計中也有一致的提升。這些結果表明判別式和生成式目標可以產生協同效應，允許統一的多模態模型在視覺理解和生成方面都表現優異。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Diffusion</span><span class="tag method">Contrastive Learning</span><span class="tag method">Masking</span>
+        <span class="tag task">Text-to-Image Generation</span><span class="tag task">Image Classification</span><span class="tag task">Semantic Segmentation</span><span class="tag task">Depth Estimation</span><span class="tag task">Visual Representation Learning</span>
+        
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.02667/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.02667" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="paper-card">
+    <div class="paper-card-meta">
+      <span>2603.01400</span>
+      <span>▲ 1</span>
+    </div>
+    <div class="paper-card-title">
+      <a href="../paper/2603.01400/index.html" style="color:inherit;">
+        通過本地和全局上下文優化的令牌降低以實現高效視頻大語言模型
+      </a>
+    </div>
+    
+    <div class="paper-card-title-en">Token Reduction via Local and Global Contexts Optimization for Efficient Video Large Language Models</div>
+    
+    <div class="paper-card-abstract"># 論文摘要翻譯
+
+視訊大語言模型（VLLMs）展現強大的視訊理解能力，但因冗餘視覺標記而存在效率問題。現有的剪枝方法主要針對幀內空間冗餘，或在 LLM 內進行剪枝且存在淺層開銷，導致時空降維效果次優且未充分利用長上下文的可壓縮性。這些方法往往會丟棄來自合併或剪枝標記中微妙卻有資訊價值的上下文。本文提出一個新的視角，通過幀內和幀間的標記錨點（Anchors）採用局部-全域最優運輸（Optimal Transport，AOT）來全面聚合資訊性上下文。具體而言，我們首先在注意力指導下建立每幀內的局部和全域感知標記錨點，隨後透過最優運輸聚合來自剪枝標記的資訊上下文，構造幀內標記錨點。接著，基於時間幀片段，每個片段內的第一幀被視為關鍵幀錨點，通過最優運輸從連續幀中集成相似資訊，同時保留不同標記以表示時間動態，從而以無訓練方式實現高效的標記降維。廣泛的評估表明，我們提出的 AOT 在領先視訊 LLM 的各種短視訊和長視訊基準上獲得具有競爭力的效能，在保留時間和視覺保真度的同時取得顯著的計算效率提升。專案網頁：https://tyroneli.github.io/AOT{AOT}。</div>
+    <div class="paper-card-footer">
+      <div class="tags">
+        <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+        <span class="tag method">Transformer</span><span class="tag method">Optimal Transport</span><span class="tag method">Token Pruning</span><span class="tag method">Attention Mechanism</span>
+        <span class="tag task">Video Understanding</span><span class="tag task">Video Question Answering</span><span class="tag task">Video Captioning</span>
+        <span class="tag open">Open Source</span>
+      </div>
+      <div class="paper-card-links">
+        <a href="../paper/2603.01400/index.html">繁中全文</a>
+        <a href="https://arxiv.org/abs/2603.01400" target="_blank" rel="noopener">arXiv</a>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通過本地和全局上下文優化的令牌降低以實現高效視頻大語言模型 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">通過本地和全局上下文優化的令牌降低以實現高效視頻大語言模型</h1>
+  
+  <div class="en-title">Token Reduction via Local and Global Contexts Optimization for Efficient Video Large Language Models</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Jinlong Li, Liyuan Jiang, Haonan Zhang, Nicu Sebe</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.01400" target="_blank">2603.01400</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.01400" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.01400" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.01400" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Transformer</span><span class="tag method">Optimal Transport</span><span class="tag method">Token Pruning</span><span class="tag method">Attention Mechanism</span>
+    <span class="tag task">Video Understanding</span><span class="tag task">Video Question Answering</span><span class="tag task">Video Captioning</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+視訊大語言模型（VLLMs）展現強大的視訊理解能力，但因冗餘視覺標記而存在效率問題。現有的剪枝方法主要針對幀內空間冗餘，或在 LLM 內進行剪枝且存在淺層開銷，導致時空降維效果次優且未充分利用長上下文的可壓縮性。這些方法往往會丟棄來自合併或剪枝標記中微妙卻有資訊價值的上下文。本文提出一個新的視角，通過幀內和幀間的標記錨點（Anchors）採用局部-全域最優運輸（Optimal Transport，AOT）來全面聚合資訊性上下文。具體而言，我們首先在注意力指導下建立每幀內的局部和全域感知標記錨點，隨後透過最優運輸聚合來自剪枝標記的資訊上下文，構造幀內標記錨點。接著，基於時間幀片段，每個片段內的第一幀被視為關鍵幀錨點，通過最優運輸從連續幀中集成相似資訊，同時保留不同標記以表示時間動態，從而以無訓練方式實現高效的標記降維。廣泛的評估表明，我們提出的 AOT 在領先視訊 LLM 的各種短視訊和長視訊基準上獲得具有競爭力的效能，在保留時間和視覺保真度的同時取得顯著的計算效率提升。專案網頁：https://tyroneli.github.io/AOT{AOT}。</p>
+  
+  <div class="abstract-en">Video Large Language Models (VLLMs) demonstrate strong video understanding but suffer from inefficiency due to redundant visual tokens. Existing pruning primary targets intra-frame spatial redundancy or prunes inside the LLM with shallow-layer overhead, yielding suboptimal spatiotemporal reduction and underutilizing long-context compressibility. All of them often discard subtle yet informative context from merged or pruned tokens. In this paper, we propose a new perspective that elaborates token Anchors within intra-frame and inter-frame to comprehensively aggregate the informative contexts via local-global Optimal Transport (AOT). Specifically, we first establish local- and global-aware token anchors within each frame under the attention guidance, which then optimal transport aggregates the informative contexts from pruned tokens, constructing intra-frame token anchors. Then, building on the temporal frame clips, the first frame within each clip will be considered as the keyframe anchors to ensemble similar information from consecutive frames through optimal transport, while keeping distinct tokens to represent temporal dynamics, leading to efficient token reduction in a training-free manner. Extensive evaluations show that our proposed AOT obtains competitive performances across various short- and long-video benchmarks on leading video LLMs, obtaining substantial computational efficiency while preserving temporal and visual fidelity. Project webpage: https://tyroneli.github.io/AOT{AOT}.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="_1">通過本地和全局上下文優化實現高效視頻大型語言模型的令牌縮減</h1>
+<p>視頻大型語言模型（VLLMs）展示了強大的視頻理解能力，但由於冗餘視覺令牌而面臨效率問題。現有的修剪方法主要針對幀內空間冗餘或在 LLM 內部進行修剪，存在淺層開銷，導致次優的時空縮減和長上下文可壓縮性的未充分利用。所有這些方法往往會丟棄來自合併或修剪令牌的細微但信息豐富的上下文。在本論文中，我們提出了一個新的視角，通過本地-全局最優運輸（AOT）在幀內和幀間闡述令牌錨點，以全面聚合信息上下文。具體來說，我們首先在注意力引導下在每幀內建立本地和全局感知的令牌錨點，然後通過最優運輸聚合來自修剪令牌的信息上下文，構建幀內令牌錨點。隨後，基於時間幀片段，每個片段內的第一幀將被視為關鍵幀錨點，通過最優運輸從連續幀中集合相似信息，同時保留獨特令牌以表示時間動態，以無訓練方式實現高效令牌縮減。廣泛的評估表明，我們提出的 AOT 在領先視頻 LLM 上的各種短視頻和長視頻基準測試中獲得了具有競爭力的性能，在保留時間和視覺保真度的同時獲得了實質性的計算效率提升。項目網頁：AOT。</p>
+<p>本補充材料提供了額外的細節和分析來支持主論文，如下所示：</p>
+<ul>
+<li>• 在第 6 節中，我們提供了關於最優運輸的更詳細的理論分析。</li>
+<li>• 在第 7 節中，我們描述了更詳細的實現細節。</li>
+<li>• 在第 8 節中，我們進行了關於動態幀片段設置的更多實驗，以展示我們提出的 AOT 的實際優勢。</li>
+<li>• 在第 9 節中，我們通過隨機選擇幀內級別的令牌錨點進行了更多消融研究，以說明高質量令牌錨點建立的重要性。</li>
+<li>• 在第 10 節中，我們提供了關於初始令牌錨點的更多可視化。</li>
+<li>• 在第 11 節中，我們詳細論述了我們方法的局限性和未來改進方向。</li>
+</ul>
+<p>在第 6 節中，我們提供了關於最優運輸的更詳細的理論分析。</p>
+<p>在第 7 節中，我們描述了更詳細的實現細節。</p>
+<p>在第 8 節中，我們進行了關於動態幀片段設置的更多實驗，以展示我們提出的 AOT 的實際優勢。</p>
+<p>在第 9 節中，我們通過隨機選擇幀內級別的令牌錨點進行了更多消融研究，以說明高質量令牌錨點建立的重要性。</p>
+<p>在第 10 節中，我們提供了關於初始令牌錨點的更多可視化。</p>
+<p>在第 11 節中，我們詳細論述了我們方法的局限性和未來改進方向。</p>
+<h2 id="1">1 介紹</h2>
+<p>視頻大語言模型（VLLMs）[5, 78, 68, 28, 11, 26, 56, 57, 54, 25, 9] 近來在複雜視頻內容理解和領悟方面展現了卓越的重要性。視覺編碼器 [66, 39] 將採樣幀轉換為視頻令牌序列，隨後 LLM 將其與文本序列一起處理以生成回應。日益複雜的應用進一步要求 VLLMs 能夠處理更長且更複雜的視頻場景 [27, 7, 50, 56]。</p>
+<p>儘管它們很有效，但推理的高計算成本和記憶體消耗構成了重大挑戰，特別是在處理具有大量幀的視頻時會使推理在計算上變得非常昂貴，這會導致數萬個輸入令牌計數。儘管某些方法 [18, 36, 44, 61, 79, 45] 採用可訓練的壓縮模組來緩解此問題，但它們仍然需要大量的訓練或微調，導致高昂的訓練成本。雖然先前的工作 [63, 59, 47, 6, 40, 73, 41] 已探索模型壓縮和令牌修剪以緩解效率問題，達到了效率與性能之間的理想平衡，但未能利用採樣幀之間的時間依賴性。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01400/x1.png" loading="lazy"></figure> 圖 1：頂部是與常見令牌減少方法相比的本質差異，我們的方法不是簡單地移除不重要或合併非常相似的令牌，而是利用全局優化策略進一步挖掘並將必要的語義和上下文聚合到保留的令牌上。底部是我們提出的管道，採用 Optimal Transport 在幀內和幀間級別聚合視頻令牌的資訊。</p>
+<p>因此，開發有效的方法來減少視頻令牌冗餘，同時保留關鍵的語義和上下文資訊，對於視頻 LLMs 的廣泛應用至關重要。最近，視頻壓縮方法如 DyCoke [47] 和 PruneVid [17] 主要在 LLM 預填充和解碼階段進行修剪，將視頻令牌當作文本令牌處理，忽略了視頻的特定特性。此外，某些令牌修剪方法 [16, 6, 63, 40] 採用最具區別性的令牌，同時簡單地移除低區別性令牌或融合許多相似的令牌，容易受到令牌選擇的影響，忽略了資訊豐富的區域或涉及嘈雜的背景。需要一個更具視頻特性的修剪方法來充分利用時空冗餘，同時保留適當的視覺上下文。</p>
+<p>為了緩解此限制，本文提出了一個新的角度，即在幀內和幀間層級上詳細闡述令牌錨點，並通過局部-全局 Optimal Transport（AOT）全面聚合語義和上下文資訊。受到 MLLMs 中 AnyRes 技術的啟發 [20, 10, 74]，我們首先執行柵格式局部令牌選擇以保持局部先驗，同時應用全局級別的專有選擇以在注意力引導下選擇全局令牌，兩者共同充當每幀的令牌錨點。此策略保留了語義上重要且空間上多樣化的令牌候選。</p>
+<p>基於這一洞察，如何恰當地測量所選和未選令牌之間的關係仍然是一個關鍵的探索方向，其目的是抽象出必要的資訊。為了解決這個問題，我們引入 Optimal Transport（OT）通過全局優化策略來測量所選令牌錨點和未選令牌之間的距離。對於幀內令牌修剪，我們將令牌錨點和未選令牌表述為兩個離散分佈的採樣，並使用 OT 來鼓勵細粒度測量匹配（一對多），而令牌集合之間的反向餘弦相似度作為要優化的成本矩陣。令牌集合之間的距離計算將被建模為離散概率分佈，其中根據最優運輸理論 [52]，每個令牌具有相等的概率值。未選集合中的每個令牌是一個供應商，供應某種程度的必要上下文，而每個令牌錨點是一個需求者，需要一個單位的上下文。在這種意義下，每個令牌錨點在最優運輸計劃下全面整合來自未選令牌的聚合。</p>
+<p>對於幀間令牌修剪，我們進一步利用 Optimal Transport 通過將每個幀片段內的第一幀建立為錨點來解決時間冗餘，然後整合相鄰幀中的相似令牌並逐漸更新令牌錨點，同時保留不相似令牌以代表關鍵的時間動態。這可以與均勻採樣或自適應聚類幀片段配合使用。之後，AOT 通過採用 Optimal Transport 來彙集眾多令牌中的資訊提示，在合併或移除過程中，跨時空維度進行必要的局部-全局語義和上下文聚合。與現有方法 [47, 17, 34, 44] 不同，我們的方法考慮了這些令牌對緊湊令牌錨點的詳細內在貢獻，如圖 1 所示，顯著加速了視頻 LLM 推理，同時保留了時間和視覺完整性。制定公式後，找到最優分配解決方案被轉換為求解最優運輸計劃，可以通過現成的 Sinkhorn-Knopp Iteration [13] 快速且有效地求解。</p>
+<p>為了評估我們方法的有效性，我們在 LLaVA-OneVision 7B 和 LLaVA-Video 7B 模型上進行了廣泛的實驗，涵蓋 MVBench [26]、LongVideoBench [58]、EgoSchema [37] 和 VideoMME [15] 基準。我們的方法將計算成本降低至原始 FLOPs 的 8.3%，修剪 90% 的視頻令牌，同時在所有基準上顯著保留了原始模型 97.6% 的性能。這些結果清楚地展示了我們的令牌減少框架在高效視頻 LLM 推理中的實質性實際優勢。</p>
+<p>總之，本工作的貢獻為：</p>
+<ul>
+<li>• 據我們所知，我們是首次研究如何將細微但資訊豐富的語義和上下文從合併或移除的令牌聚合到保留的令牌中，而不是簡單地合併或移除。</li>
+<li>• 我們研究了如何首先促進同時考慮局部和全局先驗的令牌錨點，導致語義上重要且空間上多樣化的候選。</li>
+<li>• 我們探索了 Optimal Transport 以在幀內和幀間的運輸計劃中聚合時空上下文，以通過無需訓練的管道保留時間和視覺保真度。</li>
+<li>• 我們在廣泛的視頻基準集上評估了我們的方法，並在受限的令牌預算下呈現了有競爭力的性能。</li>
+</ul>
+<p>據我們所知，我們是首次研究如何將細微但資訊豐富的語義和上下文從合併或移除的令牌聚合到保留的令牌中，而不是簡單地合併或移除。</p>
+<p>我們研究了如何首先促進同時考慮局部和全局先驗的令牌錨點，導致語義上重要且空間上多樣化的候選。</p>
+<p>我們探索了 Optimal Transport 以在幀內和幀間的運輸計劃中聚合時空上下文，以通過無需訓練的管道保留時間和視覺保真度。</p>
+<p>我們在廣泛的視頻基準集上評估了我們的方法，並在受限的令牌預算下呈現了有競爭力的性能。</p>
+<h2 id="2">2 相關研究</h2>
+<h3 id="21">2.1 影片大語言模型</h3>
+<p>隨著大語言模型（LMMs）[1, 12, 48] 和多模態大語言模型（MLLMs）[2, 24, 30, 31, 49, 5, 78, 69, 70] 的快速進展，現今對於開發影片 LLM（VLLMs）[5, 78, 68, 28, 11, 26, 56, 57, 54, 25, 65, 9] 的興趣日益增長，能夠執行影片理解和問答任務。這些模型可分為兩類：通用影片 LLM 和在訓練時進行視覺 token 壓縮的影片 LLM。通用影片 LLM [28, 20, 3, 75, 11, 5, 78] 直接提取原始影片幀 token，然後在輸入 LLM 之前簡單地應用池化操作。此外，為了處理影片的時空資訊，某些方法 [5, 75] 通過引入時間維度，將 2D 影像位置編碼擴展到影片。在訓練時進行視覺 token 壓縮的影片 LLM [61, 36, 18, 44, 79, 27] 提議顯著減少影片 token，以實現長文本影片處理。</p>
+<p>然而，由於複雜影片理解任務的高時空需求，視覺 token 支配了後續 LLM 計算開銷，因為對於數小時長的影片，token 長度可達一百萬 [50]，大幅增加推理時間和記憶體消耗。雖然某些方法 [29, 35] 旨在最佳化 token 效用，但它們仍然需要模型微調並且需要考慮龐大的硬體資源。這凸顯了開發更高效、不需訓練的 token 壓縮方法專門用於影片 LLM 的關鍵需求，繞過了昂貴的模型適應和顯著硬體消耗的必要性。</p>
+<h3 id="22-token">2.2 影像視覺 Token 壓縮</h3>
+<p>Token 壓縮已成為一種有效的方法，用於降低 transformer 視覺編碼器和大型語言模型（如 ViT [ 14 ]、CLIP [ 39 ] 和 SigLip [ 66 ]）的計算開銷和複雜性。先驅性工作如 ToMe [ 6 ] 和 FastV [ 8 ] 已探索了視覺 token 空間合併和文本引導剪枝的方法，以提高 LVLM 的效率。因此，這類方法可以大致分為兩個主要類別：(1) 文本無關的 token 壓縮方法 [ 62 , 4 , 40 , 55 , 63 , 72 , 67 ]，在視覺編碼過程中發現並合併或移除冗餘或無資訊的視覺 token。VisionZip [ 63 ] 基於 [CLS] 注意力分數挑選出主導視覺 token，而 LLaVA-PruMerge [ 40 ] 識別視覺 token 之間的重要空間冗餘，並應用自適應視覺 token 縮減策略來減少視覺 token 的數量。(2) 文本引導剪枝方法 [ 46 , 73 , 60 , 59 , 32 , 64 ]，目標是在 LLM 解碼階段移除與文本查詢無關的視覺 token。SparseVLM [ 73 ] 利用迭代稀疏化策略選擇視覺相關的文本 token 來排序視覺 token 的重要性。PyramidDrop [ 59 ] 在 LLM 的不同階段應用 token 的漸進式剪枝。</p>
+<h3 id="23-token">2.3 影片視覺 Token 壓縮</h3>
+<p>然而，當涉及視頻幀之間的時間依賴性時，需要量身訂製的專業壓縮設計。TempMe [ 43 ] 通過合併相鄰的片段來擴展漸進式空間 token 縮減，以最小化時間冗餘。DyCoke [ 47 ] 跨幀合併 token 並應用動態 KV 快取縮減。然而，其在預填充階段的剪枝難以在保持準確性的同時實現大幅 token 縮減。PruneVID [ 17 ] 在連續的淺層 LLM 層上應用合併和剪枝，但重複的剪枝操作會對整體效率造成不利影響。FastVID [ 42 ] 通過結合時間分割和時空 token 合併來增強壓縮效能。FrameFusion [ 16 ] 在連續的淺層 LLM 層上應用合併和剪枝，但重複的剪枝操作會對整體效率造成不利影響。不同的是，我們的方法提出通過最佳化策略在時空上構建緊湊的 token 錨點，以聚合局部和全局層級的語義和上下文資訊。</p>
+<h2 id="3">3 方法論</h2>
+<p>在本節中，我們首先在第 3.1 節回顧最優運輸問題的預備知識。然後我們展示如何在第 3.2 節建立令牌錨點，並在第 3.3 節制定框內和框間級別的令牌集合優化策略，以利用必要的局部和全局時空上下文，從而以無訓練方式實現緊湊且有效的視頻令牌縮減。我們在圖 2 中提供了 AOT 的概览。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01400/x2.png" loading="lazy"></figure> 圖 2：我們 AOT 的整體管線。我們的方法通過最優運輸在時空上壓縮視頻 LLMs 的令牌，首先在每一幀內建立令牌錨點以覆蓋語義上重要且空間上多樣的令牌候選，然後在第一階段利用最優運輸聚合框內所需的信息線索，最後在第二階段將優化策略轉向時間上的框間方向。所提出的 AOT 通過利用高效的 Sinkhorn-Knopp 迭代來求解最優運輸計畫分配，從而保留時間和視覺完整性。</p>
+<h3 id="31">3.1 最優運輸</h3>
+<p>最優運輸 (OT) 距離是用於比較分佈的廣泛使用的度量。在此，我們僅關注與我們的流程更相關的離散情況。假設我們有兩組標記（特徵），離散分佈的表述如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>U = ∑ m = 1 M u m ​ δ 𝑿 m and V = ∑ n = 1 N v n ​ δ 𝑿 n , U=\sum_{m=1}^{M}u_{m}\delta_{\bm{X}<em>{m}}\hskip 20.00003pt\text{and}\hskip 20.00003ptV=\sum</em>{n=1}^{N}v_{n}\delta_{\bm{X}_{n}},</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 𝒖 \bm{u} 和 𝒗 \bm{v} 是離散機率向量，其和為 1，𝛿 𝑿 \delta_{\bm{X}} 是放置在視覺標記嵌入空間中支撐點 𝑿 = { X 1 , … , X N } ∈ ℝ N × d \bm{X}={X_{1},...,X_{N}}\in\mathbb{R}^{N\times d} 處的 Dirac delta 函數。
+然後，總距離被建模為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>&lt; 𝑻 , 𝑪 &gt;= ∑ m = 1 M ∑ n = 1 N 𝑻 m , n ​ 𝑪 m , n , &lt;\bm{T},\bm{C}&gt;=\sum_{m=1}^{M}\sum_{n=1}^{N}\bm{T}<em>{m,n}\bm{C}</em>{m,n},</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>我們將 𝑪 \bm{C} 稱為成本矩陣，其中每個點表示 𝑿 m \bm{X}<em>{m} 和 𝑿 n \bm{X}</em>{n} 之間的成本，例如 𝑪 m , n = 1 − sim ​ ( 𝑿 m , 𝑿 n ) \bm{C}<em>{m,n}=1-\text{sim}(\bm{X}</em>{m},\bm{X}_{n})。而 𝑻 \bm{T} 被稱為運輸計劃，它被學習以最小化總距離。最優運輸的最佳化問題表述如下：</p>
+<p>|  |  | d OT ​ ( 𝒖 , 𝒗 | 𝑪 ) = minimize 𝑻 &lt; 𝑻 , 𝑪 &gt; , \displaystyle d_{\text{OT}}(\bm{u},\bm{v}|\bm{C})=\underset{\bm{T}}{\text{minimize}}&lt;\bm{T},\bm{C}&gt;, |  | (3) |
+| --- | --- | --- | --- | --- |
+|  |  | subject to 𝑻 ​ 𝟏 N = 𝒖 , 𝑻 ⊤ ​ 𝟏 M = 𝒗 , 𝑻 ∈ ℝ + M × N . \displaystyle\text{subject to}\penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \bm{T}\bm{1}<em>{N}=\bm{u},\;\bm{T}^{\top}\bm{1}</em>{M}=\bm{v},\;\bm{T}\in\mathbb{R}^{M\times N}_{+}. |  |</p>
+<p>由於直接最佳化上述目標需要大量時間，我們應用 Sinkhorn 距離 [13]（一種快速疊代解法）來使用熵約束進行快速最佳化。具有熵約束之拉格朗日乘數的最佳化問題為：</p>
+<p>|  |  | d OT , λ ​ ( 𝒖 , 𝒗 | 𝑪 ) = minimize 𝑻 &lt; 𝑻 , 𝑪 &gt; − λ ​ h ​ ( 𝑻 ) , \displaystyle d_{\text{OT},\lambda}(\bm{u},\bm{v}|\bm{C})=\underset{\bm{T}}{\text{minimize}}&lt;\bm{T},\bm{C}&gt;-\lambda h(\bm{T}), |  | (4) |
+| --- | --- | --- | --- | --- |
+|  |  | subject to 𝑻 ​ 𝟏 N = 𝒖 , 𝑻 ⊤ ​ 𝟏 M = 𝒗 , 𝑻 ∈ ℝ + M × N . \displaystyle\text{subject to}\penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \bm{T}\bm{1}<em>{N}=\bm{u},\;\bm{T}^{\top}\bm{1}</em>{M}=\bm{v},\;\bm{T}\in\mathbb{R}^{M\times N}_{+}. |  |</p>
+<p>其中 h ​ ( ⋅ ) h(\cdot) 是熵，λ ≥ 0 \lambda\geq 0 是超參數。然後我們可以通過幾次疊代得到快速最佳化解：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝑻 ∗ = diag ​ ( 𝒖 ( t ) ) ​ exp ⁡ ( − 𝑪 / λ ) ​ diag ​ ( 𝒗 ( t ) ) , \bm{T}^{*}=\text{diag}(\bm{u}^{(t)})\exp(-\bm{C}/\lambda)\text{diag}(\bm{v}^{(t)}),</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 t t 表示疊代次數，在每次疊代中 𝒖 ( t ) = 𝒖 / ( ( exp ( − 𝑪 / λ ) 𝒗 ( t − 1 ) ) \bm{u}^{(t)}=\bm{u}/\left((\exp(-\bm{C}/\lambda)\bm{v}^{(t-1)}\right) 且 𝒗 ( t ) = 𝒗 / ( ( exp ( − 𝑪 / λ ) ⊤ 𝒖 ( t ) ) \bm{v}^{(t)}=\bm{v}/\left((\exp(-\bm{C}/\lambda)^{\top}\bm{u}^{(t)}\right)，初始化為 𝒗 ( 0 ) = 𝟏 \bm{v}^{(0)}=\bm{1}。</p>
+<h3 id="32-">3.2 區域-全局令牌錨點建立</h3>
+<p><strong>全局錨點</strong>。鑒於視覺編碼器的最後幾層捕捉全局信息，我們遵循最近的研究 [ 72 , 63 ] 來選擇在輸出層中從 [ CLS ] 令牌 $x_{[\mathtt{CLS}]}$ 接收最多注意力的全局令牌。
+具體而言，每個注意力頭的 [ CLS ] 注意力計算可表示為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$S_{[\mathtt{CLS}]}^{h}$</th>
+<th>$=\mathtt{Softmax}!\left(\frac{Q_{[\mathtt{CLS}]}K_{V}^{\top}}{\sqrt{D}}\right)$</th>
+<th></th>
+<th>(6)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $Q_{[\mathtt{CLS}]}$ 和 $K_{V}$ 分別表示頭 $h\in[1,H]$ 的查詢和鍵輸出，$D$ 表示隱狀態大小，$S_{[\mathtt{CLS}]}^{h}$ 表示 [ CLS ] 注意力。全局令牌的選擇方式如下：</p>
+<p>|  | $\begin{split}S_{[\mathtt{CLS}]}^{\texttt{avg}}&amp;=\frac{1}{H}\sum_{h=1}^{H}S_{[\mathtt{CLS}]}^{h},\\mathbf{x}<em>{V}^{\mathtt{g}}&amp;=\operatorname{TopK}\big(\mathbf{x}</em>{V},\;S_{[\mathtt{CLS}]}^{\texttt{avg}},\;K\big),\end{split}$ |  | (7) |
+| --- | --- | --- |</p>
+<p>其中 $\operatorname{TopK}(\cdot)$ 選擇具有最高 $S_{[\mathtt{CLS}]}^{\texttt{avg}}$ 分數的 $K$ 個視覺令牌，產生最終保留的令牌集合 $\mathbf{x}_{V}^{\mathtt{g}}$，大小為 $K$。對於沒有 [ CLS ] 令牌的 LVLM（例如 SigLip [ 66 ] 和 Qwen-2.5-VL [ 5 ]），我們類似地基於自注意力（即每個視覺令牌從其他令牌接收的平均注意力）定義令牌重要性分數，並應用相同的 Top-$K$ 選擇。</p>
+<p><strong>區域錨點</strong>。為了實現細粒度的區域細節保留，我們將圖像特徵劃分為 $W$ 個不重疊的網格窗口，並從每個窗口內的淺層 $l$ 選擇具有最高 [ CLS ] 注意力的局部重要令牌，遵循 [ 20 , 10 , 74 ]。
+給定總本地預算 $K$，我們為每個窗口分配 $K_{w}=K/W$ 個令牌，並進行 Top-$K$ 選擇：</p>
+<p>|  | $\mathbf{x}<em>{V}^{\mathtt{l}}=\bigcup</em>{w=1}^{W}\operatorname{TopK}\big(\mathbf{x}<em>{V}^{w},\,S</em>{[\mathtt{CLS}]}^{\texttt{avg}},\,K_{w}\big)$ |  | (8) |
+| --- | --- | --- |</p>
+<p>其中 $\mathbf{x}<em>{V}^{w}$ 表示窗口 $w$ 中的令牌。
+最終錨點集合是全局和局部令牌的並集，$\mathbf{X}</em>{V}^{\texttt{anchors}}=\mathbf{x}<em>{V}^{\mathtt{g}}\cup\mathbf{x}</em>{V}^{\mathtt{l}}$，
+其餘令牌記為 $\mathbf{X}<em>{V}^{\texttt{unanchors}}$。
+遵循 [ 67 ]，我們平衡全局和區域選擇，例如 $|\mathbf{x}</em>{V}^{\mathtt{g}}|=|\mathbf{x}_{V}^{\mathtt{l}}|$，並從全局集合中排除局部選擇的令牌以避免重複和冗餘。</p>
+<h3 id="33">3.3 時空修剪</h3>
+<p><strong>框架內修剪與 OT</strong>。對於每一幀，給定提取的視覺符號 $\bm{X}={X_{1},...,X_{N}}\in\mathbb{R}^{N\times d}$，我們執行符號錨點選擇策略來建立 $\mathbf{X}<em>{V}^{\texttt{acnhors}}\in\mathbb{R}^{M\times d}$（簡記為 $\mathbf{X}</em>{V}^{\texttt{a}}$）和 $\mathbf{X}<em>{V}^{\texttt{unanchors}}\in\mathbb{R}^{(N-M)\times d}$（簡記為 $\mathbf{X}</em>{V}^{\texttt{u}}$）。基於 OT，我們通過以下固定支撐集 $\mathbf{X}<em>{V}^{\texttt{a}}$ 和 $\mathbf{X}</em>{V}^{\texttt{u}}$ 學習幾何對齊傳輸計畫 $\bm{T}$，透過最小化以下 OT 距離將 $\mathbf{X}<em>{V}^{\texttt{u}}$ 推向 $\mathbf{X}</em>{V}^{\texttt{a}}$：</p>
+<p>| | $d^{intra}<em>{\text{OT}}(k)=d</em>{\text{OT}}(\bm{u},\bm{v}|\bm{1}-\bm{{(X^{a}<em>{V})}}^{\top}\bm{({X}^{u}</em>{V})})$, | | (9) |
+| --- | --- | --- | --- |</p>
+<p>其中 $\bm{C}=\bm{1}-\bm{{(X}^{a}<em>{V})}^{\top}\bm{({X}^{u}</em>{V})}$ 表示我們使用 $\bm{X^{a}<em>{V}}$ 和 $\bm{X^{u}</em>{V}}$ 之間的反餘弦相似度距離作為成本矩陣。隨後我們可以計算傳輸計畫 $\bm{T_{intra}}^{<em>}$ 的解（如等式 5）和最終 OT 距離 $d^{intra}<em>{\text{OT}}(k)$。給定 $\mathbf{X}</em>{V}^{\texttt{u}}$ 和 $\mathbf{X}<em>{V}^{\texttt{a}}$ 之間的最優傳輸計畫 $\bm{T</em>{intra}}^{</em>}\in\mathbb{R}_{+}^{(N-M)\times M}$，我們將未選中的符號聚合到錨點符號上以獲得壓縮後的視覺表示。</p>
+<p>對於第 $j$ 個錨點符號，我們首先計算它從所有未選中符號接收的傳輸質量：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$m_{j}\;=\;\sum_{i=1}^{N-M}T^{*}_{ij}$,</th>
+<th></th>
+<th>(10)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中質量表示提供的上下文單位，然後透過來自未選中符號的質量歸一化 OT 聚合來更新對應的錨點：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\tilde{\mathbf{x}}^{a}<em>{j}\;=\;\frac{\mathbf{x}^{a}</em>{j}\;+\;\lambda_{intra}\sum_{i=1}^{N-M}T^{*}<em>{ij}\,\mathbf{x}^{u}</em>{i}}{1\;+\;\lambda_{intra}m_{j}},\quad j=1,\dots,M$,</th>
+<th></th>
+<th>(11)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\lambda_{intra}$ 是用於控制 OT 基礎更新對符號錨點最終上下文貢獻的加權係數。最終的框架內壓縮符號集隨後更新為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\tilde{\mathbf{X}}<em>{V}^{\texttt{a}}\;=\;\left{\tilde{\mathbf{x}}^{a}</em>{1},\dots,\tilde{\mathbf{x}}^{a}_{M}\right}\in\mathbb{R}^{M\times d}$,</th>
+<th></th>
+<th>(12)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>這用作後續時間修剪的修剪後視覺符號。</p>
+<p><strong>框架間修剪與 OT</strong>。透過將整體採樣幀分割為若干幀片段（採用均勻採樣或動態聚類），對於每個幀片段 $\mathcal{C}={t_{1},\dots,t_{L}}$，我們使用第一幀的框架內壓縮符號作為時間錨點：</p>
+<p>| | $\mathbf{A}^{(1)}=\tilde{\mathbf{X}}^{\texttt{a}}<em>{V,t</em>{1}}={\mathbf{x}^{(1)}<em>{j}}</em>{j=1}^{M}$. | | |
+| --- | --- | --- |</p>
+<p>對於每個後續幀 $t_{\ell}$（$\ell=2,\dots,L$），令 $\mathbf{S}^{(\ell)}=\tilde{\mathbf{X}}^{\texttt{a}}<em>{V,t</em>{\ell}}={\mathbf{x}^{(\ell)}<em>{i}}</em>{i=1}^{M}$ 表示其框架內壓縮符號，$\mathbf{A}^{(\ell-1)}={\mathbf{x}^{(\ell-1)}<em>{j}}</em>{j=1}^{M}$ 表示經過 $(\ell-1)$ 次跨連續幀 OT 聚合後的當前片段錨點。</p>
+<p>對於每個後續幀 $t_{\ell}$（$\ell=2,\dots,L$），擁有錨點 $\mathbf{A}^{(\ell-1)}={\mathbf{x}^{(\ell-1)}<em>{j}}</em>{j=1}^{M}$ 和符號 $\mathbf{S}^{(\ell)}={\mathbf{x}^{(\ell)}<em>{i}}</em>{i=1}^{M}$，我們進一步使用最優傳輸公式化框架間 OT 距離為：</p>
+<p>| | $d^{\text{inter}}<em>{\text{OT}}(\ell)=d</em>{\text{OT}}!\left(\bm{u},\bm{v}\,\big|\,\bm{1}-\big(\mathbf{A}^{(\ell-1)}\big)\big(\mathbf{S}^{(\ell)}\big)^{\top}\right)$, | | (13) |
+| --- | --- | --- | --- |</p>
+<p>並獲得框架間最優傳輸計畫為：</p>
+<p>| | $\bm{T_{inter}}^{(\ell)\,*}=\mathrm{OT}!\left(\bm{u},\bm{v}\,\big|\,\bm{1}-\big(\mathbf{A}^{(\ell-1)}\big)\big(\mathbf{S}^{(\ell)}\big)^{\top}\right)$, | | (14) |
+| --- | --- | --- | --- |</p>
+<p>其中這也利用了類似於框架內場景的快速基於 Sinkhorn 的求解器。我們隨後沿著 $\bm{T_{inter}}^{(\ell)\,*}$ 的行進行歸一化以獲得指派概率，</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$p^{(\ell)}<em>{ij}=\frac{T^{(\ell)\,<em>}<em>{ij}}{\sum</em>{j^{\prime}}T^{(\ell)\,</em>}</em>{ij^{\prime}}},\qquad q^{(\ell)}<em>{i}=\max</em>{j}p^{(\ell)}_{ij}$,</th>
+<th></th>
+<th>(15)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>這些用於決定符號是否被聚合到展示潛在相似視覺內容的錨點中，或保留為時間變異符號以維持動態性。具體來說，如果 $q^{(\ell)}<em>{i}&lt;\tau$，幀 $t</em>{\ell}$ 的第 $i$ 個符號被認為具有劇烈的時間變化並照常保留；否則，它會平順地聚合到當前片段錨點中，類似於框架內修剪優化：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{a}^{(\ell)}<em>{j}=\frac{\mathbf{a}^{(\ell-1)}</em>{j}+\lambda_{inter}\sum_{i:\,q^{(\ell)}<em>{i}\geq\tau}p^{(\ell)}</em>{ij}\,\mathbf{s}^{(\ell)}<em>{i}}{1+\lambda</em>{inter}\sum_{i:\,q^{(\ell)}<em>{i}\geq\tau}p^{(\ell)}</em>{ij}},\quad j=1,\dots,M$.</th>
+<th></th>
+<th>(16)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>透過對片段中的幀迭代此程序，我們獲得一組緊湊的片段級錨點（來自 $\mathbf{A}^{(\ell)}$）以及少量剩餘的高變化符號，它們共同促進了時空修剪後的視覺符號。</p>
+<p>提議的 AOT 透過採用最優傳輸來組合來自低判別性或相對相似符號的資訊線索（在移除或合併時），獲得跨時空維度必要的區域-全域語義和上下文聚合。我們的方法考慮了它們對符號錨點的內在貢獻，這些錨點全域抽象並壓縮時空冗餘並保留必要的時間動態，顯著加速視頻 LLM 推理同時保持時間和視覺的完整性。同時，最優傳輸解決方案可以透過現成的 Sinkhorn-Knopp 迭代 [13] 快速且高效地求解，計算開銷可忽略不計，進而實現高效和有效的無訓練方式。</p>
+<h2 id="4">4 實驗</h2>
+<h3 id="41">4.1 實驗設置</h3>
+<p>基準測試。為了展示我們提出的 AOT 方法的有效性和效率，我們在四個常用的視頻理解基準上評估我們的方法：MVBench [ 26 ]、EgoSchema [ 37 ]、LongVideoBench [ 58 ] 和 VideoMME [ 15 ]。這些基準包含各種長度和複雜場景的視頻，為展示我們方法的有效性和泛化能力提供了一個全面的測試平台。</p>
+<p>表 1：LLaVA-OneVision [ 20 ] 在視頻基準上最先進方法的比較。相似保留比例 $Ratio$ 中的最佳性能以粗體突出顯示，第二最佳性能以下劃線表示。</p>
+<p>表 2：LLaVA-Video [ 75 ] 在視頻基準上最先進方法的比較。最佳性能以粗體突出顯示，第二最佳性能以下劃線表示，展示了一致的有效性。</p>
+<p>實現細節。我們的方法在 LLaVA-OneVision-7B [ 20 ] 和 LLaVA-Video-7B [ 75 ] 模型上實現。評估和推理都使用 NVIDIA A100 GPU。推理成本以預填充 FLOPs 測量，基線配置為可比較的 FLOPs（見附錄）。幀內令牌錨點的數量設置為 126，令牌保留預算為 10%。幀內和幀間 Sinkhorn-Knopp 迭代均進行 100 次。加權係數 $\lambda_{intra}$ 和 $\lambda_{inter}$ 設置為預設值 1.0，除非另有說明。
+按照官方實踐，LLaVA-OneVision 模型使用 32 個輸入視頻幀（$N_{v}$ = 196），而 LLaVA-Video 使用 64 幀（$N_{v}$ = 169）。所有基準均使用 LMMs Eval [ 71、19 ] 進行。</p>
+<p>比較的基線方法。我們將提出的 AOT 與六種代表性的無訓練方法進行評估。
+(1) FastV [ 8 ]，在預填充期間根據預測令牌和視覺令牌之間的注意引導選擇顯著視覺令牌；
+(2) PDrop [ 59 ]，在圖像和指令令牌的引導下丟棄跨層次 LLM 塊的視覺令牌；
+(3) VisionZip [ 63 ]，在將視覺令牌饋入 LLM 之前執行空間令牌合併；
+(4) DyCoke [ 47 ]，整合了 LLM 前的時間令牌合併以及解碼期間的自適應 KV 快取修剪；
+(5) PruneVid [ 17 ]，通過聯合空間和時間令牌聚類減少冗餘；
+以及 (6) FastVID [ 42 ]，一種最近的方法，將視頻分段成片段並應用密度感知令牌修剪。</p>
+<p>推理成本分析。在本節中，我們通過計算每個 Transformer 層（MHA+FFN）的成本來調查 LLM 骨幹的 FLOPs。按照 [ 8、59、47、41 ]，在第 $i$ 層使用隱藏大小 $d$ 和 FFN 寬度 $m$ 處理 $n_{i}$ 個視覺令牌的成本為 $4n_{i}d^{2}+2n_{i}^{2}d+2n_{i}dm$ FLOPs。
+對於具有 $T$ 層的 LLM，預填充和解碼 FLOPs 可以計算為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$F_{\text{pre}}$</th>
+<th>$\displaystyle=\sum_{i=1}^{T}\big(4n_{i}d^{2}+2n_{i}^{2}d+2n_{i}dm\big),$</th>
+<th></th>
+<th>(17)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>$F_{\text{dec}}$</td>
+<td>$\displaystyle=\sum_{i=1}^{T}R\Big((4d^{2}+2dm)+2\big(dn_{i}+\tfrac{1}{2}d(R+1)\big)\Big),$</td>
+<td></td>
+<td>(18)</td>
+</tr>
+</tbody>
+</table>
+<p>總成本為 $F_{\text{pre}}+F_{\text{dec}}$。
+當令牌生成數 $R=100$ 時，解碼項僅佔視頻 LLM 總 FLOPs 的約 2%，說明計算主要由預填充階段主導。因此，在將視覺令牌饋入 LLM 之前減少視覺令牌可以實現遠大於僅在 LLM 早期層中應用修剪的節省。</p>
+<h3 id="42">4.2 主要結果</h3>
+<p><strong>LLaVA-OneVision 上的結果。</strong> 如表 1 所示，我們在各種視訊基準上對 LLaVA-OneVision 7B 模型進行 AOT 評估，比較了在不同 token 保留預算（25%、20%、15% 和 10%）下的性能，並分析了推理成本（所謂的 FLOPs），然後將視覺 token 饋送到 LLM 進行後續處理。內部 LLM 修剪方法，如 FastV [8] 和 PDrop [59]，在較低的 token 保留比率（25%）下往往難以平衡性能和效率。DyCoke [47] 將視訊幀分組為 4 幀一組，並修剪除第一幀外的所有幀，其設計受到限制，最低保留比率上限為 25%。空間修剪方法如 VisionZip [63] 在 10% 保留率下顯示出顯著的性能下降（高達 8.4%）。這種下降可歸因於僅依賴空間壓縮，在激進修剪下對於保留必要的時空資訊效果不佳。值得注意的是，即使修剪了 90.0% 的視覺 token，我們的 AOT 保留了原始模型平均 97.6% 的性能。這證明了與現有方法相比，我們方法的卓越穩健性和適應性。</p>
+<p><strong>LLaVA-Video 上的結果。</strong> 表 2 展示了我們的 AOT 在 LLaVA-Video 7B 模型上的性能。LLaVA-Video-7B 由於其更高的初始 pooling 率（LLaVA-OneVision 中每幀 169 與 196 個 token）而帶來更大的壓縮挑戰。儘管如此，我們的方法實現了將 FLOPs 減少至原始 15% 的目標，保留了 95.1% 的性能，並優於現有方法。一般而言，在 LLaVA-Video 7B 上以最少性能損失獲得顯著 token 壓縮確實比 LLaVA-OneVision 7B 更具挑戰性。</p>
+<p><strong>使用更多幀進行縮放輸入。</strong> 為了驗證改變輸入幀數時的性能波動，我們進行了具有增加輸入幀數的實驗，以在圖 3 中展示我們方法的穩健改進。視訊 LLM 的一個關鍵挑戰是均勻且稀疏採樣的幀可能會丟失基本視覺資訊以獲得準確答案。圖 3 說明我們的方法在各個幀率上持續超越其他壓縮方法。在時間冗餘較少的稀疏 16 採樣幀上，我們的 AOT 仍然超越所有其他壓縮方法。對於更密集的 64 幀，得益於我們的幀內和幀間層級最優 token 修剪，我們的方法相比原始模型展示了更高效和更有效的性能。此外，當輸入 128 幀時，我們的 token 縮減方法保持近似的上下文長度，而原始模型受到最大上下文長度限制。這進一步證明了我們提出的 AOT 優於那些需要廣泛時空上下文或回答具有長文本複雜問題的任務。</p>
+<p><strong>token 縮減後的優越性能。</strong> 如表 1 和圖 3 所示，我們可以發現利用我們 token 縮減方法的模型可以在某些基準上超越原始模型。這說明存在過度、無關或冗餘資訊充當雜訊，引入對有效和高效抽象無用的視覺線索。大量視覺資訊誤導後續的 LLM 關注於關鍵部分，因此導致結果下降。我們的方法不是直接移除不重要的 token 或合併高度相似的 token，而是利用最優傳輸來全面挖掘這些 token 中的資訊信號，這些 token 包含基本的語義和上下文，以增強選定的 token anchors，通過傳輸加權聚合實現。這樣，結果凸顯了我們方法在聚合或蒸餾關鍵視覺資訊方面的有效性，以及為了更好地進行 LLM 處理的全局最優細化，我們在圖 4 中呈現定性視覺化。</p>
+<h3 id="43-sinkhorn-knopp">4.3 Sinkhorn-Knopp 迭代的效率分析</h3>
+<p>如表 3 所示，我們在單個 A100 GPU 上使用 LLaVA-OneVision 7B 在 32 幀場景下測量了使用 Sinkhorn-Knopp 迭代進行最優運輸的時間消耗。我們可以看到，進行 100 次迭代時，幀內最優運輸（Intra-Frame OT）的計算時間約為 0.51 毫秒，而完成幀間最優運輸（Inter-Frame OT）則需要 1.60 毫秒，合計約 2.11 毫秒，佔整個推理時間不到 1%。對於 VisionZip [63]、PruneVid [17] 和我們提出的 AOT，都需要在 LLM 之前進行令牌預處理，這會引入額外的時間。然而，我們的方法為每幀構造固定數量的稀疏令牌作為令牌錨點，而 PruneVid 為每幀生成可變數量的令牌，這使得批處理加速更加複雜，不可避免地引入額外的計算開銷。</p>
+<h3 id="44">4.4 消融研究</h3>
+<p>在本節中，我們在 LLaVA-OneVision 7B 上進行消融研究，將 token 保留預算設定在 10%，逐步展示我們提出的各個組件所帶來的改進。</p>
+<p><strong>Intra-Frame Token Anchors 選擇的消融</strong>。為了驗證 Local-Global token anchors 建立的有效性，如表 5 所示，儘管僅利用全局級別的 anchors 在採用我們的 AOT 後能在視頻基準測試中達到具有競爭力的性能，但將全局和局部 anchors 結合使用能達到最佳效果，這充分展示了保留語義上重要且空間上多樣化的 token 候選的有效性。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01400/x3.png" loading="lazy"></figure> 圖 3：左圖：使用更多幀進行縮放會導致更高效和更有效的視覺資訊抽象。右圖：控制上下文貢獻的加權係數的敏感性分析，配置一致，$\lambda_{intra}$ 和 $\lambda_{inter}$。</p>
+<p><strong>Token 縮減 OT 的消融</strong>。在表 5 中，我們也可以觀察到，如果沒有最優運輸來聚合全面的語義和上下文，模型會導致性能下降，特別是在進行激進的 token 壓縮時。</p>
+<p><strong>Intra-Frame 和 Inter-Frame OT 的消融</strong>。我們在表 5 中進行實驗，將來自 intra-frame 和 inter-frame 優化的最優運輸相結合，有助於將合併或移除 token 中的必要語義和上下文聚合到選定的 token anchors 中，以更好地處理複雜視頻，而不是簡單地合併或移除它們。這進一步證明了我們的方法在顯著加速 Video LLM 推理的同時保持了時間和視覺完整性。</p>
+<p><strong>Token Anchors 聚合的消融</strong>。在表 4 中，我們進一步進行研究以驗證透過優化運輸計畫 $T$ 聚合來自不重要和非常相似 token 的資訊的有效性，包括 intra-frame 和 inter-frame。與不進行合併和餘弦相似度加權相比，運輸加權 $T$ 展示了優越的 token 壓縮性能，這證明了本文中 local-global 最優運輸聚合的有效性。</p>
+<p><strong>加權係數 $\lambda_{Intra}$ 和 $\lambda_{Inter}$ 的敏感性</strong>。如圖 3 右側所示，預設值為 1.0 的 $\lambda_{Intra}$ 和 $\lambda_{Inter}$ 都達到了最佳效果，而較低的加權係數會聚合邊際資訊，較高的係數會引入噪聲，兩者都會導致性能下降。</p>
+<p>表 3：使用 Sinkhorn-Knopp 迭代計算 Intra- 和 Inter-Frame 的計算開銷（毫秒）。</p>
+<p>表 4：消融：不同聚合策略對獲得最終 token anchors 集合以代表視頻的影響。</p>
+<p>表 5：消融：透過逐步移除提出的組件來展示其有效性，從而說明各個組件的貢獻。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01400/x4.png" loading="lazy"></figure> 圖 4：我們的 Local-Global token anchors 在連續幀上的演變的定性視覺化，同時採用最優運輸將來自未選定 token 的必要資訊聚合，以幫助 LLM 更好地處理。</p>
+<h2 id="5">5 結論</h2>
+<p>本論文首先探討如何將必要但最優的語義和上下文聚合到保留的令牌中，而不是單純地合併或移除令牌。首先，我們對語義上重要且空間上多樣化的令牌候選進行局部-全局令牌選擇，為每一幀建立令牌錨點。隨後，我們利用最優傳輸策略，從幀內和幀間的傳輸計畫中全面聚合時空上下文，以在無訓練流程中保持時間和視覺保真度。透過此方法，我們的方法在激進的令牌壓縮下，在各種視頻基準上展現出具有競爭力的性能，期望能為社群帶來新的啟示。</p>
+<p>補充材料</p>
+<h2 id="6-aot">6 AOT 方法詳細說明</h2>
+<h3 id="61-optimal-transport">6.1 Optimal Transport</h3>
+<p>最優運輸 [38] 最初是為了找到一個運輸計畫，以最小成本向各種消費者運送多種產品以滿足其需求，例如在多個容器之間倒飲料直到全部填滿。最近，它已被廣泛應用於分佈的比較。具體來說，給定兩個機率密度函數 U U 和 V V 分別在空間 𝒳 \mathcal{X} 和 𝒴 \mathcal{Y} 上，則 OT (Wasserstein) 距離 [51] 可定義為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>D OT ​ ( U , V ) = inf Γ ​ ∫ 𝒳 × 𝒴 𝑪 ​ ( 𝒙 , 𝒚 ) ​ 𝑑 γ ​ ( 𝒙 , 𝒚 ) , D_{\text{OT}}(U,V)=\underset{\Gamma}{\inf}\int_{\mathcal{X}\times\mathcal{Y}}\bm{C}(\bm{x},\bm{y})d\gamma(\bm{x},\bm{y}),</th>
+<th></th>
+<th>(19)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 𝑪 ​ ( 𝒙 , 𝒚 ) \bm{C}(\bm{x},\bm{y}) 是空間 𝒳 × 𝒴 \mathcal{X}\times\mathcal{Y} 中兩點之間的成本，而 Γ \Gamma 表示支撐點 𝒙 \bm{x} 和 𝒚 \bm{y} 之間的運輸計畫集合（例如 γ ​ ( 𝒙 , 𝒚 ) \gamma(\bm{x},\bm{y})）。
+我們可以將兩個機率密度函數 U U 和 V V 視為飲料和容器，而 𝑪 \bm{C} 是倒出單位飲料的成本函數。</p>
+<p>當涉及到我們框架的標記集合聚合時，我們將標記錨點集合和未選定標記集合表述為兩個離散分佈，如下所示：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>U = ∑ m = 1 M u m ​ δ 𝑿 m and V = ∑ n = 1 N v n ​ δ 𝑿 n , U=\sum_{m=1}^{M}u_{m}\delta_{\bm{X}<em>{m}}\hskip 28.80008pt\text{and}\hskip 28.80008ptV=\sum</em>{n=1}^{N}v_{n}\delta_{\bm{X}_{n}},</th>
+<th></th>
+<th>(20)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 𝒖 \bm{u} 和 𝒗 \bm{v} 是總和為 1 的離散機率向量，而 δ 𝒇 \delta_{\bm{f}} 是在嵌入空間中的支撐點 𝒇 \bm{f} 處的 Dirac delta 函數。給定兩個支撐標記點 𝑿 m \bm{X}<em>{m} 和 𝑿 n \bm{X}</em>{n}，成本函數寫成 𝑪 ​ ( 𝑿 m , 𝑿 n ) = 1 − sim ​ ( 𝑿 m , 𝑿 n ) = 1 − 𝑿 m ⊤ ​ 𝑿 n ‖ 𝑿 m ‖ ⋅ ‖ 𝑿 n ‖ \bm{C}(\bm{X}<em>{m},\bm{X}</em>{n})=1-\text{sim}(\bm{X}<em>{m},\bm{X}</em>{n})=1-\frac{\bm{X}<em>{m}^{\top}\bm{X}</em>{n}}{||\bm{X}<em>{m}||\cdot||\bm{X}</em>{n}||} 。
+為簡便起見，在此離散情況下，𝑪 ∈ ℝ M × N \bm{C}\in\mathbb{R}^{M\times N} 是一個成本矩陣，其中每個點表示 𝑿 m \bm{X}<em>{m} 和 𝑿 n \bm{X}</em>{n} 之間的成本。
+然後，這兩個分佈的總距離寫成：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>&lt; 𝑻 , 𝑪 &gt;= ∑ m = 1 M ∑ n = 1 N 𝑻 m , n ​ 𝑪 m , n , &lt;\bm{T},\bm{C}&gt;=\sum_{m=1}^{M}\sum_{n=1}^{N}\bm{T}<em>{m,n}\bm{C}</em>{m,n},</th>
+<th></th>
+<th>(21)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 𝑻 ∈ ℝ M × N \bm{T}\in\mathbb{R}^{M\times N} 是運輸計畫矩陣，被學習以最小化總距離。每個點 𝑻 m , n ∈ 𝑻 \bm{T}<em>{m,n}\in\bm{T} 是局部成本 𝑪 m , n \bm{C}</em>{m,n} 的權重。</p>
+<p>最優運輸的上述最佳化問題表述為：</p>
+<p>|  |  | d OT ​ ( 𝒖 , 𝒗 | 𝑪 ) = minimize 𝑻 &lt; 𝑻 , 𝑪 &gt; \displaystyle d_{\text{OT}}(\bm{u},\bm{v}|\bm{C})=\underset{\bm{T}}{\text{minimize}}&lt;\bm{T},\bm{C}&gt; |  | (22) |
+| --- | --- | --- | --- | --- |
+|  |  | subject to 𝑻 ​ 𝟏 N = 𝒖 , 𝑻 ⊤ ​ 𝟏 M = 𝒗 , 𝑻 ∈ ℝ + M × N . \displaystyle\text{subject to}\penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \bm{T}\bm{1}<em>{N}=\bm{u},\;\bm{T}^{\top}\bm{1}</em>{M}=\bm{v},\;\bm{T}\in\mathbb{R}^{M\times N}_{+}. |  |</p>
+<p>𝑻 \bm{T} 的這些約束用於匹配其邊際分佈和方程式 20 中的原始離散分佈。在我們的框架中，我們
+對標記錨點 𝑿 m \bm{X}<em>{m} 和未選定標記 𝑿 n \bm{X}</em>{n} 等同看待，因此 𝒖 = 𝟏 M × 1 / M \bm{u}=\bm{1}<em>{M\times 1}/M 和 𝒗 = 𝟏 N × 1 / N \bm{v}=\bm{1}</em>{N\times 1}/N 。</p>
+<p>由於直接最佳化上述目標函數總是耗時的，我們應用 Sinkhorn 距離 [13] 來使用熵約束以實現快速最佳化。
+帶有熵約束拉格朗日乘數的最佳化問題為：</p>
+<p>|  |  | d OT , λ ​ ( 𝒖 , 𝒗 | 𝑪 ) = minimize 𝑻 &lt; 𝑻 , 𝑪 &gt; − λ ​ h ​ ( 𝑻 ) \displaystyle d_{\text{OT},\lambda}(\bm{u},\bm{v}|\bm{C})=\underset{\bm{T}}{\text{minimize}}&lt;\bm{T},\bm{C}&gt;-\lambda h(\bm{T}) |  | (23) |
+| --- | --- | --- | --- | --- |
+|  |  | subject to 𝑻 ​ 𝟏 N = 𝒖 , 𝑻 ⊤ ​ 𝟏 M = 𝒗 , 𝑻 ∈ ℝ + M × N , \displaystyle\text{subject to}\penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \penalty 10000\ \bm{T}\bm{1}<em>{N}=\bm{u},\;\bm{T}^{\top}\bm{1}</em>{M}=\bm{v},\;\bm{T}\in\mathbb{R}^{M\times N}_{+}, |  |</p>
+<p>其中 h ​ ( ⋅ ) h(\cdot) 是熵，而 λ ≥ 0 \lambda\geq 0 是超參數。然後我們可以通過幾次迭代獲得快速最佳化解：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>𝑻 ∗ = diag ​ ( 𝒖 ( t ) ) ​ exp ⁡ ( − 𝑪 / λ ) ​ diag ​ ( 𝒗 ( t ) ) , \bm{T}^{*}=\text{diag}(\bm{u}^{(t)})\exp(-\bm{C}/\lambda)\text{diag}(\bm{v}^{(t)}),</th>
+<th></th>
+<th>(24)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 t t 表示迭代，在每次迭代中 𝒖 ( t ) = 𝒖 / ( ( exp ( − 𝑪 / λ ) 𝒗 ( t − 1 ) ) \bm{u}^{(t)}=\bm{u}/\left((\exp(-\bm{C}/\lambda)\bm{v}^{(t-1)}\right) 和 𝒗 ( t ) = 𝒗 / ( ( exp ( − 𝑪 / λ ) ⊤ 𝒖 ( t ) ) \bm{v}^{(t)}=\bm{v}/\left((\exp(-\bm{C}/\lambda)^{\top}\bm{u}^{(t)}\right) ，初始化為 𝒗 ( 0 ) = 𝟏 \bm{v}^{(0)}=\bm{1} 。訓練和測試過程的詳細演算法分別如演算法 1 和 2 所示。</p>
+<p>Algorithm 1 ​​​ : Intra-Frame Inference of AOT with OT</p>
+<p>Algorithm 2 ​​​ : Inter-Frame Inference of AOT with OT</p>
+<h3 id="62-sinkhorn">6.2 最優運輸與 Sinkhorn 迭代</h3>
+<p>在本小節中，我們簡要介紹 Sinkhorn-Knopp 迭代 [13] 演算法的推導，我們強調這不是我們的貢獻，屬於教科書知識。</p>
+<p>最優運輸問題的數學公式在方程式 20 和方程式 22 中定義。這是一個可在多項式時間內求解的線性規劃。然而，對於密集 token 集合的情況，產生的線性規劃很大，涉及特徵維度的平方以及所有尺度上的錨點。這個問題可以通過快速迭代求解來解決，該方法將上述優化目標轉換為具有熵正則化項 $E$ 的非線性但凸形式：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle\begin{split}\min_{T}\quad&amp;\sum\limits_{i=1}^{m}\sum\limits_{j=1}^{n}C_{ij}T_{ij}+\gamma E(T_{ij}),\end{split}$</th>
+<th></th>
+<th>(25)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $E(T_{ij})=T_{ij}(\log T_{ij}-1)$。$\gamma$ 是一個常數超參數，控制正則化項的強度。根據拉格朗日乘數法，方程式 25 中的約束優化目標可以轉換為無約束目標：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle\begin{split}\min_{t}\quad&amp;\sum\limits_{i=1}^{m}\sum\limits_{j=1}^{n}C_{ij}T_{ij}+\gamma E(T_{ij})+\&amp;\alpha_{j}(\sum\limits_{i=1}^{m}T_{ij}-d_{j})+\beta_{i}(\sum\limits_{j=1}^{n}T_{ij}-s_{i}),\end{split}$</th>
+<th></th>
+<th>(26)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\alpha_{j}(j=1,2,...n)$ 和 $\beta_{i}(i=1,2,...,m)$ 是拉格朗日乘數。</p>
+<p>注意第 $i$ 個供應商（未選中的 token）持有 $s_{i}$ 個背景資訊單位，而第 $j$ 個需求者（token 錨點）需要 $d_{j}$ 個背景資訊單位。從供應商 $i$ 到需求者 $j$ 運輸每單位背景資訊的成本由 $C_{ij}$ 表示。OT 問題的目標是找出一個運輸計劃 $T^{*}={T_{i,j}|i=1,2,...m,j=1,2,...n}$，根據該計劃所有供應商的背景資訊可以以最小運輸成本運送給需求者。</p>
+<p>通過令優化目標的導數等於 0，最優計劃 $T^{*}$ 被求解為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\begin{split}T_{ij}^{*}=\exp(-{\frac{\alpha_{j}}{\gamma}})\exp(-{\frac{C_{ij}}{\gamma}})\exp(-{\frac{\beta_{i}}{\gamma}}).\end{split}$</th>
+<th></th>
+<th>(27)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>令 $u_{j}=\exp(-{\frac{\alpha_{j}}{\gamma}}),v_{i}=\exp(-{\frac{\beta_{i}}{\gamma}}),M_{ij}=\exp(-{\frac{C_{ij}}{\gamma}})$，以下約束可以被強制執行：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\displaystyle\sum_{i}T_{ij}=u_{j}(\sum_{i}M_{ij}v_{i})=d_{j},$</th>
+<th></th>
+<th>(28)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>$\displaystyle\sum_{j}T_{ij}=(u_{j}\sum_{i}M_{ij})v_{i}=s_{i}.$</td>
+<td></td>
+<td>(29)</td>
+</tr>
+</tbody>
+</table>
+<p>這兩個方程式必須同時滿足。一個可能的解決方案是通過重複以下更新公式足夠多的步驟來計算 $v_{i}$ 和 $u_{j}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\begin{split}u_{j}^{t+1}=\frac{d_{j}}{\sum_{i}M_{ij}v_{i}^{t}},\quad v_{i}^{t+1}=\frac{s_{i}}{\sum_{j}M_{ij}u_{j}^{t+1}}.\end{split}$</th>
+<th></th>
+<th>(30)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>方程式 30 中的更新規則也被稱為 Sinkhorn-Knopp 迭代。在重複此迭代 $t$ 次後，可以獲得近似最優計劃 $T^{*}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\begin{split}T^{*}=diag(u)Mdiag(v).\end{split}$</th>
+<th></th>
+<th>(31)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>$\gamma$ 和 $T$ 經驗上設定為 0.1 和 100。</p>
+<h2 id="7">7 更多實現細節</h2>
+<p>我們的方法在 LLaVA-OneVision-7B [ 20 ] 和 LLaVA-Video-7B [ 75 ] 模型上實現。評估和推論均使用 8 個 NVIDIA A100 GPU，每個 GPU 具有 40GB 記憶體可用性。
+當採用 LLaVA-OneVision-7B 與 32 個採樣幀時，幀內 token 錨點數設定為 126（對應 10% token 保留預算）、144（15%）、196（20%）和 205（25%）。當採用 LLaVA-Video-7B 與 64 個採樣幀時，幀內 token 錨點數設定為 108（對應 10% token 保留預算）、144（15%）、176（20%）和 198（25%）。這兩種配置都將通過調整 τ \tau 來調整幀間壓縮的保留比例，以匹配整體 token 保留預算。幀內和幀間 Sinkhorn-Knopp 迭代都進行了 100 次，熵參數 λ \lambda 設為 0.1。我們發現最佳化迭代對壓縮性能影響很小，而 100 這個數字是最佳的。</p>
+<h2 id="8">8 動態聚類幀片段</h2>
+<p>按照 FastVID [ 42 ]，我們採用動態時間分割法，這是一種自適應簡單方法，使用全局級特徵根據視訊複雜度分割邊界。該動態聚類方法同時實現時間結構和高的幀內相似性，為簡單場景生成較少分割，為複雜場景生成較細緻的分割。同時，該方法緩解了固定長度的問題，保留時間順序但可能會將視覺上不相似的幀分組。如表 6 和表 7 所示，配備動態聚類功能的提議 AOT 分割幀片段仍然在各種視訊基準測試中持續表現出具有競爭力和優越的性能，進一步證明了我們方法的實際優勢。</p>
+<p>表 6：最先進方法在 LLaVA-OneVision [ 20 ] 上的視訊基準測試對比。在保留比例 R ​ a ​ t ​ i ​ o Ratio 相似的方法中，最佳性能以粗體突出顯示，次佳者以下劃線表示。AOT w Dyn 表示我們應用動態時間分割來在每個片段內獲得自適應幀，按照 FastVID [ 42 ]。</p>
+<p>表 7：最先進方法在 LLaVA-Video [ 75 ] 上的視訊基準測試對比。最佳性能以粗體突出顯示，次佳者以下劃線表示，證明了一致的有效性。AOT w Dyn 表示我們應用動態時間分割來在每個片段內獲得自適應幀，按照 FastVID [ 42 ]。</p>
+<p>表 8：消融研究：隨機 token 選擇的影響。</p>
+<h2 id="9">9 隨機令牌錨點選擇消融</h2>
+<p>在表 8 中，我們進一步進行更多的消融研究，通過在幀內級別隨機選擇令牌錨點來展示高品質令牌錨點初始建立的重要性，而隨機選擇噪聲令牌會大幅惡化性能。</p>
+<h2 id="10">10 更多視覺化</h2>
+<p>如圖 5 和圖 6 所示，我們視覺化初始選擇的令牌錨點。由於 LLaVA-OneVision-7B [ 20 ] 和 LLaVA-Video-7B [ 75 ] 都利用相鄰令牌的空間池化，這使得時間令牌標記的視覺化變得困難，我們選擇在連續採樣的幀上展示初始幀內令牌錨點，以幫助更好地說明最優運輸在本文中聚集未選擇令牌的必要信息來幫助 LLM 更好地處理的有效性。</p>
+<h2 id="11">11 限制與未來工作</h2>
+<p>限制。本論文著重於透過 OT 為基礎的聚集方法，將信息豐富的語義與上下文聚集到精簡的剩餘代幣集合中，而非天真地丟棄或平均它們。
+然而，跨幀 OT 修剪模組仍然是啟發式的，因為沒有原理性的方法來構造高品質的時間代幣錨點，不同於單一影像由強大的視覺編碼器編碼的幀內情況 [ 39 , 66 ]。
+儘管我們的方法支援固定和動態的時間分段幀片段，時間邊界仍然存在雜訊，因此視覺上不相似的幀可能被分組在同一個片段內，在複雜的視頻場景中降低性能。</p>
+<p>未來工作。儘管我們以無訓練方式使用 OT 來聚集跨幀內和跨幀層級的區域–全局代幣錨點，整個推論流程仍然是端到端可微的，因為傳輸計畫是由前向傳遞中的少量矩陣乘法計算的。
+因此，梯度仍然可以通過 OT 最佳化策略反向傳播，使得整個系統（包括迭代更新）完全可微。
+因此探索與 OT 的模型微調或指令微調很有前景，旨在實現更具競爭力且更有效率的代幣縮減框架。同樣值得探索輔助信號 [ 21 , 76 , 33 , 22 , 53 , 23 , 77 ] 以增強和擴展 Video LLM 至 3D/4D 空間智能也很有前景。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01400/x5.png" loading="lazy"></figure> 圖 5：在 MVBench 樣本上我們的區域-全局代幣錨點跨連續幀演化的定性視覺化，同時採用最優傳輸來聚集來自未選中代幣的必要訊息以幫助 LLM 更好地處理。頂部是原始採樣幀，底部是相應的代幣視覺化。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01400/x6.png" loading="lazy"></figure> 圖 6：在 VideoMME 樣本上我們的區域-全局代幣錨點跨連續幀演化的定性視覺化，同時採用最優傳輸來聚集來自未選中代幣的必要訊息以幫助 LLM 更好地處理。頂部是原始採樣幀，底部是相應的代幣視覺化。</p>
+<h2 id="_2">參考文獻</h2>
+<ul>
+<li>
+<p>[1] J. Achiam, S. Adler, S. Agarwal, L. Ahmad, I. Akkaya, F. L. Aleman, D. Almeida, J. Altenschmidt, S. Altman, S. Anadkat, et al. (2023) GPT-4 技術報告。arXiv 預印本 arXiv:2303.08774。引用於：§2.1。</p>
+</li>
+<li>
+<p>[2] J. Alayrac, J. Donahue, P. Luc, A. Miech, I. Barr, Y. Hasson, K. Lenc, A. Mensch, K. Millican, M. Reynolds, et al. (2022) Flamingo：用於少樣本學習的視覺語言模型。在 NeurIPS 中，Vol. 35，pp. 23716–23736。引用於：§2.1。</p>
+</li>
+<li>
+<p>[3] X. An, Y. Xie, K. Yang, W. Zhang, X. Zhao, Z. Cheng, Y. Wang, S. Xu, C. Chen, C. Wu, et al. (2025) LLaVA-OneVision-1.5：多模態訓練的完全開源框架。arXiv 預印本 arXiv:2509.23661。引用於：§2.1。</p>
+</li>
+<li>
+<p>[4] K. H. I. Arif, J. Yoon, D. S. Nikolopoulos, H. Vandierendonck, D. John, and B. Ji (2025) HiRED：針對高解析度視覺語言模型高效推論的注意力引導標記丟棄。在 AAAI 中，Vol. 39，pp. 1773–1781。引用於：§2.2。</p>
+</li>
+<li>
+<p>[5] S. Bai, K. Chen, X. Liu, J. Wang, W. Ge, S. Song, K. Dang, P. Wang, S. Wang, J. Tang, et al. (2025) Qwen2.5-VL 技術報告。arXiv 預印本 arXiv:2502.13923。引用於：§1、§2.1、§3.2。</p>
+</li>
+<li>
+<p>[6] D. Bolya, C. Fu, X. Dai, P. Zhang, C. Feichtenhofer, and J. Hoffman (2022) Token merging：更快的 ViT。arXiv 預印本 arXiv:2210.09461。引用於：§1、§1、§2.2。</p>
+</li>
+<li>
+<p>[7] W. Chai, E. Song, Y. Du, C. Meng, V. Madhavan, O. Bar-Tal, J. Hwang, S. Xie, and C. D. Manning (2024) AuroraCap：高效能的影片詳細字幕標註及新基準。arXiv 預印本 arXiv:2410.03051。引用於：§1。</p>
+</li>
+<li>
+<p>[8] L. Chen, H. Zhao, T. Liu, S. Bai, J. Lin, C. Zhou, and B. Chang (2024) 一張圖像在第 2 層之後值 1/2 個標記：大型視覺語言模型的隨插即用推論加速。在 ECCV 中，pp. 19–35。引用於：§2.2、§4.1、§4.1、§4.2、表 1、表 2、表 6、表 7。</p>
+</li>
+<li>
+<p>[9] L. Chen, X. Wei, J. Li, X. Dong, P. Zhang, Y. Zang, Z. Chen, H. Duan, Z. Tang, L. Yuan, et al. (2024) ShareGPT4Video：透過更優質字幕改進影片理解與生成。在 NeurIPS 中，Vol. 37，pp. 19472–19495。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[10] Z. Chen, W. Wang, H. Tian, S. Ye, Z. Gao, E. Cui, W. Tong, K. Hu, J. Luo, Z. Ma, et al. (2024) 我們距離 GPT-4V 有多遠？使用開源套件縮小與商業多模態模型的差距。Science China Information Sciences 67（12），pp. 220101。引用於：§1、§3.2。</p>
+</li>
+<li>
+<p>[11] Z. Cheng, S. Leng, H. Zhang, Y. Xin, X. Li, G. Chen, Y. Zhu, W. Zhang, Z. Luo, D. Zhao, et al. (2024) VideoLLaMA 2：推進視訊 LLM 中的時空建模與音頻理解。arXiv 預印本 arXiv:2406.07476。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[12] W. Chiang, Z. Li, Z. Lin, Y. Sheng, Z. Wu, H. Zhang, L. Zheng, S. Zhuang, Y. Zhuang, J. E. Gonzalez, et al. (2023) Vicuna：開源聊天機器人以 90%* ChatGPT 品質打動 GPT-4。參閱 https://vicuna.lmsys.org（於 2023 年 4 月 14 日存取）2（3），pp. 6。引用於：§2.1。</p>
+</li>
+<li>
+<p>[13] M. Cuturi (2013) Sinkhorn 距離：最優傳輸的光速計算。在神經資訊處理系統進展中，Vol. 26。引用於：§1、§3.1、§3.3、§6.1、§6.2。</p>
+</li>
+<li>
+<p>[14] A. Dosovitskiy (2020) 一張圖像值 16x16 個單字：大規模圖像識別的 Transformer。arXiv 預印本 arXiv:2010.11929。引用於：§2.2。</p>
+</li>
+<li>
+<p>[15] C. Fu, Y. Dai, Y. Luo, L. Li, S. Ren, R. Zhang, Z. Wang, C. Zhou, Y. Shen, M. Zhang, et al. (2025) Video-MME：多模態 LLM 影片分析的首個全面評估基準。在 CVPR 中，pp. 24108–24118。引用於：§1、§4.1。</p>
+</li>
+<li>
+<p>[16] T. Fu, T. Liu, Q. Han, G. Dai, S. Yan, H. Yang, X. Ning, and Y. Wang (2024) FrameFusion：結合相似性與重要性進行大型視覺語言模型的影片標記縮減。arXiv 預印本 arXiv:2501.01986。引用於：§1、§2.3。</p>
+</li>
+<li>
+<p>[17] X. Huang, H. Zhou, and K. Han (2024) PruneVid：針對高效率視訊大型語言模型的視覺標記修剪。arXiv 預印本 arXiv:2412.16117。引用於：§1、§1、§2.3、§4.1、§4.3、表 1、表 1、表 1、表 1、表 6、表 6、表 6、表 6。</p>
+</li>
+<li>
+<p>[18] P. Jin, R. Takanobu, W. Zhang, X. Cao, and L. Yuan (2024) Chat-UniVi：統一視覺表示賦予大型語言模型圖像和影片理解能力。在 CVPR 中，pp. 13700–13710。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[19] B. Li, P. Zhang, K. Zhang, F. Pu, X. Du, Y. Dong, H. Liu, Y. Zhang, G. Zhang, C. Li, et al. (2024) LMMS-Eval：加速大型多模態模型的開發。3 月。引用於：§4.1。</p>
+</li>
+<li>
+<p>[20] B. Li, Y. Zhang, D. Guo, R. Zhang, F. Li, H. Zhang, K. Zhang, P. Zhang, Y. Li, Z. Liu, et al. (2024) LLaVA-OneVision：輕鬆視覺任務轉移。arXiv 預印本 arXiv:2408.03326。引用於：§1、§10、§2.1、§3.2、§4.1、表 1、表 1、§7、表 6、表 6。</p>
+</li>
+<li>
+<p>[21] J. Li, Z. Jie, X. Wang, X. Wei, and L. Ma (2022) 弱監督語義分割的本地化擴展與收縮。Advances in Neural Information Processing Systems 35，pp. 16037–16051。引用於：§11。</p>
+</li>
+<li>
+<p>[22] J. Li, C. Saltori, F. Poiesi, and N. Sebe (2025) 開放詞彙三維場景理解的跨模態與不確定性感知團聚。在 IEEE/CVF 計算機視覺與模式識別會議論文集中，pp. 19390–19400。引用於：§11。</p>
+</li>
+<li>
+<p>[23] J. Li, D. Zhao, Q. Zang, Z. Jie, L. Ma, and N. Sebe (2025) 正交投影子空間聚集在線先驗知識用於持續測試時間適應。arXiv 預印本 arXiv:2506.19022。引用於：§11。</p>
+</li>
+<li>
+<p>[24] J. Li, D. Li, S. Savarese, and S. Hoi (2023) BLIP-2：使用凍結圖像編碼器與大型語言模型進行自助語言圖像預訓練。在 ICML 中，pp. 19730–19742。引用於：§2.1。</p>
+</li>
+<li>
+<p>[25] K. Li, Y. He, Y. Wang, Y. Li, W. Wang, P. Luo, Y. Wang, L. Wang, and Y. Qiao (2023) VideoChat：聊天中心的影片理解。arXiv 預印本 arXiv:2305.06355。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[26] K. Li, Y. Wang, Y. He, Y. Li, Y. Wang, Y. Liu, Z. Wang, J. Xu, G. Chen, P. Luo, et al. (2024) MVBench：全面的多模態影片理解基準。在 CVPR 中，pp. 22195–22206。引用於：§1、§1、§2.1、§4.1。</p>
+</li>
+<li>
+<p>[27] Y. Li, C. Wang, and J. Jia (2024) Llama-Vid：一張圖像在大型語言模型中值 2 個標記。在 ECCV 中，pp. 323–340。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[28] B. Lin, Y. Ye, B. Zhu, J. Cui, M. Ning, P. Jin, and L. Yuan (2023) Video-LLaVA：透過投影前的對齊學習統一視覺表示。arXiv 預印本 arXiv:2311.10122。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[29] J. Lin, H. Yin, W. Ping, P. Molchanov, M. Shoeybi, and S. Han (2024) ViLA：視覺語言模型預訓練。在 CVPR 中，pp. 26689–26699。引用於：§2.1。</p>
+</li>
+<li>
+<p>[30] H. Liu, C. Li, Y. Li, and Y. J. Lee (2024) 透過視覺指令微調改進基線。在 CVPR 中，pp. 26296–26306。引用於：§2.1。</p>
+</li>
+<li>
+<p>[31] H. Liu, C. Li, Y. Li, B. Li, Y. Zhang, S. Shen, and Y. J. Lee (2024) LLaVA-Next：改進的推理、光學字元辨識與世界知識。引用於：§2.1。</p>
+</li>
+<li>
+<p>[32] T. Liu, L. Shi, R. Hong, Y. Hu, Q. Yin, and L. Zhang (2024) 多階段視覺標記丟棄：邁向高效率多模態大型語言模型。arXiv 預印本 arXiv:2411.10803。引用於：§2.2。</p>
+</li>
+<li>
+<p>[33] X. Liu, X. Xiaoxu, J. Li, Q. Zhang, X. Wang, N. Sebe, M. Lin, et al. (2024) LESS：標籤高效且單階段的三維實例分割參考。在第 38 屆神經資訊處理系統會議（NeurIPS 2024）中。引用於：§11。</p>
+</li>
+<li>
+<p>[34] Z. Liu, C. Xie, P. Li, L. Zhao, L. Tang, Y. Zheng, C. Liu, and H. Xie (2025) 混合層級指令注入用於多模態大型語言模型中的影片標記壓縮。在 CVPR 中，pp. 8568–8578。引用於：§1。</p>
+</li>
+<li>
+<p>[35] Z. Liu, L. Zhu, B. Shi, Z. Zhang, Y. Lou, S. Yang, H. Xi, S. Cao, Y. Gu, D. Li, et al. (2025) NVILA：高效率前沿視覺語言模型。在 CVPR 中，pp. 4122–4134。引用於：§2.1。</p>
+</li>
+<li>
+<p>[36] M. Maaz, H. Rasheed, S. Khan, and F. S. Khan (2023) Video-ChatGPT：透過大型視覺與語言模型進行詳細影片理解。arXiv 預印本 arXiv:2306.05424。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[37] K. Mangalam, R. Akshulakov, and J. Malik (2023) EgoSchema：超長形式影片語言理解的診斷基準。在神經資訊處理系統進展中，Vol. 36，pp. 46212–46244。引用於：§1、§4.1。</p>
+</li>
+<li>
+<p>[38] G. Monge (1781) 填方與開挖理論備忘錄。Mem. Math. Phys. Acad. Royale Sci.，pp. 666–704。引用於：§6.1。</p>
+</li>
+<li>
+<p>[39] A. Radford, J. W. Kim, C. Hallacy, A. Ramesh, G. Goh, S. Agarwal, G. Sastry, A. Askell, P. Mishkin, J. Clark, et al. (2021) 從自然語言監督學習可轉移的視覺模型。在 ICML 中，pp. 8748–8763。引用於：§1、§11、§2.2。</p>
+</li>
+<li>
+<p>[40] Y. Shang, M. Cai, B. Xu, Y. J. Lee, and Y. Yan (2025) LLaVA-PruMerge：針對高效率大型多模態模型的自適應標記縮減。在 ICCV 中，pp. 22857–22867。引用於：§1、§1、§2.2。</p>
+</li>
+<li>
+<p>[41] K. Shao, K. Tao, C. Qin, H. You, Y. Sui, and H. Wang (2025) HoliTom：快速影片大型語言模型的全面標記合併。arXiv 預印本 arXiv:2505.21334。引用於：§1、§4.1。</p>
+</li>
+<li>
+<p>[42] L. Shen, G. Gong, T. He, Y. Zhang, P. Liu, S. Zhao, and G. Ding (2025) FastVid：快速影片大型語言模型的動態密度修剪。arXiv 預印本 arXiv:2503.11187。引用於：§2.3、§4.1、表 1、表 1、表 1、表 1、表 6、表 6、表 6、表 6、表 6、表 6、表 7、表 7、§8。</p>
+</li>
+<li>
+<p>[43] L. Shen, T. Hao, T. He, S. Zhao, Y. Zhang, P. Liu, Y. Bao, and G. Ding (2024) TempMe：用於高效率文字影片檢索的影片時間標記合併。arXiv 預印本 arXiv:2409.01156。引用於：§2.3。</p>
+</li>
+<li>
+<p>[44] X. Shen, Y. Xiong, C. Zhao, L. Wu, J. Chen, C. Zhu, Z. Liu, F. Xiao, B. Varadarajan, F. Bordes, et al. (2024) LongVU：用於長影片語言理解的時空自適應壓縮。arXiv 預印本 arXiv:2410.17434。引用於：§1、§1、§2.1。</p>
+</li>
+<li>
+<p>[45] E. Song, W. Chai, G. Wang, Y. Zhang, H. Zhou, F. Wu, H. Chi, X. Guo, T. Ye, Y. Zhang, et al. (2024) MovieChat：從密集標記到稀疏記憶的長影片理解。在 CVPR 中，pp. 18221–18232。引用於：§1。</p>
+</li>
+<li>
+<p>[46] X. Tan, P. Ye, C. Tu, J. Cao, Y. Yang, L. Zhang, D. Zhou, and T. Chen (2025) TokenCarve：多模態大型語言模型中的信息保留視覺標記壓縮。arXiv 預印本 arXiv:2503.10501。引用於：§2.2。</p>
+</li>
+<li>
+<p>[47] K. Tao, C. Qin, H. You, Y. Sui, and H. Wang (2025) DyCoke：快速影片大型語言模型的標記動態壓縮。在 CVPR 中，pp. 18992–19001。引用於：§1、§1、§1、§2.3、§4.1、§4.1、§4.2、表 1、表 6。</p>
+</li>
+<li>
+<p>[48] R. Taori, I. Gulrajani, T. Zhang, Y. Dubois, X. Li, C. Guestrin, P. Liang, and T. B. Hashimoto (2023) Stanford Alpaca：遵循指令的 Llama 模型。Stanford，加州，美國。引用於：§2.1。</p>
+</li>
+<li>
+<p>[49] G. Team, R. Anil, S. Borgeaud, J. Alayrac, J. Yu, R. Soricut, J. Schalkwyk, A. M. Dai, A. Hauth, K. Millican, et al. (2023) Gemini：高度能幹的多模態模型家族。arXiv 預印本 arXiv:2312.11805。引用於：§2.1。</p>
+</li>
+<li>
+<p>[50] G. Team, P. Georgiev, V. I. Lei, R. Burnell, L. Bai, A. Gulati, G. Tanzer, D. Vincent, Z. Pan, S. Wang, et al. (2024) Gemini 1.5：解鎖跨數百萬標記上下文的多模態理解。arXiv 預印本 arXiv:2403.05530。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[51] M. Thorpe (2018) 最優傳輸簡介。Cambridge 大學課程筆記 3。引用於：§6.1。</p>
+</li>
+<li>
+<p>[52] C. Villani et al. (2008) 最優傳輸：舊與新。Vol. 338，Springer。引用於：§1。</p>
+</li>
+<li>
+<p>[53] H. Wang, Y. Zhao, T. Wang, H. Fan, X. Zhang, and Z. Zhang (2025) ROSS3D：具有三維感知的重建視覺指令微調。在 IEEE/CVF 計算機視覺國際會議論文集中，pp. 9275–9286。引用於：§11。</p>
+</li>
+<li>
+<p>[54] J. Wang, D. Chen, C. Luo, X. Dai, L. Yuan, Z. Wu, and Y. Jiang (2023) ChatVideo：以軌跡為中心的多模態與多功能影片理解系統。arXiv 預印本 arXiv:2304.14407。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[55] Z. Wen, Y. Gao, S. Wang, J. Zhang, Q. Zhang, W. Li, C. He, and L. Zhang (2025) 停止在多模態語言模型中尋找重要標記：複製比重要性更重要。arXiv 預印本 arXiv:2502.11494。引用於：§2.2。</p>
+</li>
+<li>
+<p>[56] Y. Weng, M. Han, H. He, X. Chang, and B. Zhuang (2024) LongVLM：透過大型語言模型進行高效率長影片理解。在 ECCV 中，pp. 453–470。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[57] C. Wu, S. Yin, W. Qi, X. Wang, Z. Tang, and N. Duan (2023) Visual ChatGPT：使用視覺基礎模型進行談話、繪製與編輯。arXiv 預印本 arXiv:2303.04671。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[58] H. Wu, D. Li, B. Chen, and J. Li (2024) LongVideoBench：長上下文交錯影片語言理解的基準。在 NeurIPS 中，Vol. 37，pp. 28828–28857。引用於：§1、§4.1。</p>
+</li>
+<li>
+<p>[59] L. Xing, Q. Huang, X. Dong, J. Lu, P. Zhang, Y. Zang, Y. Cao, C. He, J. Wang, F. Wu, et al. (2024) PyramidDrop：透過金字塔視覺冗餘縮減加速大型視覺語言模型。arXiv 預印本 arXiv:2410.17247。引用於：§1、§2.2、§4.1、§4.1、§4.2、表 1、表 2、表 6、表 7。</p>
+</li>
+<li>
+<p>[60] L. Xing, Q. Huang, X. Dong, J. Lu, P. Zhang, Y. Zang, Y. Cao, C. He, J. Wang, F. Wu, et al. (2025) 圓錐視覺聚焦用於高效率大型視覺語言模型。在 CVPR 中，pp. 14593–14603。引用於：§2.2。</p>
+</li>
+<li>
+<p>[61] L. Xu, Y. Zhao, D. Zhou, Z. Lin, S. K. Ng, and J. Feng (2024) PLLaVA：參數自由的 LLaVA 擴展，從圖像到影片用於影片密集字幕標註。arXiv 預印本 arXiv:2404.16994。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[62] C. Yang, Y. Sui, J. Xiao, L. Huang, Y. Gong, C. Li, J. Yan, Y. Bai, P. Sadayappan, X. Hu, et al. (2025) TopV：與推論時間最佳化相容的標記修剪，用於快速且低記憶體多模態視覺語言模型。在 CVPR 中，pp. 19803–19813。引用於：§2.2。</p>
+</li>
+<li>
+<p>[63] S. Yang, Y. Chen, Z. Tian, C. Wang, J. Li, B. Yu, and J. Jia (2025) VisionZip：視覺語言模型中越長越好但並非必需。在 CVPR 中，pp. 19792–19802。引用於：§1、§1、§2.2、§3.2、§4.1、§4.2、§4.3、表 1、表 1、表 1、表 1、表 2、表 2、表 2、表 6、表 6、表 6、表 6、表 7、表 7、表 7。</p>
+</li>
+<li>
+<p>[64] X. Ye, Y. Gan, Y. Ge, X. Zhang, and Y. Tang (2025) ATP-LLaVA：大型視覺語言模型的自適應標記修剪。在 CVPR 中，pp. 24972–24982。引用於：§2.2。</p>
+</li>
+<li>
+<p>[65] P. Zeng, H. Zhang, L. Gao, J. Song, and H. T. Shen (2022) 具有先驗知識與物件敏感學習的影片問答。IEEE Transactions on Image Processing 31，pp. 5936–5948。引用於：§2.1。</p>
+</li>
+<li>
+<p>[66] X. Zhai, B. Mustafa, A. Kolesnikov, and L. Beyer (2023) Sigmoid 損失用於語言圖像預訓練。在 ICCV 中，pp. 11975–11986。引用於：§1、§11、§2.2、§3.2。</p>
+</li>
+<li>
+<p>[67] C. Zhang, K. Ma, T. Fang, W. Yu, H. Zhang, Z. Zhang, Y. Xie, K. Sycara, H. Mi, and D. Yu (2025) VScan：重新思考高效率大型視覺語言模型的視覺標記縮減。arXiv 預印本 arXiv:2505.22654。引用於：§2.2、§3.2。</p>
+</li>
+<li>
+<p>[68] H. Zhang, X. Li, and L. Bing (2023) Video-LLaMA：用於影片理解的指令微調音視頻語言模型。arXiv 預印本 arXiv:2306.02858。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[69] H. Zhang, R. Luo, X. Liu, Y. Wu, T. Lin, P. Zeng, Q. Qu, F. Fang, M. Yang, L. Gao, et al. (2025) OmniCharacter：具有無縫語音語言人格互動的沈浸式角色扮演代理。在第 63 屆計算語言學協會年會論文集（第 1 卷：長論文）中，pp. 26318–26331。引用於：§2.1。</p>
+</li>
+<li>
+<p>[70] H. Zhang, P. Zeng, L. Gao, J. Song, Y. Duan, X. Lyu, and H. T. Shen (2025) 具有全局局部語義一致學習的文字影片檢索。IEEE Transactions on Image Processing。引用於：§2.1。</p>
+</li>
+<li>
+<p>[71] K. Zhang, B. Li, P. Zhang, F. Pu, J. A. Cahyono, K. Hu, S. Liu, Y. Zhang, J. Yang, C. Li, et al. (2025) LMMS-Eval：大型多模態模型評估的現實檢查。在計算語言學協會：NAACL 2025 的發現中，pp. 881–916。引用於：§4.1。</p>
+</li>
+<li>
+<p>[72] Q. Zhang, A. Cheng, M. Lu, Z. Zhuo, M. Wang, J. Cao, S. Guo, Q. She, and S. Zhang (2024) [CLS] 注意力是訓練自由視覺標記修剪所需的全部：加快 VLM 推論。arXiv 電子印刷品，pp. arXiv–2412。引用於：§2.2、§3.2。</p>
+</li>
+<li>
+<p>[73] Y. Zhang, C. Fan, J. Ma, W. Zheng, T. Huang, K. Cheng, D. Gudovskiy, T. Okuno, Y. Nakata, K. Keutzer, et al. (2024) SparseVLM：用於高效率視覺語言模型推論的視覺標記稀疏化。arXiv 預印本 arXiv:2410.04417。引用於：§1、§2.2。</p>
+</li>
+<li>
+<p>[74] Y. Zhang, B. Li, h. Liu, Y. j. Lee, L. Gui, D. Fu, J. Feng, Z. Liu, and C. Li (2024-04) LLaVA-Next：強大的零樣本影片理解模型。外部連結：Link。引用於：§1、§3.2。</p>
+</li>
+<li>
+<p>[75] Y. Zhang, J. Wu, W. Li, B. Li, Z. Ma, Z. Liu, and C. Li (2024) 具有合成資料的影片指令微調。arXiv 預印本 arXiv:2410.02713。引用於：§10、§2.1、§4.1、表 2、表 2、§7、表 7、表 7。</p>
+</li>
+<li>
+<p>[76] D. Zheng, S. Huang, and L. Wang (2025) Video-3D LLM：學習位置感知影片表示用於三維場景理解。在 IEEE/CVF 計算機視覺與模式識別會議論文集中，pp. 8995–9006。引用於：§11。</p>
+</li>
+<li>
+<p>[77] C. Zhu, T. Wang, W. Zhang, J. Pang, and X. Liu (2024) LLaVA-3D：簡單但有效的途徑賦予 LMM 三維感知能力。arXiv 預印本 arXiv:2409.18125。引用於：§11。</p>
+</li>
+<li>
+<p>[78] J. Zhu, W. Wang, Z. Chen, Z. Liu, S. Ye, L. Gu, H. Tian, Y. Duan, W. Su, J. Shao, et al. (2025) InternVL3：探索開源多模態模型的進階訓練與測試時間技巧。arXiv 預印本 arXiv:2504.10479。引用於：§1、§2.1。</p>
+</li>
+<li>
+<p>[79] O. Zohar, X. Wang, Y. Dubois, N. Mehta, T. Xiao, P. Hansen-Estruch, L. Yu, X. Wang, F.</p>
+</li>
+</ul>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

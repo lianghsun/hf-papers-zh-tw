@@ -1,0 +1,3 @@
+# 論文摘要翻譯
+
+生成式獎勵模型（Generative Reward Models, GRMs）的最近進展已証明，擴展思維鏈（Chain-of-Thought, CoT）推理的長度能夠顯著提升評估的可靠性。然而，現有研究主要依賴於無結構的長度擴展，忽視了不同推理機制的不同效能：廣度思維鏈（Breadth-CoT, B-CoT，即多維度原則涵蓋）和深度思維鏈（Depth-CoT, D-CoT，即實質性判斷的合理性）。為了解決這一問題，我們引入 Mix-GRM，一個框架，通過模組化綜合管道將原始推理重新配置為結構化的 B-CoT 和 D-CoT，隨後採用監督微調（Supervised Fine-Tuning, SFT）和可驗證獎勵的強化學習（Reinforcement Learning with Verifiable Rewards, RLVR）來內化和優化這些機制。綜合實驗表明，Mix-GRM 在五個基準上建立了新的最先進水平，比領先的開源 RMs 平均超越 8.2%。我們的結果揭示了推理中的清晰分歧：B-CoT 在主觀偏好任務中具有優勢，而 D-CoT 在客觀正確性任務中表現優異。因此，將推理機制與任務不對齐會直接降低性能。此外，我們證明 RLVR 充當切換放大器，引發一種突現的極化現象，其中模型自發地配置其推理風格以匹配任務需求。合成數據和模型發佈於 https://huggingface.co/collections/DonJoey/mix-grm{Hugging Face}，代碼發佈於 https://github.com/Don-Joey/Mix-GRM{Github}。

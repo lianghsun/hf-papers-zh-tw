@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "NLP"
+  ],
+  "method": [
+    "Steering Methods",
+    "Behavioral Control"
+  ],
+  "task": [
+    "Text Generation",
+    "Controllability Evaluation"
+  ],
+  "dataset": [
+    "SteerEval"
+  ],
+  "open_source": false
+}

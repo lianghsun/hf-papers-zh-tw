@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "NLP",
+    "RL"
+  ],
+  "method": [
+    "Chain-of-Thought",
+    "Supervised Fine-Tuning",
+    "Reinforcement Learning",
+    "Reward Modeling"
+  ],
+  "task": [
+    "Preference Evaluation",
+    "Reward Modeling",
+    "Text Evaluation"
+  ],
+  "dataset": [],
+  "open_source": true
+}

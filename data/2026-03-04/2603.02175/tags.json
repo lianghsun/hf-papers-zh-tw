@@ -1,0 +1,21 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion",
+    "Transformer",
+    "Query-based Architecture"
+  ],
+  "task": [
+    "Video Editing",
+    "Instruction Following",
+    "Reference-guided Generation"
+  ],
+  "dataset": [
+    "RefVIE",
+    "RefVIE-Bench"
+  ],
+  "open_source": true
+}

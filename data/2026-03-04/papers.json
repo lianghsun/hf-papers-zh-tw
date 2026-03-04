@@ -1,0 +1,217 @@
+[
+  {
+    "arxiv_id": "2603.03241",
+    "title": "UniG2U-Bench: Do Unified Models Advance Multimodal Understanding?",
+    "abstract": "Unified multimodal models have recently demonstrated strong generative capabilities, yet whether and when generation improves understanding remains unclear. Existing benchmarks lack a systematic exploration of the specific tasks where generation facilitates understanding. To this end, we introduce UniG2U-Bench, a comprehensive benchmark categorizing generation-to-understanding (G2U) evaluation into 7 regimes and 30 subtasks, requiring varying degrees of implicit or explicit visual transformations. Extensive evaluation of over 30 models reveals three core findings: 1) Unified models generally underperform their base Vision-Language Models (VLMs), and Generate-then-Answer (GtA) inference typically degrades performance relative to direct inference. 2) Consistent enhancements emerge in spatial intelligence, visual illusions, or multi-round reasoning subtasks, where enhanced spatial and shape perception, as well as multi-step intermediate image states, prove beneficial. 3) Tasks with similar reasoning structures and models sharing architectures exhibit correlated behaviors, suggesting that generation-understanding coupling induces class-consistent inductive biases over tasks, pretraining data, and model architectures. These findings highlight the necessity for more diverse training data and novel paradigms to fully unlock the potential of unified multimodal modeling.",
+    "authors": [
+      "Zimo Wen",
+      "Boxiu Li",
+      "Wanbo Zhang",
+      "Junxiang Lei",
+      "Xiaoyu Chen",
+      "Yijia Fan",
+      "Qi Zhang",
+      "Yujiang Wang",
+      "Lili Qiu",
+      "Bo Li",
+      "Ziwei Liu",
+      "Caihua Shan",
+      "Yifan Yang",
+      "Yifei Shen"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-03T18:36:16.000Z"
+  },
+  {
+    "arxiv_id": "2603.01571",
+    "title": "Beyond Length Scaling: Synergizing Breadth and Depth for Generative Reward Models",
+    "abstract": "Recent advancements in Generative Reward Models (GRMs) have demonstrated that scaling the length of Chain-of-Thought (CoT) reasoning considerably enhances the reliability of evaluation. However, current works predominantly rely on unstructured length scaling, ignoring the divergent efficacy of different reasoning mechanisms: Breadth-CoT (B-CoT, i.e., multi-dimensional principle coverage) and Depth-CoT (D-CoT, i.e., substantive judgment soundness). To address this, we introduce Mix-GRM, a framework that reconfigures raw rationales into structured B-CoT and D-CoT through a modular synthesis pipeline, subsequently employing Supervised Fine-Tuning (SFT) and Reinforcement Learning with Verifiable Rewards (RLVR) to internalize and optimize these mechanisms. Comprehensive experiments demonstrate that Mix-GRM establishes a new state-of-the-art across five benchmarks, surpassing leading open-source RMs by an average of 8.2\\%. Our results reveal a clear divergence in reasoning: B-CoT benefits subjective preference tasks, whereas D-CoT excels in objective correctness tasks. Consequently, misaligning the reasoning mechanism with the task directly degrades performance. Furthermore, we demonstrate that RLVR acts as a switching amplifier, inducing an emergent polarization where the model spontaneously allocates its reasoning style to match task demands. The synthesized data and models are released at https://huggingface.co/collections/DonJoey/mix-grm{Hugging Face}, and the code is released at https://github.com/Don-Joey/Mix-GRM{Github}.",
+    "authors": [
+      "Qiyuan Zhang",
+      "Yufei Wang",
+      "Tianhe Wu",
+      "Can Xu",
+      "Qingfeng Sun",
+      "Kai Zheng",
+      "Xue Liu",
+      "Chen Ma"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-02T07:54:29.000Z"
+  },
+  {
+    "arxiv_id": "2603.02578",
+    "title": "How Controllable Are Large Language Models? A Unified Evaluation across Behavioral Granularities",
+    "abstract": "Large Language Models (LLMs) are increasingly deployed in socially sensitive domains, yet their unpredictable behaviors, ranging from misaligned intent to inconsistent personality, pose significant risks. We introduce SteerEval, a hierarchical benchmark for evaluating LLM controllability across three domains: language features, sentiment, and personality. Each domain is structured into three specification levels: L1 (what to express), L2 (how to express), and L3 (how to instantiate), connecting high-level behavioral intent to concrete textual output. Using SteerEval, we systematically evaluate contemporary steering methods, revealing that control often degrades at finer-grained levels. Our benchmark offers a principled and interpretable framework for safe and controllable LLM behavior, serving as a foundation for future research.",
+    "authors": [
+      "Ziwen Xu",
+      "Kewei Xu",
+      "Haoming Xu",
+      "Haiwen Hong",
+      "Longtao Huang",
+      "Hui Xue",
+      "Ningyu Zhang",
+      "Yongliang Shen",
+      "Guozhou Zheng",
+      "Huajun Chen",
+      "Shumin Deng"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-03T03:50:13.000Z"
+  },
+  {
+    "arxiv_id": "2603.02802",
+    "title": "NOVA: Sparse Control, Dense Synthesis for Pair-Free Video Editing",
+    "abstract": "Recent video editing models have achieved impressive results, but most still require large-scale paired datasets. Collecting such naturally aligned pairs at scale remains highly challenging and constitutes a critical bottleneck, especially for local video editing data. Existing workarounds transfer image editing to video through global motion control for pair-free video editing, but such designs struggle with background and temporal consistency. In this paper, we propose NOVA: Sparse Control \\& Dense Synthesis, a new framework for unpaired video editing. Specifically, the sparse branch provides semantic guidance through user-edited keyframes distributed across the video, and the dense branch continuously incorporates motion and texture information from the original video to maintain high fidelity and coherence. Moreover, we introduce a degradation-simulation training strategy that enables the model to learn motion reconstruction and temporal consistency by training on artificially degraded videos, thus eliminating the need for paired data. Our extensive experiments demonstrate that NOVA outperforms existing approaches in edit fidelity, motion preservation, and temporal coherence.",
+    "authors": [
+      "Tianlin Pan",
+      "Jiayi Dai",
+      "Chenpu Yuan",
+      "Zhengyao Lv",
+      "Binxin Yang",
+      "Hubery Yin",
+      "Chen Li",
+      "Jing Lyu",
+      "Caifeng Shan",
+      "Chenyang Si"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-03T09:41:06.000Z"
+  },
+  {
+    "arxiv_id": "2603.02175",
+    "title": "Kiwi-Edit: Versatile Video Editing via Instruction and Reference Guidance",
+    "abstract": "Instruction-based video editing has witnessed rapid progress, yet current methods often struggle with precise visual control, as natural language is inherently limited in describing complex visual nuances. Although reference-guided editing offers a robust solution, its potential is currently bottlenecked by the scarcity of high-quality paired training data. To bridge this gap, we introduce a scalable data generation pipeline that transforms existing video editing pairs into high-fidelity training quadruplets, leveraging image generative models to create synthesized reference scaffolds. Using this pipeline, we construct RefVIE, a large-scale dataset tailored for instruction-reference-following tasks, and establish RefVIE-Bench for comprehensive evaluation. Furthermore, we propose a unified editing architecture, Kiwi-Edit, that synergizes learnable queries and latent visual features for reference semantic guidance. Our model achieves significant gains in instruction following and reference fidelity via a progressive multi-stage training curriculum. Extensive experiments demonstrate that our data and architecture establish a new state-of-the-art in controllable video editing. All datasets, models, and code is released at https://github.com/showlab/Kiwi-Edit.",
+    "authors": [
+      "Yiqi Lin",
+      "Guoqiang Liang",
+      "Ziyun Zeng",
+      "Zechen Bai",
+      "Yanzhe Chen",
+      "Mike Zheng Shou"
+    ],
+    "upvotes": 2,
+    "published_at": "2026-03-02T18:46:28.000Z"
+  },
+  {
+    "arxiv_id": "2603.03160",
+    "title": "Kling-MotionControl Technical Report",
+    "abstract": "Character animation aims to generate lifelike videos by transferring motion dynamics from a driving video to a reference image. Recent strides in generative models have paved the way for high-fidelity character animation. In this work, we present Kling-MotionControl, a unified DiT-based framework engineered specifically for robust, precise, and expressive holistic character animation. Leveraging a divide-and-conquer strategy within a cohesive system, the model orchestrates heterogeneous motion representations tailored to the distinct characteristics of body, face, and hands, effectively reconciling large-scale structural stability with fine-grained articulatory expressiveness. To ensure robust cross-identity generalization, we incorporate adaptive identity-agnostic learning, facilitating natural motion retargeting for diverse characters ranging from realistic humans to stylized cartoons. Simultaneously, we guarantee faithful appearance preservation through meticulous identity injection and fusion designs, further supported by a subject library mechanism that leverages comprehensive reference contexts. To ensure practical utility, we implement an advanced acceleration framework utilizing multi-stage distillation, boosting inference speed by over 10x. Kling-MotionControl distinguishes itself through intelligent semantic motion understanding and precise text responsiveness, allowing for flexible control beyond visual inputs. Human preference evaluations demonstrate that Kling-MotionControl delivers superior performance compared to leading commercial and open-source solutions, achieving exceptional fidelity in holistic motion control, open domain generalization, and visual quality and coherence. These results establish Kling-MotionControl as a robust solution for high-quality, controllable, and lifelike character animation.",
+    "authors": [
+      "Kling Team",
+      "Jialu Chen",
+      "Yikang Ding",
+      "Zhixue Fang",
+      "Kun Gai",
+      "Kang He",
+      "Xu He",
+      "Jingyun Hua",
+      "Mingming Lao",
+      "Xiaohan Li",
+      "Hui Liu",
+      "Jiwen Liu",
+      "Xiaoqiang Liu",
+      "Fan Shi",
+      "Xiaoyu Shi",
+      "Peiqin Sun",
+      "Songlin Tang",
+      "Pengfei Wan",
+      "Tiancheng Wen",
+      "Zhiyong Wu",
+      "Haoxian Zhang",
+      "Runze Zhao",
+      "Yuanxing Zhang",
+      "Yan Zhou"
+    ],
+    "upvotes": 2,
+    "published_at": "2026-03-03T17:02:45.000Z"
+  },
+  {
+    "arxiv_id": "2603.02573",
+    "title": "Track4World: Feedforward World-centric Dense 3D Tracking of All Pixels",
+    "abstract": "Estimating the 3D trajectory of every pixel from a monocular video is crucial and promising for a comprehensive understanding of the 3D dynamics of videos. Recent monocular 3D tracking works demonstrate impressive performance, but are limited to either tracking sparse points on the first frame or a slow optimization-based framework for dense tracking. In this paper, we propose a feedforward model, called Track4World, enabling an efficient holistic 3D tracking of every pixel in the world-centric coordinate system. Built on the global 3D scene representation encoded by a VGGT-style ViT, Track4World applies a novel 3D correlation scheme to simultaneously estimate the pixel-wise 2D and 3D dense flow between arbitrary frame pairs. The estimated scene flow, along with the reconstructed 3D geometry, enables subsequent efficient 3D tracking of every pixel of this video. Extensive experiments on multiple benchmarks demonstrate that our approach consistently outperforms existing methods in 2D/3D flow estimation and 3D tracking, highlighting its robustness and scalability for real-world 4D reconstruction tasks.",
+    "authors": [
+      "Jiahao Lu",
+      "Jiayi Xu",
+      "Wenbo Hu",
+      "Ruijie Zhu",
+      "Chengfeng Zhao",
+      "Sai-Kit Yeung",
+      "Ying Shan",
+      "Yuan Liu"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-03T03:45:43.000Z"
+  },
+  {
+    "arxiv_id": "2603.02684",
+    "title": "HateMirage: An Explainable Multi-Dimensional Dataset for Decoding Faux Hate and Subtle Online Abuse",
+    "abstract": "Subtle and indirect hate speech remains an underexplored challenge in online safety research, particularly when harmful intent is embedded within misleading or manipulative narratives. Existing hate speech datasets primarily capture overt toxicity, underrepresenting the nuanced ways misinformation can incite or normalize hate. To address this gap, we present HateMirage, a novel dataset of Faux Hate comments designed to advance reasoning and explainability research on hate emerging from fake or distorted narratives. The dataset was constructed by identifying widely debunked misinformation claims from fact-checking sources and tracing related YouTube discussions, resulting in 4,530 user comments. Each comment is annotated along three interpretable dimensions: Target (who is affected), Intent (the underlying motivation or goal behind the comment), and Implication (its potential social impact). Unlike prior explainability datasets such as HateXplain and HARE, which offer token-level or single-dimensional reasoning, HateMirage introduces a multi-dimensional explanation framework that captures the interplay between misinformation, harm, and social consequence. We benchmark multiple open-source language models on HateMirage using ROUGE-L F1 and Sentence-BERT similarity to assess explanation coherence. Results suggest that explanation quality may depend more on pretraining diversity and reasoning-oriented data rather than on model scale alone. By coupling misinformation reasoning with harm attribution, HateMirage establishes a new benchmark for interpretable hate detection and responsible AI research.",
+    "authors": [
+      "Sai Kartheek Reddy Kasu",
+      "Shankar Biradar",
+      "Sunil Saumya",
+      "Md. Shad Akhtar"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-03T07:26:53.000Z"
+  },
+  {
+    "arxiv_id": "2603.02479",
+    "title": "PRISM: Pushing the Frontier of Deep Think via Process Reward Model-Guided Inference",
+    "abstract": "DEEPTHINK methods improve reasoning by generating, refining, and aggregating populations of candidate solutions, which enables strong performance on complex mathematical and scientific tasks. However, existing frameworks often lack reliable correctness signals during inference, which creates a population-enhancement bottleneck where deeper deliberation amplifies errors, suppresses correct minority solutions, and yields weak returns to additional compute. In this paper, we introduce a functional decomposition of DEEPTHINK systems and propose PRISM, a Process Reward Model (PRM)-guided inference algorithm that uses step-level verification to guide both population refinement and solution aggregation. During refinement, PRISM treats candidate solutions as particles in a PRM-defined energy landscape and reshapes the population through score-guided resampling and stochastic refinement, which concentrates probability mass on higher-quality reasoning while preserving diversity. Across mathematics and science benchmarks, PRISM is competitive with or outperforms existing DEEPTHINK methods, reaching 90.0%, 75.4%, and 71.4% with gpt-oss-20b on AIME25, HMMT25, and GPQA Diamond, respectively, while matching or exceeding gpt-oss-120b. Additionally, our analysis shows that PRISM produces consistent net-directional correction during refinement, remains reliable when the initial population contains few correct candidates, and often lies on the compute-accuracy Pareto frontier.",
+    "authors": [
+      "Rituraj Sharma",
+      "Weiyuan Chen",
+      "Noah Provenzano",
+      "Tu Vu"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-03T00:03:42.000Z"
+  },
+  {
+    "arxiv_id": "2602.23496",
+    "title": "SGDC: Structurally-Guided Dynamic Convolution for Medical Image Segmentation",
+    "abstract": "Spatially variant dynamic convolution provides a principled approach of integrating spatial adaptivity into deep neural networks. However, mainstream designs in medical segmentation commonly generate dynamic kernels through average pooling, which implicitly collapses high-frequency spatial details into a coarse, spatially-compressed representation, leading to over-smoothed predictions that degrade the fidelity of fine-grained clinical structures. To address this limitation, we propose a novel Structure-Guided Dynamic Convolution (SGDC) mechanism, which leverages an explicitly supervised structure-extraction branch to guide the generation of dynamic kernels and gating signals for structure-aware feature modulation. Specifically, the high-fidelity boundary information from this auxiliary branch is fused with semantic features to enable spatially-precise feature modulation. By replacing context aggregation with pixel-wise structural guidance, the proposed design effectively prevents the information loss introduced by average pooling. Experimental results show that SGDC achieves state-of-the-art performance on ISIC 2016, PH2, ISIC 2018, and CoNIC datasets, delivering superior boundary fidelity by reducing the Hausdorff Distance (HD95) by 2.05, and providing consistent IoU gains of 0.99\\%-1.49\\% over pooling-based baselines. Moreover, the mechanism exhibits strong potential for extension to other fine-grained, structure-sensitive vision tasks, such as small-object detection, offering a principled solution for preserving structural integrity in medical image analysis. To facilitate reproducibility and encourage further research, the implementation code for both our SGE and SGDC modules has been is publicly released at https://github.com/solstice0621/SGDC.",
+    "authors": [
+      "Bo Shi",
+      "Wei-ping Zhu",
+      "M. N. S. Swamy"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-02-26T20:59:51.000Z"
+  },
+  {
+    "arxiv_id": "2603.02667",
+    "title": "DREAM: Where Visual Understanding Meets Text-to-Image Generation",
+    "abstract": "Unifying visual representation learning and text-to-image (T2I) generation within a single model remains a central challenge in multimodal learning. We introduce DREAM, a unified framework that jointly optimizes discriminative and generative objectives, while learning strong visual representations. DREAM is built on two key techniques: During training, Masking Warmup, a progressive masking schedule, begins with minimal masking to establish the contrastive alignment necessary for representation learning, then gradually transitions to full masking for stable generative training. At inference, DREAM employs Semantically Aligned Decoding to align partially masked image candidates with the target text and select the best one for further decoding, improving text-image fidelity (+6.3%) without external rerankers. Trained solely on CC12M, DREAM achieves 72.7% ImageNet linear-probing accuracy (+1.1% over CLIP) and an FID of 4.25 (+6.2% over FLUID), with consistent gains in few-shot classification, semantic segmentation, and depth estimation. These results demonstrate that discriminative and generative objectives can be synergistic, allowing unified multimodal models that excel at both visual understanding and generation.",
+    "authors": [
+      "Chao Li",
+      "Tianhong Li",
+      "Sai Vidyaranya Nuthalapati",
+      "Hong-You Chen",
+      "Satya Narayan Shukla",
+      "Yonghuan Yang",
+      "Jun Xiao",
+      "Xiangjun Fan",
+      "Aashu Singh",
+      "Dina Katabi",
+      "Shlok Kumar Mishra"
+    ],
+    "upvotes": 0,
+    "published_at": "2026-03-03T06:54:19.000Z"
+  },
+  {
+    "arxiv_id": "2603.01400",
+    "title": "Token Reduction via Local and Global Contexts Optimization for Efficient Video Large Language Models",
+    "abstract": "Video Large Language Models (VLLMs) demonstrate strong video understanding but suffer from inefficiency due to redundant visual tokens. Existing pruning primary targets intra-frame spatial redundancy or prunes inside the LLM with shallow-layer overhead, yielding suboptimal spatiotemporal reduction and underutilizing long-context compressibility. All of them often discard subtle yet informative context from merged or pruned tokens. In this paper, we propose a new perspective that elaborates token Anchors within intra-frame and inter-frame to comprehensively aggregate the informative contexts via local-global Optimal Transport (AOT). Specifically, we first establish local- and global-aware token anchors within each frame under the attention guidance, which then optimal transport aggregates the informative contexts from pruned tokens, constructing intra-frame token anchors. Then, building on the temporal frame clips, the first frame within each clip will be considered as the keyframe anchors to ensemble similar information from consecutive frames through optimal transport, while keeping distinct tokens to represent temporal dynamics, leading to efficient token reduction in a training-free manner. Extensive evaluations show that our proposed AOT obtains competitive performances across various short- and long-video benchmarks on leading video LLMs, obtaining substantial computational efficiency while preserving temporal and visual fidelity. Project webpage: https://tyroneli.github.io/AOT{AOT}.",
+    "authors": [
+      "Jinlong Li",
+      "Liyuan Jiang",
+      "Haonan Zhang",
+      "Nicu Sebe"
+    ],
+    "upvotes": 1,
+    "published_at": "2026-03-02T03:06:40.000Z"
+  }
+]

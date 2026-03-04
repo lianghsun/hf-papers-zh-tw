@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion",
+    "Contrastive Learning",
+    "Masking"
+  ],
+  "task": [
+    "Text-to-Image Generation",
+    "Image Classification",
+    "Semantic Segmentation",
+    "Depth Estimation",
+    "Visual Representation Learning"
+  ],
+  "dataset": [
+    "CC12M",
+    "ImageNet"
+  ],
+  "open_source": false
+}

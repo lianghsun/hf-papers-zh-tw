@@ -1,0 +1,2288 @@
+# UniG2U-Bench：統一模型是否能推進多模態理解？
+
+統一的多模態模型最近展現了強大的生成能力，但生成是否以及何時能改善理解仍然不明確。現有的基準測試缺乏對生成能促進理解的具體任務的系統性探索。為此，我們引入 UniG2U-Bench，一個全面的基準測試，將生成到理解（G2U）評估分為 7 個領域和 30 個子任務，需要不同程度的隱式或顯式視覺轉換。對超過 30 個模型的廣泛評估揭示了三個核心發現：
+
+1) 統一模型普遍表現不如其基礎 Vision-Language Models（VLMs），而 Generate-then-Answer（GtA）推理通常相比於直接推理會降低性能。
+
+2) 在空間智能、視覺錯覺或多輪推理子任務中出現一致的增強，其中增強的空間和形狀感知以及多步驟的中間圖像狀態被證實是有益的。
+
+3) 具有相似推理結構的任務和共享架構的模型展現出相關的行為，這表明生成-理解耦合在任務、預訓練資料和模型架構上引發了類別一致的歸納偏差。
+
+這些發現強調了對更多樣化訓練資料和新穎範式的必要性，以充分解鎖統一多模態建模的潛力。
+
+## 1 引言
+
+近期多模態基礎模型的進展激發了人們對於在單一架構中統一理解與生成的興趣 [ 44 ]。統一模型在影像合成、編輯和跨模態生成方面展現了令人印象深刻的性能，這表明強大的感知與語義理解為高品質生成提供了關鍵基礎 [ 54 , 38 , 16 , 41 ]。
+
+儘管取得了這些進展，理解與生成之間的互動主要在單一方向上被研究：理解改進生成。生成本身是否能透過充當外部推理、驗證或假設構造的媒介來增強理解，仍然在很大程度上未被探索。
+
+一個關鍵原因是缺乏明確評估通過生成進行理解的基準。大多數現有的多模態理解基準強調的是靜態視覺輸入上的識別、分類或口頭推理，而非生成。因此，通常可以通過先將影像轉換為密集文本描述，然後應用僅限文本的大型語言模型，來達成強大的性能 [ 40 , 25 ]。因此，流行理解基準中的許多問題可以不依賴於本質上非語言的視覺資訊而得到回答。然而，在許多複雜場景中——例如在幾何中繪製輔助構造、重建空間佈局，或在謎題與遊戲中外部化中間狀態——有效的理解不能僅簡化為語言抽象。在這些情況下，生成必須充當內部或外部推理機制，使得能夠訪問文本描述未捕捉的視覺轉換。
+
+統一多模態模型的快速演進——例如 Bagel、OmniGen、Show-o 和 Janus——已證明生成與理解可以在共享參數空間內共存。儘管最近的基準如 UniMMU [ 54 ] 和 MME-Unify [ 38 ] 評估了這些模型，但它們主要在隔離情況下評估理解與生成（即，獨立地詢問「它能回答嗎？」和「它能繪製嗎？」）。它們未能解決生成能力是否主動幫助理解過程的問題。此外，由於模型規模縮放和骨幹網路差異的混淆變數，評估這些模型面臨挑戰。
+
+為了系統地研究這一點，我們引入了 UniG2U，這是迄今為止針對統一模型最全面的理解基準——具有最大的樣本量、最多元的任務類別、最廣泛的模型覆蓋範圍，以及最完整的評估框架。與先前的基準不同，UniG2U 在匹配的推理協議下，嚴格將尖端統一模型與其純判別式基礎 VLM 配對。透過這樣做，我們清晰地隔離了生成到理解（G2U）的能力，使我們能夠準確評估顯式或隱式視覺生成是否促進多模態推理。
+
+[FIGURE:x1.png] 圖 1：模型性能雷達圖
+
+我們在七個推理範疇上對超過 30 個模型進行了基準測試——包括基礎視覺理解模型（VLM）、統一模型和智能代理模型（我們也將其定義為廣義統一模型）。每個統一模型在兩種不同的推理模式下進行評估：直接推理和生成後回答（GtA）。透過嚴格比較統一模型與其基礎 VLM，我們觀察到了細微的生成到理解（G2U）動態，其特徵為不同任務類別上性能改進和性能下降程度不同，如所評估模型代表性子集的相對性能雷達圖清晰所示（見圖 1）。為了深入調查這一動態，我們制定了四個關鍵研究問題（RQ），並設計了相應的實驗。此外，我們引入了兩項新穎的指標——推理對齊（RA）和答案對齊（AL）——來量化 GtA 階段期間生成的中間影像的品質。透過這項全面的評估，我們將觀察提煉成三個核心發現：
+
+首先，我們注意到整體性能下降。整合生成能力並未產生普遍的改進；相反，統一模型通常在標準理解任務上表現不及其對應的基礎 VLM。此外，GtA 範式——在回答前生成中間影像——相對於直接推理通常會降低性能，在結構受限的領域中通常會傳播視覺誤差。
+
+其次，儘管普遍存在這種衰退，結構化的改進仍然持續出現。在特定的空間、對錯覺敏感，以及多輪推理子任務中，外部化視覺轉換轉變為顯著優勢。在這些轉換密集的場景中，增強的空間和形狀感知，以及多步中間影像狀態，被證明是高度有益的。
+
+第三，我們識別了結構化的任務-模型相關性。在任務層級，G2U 的改進並非隨機的，而是按認知需求聚集：面向感知的任務彼此強烈相關，邏輯和推理密集型任務也是如此。在模型層級，基於相同基礎模型構建的統一模型展現強行為相關性，而僅共享架構相似性的模型則表現出更弱的相關性。這些高度可預測的趨勢表明生成-理解耦合引入了類別一致的歸納偏差，這些偏差根本上由底層預訓練資料形成，其次由模型架構形成。
+
+我們的主要貢獻總結如下：
+
+- 1. 新穎的測試臺：我們引入 UniG2U，這是迄今為止最大的統一模型評估測試臺，專門為生成到理解（G2U）範式設計。它涵蓋 3,000 個精心策劃的實例，跨越七個推理類別，為可重現的評估提供標準化資料、協議和指令碼。
+- 2. 全面的實驗：我們進行了迄今為止最大規模的統一模型研究，對自迴歸、擴散型和混合架構的超過 30 個模型進行了基準測試。我們透過嚴格比較統一模型與其基礎 VLM 基準，系統地隔離 G2U 的改進。
+- 3. 深層機制洞察：我們的分析揭示了生成何時幫助或傷害理解。我們揭露了生成與判別目標之間的固有架構權衡、生成後回答視覺推理範式的脆弱性，以及中間對齊保真度的關鍵作用。
+
+新穎的測試臺：我們引入 UniG2U，這是迄今為止最大的統一模型評估測試臺，專門為生成到理解（G2U）範式設計。它涵蓋 3,000 個精心策劃的實例，跨越七個推理類別，為可重現的評估提供標準化資料、協議和指令碼。
+
+全面的實驗：我們進行了迄今為止最大規模的統一模型研究，對自迴歸、擴散型和混合架構的超過 30 個模型進行了基準測試。我們透過嚴格比較統一模型與其基礎 VLM 基準，系統地隔離 G2U 的改進。
+
+深層機制洞察：我們的分析揭示了生成何時幫助或傷害理解。我們揭露了生成與判別目標之間的固有架構權衡、生成後回答視覺推理範式的脆弱性，以及中間對齊保真度的關鍵作用。
+
+## 2 相關研究
+
+### 2.1 統一多模態模型
+
+早期的多模態系統在很大程度上遵循不相交的設計，將視覺–語言理解模型與單獨的圖像生成器耦合在一個管道中，這使得跨模態的端到端信用分配變得困難[1, 12, 45, 8]。大型多模態 LM 的興起加強了朝向單一互動介面的趨勢——使用語言來控制多模態感知和推理——然而圖像生成通常仍然外部化為單獨的模組[10]。與此同時，擴散風格的文本轉圖像合成使「理解+生成」管道在規模上變得實用[27]。最近，研究推動了統一多模態模型的發展，這些模型可以在一個介面內同時進行理解和生成，其動機是共享表示學習和感知與合成之間的更緊密耦合[2, 36]。基於令牌的早期融合模型表明，對混合模態序列的單一次令牌目標可以支持兩種行為[2]，而混合公式將自迴歸解碼與單個 Transformer 內的離散擴散/流風格生成結合在一起，以擴大模態模式[36]。將這些設計擴展到更廣泛的模態覆蓋（例如圖像/視頻）使統一介面作為通用多模態骨幹變得越來越具競爭力[37, 5, 4, 49]。調查已經開始系統化這個設計空間，並反覆強調評估仍然是理解何時統一能夠產生真正能力收益的關鍵瓶頸[44, 52]。
+
+### 2.2 統一模型的基準測試
+
+基準測試開始以不同方式推行「統一」，包括能力覆蓋、混合模態輸出能力和明確的雙向協同協議 [ 38 , 29 , 54 , 11 , 14 ] 。
+MME-Unify (MME-U) 透過三個領域（理解、生成和混合/統一任務）提供可擴展的審計，並將統一任務轉化為文本選項 + 影像選項選擇，透過 CLIP 式相似性來判斷生成的影像 [ 38 , 26 ] 。
+RealUnify 將統一定義為雙向協同 (UEG/GEU)，並引入配對的直接和分步協議，以定位失敗是源於核心技能還是整合 [ 29 ] 。
+Uni-MMMU 以多學科推理為中心，採用 Gen → \rightarrow Und / Und → \rightarrow Gen 範例，並強調透過雙通道（文本+影像）評分的可驗證中間項 [ 54 , 47 ] 。
+ROVER 針對互惠的跨模態推理，引入特定分割 (ROVER-TG) 來評估視覺增強的文本生成，其中模型在回答前生成中間視覺基本原理 [ 18 ] 。
+UEval 評估需要文本和影像的真實世界請求，並使用項目級評分指南和可運行的管道/排行榜 [ 11 , 16 ] 。
+
+儘管有這些進展，現有基準測試仍未能充分診斷生成到理解 (G2U) 作為一種能力現象：(i) 什麼構成 G2U 任務，其中中間視覺在匹配的預算下具有內在有用性，以及 (ii) 結果如何在細粒度任務體系和模型架構中變化。
+MME-U 提供了規模，但沒有隔離協同或定義 G2U 任務結構 [ 38 ] 。RealUnify 和 Uni-MMMU 引入了協同感知協議，但覆蓋了更狹隘的任務類型切片和統一模型設計 [ 29 , 54 ] 。儘管 ROVER 探索了交錯視覺推理，其 G2U 評估在規模上受限（6 個子任務中的 404 個任務），並且沒有明確將統一模型與其基本 VLM 配對以嚴格隔離協同效應。UEval 專注於混合輸出品質而非因果 G2U 效應 [ 11 ] 。
+
+為了填補這一關鍵缺口，我們介紹 UniG2U 。如表 1 所明確比較的，UniG2U 是迄今為止評估統一模型最全面的基準測試。它具有最大的樣本量（3,000 個理解任務）、最多樣的分類法（跨 7 個推理體系的 30 個細粒度子任務）和最廣泛的模型覆蓋（評估超過 30 個模型）。更重要的是，UniG2U 是第一個系統地和定量分析生成對理解協同效應的基準測試。透過策劃 G2U 中心體系（例如空間操作、狀態外化、視覺錯覺）並嚴格將統一模型與其純判別基本 VLM 配對，我們乾淨地隔離了 G2U 能力。透過這種前所未有的規模和嚴格的框架，UniG2U 提供了對生成-理解耦合的關鍵機制洞察，揭示了類別一致的歸納偏差，並識別了生成有效服務於多模態推理的特定場景。
+
+[FIGURE_CAPTION] 表 1：統一多模態基準測試的比較。
+
+## 3 公式化與定義
+
+本節將 UniG2U 中研究的核心對象進行形式化。
+我們 (i) 定義統一多模態模型（UMMs）和能力層級上的「生成有助於理解」（G2U）概念，
+(ii) 介紹了本論文全篇使用的 UMMs 分類法，以及
+(iii) 在統一評估框架下區分直接推理（Direct）與先生成後回答（Generate-then-Answer, GtA）推理。
+
+### 3.1 定義：UMMs 和 G2U
+
+任務設定。
+
+每個實例被表述為一個元組 x = ( V , T , Q ) x=(V,T,Q) ，其中 V V 表示輸入視覺上下文（例如，影像），T T 代表文本指示或上下文，而 Q Q 是要被回答的特定查詢。目標答案被表示為 y ∈ 𝒴 y\in\mathcal{Y} 。
+
+純理解模型。
+
+純理解模型將給定的輸入直接對映到答案，
+
+|  | y ^ = M U ​ ( x ) , M U ∈ ℳ U , \hat{y}=M_{U}(x),\qquad M_{U}\in\mathcal{M}_{U}, |  | (1) |
+| --- | --- | --- | --- |
+
+且不暴露用於生成旨在為同一實例重新消費的中間視覺成品的介面。
+
+統一多模態模型（UMMs）。
+
+統一多模態模型（ M U ​ M M_{UM} ）支援多模態理解，同時具有可以在多模態輸入 x x 條件下生成中間視覺成品 G G （例如，影像、草圖、標註、重建、編輯）的生成介面。從概念上講，UMMs 的動機來自於以下假設：生成可以（i）透過統一訓練來塑造內部多模態表示，和/或（ii）透過這些中間成品充當可控的推理資源。
+
+定義「生成有助於理解」（G2U）。
+
+令 𝒜 ​ ( ⋅ , ⋅ ) \mathcal{A}(\cdot,\cdot) 為任務評估指標。我們將模型 M M 在資料集 𝒟 \mathcal{D} 上的效能定義為：
+
+|  | Perf ​ ( M ; 𝒟 ) = 𝔼 ( x , y ) ∼ 𝒟 ​ [ 𝒜 ​ ( M ​ ( x ) , y ) ] . \mathrm{Perf}(M;\mathcal{D})=\mathbb{E}_{(x,y)\sim\mathcal{D}}\big[\mathcal{A}(M(x),y)\big]. |  | (2) |
+| --- | --- | --- | --- |
+
+為了嚴格隔離生成能力的效果，我們必須減輕來自不同架構設計或預訓練資料的混淆因素。因此，對於給定的統一系統 M U ​ M M_{UM} ，令 ℬ ​ ( M U ​ M ) ∈ ℳ U \mathcal{B}(M_{UM})\in\mathcal{M}_{U} 表示其對應的純判別基底 VLM（即統一模型所基於的基礎理解模型，在匹配的計算預算下進行評估）。
+
+我們將統一系統 M U ​ M M_{UM} 的 G2U 增益定義為：
+
+|  | Δ G2U ​ ( M U ​ M ; 𝒟 ) = Perf ​ ( M U ​ M ; 𝒟 ) − Perf ​ ( ℬ ​ ( M U ​ M ) ; 𝒟 ) . \Delta_{\mathrm{G2U}}(M_{UM};\mathcal{D})=\mathrm{Perf}(M_{UM};\mathcal{D})-\mathrm{Perf}(\mathcal{B}(M_{UM});\mathcal{D}). |  | (3) |
+| --- | --- | --- | --- |
+
+透過強制執行嚴格的能力可比性（基底統一配對）和預算匹配，我們確保任何觀察到的 Δ G2U \Delta_{\mathrm{G2U}} 本質上反映了生成到理解的協同效應，而不是基底模型規模或經驗雜訊中的單純變化。
+
+### 3.2 統一多模態模型的分類法
+
+我們根據評估的 UMM 的架構設計和訓練範式，將其分為三個類別：端對端統一模型 (E2E)、解耦統一系統 (Decoupled) 和代理統一模型 (UM-Ag)。
+
+[FIGURE:x2.png] 圖 2：統一多模態模型 (UMM) 的分類法。圖中標註的所有模型均在本研究中進行了基準測試。
+
+所有類別都可以通過共享的因式分解在概念上表達：
+
+|  | $G = \mathrm{Gen}(x), \qquad \hat{y} = \mathrm{Ans}(x, G)$ |  | (4) |
+| --- | --- | --- | --- |
+
+其中 $G = \varnothing$ 恢復直接回答而無需中間視覺製品。分類法在 Gen 和 Ans 的實現和訓練方式上存在根本差異。
+
+(1) 端對端統一模型 (E2E)。
+
+E2E 模型是參數耦合的：Gen 和 Ans 由具有共享參數 $\theta$ 的單一模型實現。關鍵是，生成和理解能力在統一的參數空間內聯合訓練（例如，通過交錯多模態數據）。其定義特性是，兩種能力都源於單一統一架構的端對端訓練，而非源於分離的組件。我們研究中的代表性實例包括 Bagel 和 UniPic2-Metaquery-9B。
+
+(2) 解耦統一系統 (Decoupled)。
+
+解耦系統是模組分離的。與 E2E 模型相比，生成和理解組件不進行聯合訓練。反之，Gen 和 Ans 由獨立的模組（參數分別為 $\phi$ 和 $\psi$）實現，這些模組通過模組編排拼接在一起。具體來說，生成模組產生顯式的中間製品 $G$，隨後由凍結的回答模組消耗。這種模組性實現了靈活的組件級拼接。典型示例包括 Bagel two-stage 和 OneCAT。
+
+(3) 代理統一模型 (UM-Ag)。
+
+在代理系統中，生成和理解由完全不同的模型執行。它們僅在協議層面（通過控制策略或有界的工具使用交互）而非通過架構集成或聯合訓練來實現統一。例如，純語言模型可能呼叫外部黑盒圖像生成 API。在我們的研究中，工具驅動的視覺探索設置（例如 GPT-4o + image tool）就是這個類別的實例化。
+
+從概念上講，我們將 UM-Ag 視為 UMM 的廣義變體。然而，在我們的實驗分析中，我們明確區分代理模型與標準統一模型 (E2E 和 Decoupled)。這種區分是必要的，因為大多數代理系統由不同的、通常是閉源專有模型組成，這些模型依賴於外部工具使用，而不進行任何形式的多模態統一訓練。因此，它們從本質上缺乏嚴格匹配的基礎 VLM，使其與第 3.1 節中定義的嚴格基礎-統一比較框架不相容，從而無法計算確切的 G2U 增益。
+
+圖 2 總結了這一分類法，並強調了三個類別在統一程度上的差異——從聯合訓練的參數 (E2E) 到拼接模組 (Decoupled)，最後到工具呼叫的分離模型 (UM-Ag)。
+
+### 3.3 Direct vs. Generate-then-Answer (GtA) 推論
+
+Generation-to-Understanding (G2U) 範式可以通過兩個不同的推論協議來實例化：Direct 和 Generate-then-Answer (GtA)。
+在 Direct 設置中，系統在不產生任何外部中間視覺成果物的情況下回答查詢，形式化為 $\hat{y}=\mathrm{Ans}(x,\varnothing)$。
+在 GtA 設置中，系統明確地生成中間視覺理由 $G$ 並重新使用它來推導最終答案，如式 (4) 中所定義（或通過具有多個 $G_t$ 的代理式展開）。
+
+分解 G2U 收益。
+
+定義模型 $M$ 的最佳 GtA 性能為：
+
+|  | $\displaystyle\mathrm{Perf}_{\mathrm{GtA}}(M;\mathcal{D})\triangleq\max\Big\{$ | $\displaystyle\mathrm{Perf}_{\mathrm{1shot\_GtA}}(M;\mathcal{D}),$ |  | (5) |
+| --- | --- | --- | --- | --- |
+|  |  | $\displaystyle\mathrm{Perf}_{\mathrm{agentic\_GtA}}(M;\mathcal{D})\Big\},$ |  |
+
+其中 $\mathrm{Perf}_{\mathrm{1shot\_GtA}}$ 用單個生成的成果物 $G$ 實例化式 (4)，而 $\mathrm{Perf}_{\mathrm{agentic\_GtA}}$ 用閉迴路展開來實例化它。
+
+我們可以將整體 G2U 性能變化分解為兩個具體分量：
+
+|  | $\displaystyle\Delta_{\mathrm{Direct}}$ | $\displaystyle=\mathrm{Perf}_{\mathrm{Direct}}(M_{UM};\mathcal{D})-\mathrm{Perf}(\mathcal{B}(M_{UM});\mathcal{D}),$ |  | (6) |
+| --- | --- | --- | --- | --- |
+|  | $\displaystyle\Delta_{\mathrm{GtA}}$ | $\displaystyle=\mathrm{Perf}_{\mathrm{GtA}}(M_{UM};\mathcal{D})-\mathrm{Perf}_{\mathrm{Direct}}(M_{UM};\mathcal{D}).$ |  |
+
+此處，$\Delta_{\mathrm{Direct}}$ 捕捉來自統一多模態訓練（不需明確生成）的內在能力變化，而 $\Delta_{\mathrm{GtA}}$ 隔離了在回答前明確外部化視覺推理過程的特定性能影響。
+
+雖然外部化視覺轉換可能是有益的，但如果中間生成的成果物不準確、物理上不合理或與預期的推理計畫不一致，GtA 協議也可能降低性能，從而誤導後續的回答模組。
+
+## 4 UniG2U 的設置
+
+### 4.1 資料集構建和任務分類
+
+[FIGURE:x3.png] 圖 3：UniG2U 的任務分類概述。
+
+UniG2U 被設計為一個診斷基準，用以研究生成何時以及為什麼能夠有益於多模態理解。我們並非專注於單一任務族群，而是構建了涵蓋廣泛感知和認知結構的多樣化資料集。總體而言，UniG2U 包含約 3,000 個樣本，組織成 7 個高層級類別和 30 個細粒度子類別。本節詳細說明分類法設計以及各類別背後的動機。
+
+#### 4.1.1 設計原則
+
+資料集分類法由兩個核心原則指導，從根本上呼應理查德·費曼的深刻格言：「我無法創造的，我就無法理解。」
+
+首先，類別應反映不同的基礎認知結構，而非資料集來源的表面差異。
+
+其次，所有選定的類別必須在理論上展現生成到理解（Generation-to-Understanding, G2U）協同作用的潛力。與其聚合任意的多模態任務，我們有意精心挑選那些視覺外化與理解本質上相耦合的情景。無論是通過繪製幾何輔助線、模擬物理動力學、追蹤空間變換，或甚至重建細粒度感知特徵。
+
+- 1. 真實世界應用（200 個樣本）。類似於實際應用的視覺接地任務，例如注意力聚焦和視覺最短路徑推理（VSP）。這些任務通常需要識別相關區域、追蹤空間關係，或在複雜場景中遵循視覺約束。資料主要來自 VSP 風格的基準和注意力推理資料集。
+- 2. 幾何推理（200 個樣本）。視覺數學和幾何問題，包括 2D 和 3D 幾何推理。子任務包括平面幾何和立體幾何，來自 Geometry3K 和 AuxSolidMath 等資料集。這些問題通常受益於結構化中間體（例如繪製輔助線、重建幾何結構），使其非常適合評估顯式生成增強理解。
+- 3. 物理推理（200 個樣本）。基於圖表的已知答案科學推理，包括物理和光學問題。我們包含來自 Cloudriver 和 PhyX 等資料集的精選子集，其中解決問題需要解釋圖表、理解物理過程或對科學插圖進行推理。
+- 4. 謎題和遊戲（537 個樣本）。具有狀態追蹤和基於規則變換的結構化推理，包括心理重建/追蹤、視覺追蹤和經典謎題，例如迷宮導航、拼圖和滑動謎題。資料來自多個來源，包括 Uni-MMMU、RealUnify 和 BabyVision 風格的資料集。這些任務通常允許顯式中間視覺狀態，使其適合研究隱式和顯式生成機制。
+- 5. 圖表和表格推理（100 個樣本）。對結構化視覺資料（圖表/表格）的推理。我們使用 ChartQA 的精選子集，其中模型必須解釋條形圖、折線圖和其他視覺化表示；中間生成可能通過重新表達或簡化圖表來幫助。
+- 6. 空間智力（500 個樣本）。關於空間關係、幾何變換和物體動力學的推理（例如多步空間推理、屬性測量/近似、攝影機/物體運動）。樣本主要來自空間推理資料集，例如 MMSI-Bench。
+- 7. 感知推理（1,263 個樣本）。細粒度視覺感知和低層級推理，包括場景/形狀型推理、場景內對比場景外判別、標誌理解、演算法和演繹視覺推理、空間模式識別和類比/歸納推理。資料來自 IllusionBench、視覺謎題資料集和 BabyVision 風格基準；與其他類別相比，這裡的許多任務主要是感知型的，可能從顯式生成中受益較少。
+
+真實世界應用（200 個樣本）。類似於實際應用的視覺接地任務，例如注意力聚焦和視覺最短路徑推理（VSP）。這些任務通常需要識別相關區域、追蹤空間關係，或在複雜場景中遵循視覺約束。資料主要來自 VSP 風格的基準和注意力推理資料集。
+
+幾何推理（200 個樣本）。視覺數學和幾何問題，包括 2D 和 3D 幾何推理。子任務包括平面幾何和立體幾何，來自 Geometry3K 和 AuxSolidMath 等資料集。這些問題通常受益於結構化中間體（例如繪製輔助線、重建幾何結構），使其非常適合評估顯式生成增強理解。
+
+物理推理（200 個樣本）。基於圖表的已知答案科學推理，包括物理和光學問題。我們包含來自 Cloudriver 和 PhyX 等資料集的精選子集，其中解決問題需要解釋圖表、理解物理過程或對科學插圖進行推理。
+
+謎題和遊戲（537 個樣本）。具有狀態追蹤和基於規則變換的結構化推理，包括心理重建/追蹤、視覺追蹤和經典謎題，例如迷宮導航、拼圖和滑動謎題。資料來自多個來源，包括 Uni-MMMU、RealUnify 和 BabyVision 風格的資料集。這些任務通常允許顯式中間視覺狀態，使其適合研究隱式和顯式生成機制。
+
+圖表和表格推理（100 個樣本）。對結構化視覺資料（圖表/表格）的推理。我們使用 ChartQA 的精選子集，其中模型必須解釋條形圖、折線圖和其他視覺化表示；中間生成可能通過重新表達或簡化圖表來幫助。
+
+空間智力（500 個樣本）。關於空間關係、幾何變換和物體動力學的推理（例如多步空間推理、屬性測量/近似、攝影機/物體運動）。樣本主要來自空間推理資料集，例如 MMSI-Bench。
+
+感知推理（1,263 個樣本）。細粒度視覺感知和低層級推理，包括場景/形狀型推理、場景內對比場景外判別、標誌理解、演算法和演繹視覺推理、空間模式識別和類比/歸納推理。資料來自 IllusionBench、視覺謎題資料集和 BabyVision 風格基準；與其他類別相比，這裡的許多任務主要是感知型的，可能從顯式生成中受益較少。
+
+[FIGURE_CAPTION] 表 2：UniG2U 資料集概述。該基準包含 3,000 個樣本，組織成 7 個推理類別和 30 個細粒度子任務，精心精選自多個已建立的多模態推理資料集。
+
+通過在七個具有不同推理特性的類別中構建基準，UniG2U 能夠對生成與理解之間的關係進行細粒度分析。如圖 3 所示，分類法跨越生成友善的類別（例如空間推理、謎題）和更多感知密集的類別，使我們能夠探究中間視覺生成何時有幫助、中立或有害。此設計允許我們調查生成的有效性如何在認知體制中變化，而不是僅報告整體準確性，從而提供對統一多模態模型機制更深入的見解。
+
+#### 4.1.2 任務選擇和覆蓋範圍
+
+[FIGURE:x4.png] 圖 4：UniG2U 中的任務選擇和覆蓋範圍。
+
+UniG2U 是圍繞一個單一的指導假設構建的：存在一族多模態理解任務，其中中間視覺生成可作為有效的推理輔助工具。此類任務在實踐中很常見，包括 (i) 空間推理，其中模型受益於外化變換或佈局，(ii) 圖表和表格推理，其中重新表達或簡化圖表可以減少認知負荷，(iii) 謎題和遊戲，其中中間狀態可視化可支持狀態追蹤，以及 (iv) 物理/幾何問題，其中輔助構造和圖表操作通常能夠實現正確的解決方案。
+
+為了確保全面覆蓋和與 G2U 目標的強相關性，我們在 7 個高層級類別和 30 個子任務中精心策劃 3,000 個實例（表 2）。如圖 4 所示，我們的候選池收集自多個公開來源（例如 IllusionBench、MMSI-Bench、Visual Puzzles、Geometry3K、AuxSolidMath、Uni-MMMU、ChartQA、RealUnify、BabyVision、PhyX 和 VSP 風格基準），從中我們進一步選擇和篩選最能反映中間生成可能協助理解設定的實例。
+
+特別地，基準包括真實世界應用、幾何推理和物理推理各 200 個樣本；謎題和遊戲 537 個樣本；圖表和表格推理 100 個樣本；空間智力 500 個樣本；以及感知推理 1,263 個樣本。此分佈使我們能夠分析生成好處跨越認知體制，從生成友善的空間操縱到主要感知識別。
+
+值得注意的是，雖然每個細粒度子任務的樣本大小可能看起來相對適中，但這是我們嚴格選擇標準的一個有意後果。真正展現 G2U 協同作用的任務—其中中間視覺外化提供切實推理優勢—在現有資料集中本質上稀缺，這些資料集歷來傾向於直接感知或純文字推理。儘管存在這種固有的稀缺性，UniG2U 的 3,000 個精心精選樣本集合使其成為與現有統一評估相比其同類中最大的基準（如表 1 中的定量比較所示）。結合我們對 30 多個不同的統一模型和基線進行的廣泛評估，UniG2U 代表了對多模態統一景觀的一次真正大規模、全面且極具說服力的調查。
+
+UniG2U 中的每個實例都圍繞問題-回答格式組織，以影像（或一小組影像）作為主要輸入。除了最終答案外，我們標註（如適用）輔助資訊以便於診斷評估：
+
+- • 用於跨分類法進行細粒度分析的類別/子任務標籤。
+- • 答案類型（例如多選題、簡短文字、數值），其決定後處理和匹配規則。
+- • 生成要求標籤，指示任務是否自然允許有益的中間視覺表示（例如幾何構造、狀態轉移視覺化、圖表重新表達）。
+
+用於跨分類法進行細粒度分析的類別/子任務標籤。
+
+答案類型（例如多選題、簡短文字、數值），其決定後處理和匹配規則。
+
+生成要求標籤，指示任務是否自然允許有益的中間視覺表示（例如幾何構造、狀態轉移視覺化、圖表重新表達）。
+
+重要的是，UniG2U 不為每個問題強制單一規範的中間影像。相反，我們將中間生成視為一個推理工具，其有用性應通過它是否改進最終任務表現來衡量。
+
+### 4.2 Evaluation Protocol
+
+Our evaluation protocol is strictly designed to ensure fair comparison across a diverse suite of models and to rigorously isolate the causal contribution of intermediate generation (i.e., the G2U effect).
+
+[FIGURE:x5.png] Figure 5 : Overview of our two evaluation prompt formats: Direct and Generate-then-Answer (GtA).
+
+Unified evaluation environment.
+
+To minimize implementation biases, we execute all evaluations under a unified architecture using the lmms-eval framework whenever possible. For proprietary models or specific architectures incompatible with this environment, we fallback to their native evaluation stacks while strictly preserving the rest of our protocol (i.e., prompt templates, budget constraints, and decoding strategies).
+
+Dual-protocol prompting (Direct vs. GtA).
+
+To localize the effect of generation, we evaluate all models under two paired inference protocols, as illustrated in Fig. 5 :
+
+- • Direct : The model processes the task instruction, input image(s), and query to directly output the final answer in a single end-to-end forward pass.
+- • Generate-then-Answer (GtA) : The instance is explicitly decomposed. The model is first prompted to generate an intermediate visual artifact G G (e.g., drawing auxiliary lines or tracking states). Subsequently, it generates the final answer using both the original input and the newly generated G G as expanded context.
+
+Direct : The model processes the task instruction, input image(s), and query to directly output the final answer in a single end-to-end forward pass.
+
+Generate-then-Answer (GtA) : The instance is explicitly decomposed. The model is first prompted to generate an intermediate visual artifact G G (e.g., drawing auxiliary lines or tracking states). Subsequently, it generates the final answer using both the original input and the newly generated G G as expanded context.
+
+For inherently multi-step reasoning problems (e.g., maze navigation, jigsaw puzzles), we employ an iterative GtA variant: if an instance requires K K steps, the model alternates between producing a step- k k intermediate visual state and the corresponding step- k k decision, until the final answer is reached. Models unable to support the GtA mode due to architectural constraints receive specific fallback treatments, detailed in Appendix B .
+
+Budget matching and interaction constraints.
+
+To prevent performance gains from being confounded by disparate compute budgets, we enforce strict bounds. Across all models and task categories, we cap the maximum token generation length. Input images are processed at the model’s default resolution; if out-of-memory (OOM) exceptions occur, we downscale to the nearest supported resolution.
+
+Unified decoding settings.
+
+To ensure deterministic and reproducible evaluations, we standardize the text decoding hyperparameters across all models using greedy decoding ( temperature = 0 \text{temperature}=0 , top- ​ p = 1.0 \text{top-}p=1.0 ). For intermediate image generation, we generally adopt the default configurations of the respective models.
+
+### 4.3 評量指標
+
+準確度。
+
+我們將準確度（或完全匹配）報告為主要的基準評量指標。根據任務格式，我們通過以下方式計算正確性：(i) 使用文本正規化後進行正則表達式匹配的基於規則的評估，或 (ii) 透過調用 GPT-4o API 搭配任務特定評分提示的 LLM-as-a-judge 評估。除非另有說明，GPT-4o 嚴格用於裁定非平凡的自由形式輸出和視覺相關的判斷。
+
+G2U 增益。
+
+我們的核心指標是 G2U 增益（$\Delta$），定義為統一模型 $M_{UM}$ 相對於其嚴格配對的純判別式基礎模型 $\mathcal{B}(M_{UM})$ 的準確度改進。回顧等式 6，我們報告兩個不同的變體：
+
+|  | $\displaystyle\Delta_{\mathrm{Direct}}\;$ | $\displaystyle=\;\mathrm{Acc}^{\text{Direct}}_{M_{UM}}\;-\;\mathrm{Acc}_{\mathcal{B}(M_{UM})},$ |  | (7) |
+| --- | --- | --- | --- | --- |
+|  | $\displaystyle\Delta_{\mathrm{GtA}}\;$ | $\displaystyle=\;\mathrm{Acc}^{\text{GtA}}_{M_{UM}}\;-\;\mathrm{Acc}_{\mathcal{B}(M_{UM})}.$ |  | (8) |
+
+這個相對的公式化有效地隔離了統一架構和生成過程所引入的淨能力轉變。我們計算整體的 G2U 增益以及每個子任務的增益，以定量診斷生成何時有幫助、保持中立或損害多模態理解。
+
+GtA 中間產物的診斷指標：RA 和 AL。
+
+為了機械地理解 GtA 協議期間生成的中間影像的有效性（或失敗），我們引入兩個新穎的對齊指標，由 GPT-4o 在 1 到 5 分的量表上進行評估，並針對每個任務家族使用自訂評分標準。
+
+推理到視覺的對齊（RA）。RA 評估生成的中間影像是否正確地體現了預期的推理鷹架。它彙總指令遵守、視覺品質和任務相關性（加權架構詳見圖 6）。本質上，RA 衡量的是視覺外部化的保真度。
+
+答案到視覺的對齊（AL）。AL 評估模型的最終答案是否在邏輯上與生成的中間影像和原始查詢保持一致。它彙總視覺-答案一致性、問題-答案對齐和推理連貫性（見圖 6）。AL 有效地衡量生成視覺文脈的重新消費能力。
+
+評分架構。
+
+對於 RA 和 AL，GPT-4o 通過彙總評分標準特定的子分數，在 5 分量表上產生最終分數。我們報告相關實例中 RA/AL 分數的平均值，為每個模型和子任務提供細粒度的分解，以將中間生成品質與最終任務準確度相關聯。
+
+[FIGURE:x6.png] 圖 6：GtA 中間產物評估的評分標準權重。RA 衡量生成的中間影像相對於生成提示的遵守和保真度，而 AL 衡量最終答案、生成的影像和原始問題之間的邏輯一致性。
+
+### 4.4 模型與實作細節
+
+為了在現實的模型生態系中全面研究 G2U 效應，我們系統地評估了 35 個不同模型的龐大套件。這些模型分為三個系列：11 個基礎 VLM、21 個原生統一模型和 3 個智能代理模型。
+
+基礎 VLM（僅理解）。
+
+我們對 11 個強大的視覺語言模型（VLM）進行基準測試，這些模型執行純理解而無需生成中間圖像。該集合包含所有測試統一模型的確切對應基礎模型，以及領先的 VLM 模型 GPT-4o 和 Ovis2.5。這些基礎 VLM 用作計算 G2U Gain 的嚴格參考點（方程式 7 和 8）。
+
+原生統一模型。
+
+我們對 21 個代表性開源統一模型進行基準測試，這些模型在單一模型介面中本地整合多模態理解和圖像生成（即模型可以直接遵循 Direct 和 GtA 協議，無需外部工具連接）。這些模型是我們評估內在理解生成的主要研究對象。至關重要的是，如表 3 所詳述，「Backbone」欄明確指出用於基線比較的對應基礎 VLM。
+
+智能代理模型
+
+最後，我們通過將規劃器 LLM 與外部圖像生成工具組合來評估 3 個智能代理模型。根據我們的分類法，智能代理系統在概念上被視為統一模型的廣義變體。具體來說，規劃器生成 generation_prompt，調用生成 API 以獲得中間圖像，然後根據這個新生成的視覺狀態來回答查詢。值得注意的是，這些智能代理系統通常由最強大的、可用的閉源專有模型驅動（例如 GPT-4o + GPT-image 和 Gemini + Nano Banana Pro）。評估此類別具有關鍵的雙重目的：一方面，它對我們任務上廣義統一模型的性能上限（天花板）進行基準測試；另一方面，它允許我們研究非端到端、純工具驅動的視覺外部化表現如何。
+
+當統一模型沒有官方對應的 VLM 基礎模型（或其基礎模型不是視覺語言模型），我們根據訓練資料和架構選擇最接近的可用 VLM 基線，並將其用作嚴格配對的基礎模型進行比較。
+
+本工作中評估的模型。
+
+我們詳盡地評估了表 3 中列出的所有 21 個統一模型，包括：Emu3 [32]、X-Omni [6]、UniWorld-V1 [19]、MIO [9]、Bagel [5]、OmniGen2 [35]、Lumina-DiMOO [39]、Ovis-U1 [31]、OneCAT-3B [24]、JavisGPT [20]、UAE [46]、TokenFlow-XL [15]、UniPic2 [23]、Janus-Pro [4]、Show-o2 [37]、ILLUME+ [50]、STAR-7B [17]、MMaDA [43]、FUDOKI [33]、AIA [53]、Uni-Video [34] 和 MammothModa2 [28]。
+
+這些模型及其關鍵設計選擇的概述在表 3 中提供，詳細說明了它們的骨幹網路（基礎 VLM）、支援的模式、圖像生成範式、訓練方案、i2i 功能以及統一是端到端還是解耦的。
+
+[FIGURE_CAPTION] 表 3：統一多模態模型的比較。 表示凍結骨幹網路，表示未凍結（可訓練）骨幹網路。「Backbone」欄代表用於 G2U 評估的對應基礎 VLM。
+
+所有系統都在第 4.2 節中描述的相同資料集、提示範本和預算約束下進行評估。
+
+### 4.5 研究問題
+
+我們定義四個主要研究問題（RQs）以系統性地指導我們對於生成到理解（G2U）範式的實證研究。我們在後續的結果部分系統性地解決這些 RQs。
+
+RQ1：統一模型 vs. 基礎模型。
+
+統一的多模態模型是否在我們的診斷基準上相對於其嚴格配對的基礎 VLMs 展現一致的能力優勢？
+
+實驗設計：對於每個統一模型，我們識別其對應的純判別性基礎 VLM，並在相同的資料集、提示範本和推理預算下評估兩者。我們報告絕對效能和直接 G2U 增益（$\Delta_{\mathrm{Direct}}$）的整體結果和按認知類別的結果，以表徵隱式參數統一在何處產生效益。
+
+RQ2：生成後回答（GtA）vs. 直接推理。
+
+對於複雜推理任務，統一模型是否更多地受益於中間步驟的明確視覺外化（GtA 協議），還是直接推理能達到相當的理解效能？
+
+實驗設計：我們在匹配的計算預算下使用直接和 GtA 協議（第 4.2 節）評估每個統一模型。我們隨後量化兩種模式之間的效能差異（$\Delta_{\mathrm{GtA}}$）以嚴格隔離明確生成中間視覺推理支架的因果貢獻。
+
+RQ3：架構類別內的行為關聯性。
+
+在統一模型的特定架構族系內，我們是否觀察到相關的效能模式，這些模式暗示 G2U 任務中的類別一致的優勢和脆弱性？
+
+實驗設計：按照表 3 中的分類法，我們按其影像生成範式（例如自迴歸 vs. 擴散 vs. 流）和統一策略（端到端 vs. 解耦）將模型分組。我們構建模型-任務效能向量並計算成對等級相關性，以判斷基本架構選擇是否決定了不同的 G2U 行為。
+
+RQ4：中間視覺化的保真度和效用。
+
+當在 GtA 協議下明確提示統一模型生成中間輔助影像時，統一模型是否可靠地遵循指示，以及它們是否產生確實有助於下游推理的有用視覺？
+
+實驗設計：我們使用第 4.3 節中定義的兩個基於評分標準的評估指標診斷生成的中間輸出：推理到視覺對齊（RA）和答案到視覺對齊（AL）。我們隨後分析 RA/AL 分數、下游任務準確度和觀察到的 GtA-vs-直接增益之間的關聯性，以機械性地追蹤 G2U 成功和失敗的根源。
+
+## 5 結果分析
+
+[FIGURE:x7.png] 圖 7：UniG2U-Bench 的代表性案例研究
+
+### 5.1 主要結果（RQ1）
+
+[FIGURE_CAPTION] 表4：UniG2U 在各類別上的主要結果。所有數值報告為百分比（× 100 \times 100）。每個模型組內的最佳結果以粗體標示。基礎模型（標記為 ∗ * ）以灰色背景突出顯示。Δ \Delta 表示與相應基礎模型的效能差距。
+
+表4 總結了所有評估模型在 UniG2U 七個認知類別上的表現。為了嚴謹地回答 RQ1，我們將統一模型與其嚴格配對的基礎 VLM 進行分組（標記為 ∗）。指標 Δ \Delta 隔離了統一架構引入的絕對 G2U 增益（或損失）。* * * 評估限制：為了確保嚴格的公平比較，我們排除了本質上缺乏影像編輯訓練的模型的 GtA 結果（視覺修改的分佈外）。同樣，我們省略了具有凍結主幹的模型的 Direct 結果，因為它們的效能偏差源於投影層而非參數級多模態耦合。詳細的處理和分析延遲到附錄 B 和 A。
+
+**整體趨勢：統一的「對齐稅」。**
+
+**要點1：在大多數任務上，整合生成能力會導致純粹理解效能的下降。**
+
+人們可能自然地假設純粹理解的這種下降僅僅是多模態聯合訓練階段期間「災難性遺忘」的症狀。然而，經驗證據堅實地駁斥了這一點。我們基準測試中評估的原生統一模型在大規模理解資料集和生成資料上經歷了廣泛的共同訓練，這個方案被明確設計用於保留純粹的理解能力。因此，觀察到的下降不是先前所得知識的喪失，而必然源於跨模態「對齐稅」和通過生成路徑路由引入的目標干擾。
+
+表4 中一個引人注目的觀察是，統一模型相對於相應基礎 VLM 經常產生負 Δ \Delta 值。至關重要的是，即使在 Direct 協議下（不產生明確的影像），這種下降仍然存在。這表明下降不僅僅是低品質中間視覺偽影的副產品，而是參數級生成與理解耦合的內在結果。
+
+這一現象表明了表徵權衡，類似於「對齐稅」。旨在融合生成和感知的聯合多模態訓練目標經常引入目標干擾，略微破壞了原始基礎理解模型中存在的精細判別推理能力。
+
+**類別級行為：整體衰退中孤立的增益。**
+
+**要點2：儘管整體理解中普遍存在下降，統一模型在空間智慧和視覺錯覺上表現出孤立的韌性和顯著的增益。**
+
+更細粒度的類別分析揭示了參數級耦合的負面影響並非絕對的。雖然許多一般推理類別受到目標干擾的影響，但統一模型在空間智慧和視覺錯覺（感知推理的特定子集）上始終表現出更清晰的韌性，甚至適度的增益。
+
+為了說明這一趨勢，表5 呈現了專注於 llava_onevision 模型家族的結果摘錄。如表所示，儘管存在整體「對齐稅」，但像 bagel 和 show-o2 這樣的生成整合模型在需要轉換感知推理和幾何一致性的任務中達成了顯著的正增益（Δ \Delta）。如需在所有評估的基礎 VLM 中的完整實驗結果，以及關於生成誘導的表徵如何正規化內部空間結構的更詳細分析，請參考附錄 C。
+
+[FIGURE_CAPTION] 表5：選定錯覺和空間子任務的絕對結果摘錄。基礎模型以灰色突出顯示。請參考附錄 C 獲取包含所有模型塊的綜合表格。
+
+這些專門的任務涉及幾何變換、狀態追蹤和解決複雑的視覺歧義。在這些特定領域中，生成能力的整合並不作為干擾分心；相反，它似乎充當了強大的結構正規化器。通過學習合成和操縱影像，模型顯著增強了其基礎感知敏銳度和明確建模視覺結構的能力。這表明雖然當前統一範式可能稀釋一般推理，但它們對於嚴格基於結構和空間建模的任務持有明確而獨特的前景。
+
+**對 RQ1 的影響。**
+
+我們的發現表明 G2U 根本上是表徵耦合的挑戰。簡單地向 VLM 注入生成路徑並不會自動產生更強的推理器。統一僅在生成和理解目標相互一致對齐時才有益於推理（如在空間任務中所見）；否則，添加的生成容量充當干擾性輔助目標，稀釋模型的核心認知推理能力。
+
+### 5.2 GtA 與直接推理之間的比較（RQ2）
+
+[FIGURE_CAPTION] 表格 6：直接推理與 GtA 在生成友善子任務上的準確度。GtA 在多步驟空間推理體制中顯示一致的改進。結果格式為（直接推理 / GtA）。
+
+[FIGURE:x8.png] 圖 8：GtA 與直接推理（類別級別）。每個點代表一個（模型、類別）對，比較直接推理與 GtA 準確度。
+
+[FIGURE:x9.png] 圖 9：GtA 與直接推理（整體）。支援兩種推理協議的模型的整體準確度比較。
+
+為了調查明確的中間視覺生成是否相比於直接統一推理提供額外的優勢，我們在推理預算匹配的情況下，針對每個統一模型在直接推理和 GtA 協議下進行評估。
+
+**整體趨勢：視覺錯誤傳播的風險。**
+
+**要點 3：明確的生成增強範式（GtA）在大多數邏輯密集型任務中會降低效能，因為強制視覺外部化通常會傳播錯誤。**
+
+[FIGURE_CAPTION] 表格 7：跨任務類別的中間影像對齊。每個單元格報告 RA / AL 分數（滿分 5.0）。較高的 RA 表示對預期視覺推理支架的更強遵循；較高的 AL 表示最終答案與生成的構件之間更緊密的邏輯一致性。
+
+在類別級別（圖 8），大多數點位於 $y = x$ 線下方，表示 GtA 推理在各個任務體制中並未持續優於直接推理。這一趨勢在整體比較（圖 9）中得到進一步反映，其中 GtA 準確度對於支援兩種協議的模型經常低於直接推理。對於幾個統一模型（例如 OneCAT-3B、Ovis-U1 和 MIO），效能下降相當明顯。
+
+這種整體下降凸顯了一個關鍵的漏洞：明確地外部化中間視覺並不會自動改善推理。相反地，GtA 提示引入了嚴重的失敗模式，當生成的構件不準確、語義不對齐或整合不良時。從耦合的角度來看，直接模式允許模型在其隱藏空間內隱含地利用經過生成訓練的表示，完全迴避了提交到有缺陷的具體影像的風險。相比之下，GtA 強制了明確的視覺假設；如果生成精度不足，這個有缺陷的視覺化就成為誤導後續回答模組的噪聲來源（參見附錄 D 中的定性失敗案例）。
+
+**轉換密集型體制：視覺 CoT。**
+
+**要點 4：在轉換密集型場景中，明確的中間生成（GtA）會產生明顯的效能收益，其中視覺狀態充當外部工作空間。**
+
+儘管整體有所下降，GtA 並非統一有害。細粒度子任務分析揭示了，在特定轉換密集型體制（例如迷宮導航、滑塊拼圖和多步驟空間推理（MSR））中，明確生成會產生一致的改進（表格 6）。
+
+這些任務共享一個決定性的結構特性：它們需要順序、多步驟的空間操縱和反覆的狀態追蹤。在這樣的場景中，明確的中間生成有效地充當視覺思維鏈（CoT）。透過明確繪出中間空間配置，模型將複雜的推理軌跡分解為易於管理的子步驟。生成的構件充當外部認知工作空間，穩定狀態追蹤，並顯著減少了在長時間範圍內追蹤移動物體或路徑所需的隱含記憶負擔。
+
+綜合來看，這些發現表明 G2U 成功的決定因素不僅僅是明確生成的行為，而是生成是否充當可靠的結構支架。直接推理捕捉廣泛的表示優勢，而 GtA 僅在中間視覺既結構準確又與順序空間邏輯語義對齐時才提供推理收益。
+
+### 5.3 Correlation Analysis of G2U Gains Across Tasks and Models (RQ3)
+
+[FIGURE:x10.png] (a) Task-level correlation
+
+While RQ1 and RQ2 examine absolute performance and specific inference protocols, RQ3 investigates a deeper systemic question: do the observed G2U gains ( Δ \Delta ) exhibit structured, predictable correlation patterns?
+
+Takeaway 5: At the task level, perception-oriented tasks and reasoning-oriented tasks each form internally correlated clusters, but typically exhibit negative correlations with one another. At the model level, unified models built upon the same base model demonstrate strong behavioral correlations, whereas those merely sharing architectural similarities exhibit much weaker correlations.
+
+To rigorously answer this, we analyze the relative offset Δ \Delta (unified model minus its strictly paired base model). This isolation explicitly removes the confounding variable of underlying backbone strength, leaving only the pure generation-induced capability shift.
+
+Task-Level Correlation
+
+We compute pairwise Spearman correlations between subtasks by treating each subtask as a vector of Δ \Delta values across all evaluated models. The resulting heatmap (Fig. 10(a) ) reveals that G2U gains form distinct cognitive clusters. Subtasks leaning towards rigorous structural reasoning (e.g., jigsaw, maze) exhibit strong positive mutual correlations. Similarly, perception-oriented tasks (e.g., fine-grained recognition) also show a certain degree of internal similarity. Conversely, reasoning-oriented subtasks frequently exhibit negative correlations with perception-oriented tasks. This divergence provides compelling statistical evidence for the “alignment tax” discussed in RQ1: optimizing a model to benefit structural generation tasks often induces a representational trade-off that subtly degrades raw perceptual discrimination.
+
+Model-Level Correlation
+
+We further compute correlations between models by treating each model as a vector of Δ \Delta across all subtasks. The model-level heatmaps (Fig. 10(b) and 10(c) ) unearth a striking grouping effect. Unified models constructed upon the exact same foundational Base VLM (Fig. 10(b) ) exhibit exceptionally strong correlations in their behavioral patterns, forming distinct high-correlation blocks. In stark contrast, models that merely share similar generative architectures (e.g., grouped by Autoregressive vs. Diffusion paradigms in Fig. 10(c) ) demonstrate much weaker correlation signatures. This yields a critical insight for future unified model design: the mechanism by which generative capacity transfers to understanding is predominantly dictated by the inherited foundational representations (the VLM base), while merely adopting a similar generative architecture provides minimal behavioral consistency.
+
+### 5.4 中間視覺化是否一致且有幫助？(RQ4)
+
+我們使用第 4.3 節定義的 RA（推理到視覺對齊，Reasoning-to-Visual Alignment）和 AL（答案到視覺對齊，Answer-to-Visual Alignment）指標診斷顯式生成中間圖像的品質。詳細的評估提示和評分標準在附錄 I 中提供。在此，我們分析跨任務類別和模型的對齊模式，以機械地解釋在 RQ2 中觀察到的 GtA 有效性。
+
+**要點 6：高對齊保真度是 G2U 收益的必要但不充分條件。雖然模型在感知任務中繪製忠實，但顯式外化是冗餘的；相反地，在結構受限的領域中，對齊不佳會導致嚴重的誤差傳播。**
+
+表 7 中的診斷分數出現了兩種不同的模式，這完美地證實了我們在 RQ1 和 RQ2 中的發現。
+
+首先，識別導向的任務（例如感知推理，Perception Reasoning）在幾乎所有模型中普遍達到最高的 RA/AL 分數。這表明當前統一模型在所需轉換是相對直接的視覺翻譯時，可以可靠地生成視覺忠實的中間工件。然而，如 RQ2 中所確立的，這種高保真度並未轉化為性能提升。因為感知任務主要依賴於低層級的視覺判別而非多步驟的結構邏輯，繪製中間狀態在計算上是冗餘的。模型「繪製得很好」，但實際上不需要這些繪製來回答問題。
+
+其次，邏輯密集且結構受限的任務（例如數學與幾何或特定的物理模擬）表現出明顯較低的 RA 分數。這反映了將複雜、嚴格的數學邏輯忠實外化為視覺格式的深層困難。在這些對齊較低的設置中，生成的輔助圖表通常會省略關鍵約束或扭曲幾何關係。因此，後續的答題模組消耗有缺陷的視覺前提（低 AL），直接導致在 GtA 協議中觀察到的嚴重性能退化（誤差傳播）。
+
+最終，對齐診斷表明顯式生成只在「最佳點」中有益：即視覺外化在結構上必要以減少認知負荷的任務（如空間智力，Spatial Intelligence，其中 RA 分數適中但有用），以及模型擁有足夠的對齊保真度以產生可信賴的視覺支架的情況下。
+
+## 6 結論與未來工作
+
+在本工作中，我們引入了 UniG2U，一個大規模診斷基準，用於系統性地研究生成在統一多模態模型中何時及如何幫助理解。跨越七個認知框架的 3,000 個精選實例，我們展示了生成到理解（G2U）的增益高度取決於任務和架構。統一模型並不總是優於其基礎 VLMs；相反，改進主要出現在空間變換和狀態追蹤任務中，其中生成訓練的表示規則化結構推理。此外，明確的「生成後回答」生成並不普遍超越直接統一推理。雖然中間視覺外化可以輔助推理，但當生成的產物不準確或不對齊時，它通常會引入新的失敗模式。我們的相關性分析進一步揭示，G2U 增益遵循由基礎模型繼承的表示先驗所塑形的結構化任務和模型級模式。
+
+展望未來，推進 G2U 需要更強大的生成與推理之間的整合機制。未來方向包括表示級對齐目標、可靠性感知或自驗證中間生成，以及減少錯誤傳播的閉環代理精煉。延伸超越僅限圖像的中間體至結構化或多模態推理產物可能進一步增強魯棒性。此外，調查 G2U 效應的縮放規律和設計因果評估協議以隔離表示變化仍是重要的開放問題。我們希望 UniG2U 為未來研究提供一個有原則的基礎，推動統一多模態系統的發展，使生成與理解相互強化而非相互干擾。
+
+## 參考文獻
+
+- [1] J. Alayrac, J. Donahue, P. Luc, A. Miech, I. Barr, Y. Hasson, K. Lenc, A. Mensch, K. Millican, M. Reynolds, et al. (2022) Flamingo: a visual language model for few-shot learning . arXiv preprint arXiv:2204.14198 . 引用於: §2.1 .
+- [2] Chameleon Team, X. Chen, et al. (2024) Chameleon: mixed-modal early-fusion foundation models . arXiv preprint arXiv:2405.09818 . 引用於: §2.1 .
+- [3] L. Chen, W. Xie, Y. Liang, H. He, H. Zhao, Z. Yang, Z. Huang, H. Wu, H. Lu, Y. Charles, Y. Bao, Y. Fan, G. Li, H. Shen, X. Chen, W. Xu, S. Si, Z. Cai, W. Chai, F. Liu, T. Liu, B. Chang, X. Hu, K. Chen, Y. Ren, Y. Liu, Y. Gong, and K. Li (2026) BabyVision: visual reasoning beyond language . arXiv preprint arXiv:2601.06521 . 引用於: 表 2 , 表 2 .
+- [4] X. Chen, Z. Wu, X. Liu, Z. Pan, W. Liu, Z. Xie, X. Yu, and C. Ruan (2025) Janus-pro: unified multimodal understanding and generation with data and model scaling . arXiv preprint arXiv:2501.17811 . 引用於: §2.1 , §4.4 .
+- [5] C. Deng, D. Zhu, K. Li, C. Gou, F. Li, Z. Wang, S. Zhong, W. Yu, X. Nie, Z. Song, G. Shi, and H. Fan (2025) Emerging properties in unified multimodal pretraining . arXiv preprint arXiv:2505.14683 . 引用於: §2.1 , §4.4 .
+- [6] Z. Geng, Y. Wang, Y. Ma, et al. (2025) X-omni: reinforcement learning makes discrete autoregressive image generative models great again . arXiv preprint arXiv:2507.22058 . 引用於: §4.4 .
+- [7] S. Guo, J. Li, Y. Wang, et al. (2026) GeoVLMath: enhancing geometry reasoning in vision-language models via cross-modal reward for auxiliary line creation . OpenReview (ICLR 2026) . 外部連結: 2511.08765 引用於: 表 2 .
+- [8] H. Hu et al. (2025) PAST: a primary-auxiliary spatio-temporal network for traffic time series imputation . arXiv preprint arXiv:2511.13414 . 引用於: §2.1 .
+- [9] Y. Hu, H. Tian, et al. (2025) MIO: a foundation model for unified multimodal input and output . arXiv preprint arXiv:2510.13456 . 引用於: §4.4 .
+- [10] S. Huang, L. Zhang, and et al. (2023) Language is not all you need: aligning perception with language models . arXiv preprint arXiv:2302.14045 . 引用於: §2.1 .
+- [11] B. Li, Y. Yin, W. Chai, X. Fu, and Z. Liu (2026) UEval: a benchmark for unified multimodal generation . arXiv preprint arXiv:2601.22155 . 引用於: §2.2 , §2.2 .
+- [12] J. Li, D. Li, S. Savarese, and S. Hoi (2023) BLIP-2: bootstrapping language-image pre-training with frozen image encoders and large language models . arXiv preprint arXiv:2301.12597 . 引用於: §2.1 .
+- [13] M. Li, X. Wang, Q. Zhang, et al. (2025) VSP: assessing the dual challenges of perception and reasoning in spatial planning tasks for mllms . arXiv preprint arXiv:2409.18520 . 外部連結: 2409.18520 引用於: 表 2 .
+- [14] M. Li, J. Zhong, S. Zhao, H. Zhang, S. Lin, Y. Lai, W. Chen, K. Psounis, and K. Zhang (2025) TIR-bench: a comprehensive benchmark for agentic thinking-with-images reasoning . arXiv preprint arXiv:2511.01833 . 引用於: §2.2 .
+- [15] Y. Li et al. (2024) TokenFlow: unified image tokenizer for multimodal understanding and generation . arXiv preprint arXiv:2412.03069 . 引用於: §4.4 .
+- [16] Y. Li, H. Wang, Q. Zhang, B. Xiao, C. Hu, H. Wang, and X. Li (2025) Unieval: unified holistic evaluation for unified multimodal understanding and generation . arXiv preprint arXiv:2505.10483 . 引用於: §1 , §2.2 .
+- [17] Z. Li, T. Chen, D. Li, et al. (2025) STAR: stacked autoregressive for unified multimodal understanding and generation . arXiv preprint arXiv:2512.08244 . 引用於: §4.4 .
+- [18] Y. Liang, W. Chow, F. Li, Z. Ma, X. Wang, J. Mao, J. Chen, J. Gu, Y. Wang, and F. Huang (2025) ROVER: benchmarking reciprocal cross-modal reasoning for omnimodal generation . arXiv preprint arXiv:2511.01163 . 引用於: §2.2 .
+- [19] B. Lin et al. (2025) UniWorld-v1: high-resolution semantic encoders for unified visual understanding and generation . arXiv preprint arXiv:2506.03147 . 引用於: §4.4 .
+- [20] B. Liu, Z. Huang, et al. (2025) JavisGPT: scaling up unified understanding and generation for video and audio . arXiv preprint arXiv:2512.22905 . 引用於: §4.4 .
+- [21] P. Lu, H. Bansal, T. Xia, J. Liu, C. Li, H. Hajishirzi, H. Cheng, K. Chang, M. Galley, and J. Gao (2023) MathVista: evaluating mathematical reasoning of foundation models in visual contexts . arXiv preprint arXiv:2310.02255 . 引用於: 表 2 .
+- [22] A. Masry, D. X. Long, J. Q. Tan, S. Joty, and E. Hoque (2022) ChartQA: a benchmark for question answering about charts with visual and logical reasoning . In Findings of the Association for Computational Linguistics: ACL 2022 , pp. 2263–2279 . 外部連結: Document 引用於: 表 2 .
+- [23] S. Peng et al. (2025) Skywork unipic 2.0: building kontext model with online rl for unified multimodal model . arXiv preprint arXiv:2509.04548 . 引用於: §4.4 .
+- [24] X. Peng et al. (2025) OneCAT: a decoder-only foundation model for unified multimodal understanding and generation . arXiv preprint arXiv:2509.03498 . 引用於: §4.4 .
+- [25] Y. Qiao, H. Duan, X. Fang, J. Yang, L. Chen, S. Zhang, J. Wang, D. Lin, and K. Chen (2024) Prism: a framework for decoupling and assessing the capabilities of vlms . Advances in Neural Information Processing Systems 37 , pp. 111863–111898 . 引用於: §1 .
+- [26] A. Radford, J. W. Kim, C. Hallacy, A. Ramesh, G. Goh, S. Agarwal, G. Sastry, A. Askell, P. Mishkin, J. Clark, G. Krueger, and I. Sutskever (2021) Learning transferable visual models from natural language supervision . In Proceedings of the 38th International Conference on Machine Learning (ICML) , 引用於: §2.2 .
+- [27] R. Rombach, A. Blattmann, D. Lorenz, P. Esser, and B. Ommer (2022) High-resolution image synthesis with latent diffusion models . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) , 引用於: §2.1 .
+- [28] T. Shen, X. Wan, T. Chen, R. Zhang, J. Pan, D. Lu, F. Lei, Z. Lu, Y. Yang, C. Cheng, Q. She, C. Liu, and Z. Sun (2025) MammothModa2: a unified ar-diffusion framework for multimodal understanding and generation . arXiv preprint arXiv:2511.18262 . 引用於: §4.4 .
+- [29] Y. Shi, Y. Dong, Y. Ding, Y. Wang, X. Zhu, S. Zhou, W. Liu, H. Tian, R. Wang, H. Wang, Z. Liu, B. Zeng, R. Chen, Q. Wang, Z. Zhang, X. Chen, C. Tong, B. Li, C. Fu, Q. Liu, H. Wang, W. Yang, Y. Zhang, P. Wan, Y. Zhang, and Z. Liu (2025) RealUnify: do unified models truly benefit from unification? a comprehensive benchmark . arXiv preprint arXiv:2509.24897 . 引用於: §2.2 , §2.2 , 表 2 , 表 2 .
+- [30] F. Wang, Q. Li, Y. Zhao, et al. (2025) VISUALPUZZLES: decoupling multimodal reasoning evaluation from domain knowledge . arXiv preprint arXiv:2504.10342 . 外部連結: 2504.10342 引用於: 表 2 .
+- [31] G. Wang et al. (2025) Ovis-u1: unified understanding and generation with discrete image representation . arXiv preprint arXiv:2506.23044 . 引用於: §4.4 .
+- [32] X. Wang, X. Zhang, Z. Luo, Q. Sun, Y. Cui, J. Wang, F. Zhang, Y. Wang, Z. Li, Q. Yu, et al. (2024) Emu3: next-token prediction is all you need . arXiv preprint arXiv:2409.15920 . 引用於: §4.4 .
+- [33] Z. Wang et al. (2025) FUDOKI: discrete flow-based unified understanding and generation via kinetic-optimal velocities . arXiv preprint arXiv:2505.20147 . 引用於: §4.4 .
+- [34] C. Wei, Q. Liu, Z. Ye, Q. Wang, X. Wang, P. Wan, K. Gai, and W. Chen (2025) UniVideo: unified understanding, generation, and editing for videos . arXiv preprint arXiv:2510.08377 . 引用於: §4.4 .
+- [35] S. Xiao, G. Wang, et al. (2024) OmniGen: unified image generation with diffusion language models . arXiv preprint arXiv:2409.11314 . 引用於: §4.4 .
+- [36] J. Xie, W. Mao, Z. Bai, D. J. Zhang, W. Wang, K. Q. Lin, Y. Gu, Z. Chen, Z. Yang, and M. Z. Shou (2024) Show-o: one single transformer to unify multimodal understanding and generation . arXiv preprint arXiv:2408.12528 . 引用於: §2.1 .
+- [37] J. Xie, Z. Yang, and M. Z. Shou (2025) Show-o2: improved native unified multimodal models . arXiv preprint arXiv:2506.15564 . 引用於: §2.1 , §4.4 .
+- [38] W. Xie, Y. Zhang, C. Fu, Y. Shi, B. Nie, H. Chen, Z. Zhang, L. Wang, and T. Tan (2025) MME-unify: a comprehensive benchmark for unified multimodal understanding and generation models . arXiv preprint arXiv:2504.03641 . 引用於: §1 , §1 , §2.2 , §2.2 .
+- [39] Y. Xin et al. (2025) Lumina-dimoo: an omni diffusion large language model . arXiv preprint arXiv:2510.06308 . 引用於: §4.4 .
+- [40] L. Xing, X. Dong, Y. Zang, Y. Cao, J. Liang, Q. Huang, J. Wang, F. Wu, and D. Lin (2025) Caprl: stimulating dense image caption capabilities via reinforcement learning . arXiv preprint arXiv:2509.22647 . 引用於: §1 .
+- [41] Z. Xu et al. (2026) Tri-marf (3d-agent): a tri-modal multi-agent responsive framework for comprehensive 3d object annotation . arXiv preprint arXiv:2601.04404 . 引用於: §1 .
+- [42] S. Yang, R. Xu, Y. Xie, S. Yang, M. Li, J. Lin, C. Zhu, X. Chen, H. Duan, X. Yue, D. Lin, T. Wang, and J. Pang (2025) MMSI-bench: a benchmark for multi-image spatial intelligence . arXiv preprint arXiv:2505.23764 . 引用於: 表 2 .
+- [43] Y. Yang et al. (2025) MMaDA: multimodal large diffusion language models . arXiv preprint arXiv:2505.15809 . 引用於: §4.4 .
+- [44] Y. Yang, H. Tian, Y. Shi, W. Xie, Y. Zhang, Y. Dong, Y. Hu, L. Wang, R. He, C. Shan, et al. (2025) A survey of unified multimodal understanding and generation: advances and challenges . Authorea Preprints . 引用於: §1 , §2.1 .
+- [45] F. Yu et al. (2025) DANet: a rag-inspired dual attention model for few-shot time series prediction . In Proceedings of the 34th ACM International Conference on Information and Knowledge Management (CIKM) , 外部連結: Document 引用於: §2.1 .
+- [46] H. Yuan, T. Yang, J. Li, et al. (2025) UAE: incentivizing mutual benefits for unified multimodal understanding and generation via rl . arXiv preprint arXiv:2510.17160 . 引用於: §4.4 .
+- [47] X. Yue, Y. Ni, K. Zhang, T. Zheng, R. Liu, G. Zhang, S. Stevens, D. Jiang, W. Ren, Y. Sun, C. Wei, B. Yu, R. Yuan, R. Sun, M. Yin, B. Zheng, Z. Yang, Y. Liu, W. Huang, H. Sun, Y. Su, and W. Chen (2023) MMMU: a massive multi-discipline multimodal understanding and reasoning benchmark for expert AGI . arXiv preprint arXiv:2311.16502 . 引用於: §2.2 .
+- [48] L. Zhang, H. Chen, X. Liu, et al. (2025) PhyX: does your model have the "wits" for physical reasoning? . arXiv preprint arXiv:2505.15929 . 外部連結: 2505.15929 引用於: 表 2 .
+- [49] M. Zhang, L. Zhuo, T. Tan, G. Xie, X. Nie, Y. Li, R. Zhao, Z. He, Z. Wang, J. Cai, and Y. Li (2025) IPR-1: interactive physical reasoner . arXiv preprint arXiv:2511.15407 . 引用於: §2.1 .
+- [50] Y. Zhang et al. (2025) ILLUME+: illuminating unified mllm with dual visual tokenization and diffusion refinement . arXiv preprint arXiv:2504.01934 . 引用於: §4.4 .
+- [51] Y. Zhang, Z. Zhang, X. Wei, X. Liu, G. Zhai, and X. Min (2025) IllusionBench: a large-scale and comprehensive benchmark for visual illusion understanding in vision-language models . arXiv preprint arXiv:2501.00848 . 引用於: 表 2 .
+- [52] S. Zhao, X. Zhang, J. Guo, J. Hu, L. Duan, M. Fu, Y. X. Chng, G. Wang, Q. Chen, Z. Xu, W. Luo, and K. Zhang (2025) Unified multimodal understanding and generation models: advances, challenges, and opportunities . arXiv preprint arXiv:2505.02567 . 引用於: §2.1 .
+- [53] D. Zheng, M. Zhang, H. Li, K. Zou, H. Liu, Z. Guo, K. Feng, Y. Liu, Y. Luo, Y. Feng, P. Pei, X. Cai, and H. Li (2025) Architecture decoupling is not all you need for unified multimodal model . arXiv preprint arXiv:2511.22663 . 引用於: §4.4 .
+- [54] K. Zou, Z. Huang, Y. Dong, S. Tian, D. Zheng, H. Liu, J. He, B. Liu, Y. Qiao, and Z. Liu (2025) Uni-mmmu: a massive multi-discipline multimodal unified benchmark . arXiv preprint arXiv:2510.13759 . 引用於: §1 , §1 , §2.2 , §2.2 , 表 2 .
+
+## 附錄 A 凍結骨幹的統一模型效能分析（非 CoT 版本）
+
+[FIGURE_CAPTION] 表格 8：凍結骨幹模型在 UniG2U 上的直接（非 CoT）結果。所有數值以百分比報告（× 100 \times 100）。Overall 列表示所有任務類別的平均準確度。
+
+表格 8 呈現採用凍結骨幹的統一模型的直接（非 CoT）結果。理論上，由於生成路徑被繞過且基礎視覺語言模型（VLM）骨幹在訓練期間保持凍結，其效能應該與基礎模型（qwen2.5-vl-7b）的效能完全一致。然而，實證結果顯示可測量的偏差。我們將這些差異歸因於多個實現級別的因素。首先，如果統一模型使用指數移動平均（EMA）檢查點而非精確的原始基礎模型權重，會導致細微的權重差異出現，進而引發輕微的效能漂移。其次，推論超參數的變化——例如最大生成長度、輸入影像解析度縮放和解碼策略——可能會顯著改變最終預測。第三，軟體環境中的不一致，例如 PyTorch、CUDA 或 transformers 函式庫的不同版本，經常引入確定性執行差異。此外，視覺前處理管線的差異，特別是影像編碼格式（例如，通過 PIL 讀取原始影像對比應用 JPEG 壓縮），會影響像素級輸入。最後，在不同數值精度下操作會導致誤差累積。例如，以 bfloat16 而非 float32 計算旋轉位置嵌入（RoPE）會在長序列中累積數值誤差，最終改變輸出對數並改變結果。
+
+## Appendix B Ablation Study for Models without Edit Training
+
+[FIGURE_CAPTION] Table 9: Sheet7 results (values × 100 \times 100 ). Blue numbers indicate the overall drop relative to the corresponding Direct setting.
+
+[FIGURE:uae_origal.png] (a) Question Image
+
+As discussed in Section 5, not all unified models evaluated in this work are trained with explicit image-to-image (edit) capabilities. For such models, Generate-then-Answer generation that requires intermediate image editing inherently falls outside their training distribution, effectively constituting an out-of-distribution (OOD) setting. Including their Generate-then-Answer results directly in the main comparison table could therefore introduce an unfair bias.
+
+To better understand the effect of this OOD intermediate generation, we conduct additional ablation studies on a representative subset of edit-untrained models, with the results summarized in Table 9 . Specifically, we categorize their Generate-then-Answer evaluation into two alternative variants:
+
+(1) OOD-Image Generation (UAE and X-Omni).
+
+Despite lacking edit training, the first two models are forced to generate an intermediate image under the standard Generate-then-Answer protocol (i.e., conditioned on the original input image). The generated image is then re-consumed for answering. This setting measures how severely forcing OOD intermediate generation degrades downstream reasoning performance.
+
+(2) Prompt-Only Intermediate Generation (TokenFlow-XL).
+
+Instead of feeding the original input image into the intermediate generation stage, we restrict the final model to producing an auxiliary image conditioned strictly on the textual generation prompt (i.e., no image-to-image conditioning). The generated image is subsequently used as additional context for answering. This setting isolates the effect of prompt-level generation without invoking explicit edit-style image transformations.
+
+Findings.
+
+As demonstrated in Table 9 , both Generate-then-Answer variants consistently lead to overall performance degradation compared to their Direct inference counterparts. Specifically, forcing OOD-Image generation causes overall performance drops of 2.33% and 10.99% for UAE and X-Omni, respectively, while relying on Prompt-Only generation leads to a 4.65% drop for TokenFlow-XL.
+
+Furthermore, the qualitative examples presented in Figure 11 corroborate these quantitative declines. Visual inspection reveals that the intermediate images produced by these edit-untrained models are often completely chaotic, structurally irrelevant, or fail to encode the necessary information. Instead of aiding the reasoning process, these misaligned generations actively mislead the subsequent answering stage.
+
+Overall, these ablation results validate our decision to exclude the Generate-then-Answer scores of edit-untrained models from the main comparison table. They strongly emphasize that Generate-to-Understand (G2U) gains rely critically on explicit and training-aligned intermediate generation capabilities.
+
+## 附錄 C 額外結果分析：結構化子任務收益
+
+在本節中，我們分析完整的實驗結果（表 11）以識別生成到理解（G2U）收益特別明顯的子任務。
+
+雖然整體改進並非普遍存在，但我們觀察到統一模型在特定結構化子任務上展現出更清晰且更可重複的收益。特別是，空間智能和幻覺相關的感知推理子任務相比基礎 VLM 展現出更一致的正向偏移。這些領域需要變換感知推理、幾何一致性，或解決視覺歧義模式，其中生成訓練的表徵似乎能正則化內部空間結構。
+
+例如，在感知推理下的空間子任務中，多個統一變體（例如 UniWorld-V1、JavisGPT、uni-video、STAR-7B）達成比對應基礎模型更高的分數。類似地，幻覺敏感的判別子任務（例如標誌相關和形狀敏感的類別）在特定統一配置中表現出非平凡的改進。這些收益表明生成誘導的表徵耦合可能增強模型對視覺歧義或結構複雜輸入的魯棒性。
+
+相比之下，純識別密集的子任務（例如 icon_scene、in_scene）不顯示系統性改進，有時甚至經歷輕微降度。這進一步支持我們的核心主張：G2U 收益並非均勻分布，而是在變換中心或結構受限的領域中出現。
+
+表 11 提供支持此分析的詳細子任務級別結果。
+
+[FIGURE_CAPTION] 表 10：選定幻覺和空間子任務的絕對結果。所有數值以百分比報告（$\times 100$）。
+基準模型（標記為 $*$）以灰色背景突出顯示。整體是在 5 個所示子任務上的平均值，
+括號中的值表示每個模型區塊內與相應基準的差距。
+每個區塊中的最佳整體以粗體標記。
+
+## 附錄 D 生成增強理解的失敗案例分類法
+
+在本附錄中，我們呈現生成增強推理的代表性失敗案例。
+我們根據生成圖表與下游推理性能之間的關係，將所有示例組織在統一的三向分類法下。
+
+### 為什麼失敗案例很重要。
+
+生成增強理解通常以「畫圖有助於思考」的直覺為動機：
+忠實的圖表可以外化隱藏的結構、減少工作記憶負擔，並提供指導計算的幾何/物理約束。
+然而，視覺生成本身是一個結構化預測問題。
+當生成的成品與基礎任務甚至略有不一致時，下游求解器
+可能會繼承或放大這些錯誤（例如，通過信任扭曲的幾何、不正確的比例或虛假的路徑）。
+因此，重要的是表徵生成如何失敗，而不僅僅是答案是否錯誤。
+
+### 選擇協議。
+
+我們從多個領域（幾何、物理、圖表和事實性問答）策劃案例，以確保分類法涵蓋 (i) 圖表至關重要的任務（幾何/物理），
+(ii) 圖表可能有幫助但必須編碼精確結構的任務（圖表），
+和 (iii) 圖表不必要的任務（純文本知識）。
+對於每個案例，我們將原始提示與模型生成的視覺輸出配對，
+並突出顯示解釋下游失敗的關鍵不匹配。
+
+### 三項標準：有效性、相關性和效用。
+
+在所有領域中，成功的生成必須滿足三項要求：
+(i) 結構有效性（圖表在內部一致且遵守物理/幾何規則），
+(ii) 語義相關性（內容對應於任務實體和關係），
+和 (iii) 推理效用（圖表以支持解題的方式增加約束或減少歧義）。
+我們的分類法自然地對應於這些標準的違反：第一類破壞有效性，
+第二類滿足相關性但缺乏效用，第三類完全失敗相關性。
+
+### 第一類：能力失敗。
+
+模型失敗生成結構上正確或定量上有效的圖表。
+渲染的視覺效果在幾何上扭曲、結構上不一致或物理上無效，
+使下游推理不可靠或不可能。
+這個類別是最直接的失敗模式：即使圖像看起來像「圖表」，
+它也違反了任務所需的不變量。
+
+#### 常見症狀。
+
+- • **幾何不一致性**：提示隱示的角度/平行線/圓的切線未被保留。
+- • **定量失真**：長度、斜率或軸刻度在視覺上與陳述值不一致。
+- • **物理無效性**：力/速度被繪製為錯誤的方向或不相容的幅度。
+- • **缺少約束**：關鍵元素（標籤、直角標記、參考點）被省略或放置錯誤。
+
+**幾何不一致性**：提示隱示的角度/平行線/圓的切線未被保留。
+
+**定量失真**：長度、斜率或軸刻度在視覺上與陳述值不一致。
+
+**物理無效性**：力/速度被繪製為錯誤的方向或不相容的幅度。
+
+**缺少約束**：關鍵元素（標籤、直角標記、參考點）被省略或放置錯誤。
+
+#### 為什麼它會破壞推理。
+
+即使強大的文本求解器也可能隱式地將圖表視為地面實況。
+當生成的視覺效果無效時，求解器可能被推向不正確的中間計算
+（例如，錯誤的三角形相似性、曲線下方的錯誤面積、錯誤的叉積方向），或可能被迫完全忽略
+圖表，失去外化的預期好處。
+
+圖 12 展示了兩個幾何實例，其中生成的圖表違反了所需的幾何/物理約束。
+
+[FIGURE:category1_1_origin.png] 原始
+
+圖 13 呈現了兩個物理案例，其中生成的視覺效果失敗保留了積分或基於幾何的計算所需的定量/結構關係。
+
+[FIGURE:phyx_case1_original.png] 原始（案例 1）
+
+#### 含義。
+
+第一類表示生成器圖表文法中的瓶頸：
+模型可能學習表面風格（線條、箭頭、標籤），而不學習領域不變量。
+一個實際的緩解方法是在將圖表傳遞給求解器之前引入輕量級驗證或自檢
+（例如，驗證直角、軸單調性、連接性約束），
+或者當有效性不確定時將這類實例路由回純文本解決方案。
+
+### 第二類：表面相關但非效用生成。
+
+模型生成與提示語義相關的圖表，
+但它們對解題沒有增加約束或計算好處。
+在這些情況下，生成是「相關的」但不是手段式的：
+圖表要麼重述文本中已經明確的內容，要麼失敗編碼所需的特定結構。
+
+#### 常見症狀。
+
+- • **正確但冗餘**：圖表與描述相符但不減少不確定性。
+- • **缺少操作結構**：計算的關鍵關係（例如，圖表比例、迷宮連通性）缺失。
+- • **美學完成**：模型用合理的視覺填充頁面，而不是任務充分的約束。
+
+**正確但冗餘**：圖表與描述相符但不減少不確定性。
+
+**缺少操作結構**：計算的關鍵關係（例如，圖表比例、迷宮連通性）缺失。
+
+**美學完成**：模型用合理的視覺填充頁面，而不是任務充分的約束。
+
+#### 為什麼它無法提幫助。
+
+效用不由相關性保證：即使完美相關的插圖如果不支持
+所需的特定操作（例如，讀取斜率、跟蹤路徑或識別可計算的子結構），也可能是無用的。
+這種失敗模式特別重要，因為它可以浪費生成預算而不改善準確性，
+甚至可能通過引入額外的、不可操作的細節而分散下游推理。
+
+圖 14 展示了輸出看起來相關但沒有幫助的案例：一個是正確但無信息的，另一個缺乏有效的連通性/路徑結構。
+
+[FIGURE:category2_1_origin.png] 原始（幾何）
+
+圖 15 說明了運動學中的表面觸發生成：詞彙線索（例如，「硬幣」）誘發繪圖，但任務需要計算，所以視覺效果對推理的貢獻很少。
+
+[FIGURE:freefall_original.png] 原始（案例 1）
+
+#### 含義。
+
+第二類表明「畫一些相關的東西」是不充分的目標。
+對於 G2U，生成器必須是目標條件的：它應該生成使
+回答計算更容易的最小結構（例如，標註的軸、明確的路徑圖、標記的相等角），
+而不是通用插圖。
+這也激發了預算感知路由：當預測效用低時，跳過生成可以改善每令牌值而不犧牲準確性。
+
+### 第三類：不相關生成。
+
+生成的圖像與任務沒有有意義的關聯，表示完全
+生成-任務不對齊。
+這裡，生成在不應該被觸發時被觸發（例如，事實性問答），
+或模型生成未能編碼所需結構化內容的視覺效果（例如，ChartQA）。
+
+#### 常見症狀。
+
+- • **模式混淆**：模型將純文本查詢視為繪圖邀請。
+- • **結構損失**：輸出看起來像圖像但缺乏成為圖表所需的架構（柱/軸/標籤）。
+- • **幻覺內容**：視覺效果引入與提示無關的實體、風格或場景。
+
+**模式混淆**：模型將純文本查詢視為繪圖邀請。
+
+**結構損失**：輸出看起來像圖像但缺乏成為圖表所需的架構（柱/軸/標籤）。
+
+**幻覺內容**：視覺效果引入與提示無關的實體、風格或場景。
+
+#### 為什麼它會造成傷害。
+
+不相關的生成有害超過浪費計算：它可以將求解器的注意力轉向虛假線索，
+降低對系統的信任，並複雜化調試（輸出看起來「有信心」但不相關）。
+在知識問答中，正確的行為通常是直接回答；在圖表推理中，正確的行為是
+保留結構化數據而不是生成裝飾圖像。
+
+圖 16 展示了圖表和事實性問答設置中的不相關輸出：圖表生成失敗編碼結構化數據，而事實性問題不必要地觸發視覺生成。
+
+[FIGURE:category3_1_origin.png] 原始（ChartQA）
+
+圖 17 提供了額外的知識-問答示例，其中模型儘管任務純粹是事實性，仍生成視覺內容。
+
+[FIGURE:knowledge_case2_original.png] 原始（Know, C2）
+
+### G2U 系統設計的實踐教訓。
+
+- 1. 在圖表旨在成為約束時驗證（第一類風險）。
+- 2. 預測效用並跳過冗餘插圖（第二類風險）。
+- 3. 按模態路由並避免純文本任務的圖像生成（第三類風險）。
+
+**在圖表旨在成為約束時驗證**（第一類風險）。
+
+**預測效用並跳過冗餘插圖**（第二類風險）。
+
+**按模態路由並避免純文本任務的圖像生成**（第三類風險）。
+
+## Appendix E Uni-MMMU Task Design
+
+Uni-MMMU consists of three task types: Jigsaw, Maze, and Sliding Puzzle. Each task evaluates different aspects of visual reasoning through interleaved image-text generation. ( following case from Model - Nano Banana )
+
+### E.1 Jigsaw Completion Task
+
+#### E.1.1 Task Description
+
+Input:
+
+- • Reference image: 2×2 grid with bottom-right cell hidden
+- • Candidate 0: First candidate patch
+- • Candidate 1: Second candidate patch
+
+Reference image: 2×2 grid with bottom-right cell hidden
+
+Candidate 0: First candidate patch
+
+Candidate 1: Second candidate patch
+
+Task: Select which candidate correctly completes the reference image.
+
+Output: <FINAL_ANSWER_JSON>{"choice": 0 or 1, "rationale": "..."}
+
+Metrics: jigsaw_text_acc (binary accuracy)
+
+Dataset: 100 samples
+
+#### E.1.2 Visual CoT Generation Flow
+
+Step 1 - Input Images:
+
+[FIGURE:ref_2x2.png] (a) Reference (bottom-right hidden)
+
+Step 2 - Generate Completion with Candidate 0:
+
+Model generates a 2×2 image with Candidate 0 placed in the bottom-right cell. The other three cells remain pixel-identical to the reference.
+
+[FIGURE:gt_completed_2x2.png] Figure 19: Generated image: Completion with Candidate 0
+
+Step 3 - Generate Completion with Candidate 1:
+
+Model generates a 2×2 image with Candidate 1 placed in the bottom-right cell. The other three cells remain pixel-identical to the reference.
+
+[FIGURE:gt_wrong_2x2.png] Figure 20: Generated image: Completion with Candidate 1
+
+Step 4 - Generate Final Answer:
+
+Model analyzes both generated completions and outputs:
+
+<FINAL_ANSWER_JSON>
+{"choice": 0, "rationale": "Candidate 0 shows better seam continuity"}
+</FINAL_ANSWER_JSON>
+
+### E.2 迷宮求解任務
+
+#### E.2.1 任務描述
+
+輸入：迷宮圖像，包含：
+
+- • 黑色方格：牆壁（無法通行）
+- • 白色方格：路徑（可通行）
+- • 藍色點：起始位置
+- • 綠色框：目標區域
+
+黑色方格：牆壁（無法通行）
+
+白色方格：路徑（可通行）
+
+藍色點：起始位置
+
+綠色框：目標區域
+
+任務：找出從起點到目標的移動序列。
+
+限制條件：合法移動：上、下、左、右；每步一個單元格；無對角線移動；無穿過牆壁。
+
+輸出：<ANSWER_JSON>["right", "down", ...]
+
+評估指標：maze_text_exact、maze_text_frame_acc
+
+資料集：100 個樣本
+
+#### E.2.2 視覺思維鏈生成流程
+
+步驟 1 - 輸入圖像：
+
+[FIGURE:3.png] 圖 21：初始迷宮狀態（藍色點在起點，綠色框標記目標）
+
+步驟 2 - 生成逐步圖像：
+
+對於解決方案中的每個移動，模型生成一個顯示該移動後迷宮狀態的圖像。只有藍色點的位置改變；所有其他元素保持相同。
+
+[FIGURE:1.png] (a) 移動 1 後
+
+步驟 3 - 生成最終答案：
+
+生成所有步驟圖像後，模型輸出：
+
+<ANSWER_JSON>["right", "down", "right", ...]</ANSWER_JSON>
+
+關鍵限制條件：
+
+- • 生成的圖像數量必須等於移動次數
+- • 每個圖像顯示恰好一個移動後的狀態
+- • 不包括初始狀態
+- • 無拼貼、箭頭或註解
+
+生成的圖像數量必須等於移動次數
+
+每個圖像顯示恰好一個移動後的狀態
+
+不包括初始狀態
+
+無拼貼、箭頭或註解
+
+### E.3 滑動拼圖任務
+
+#### E.3.1 任務描述
+
+輸入：
+
+- • 初始狀態：3×3 網格，包含 8 個彩色磁貼和 1 個空白空間（紅色）
+- • 目標狀態：已解決的拼圖配置
+
+初始狀態：3×3 網格，包含 8 個彩色磁貼和 1 個空白空間（紅色）
+
+目標狀態：已解決的拼圖配置
+
+任務：找到一系列移動來解決拼圖。
+
+移動語義：移動以彩色磁貼移動的方向命名（不是空白空間）。例如：空白上方的磁貼向下移動 = "down"。
+
+約束：合法移動：上、下、左、右；每步一個磁貼。
+
+輸出：<ANSWER_JSON>["down", "right", ...]
+
+指標：sliding_text_exact、sliding_text_frame_acc
+
+資料集：54 個樣本
+
+#### E.3.2 視覺 CoT 生成流程
+
+步驟 1 - 輸入影像：
+
+[FIGURE:20.jpg] (a) 初始狀態（混亂）
+
+步驟 2 - 生成逐步影像：
+
+對於解決方案中的每一步移動，模型生成一張影像顯示該移動後的拼圖狀態。僅磁貼位置變化；顏色保持相同。
+
+[FIGURE:21.jpg] (a) 移動 1 後
+
+步驟 3 - 生成最終答案：
+
+生成所有步驟影像後，模型輸出：
+
+<ANSWER_JSON>["down", "right", "up", "left", "down", "right"]</ANSWER_JSON>
+
+關鍵約束：
+
+- • 生成的影像數量必須等於移動數量
+- • 每張影像恰好顯示一次移動後的狀態
+- • 不包含初始狀態
+- • 沒有拼貼或多面板影像
+- • 磁貼顏色必須保持像素完全相同
+
+生成的影像數量必須等於移動數量
+
+每張影像恰好顯示一次移動後的狀態
+
+不包含初始狀態
+
+沒有拼貼或多面板影像
+
+磁貼顏色必須保持像素完全相同
+
+## 附錄 F 實驗結果
+
+[FIGURE_CAPTION] 表 11：UniG2U 跨類別的主要結果（第 1/2 部分）。所有值以百分比報告（$\times 100$）。基準模型（標記為 *）以灰色背景突出顯示。
+
+[FIGURE_CAPTION] 表 12：UniG2U 跨類別的主要結果（第 2/2 部分）。從第 1 部分繼續，包含其餘列。
+
+[FIGURE_CAPTION] 表 13：UniG2U 跨類別的差異結果（第 3 張，第 1/2 部分）。基準模型（標記為 *）以灰色背景突出顯示，缺失值用"-"表示。
+
+[FIGURE_CAPTION] 表 14：UniG2U 跨類別的差異結果（第 3 張，第 2/2 部分）。從第 1 部分繼續，包含其餘列。
+
+## 附錄 G 任務提示詞（非 CoT 版本）
+
+### G.1 MMSI-Bench 任務
+
+#### G.1.1 mmsi_attribute_appr（屬性 - 外觀）和 mmsi_attribute_meas（屬性 - 可測量）和 mmsi_msr（多步驟推理）
+
+pre_prompt: "仔細觀察圖像中的視覺外觀屬性
+（顏色、形狀、紋理、方向、數量、視覺特徵）。
+仔細觀察細節，以識別和計算物體。\n\n"
+
+post_prompt: "\n\n根據您的視覺觀察，直接用給定選項的字母作答。
+請將選項的字母括在 '' 內。"
+
+#### G.1.2 mmsi_motion_cam（運動 - 攝影機）和 mmsi_motion_obj（運動 - 物體）
+
+注意：這兩項任務在非 CoT 版本中目前共用相同的提示。
+
+pre_prompt: "分析連續的第一人稱視角圖像。
+通過觀察場景和物體相對於觀看者的位置變化，
+確定攝影機（視點）如何移動或旋轉。\n\n"
+
+post_prompt: "\n\n根據您對攝影機運動的分析，直接用給定選項的字母作答。
+請將選項的字母括在 '' 內。"
+
+### G.2 IllusionBench Tasks
+
+#### G.2.1 ICON Shape Recognition
+
+shape_string = "Animal, Face_Emoji, Music, Sport, Stationery, Vehicle"
+scene_string = "Ocean, Origami, Forest, Cloud, Sand_dune,
+Medieval_Village, City, Underwater_ruins, Museum, Bazaar_market,
+Time_square"
+
+prompt = f"This image contains a icon integrated into a background,
+where elements of the background contribute to forming the icon.
+Identify the icon that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}
+Provide your response by stating only the single, most accurate class
+name that represents the icon. You have to respond with a single word."
+
+#### G.2.2 ICON Scene Recognition, LOGO Scene Recognition, and IN Scene Recognition
+
+Note: These three tasks share identical prompts (only differ in shape_string values).
+
+prompt = f"This image contains an icon integrated into a background,
+where elements of the background contribute to forming the icon.
+Identify the background that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}.
+Provide your response by stating only the single, most accurate class
+name that represents the background. You have to respond with a single
+word."
+
+#### G.2.3 LOGO Shape Recognition
+
+shape_string = "Adidas, Amazon, Apple, Audi, BMW, Mercedes Benz,
+Facebook, Google, Instagram, Mcdonalds, Nasa, Nike, Olympics,
+Playstation, Puma, Reebok, Spotify, Starbucks, Tesla, Telegram, Ubuntu"
+scene_string = "Ocean, Origami, Forest, Cloud, Sand_dune,
+Medieval_Village, City, Underwater_ruins, Museum, Bazaar_market,
+Time_square"
+
+prompt = f"This image contains a icon integrated into a background,
+where elements of the background contribute to forming the logo.
+Identify the logo that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}
+Provide your response by stating only the single, most accurate class
+name that represents the logo. You have to respond with a single word."
+
+#### G.2.4 IN Shape Recognition
+
+shape_string = "Airplane, Bicycle, Bird, Bottle, Car, Cat, Dog,
+Dolphin, Fork, Guitar, Mug, Panda, Paper_clip, Sailboat, Scooter,
+Teapot"
+scene_string = "Ocean, Origami, Forest, Cloud, Sand_dune,
+Medieval_Village, City, Underwater_ruins, Museum, Bazaar_market,
+Time_square"
+
+prompt = f"This image contains a icon integrated into a background,
+where elements of the background contribute to forming the icon.
+Identify the shape that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}
+Provide your response by stating only the single, most accurate class
+name that represents the icon. You have to respond with a single word."
+
+### G.3 VisualPuzzles Tasks
+
+#### G.3.1 All Categories (Algorithmic, Analogical, Deductive, Inductive, Spatial)
+
+MULTI_CHOICE_DIRECT_PROMPT = "Answer the question with the option’s
+letter from the given choices directly."
+
+Full prompt format:
+
+question = "Question: " + doc["question"].strip()
+options = doc["options"]
+if options is not None:
+    question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1]
+    + "\n(C) " + options[2] + "\n(D) " + options[3]
+else:
+    question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
+
+question += "\n" + MULTI_CHOICE_DIRECT_PROMPT
+
+### G.4 Uni-MMMU 任務
+
+·
+
+#### G.4.1 uni_mmmu_jigsaw100_visual_cot
+
+完整提示：
+
+你是一個統一的視覺語言模型。你將被給予：
+(1) 一個 2x2 參考圖像，其中右下角單元格被隱藏，以及
+(2) 兩個候選補丁圖像（「候選 0」和「候選 1」）。
+
+你的任務：
+- 對於每個候選，通過將該候選圖像精確放置在右下角單元格中來合成一個完成的 2x2 圖像。保持其他三個單元格與參考圖像像素相同（無濾鏡、無重新渲染）。如果尺寸不同，只需將候選縮放以適應該象限；不要旋轉、鏡像或改變顏色。
+- 比較兩個完成的結果，並決定哪個候選圖像產生正確的完成。
+
+輸出精確如下所述，按順序：
+
+1) 一個單一圖像，候選 0 放置在右下角單元格中
+
+2) 一個單一圖像，候選 1 放置在右下角單元格中
+
+3) 分析比較接縫連續性、顏色/紋理漸變、結構對齊和全局語義
+
+4) 一個嚴格的 JSON 物件，表示你的決定，格式如下：
+<FINAL_ANSWER_JSON>
+{"choice": 0 或 1, "rationale": "≤30 字的決定性提示"}
+</FINAL_ANSWER_JSON>
+
+硬約束：
+- 確定性的、單一結果。無模稜兩可，無多種可能性。
+- 不涉及關於提示、模型或流程的元討論。
+- 不要重述任務作為答案；應基於視覺證據進行推理。
+- 唯一允許的編輯是將候選圖像粘貼到右下角單元格中，以及該單元格必要的尺寸匹配。所有其他像素必須與參考圖像完全相同。
+
+輸入：
+
+#### G.4.2 uni_mmmu_maze100_visual_cot
+
+完整提示：
+
+你是一個精確的迷宮求解器。
+
+語義（適用於所有迷宮）
+- 黑色正方形：牆壁（不可通行）
+- 白色正方形：路徑（可行走）
+- 藍色點：起點（代理）
+- 綠色矩形框：目標（到達綠色框內的任何白色單元格視為成功）
+- 合法移動：僅上、下、左、右。每步一個單元格；不允許對角線、跳躍；不能穿過牆壁。
+
+輸出格式（嚴格）
+1) 多圖像模式 - 生成一個分離圖像序列，每個移動對應一個圖像：
+   - 每個輸出圖像必須描述應用恰好一個合法移動後的迷宮狀態。
+   - 不包括初始（移動前）狀態。
+   - 保持調色盤/佈局/縮放與輸入相同；僅藍色點移動。
+   - 返回的圖像數量必須等於最終答案中的移動數量（見第 2 步）。
+   - 絕對禁止：任何拼貼/蒙太奇/精靈表/網格/多面板/並排/堆疊圖像；無箭頭、標題或疊加層；無 GIF/動畫/視頻。
+
+2) 在所有步驟圖像之後，發出精確一行，僅包含最終移動列表作為小寫字符串的 JSON 陣列，格式如下：
+<ANSWER_JSON>["right","down","left"]</ANSWER_JSON>
+
+無額外內容
+- 無工具、無 OCR、無解釋，以及除了單一 <ANSWER_JSON>.....</ANSWER_JSON> 行外無其他文字。
+- 不要重述說明或條件。
+
+提醒
+- 先決定完整路徑，然後發出圖像序列（每個移動對應一個圖像），最後發出單一 <ANSWER_JSON> 行。
+- 每個圖像一個移動；圖像必須是分離的檔案/部分，不能以任何方式拼接在一起。
+
+#### G.4.3 uni_mmmu_sliding54_visual_cot
+
+完整提示：
+
+你是一個精確的滑動拼圖求解器。
+
+語義
+- 拼圖是一個 3x3 網格，有 8 個彩色瓷磚和一個空白空間（顯示為紅色）。
+- 「移動」是將一個相鄰瓷磚滑入空白空間。
+- 移動按彩色瓷磚移動的方向命名（不是空白空間）。
+- 合法移動：僅上、下、左、右。每步一個瓷磚。
+
+輸出格式（嚴格）
+1) 多圖像模式 - 生成一個分離圖像序列，每個移動對應一個圖像：
+   - 每個輸出圖像必須描述應用恰好一個移動後的拼圖狀態。
+   - 不包括初始（移動前）狀態。
+   - 保持瓷磚顏色相同；僅位置改變。
+   - 返回的圖像數量必須等於最終答案中的移動數量。
+   - 絕對禁止：任何拼貼/蒙太奇/精靈表/網格/多面板/並排/堆疊圖像。
+
+2) 在所有步驟圖像之後，發出精確一行，僅包含最終移動列表作為小寫字符串的 JSON 陣列，格式如下：
+<ANSWER_JSON>["down","right","up"]</ANSWER_JSON>
+
+無額外內容
+- 除了單一 <ANSWER_JSON>.....</ANSWER_JSON> 行外無解釋。
+- 不要重述說明。
+
+## 附錄 H 任務提示詞（Visual CoT 版本）
+
+本附錄包含 Visual CoT 任務的所有原始英文提示詞。
+
+所有 Visual CoT 任務皆使用雙階段格式：
+
+[GEN_PROMPT]...[/GEN_PROMPT][QUESTION]...[/QUESTION]
+
+### H.1 MMSI-Bench 任務
+
+#### H.1.1 mmsi_attribute_appr_visual_cot
+
+第一階段 - 生成提示：
+
+建立一個視覺化圖像，突出顯示並標記場景中的視覺外觀屬性
+（色彩、形狀、紋理、方向、數量）。
+使用註解、邊界框和標籤清晰地展示物體特徵和
+數量。
+
+第二階段 - 問題提示：
+
+pre_prompt: "You are given the original image(s) and a visualization
+highlighting appearance attributes. Use both to analyze color, shape,
+texture, orientation, and object counts.\n\n"
+
+post_prompt: "\n\nBased on your visual observation, answer with the
+option's letter from the given choices directly. Enclose the option's
+letter within ''."
+
+#### H.1.2 mmsi_attribute_meas_visual_cot
+
+第一階段 - 生成提示：
+
+建立一個視覺化圖像，突出顯示並註解場景中的可測量屬性
+（尺寸、長度、寬度、高度、距離、面積、體積）。繪製測量線、
+標籤和比較標記以清楚表達定量關係。
+
+第二階段 - 問題提示：
+
+pre_prompt: "You are given the original image(s) and a visualization
+highlighting measurable attributes. Use both to analyze size, length,
+width, height, distance, area, and volume relationships.\n\n"
+
+post_prompt: "\n\nBased on your measurement analysis, answer with the
+option's letter from the given choices directly. Enclose the option's
+letter within ''."
+
+#### H.1.3 mmsi_motion_cam_visual_cot
+
+第一階段 - 生成提示：
+
+建立一個視覺化圖像展示攝影機運動分析。繪製表示攝影機移動/旋轉
+方向的箭頭、突出顯示在影格間移動的參考點，並註解攝影機運動的
+類型（平移、傾斜、縮放、推進等）。
+
+第二階段 - 問題提示：
+
+pre_prompt: "You are given consecutive first-person perspective images
+and a visualization of camera motion. Use both to determine how the
+camera (viewpoint) is moving or rotating.\n\n"
+
+post_prompt: "\n\nBased on your analysis of camera motion, answer with
+the option's letter from the given choices directly. Enclose the
+option's letter within ''."
+
+#### H.1.4 mmsi_motion_obj_visual_cot
+
+第一階段 - 生成提示：
+
+建立一個視覺化圖像展示物體運動追蹤。繪製運動軌跡、表示移動方向
+的箭頭，並使用邊界框突出顯示移動的物體。註解不同物體的相對速度
+和軌跡。
+
+第二階段 - 問題提示：
+
+pre_prompt: "You are given consecutive images and a visualization of
+object motion. Use both to track objects, identify which are moving,
+their direction, and relative speeds.\n\n"
+
+post_prompt: "\n\nBased on your analysis of object motion, answer with
+the option's letter from the given choices directly. Enclose the
+option's letter within ''."
+
+#### H.1.5 mmsi_msr_visual_cot
+
+第一階段 - 生成提示：
+
+建立一個視覺化圖像分解多步驟推理過程。註解空間關係、物體位置和
+跨影像的關鍵變化。繪製圖表展示邏輯連接和中間推理步驟。
+
+第二階段 - 問題提示：
+
+pre_prompt: "You are given the original images and a visualization
+breaking down the reasoning steps. Use both to analyze spatial
+relationships, object positions, and changes across images.\n\n"
+
+post_prompt: "\n\nBased on your multi-step reasoning, answer with the
+option's letter from the given choices directly. Enclose the option's
+letter within ''."
+
+### H.2 IllusionBench Tasks
+
+#### H.2.1 ICON Shape Recognition Visual CoT
+
+Stage 1 - Generation Prompt:
+
+Create a visualization that highlights how the background elements
+contribute to forming the icon shape. Draw outlines, arrows, and
+annotations showing which parts of the scene create the icon’s
+silhouette or features.
+
+Stage 2 - Question Prompt:
+
+shape_string = "Animal, Face_Emoji, Music, Sport, Stationery, Vehicle"
+scene_string = "Ocean, Origami, Forest, Cloud, Sand_dune,
+Medieval_Village, City, Underwater_ruins, Museum, Bazaar_market,
+Time_square"
+
+pre_prompt: "You are given the original image and a visualization
+highlighting how background elements form the icon. Use both to
+identify the icon shape.\n\n"
+
+prompt = f"This image contains an icon integrated into a background,
+where elements of the background contribute to forming the icon.
+Identify the icon that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}
+Provide your response by stating only the single, most accurate class
+name that represents the icon. You have to respond with a single word."
+
+#### H.2.2 ICON Scene Recognition Visual CoT, LOGO Scene Recognition Visual CoT, and IN Scene Recognition Visual CoT
+
+Note: These three tasks share identical prompts (only differ in shape_string values).
+
+Stage 1 - Generation Prompt:
+
+Create a visualization that highlights the background scene elements.
+Draw annotations identifying key features of the environment, landscape,
+or setting that characterize the scene type.
+
+Stage 2 - Question Prompt:
+
+pre_prompt: "You are given the original image and a visualization
+highlighting the background scene elements. Use both to identify the
+scene type.\n\n"
+
+prompt = f"This image contains an icon integrated into a background,
+where elements of the background contribute to forming the icon.
+Identify the background that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}.
+Provide your response by stating only the single, most accurate class
+name that represents the background. You have to respond with a single
+word."
+
+#### H.2.3 LOGO Shape Recognition Visual CoT
+
+Stage 1 - Generation Prompt:
+
+Create a visualization that highlights how the background elements
+contribute to forming the logo shape. Draw outlines, arrows, and
+annotations showing which parts of the scene create the logo’s
+silhouette or features.
+
+Stage 2 - Question Prompt:
+
+shape_string = "Adidas, Amazon, Apple, Audi, BMW, Mercedes Benz,
+Facebook, Google, Instagram, Mcdonalds, Nasa, Nike, Olympics,
+Playstation, Puma, Reebok, Spotify, Starbucks, Tesla, Telegram, Ubuntu"
+scene_string = "Ocean, Origami, Forest, Cloud, Sand_dune,
+Medieval_Village, City, Underwater_ruins, Museum, Bazaar_market,
+Time_square"
+
+pre_prompt: "You are given the original image and a visualization
+highlighting how background elements form the logo. Use both to
+identify the logo.\n\n"
+
+prompt = f"This image contains an icon integrated into a background,
+where elements of the background contribute to forming the logo.
+Identify the logo that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}
+Provide your response by stating only the single, most accurate class
+name that represents the logo. You have to respond with a single word."
+
+#### H.2.4 IN Shape Recognition Visual CoT
+
+Stage 1 - Generation Prompt:
+
+Create a visualization that highlights how the background elements
+contribute to forming the shape. Draw outlines, arrows, and annotations
+showing which parts of the scene create the shape’s silhouette or
+features.
+
+Stage 2 - Question Prompt:
+
+shape_string = "Airplane, Bicycle, Bird, Bottle, Car, Cat, Dog,
+Dolphin, Fork, Guitar, Mug, Panda, Paper_clip, Sailboat, Scooter,
+Teapot"
+scene_string = "Ocean, Origami, Forest, Cloud, Sand_dune,
+Medieval_Village, City, Underwater_ruins, Museum, Bazaar_market,
+Time_square"
+
+pre_prompt: "You are given the original image and a visualization
+highlighting how background elements form the shape. Use both to
+identify the shape.\n\n"
+
+prompt = f"This image contains an icon integrated into a background,
+where elements of the background contribute to forming the icon.
+Identify the shape that is represented in the image by choosing
+exclusively among the following options:{shape_string},{scene_string}
+Provide your response by stating only the single, most accurate class
+name that represents the icon. You have to respond with a single word."
+
+### H.3 VisualPuzzles Tasks
+
+#### H.3.1 Algorithmic Visual CoT
+
+Stage 1 - Generation Prompt:
+
+Create a visualization that breaks down the algorithmic pattern or
+sequence. Draw step-by-step diagrams, number sequences, or flowcharts
+showing the logical progression and rules governing the pattern.
+
+Stage 2 - Question Prompt:
+
+pre_prompt: "You are given the original puzzle image(s) and a
+visualization breaking down the algorithmic pattern. Use both to
+identify the underlying algorithm or sequence rule.\n\n"
+
+MULTI_CHOICE_DIRECT_PROMPT = "Answer the question with the option’s
+letter from the given choices directly."
+
+question = "Question: " + doc["question"].strip()
+options = doc["options"]
+if options is not None:
+    question += "\nOptions:\n(A) " + options[0] + "\n(B) " + options[1]
+    + "\n(C) " + options[2] + "\n(D) " + options[3]
+else:
+    question += "\nOptions: Choose from (A) (B) (C) (D) in the image."
+
+question += "\n" + MULTI_CHOICE_DIRECT_PROMPT
+
+#### H.3.2 Analogical Visual CoT
+
+Stage 1 - Generation Prompt:
+
+You are given an analogical reasoning puzzle (A is to B as C is to ?).
+
+{question}
+
+Your task:
+1. Identify the transformation or relationship from A to B
+2. Create a diagram that clearly shows:
+   - The key features that change from A to B
+   - The transformation rule (rotation, color change, shape
+     modification, etc.)
+   - How the same rule applies to C
+   - Annotations or arrows showing the transformation steps
+3. Make the transformation pattern visually obvious
+
+Generate a diagram that reveals the transformation pattern between
+pairs.
+
+Stage 2 - Question Prompt:
+
+{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The analogical reasoning puzzle
+2) AUXILIARY DIAGRAM: A visualization showing the transformation
+   relationship
+
+Use the auxiliary diagram to understand how A transforms to B, apply
+the same rule to C, then select the correct answer.
+Answer with the option letter (A, B, C, or D) directly.
+
+#### H.3.3 Deductive Visual CoT
+
+Stage 1 - Generation Prompt:
+
+You are given a deductive reasoning puzzle that requires logical
+inference.
+
+{question}
+
+Your task:
+1. Identify the given premises, rules, or constraints in the puzzle
+2. Create a diagram that clearly shows:
+   - All given conditions/rules listed clearly
+   - A logical flowchart or inference chain
+   - Step-by-step deduction from premises to conclusion
+   - Elimination of incorrect possibilities
+   - The logical path leading to the answer
+3. Use arrows to show the deduction flow
+
+Generate a logical inference diagram that traces the reasoning path.
+
+Stage 2 - Question Prompt:
+
+{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The deductive reasoning puzzle
+2) AUXILIARY DIAGRAM: A logical inference diagram showing the deduction
+   steps
+
+Follow the logical chain in the auxiliary diagram to reach the
+conclusion, then select the correct answer.
+Answer with the option letter (A, B, C, or D) directly.
+
+#### H.3.4 Inductive Visual CoT
+
+Stage 1 - Generation Prompt:
+
+You are given an inductive reasoning puzzle that requires pattern
+recognition.
+
+{question}
+
+Your task:
+1. Observe the sequence of examples and identify the underlying pattern
+2. Create a diagram that clearly shows:
+   - The repeating elements or motifs highlighted/circled
+   - The progression rule (what changes from one step to the next)
+   - Annotations showing the pattern cycle or growth rule
+   - A prediction of what comes next based on the pattern
+   - Color-coding or numbering to show pattern repetition
+3. Make the inductive pattern visually obvious
+
+Generate a diagram that highlights the repeating pattern and predicts
+the next element.
+
+Stage 2 - Question Prompt:
+
+{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The inductive reasoning puzzle
+2) AUXILIARY DIAGRAM: A visualization highlighting the pattern and its
+   progression
+
+Use the auxiliary diagram to identify the pattern, then select the
+correct answer.
+Answer with the option letter (A, B, C, or D) directly.
+
+#### H.3.5 Spatial Visual CoT
+
+Stage 1 - Generation Prompt:
+
+You are given a spatial reasoning puzzle involving 3D visualization or
+transformations.
+
+{question}
+
+Your task:
+1. Analyze the spatial transformation required (rotation, folding,
+   unfolding, different viewpoint)
+2. Create a diagram that clearly shows:
+   - The object from multiple angles if rotation is involved
+   - Step-by-step folding/unfolding process if applicable
+   - Arrows indicating rotation direction and degree
+   - Reference points or markers to track orientation
+   - The resulting shape after transformation
+3. Add axis lines or reference frames to clarify spatial orientation
+
+Generate a multi-view or step-by-step transformation diagram.
+
+Stage 2 - Question Prompt:
+
+{question}
+
+You are given TWO images:
+1) ORIGINAL PUZZLE: The spatial reasoning puzzle
+2) AUXILIARY DIAGRAM: A visualization showing the spatial
+   transformation from multiple views
+
+Use the auxiliary diagram to mentally trace the transformation, then
+select the correct answer.
+Answer with the option letter (A, B, C, or D) directly.
+
+### H.4 ChartQA 任務
+
+#### H.4.1 chartqa100_visual_cot
+
+第 1 階段 - 生成提示：
+
+根據此圖表和被提出的問題，生成一個註解版本的圖表，突出顯示回答問題所需的相關資料點、柱狀圖、折線或區域。標記或圈出關鍵數值並清楚地標記它們。
+
+第 2 階段 - 問題提示：
+
+除了原始圖表外，您還獲得了一個註解版本，該版本突出顯示了問題的相關資料點。
+
+{question}
+
+用一個詞回答這個問題。
+
+### H.5 幾何任務
+
+#### H.5.1 geometry3k_visual_cot
+
+第 1 階段 - 生成提示：
+
+基於此幾何問題，生成一個輔助圖表，添加有用的構造來解決此問題。
+
+您的任務：
+1. 分析需要證明或計算的幾何關係
+2. 添加輔助線、點或構造來顯示這些關係
+3. 清楚地標記任何新的點、角或線段
+4. 突出關鍵幾何性質（平行線、全等線段、相等角等）
+
+生成帶有輔助構造的圖表，使解題路徑更清晰。
+
+第 2 階段 - 問題提示：
+
+您獲得兩張圖像：
+1) 原始圖表：幾何問題的圖表
+2) 輔助圖表：添加了有用輔助構造的相同圖表
+
+使用兩張圖表來解決此問題。輔助構造應該幫助您識別關鍵關係。
+
+{question}
+
+#### H.5.2 auxsolidmath_easy_visual_cot
+
+第 1 階段 - 生成提示：
+
+您獲得了一個帶有 3D 圖表的立體幾何問題。分析此問題並創建相同圖表的增強版本，並添加輔助構造。
+
+問題：{question}
+
+說明：
+1. 完全按原樣保留所有原始元素（所有點、邊、面、標籤）
+2. 分析哪些輔助構造將有助於解決此問題
+3. 用不同顏色添加輔助線（例如紅色或虛線）。常見的輔助構造包括：
+   - 從點到平面或直線的垂線
+   - 連接特定點的線段
+   - 邊的中點及其連接
+   - 延伸線以尋找交點
+   - 通過特定點的平行線
+   - 立體的截面
+4. 標記您添加的任何新點（使用圖表中尚未使用的字母）
+5. 最終圖表應該看起來像原始 3D 圖形，並在其上繪製了額外的輔助線
+
+生成一個保留原始圖形並添加有用輔助構造的增強 3D 圖表。
+
+第 2 階段 - 問題提示：
+
+您獲得了一個立體幾何問題。
+
+問題：{question}
+
+您獲得兩張圖像：
+1) 原始圖表：給定的 3D 立體幾何圖形
+2) 輔助圖表：添加了輔助構造（額外線條）的相同圖形，以幫助解決此問題
+
+說明：
+1. 查看輔助圖表以查看添加了哪些構造（垂線、連接線段、中點等）
+2. 識別由這些輔助線建立的幾何關係
+3. 使用這些構造來設定您的解題方法
+4. 應用相關定理（3D 中的勾股定理、垂線性質、體積公式等）
+5. 展示您的逐步解題過程，並進行清晰的計算
+6. 陳述最終數值答案
+
+使用輔助構造逐步解決此問題。
+
+### H.6 Physics Tasks
+
+#### H.6.1 phyx_optics100_visual_cot
+
+Stage 1 - Generation Prompt:
+
+Based on this optics problem, draw a light ray diagram that helps solve
+the problem. Show the path of light rays through the optical system,
+including incident rays, reflected rays, refracted rays, focal points,
+and any relevant angles or focal points as needed by the problem.
+
+Stage 2 - Question Prompt:
+
+In addition to the original image, you are also given an auxiliary
+light ray diagram to help you solve the problem.
+
+{question}
+
+#### H.6.2 phyx_mechanics100_visual_cot
+
+Stage 1 - Generation Prompt:
+
+Based on this mechanics problem, draw a free body diagram (force
+analysis diagram) that helps solve the problem. Show all the forces
+acting on the object(s), including gravity, normal force, friction,
+tension, applied forces, etc., with arrows indicating direction and
+relative magnitude.
+
+Stage 2 - Question Prompt:
+
+In addition to the original image, you are also given an auxiliary free
+body diagram (force analysis diagram) to help you solve the problem.
+
+{question}
+
+### H.7 RealUnify GEU Tasks
+
+#### H.7.1 realunify_mental_tracking_visual_cot
+
+Stage 1 - Generation Prompt:
+
+Here is the question: {question}
+Please apply the corresponding transformations and modifications to the
+contents of the image according to the question.
+
+Stage 2 - Question Prompt:
+
+In addition to the original image, you are also given a transformed
+version of the image with the modifications applied according to the
+question.
+
+{prompt}
+
+#### H.7.2 realunify_mental_reconstruction_visual_cot
+
+Stage 1 - Generation Prompt:
+
+Please restore the image that has been shuffled by patches, without
+adding extra content or altering the original image.
+
+Stage 2 - Question Prompt:
+
+In addition to the original image, you are also given a restored
+version of the shuffled image to help you answer the question.
+
+{prompt}
+
+#### H.7.3 realunify_attentional_focusing_visual_cot
+
+Stage 1 - Generation Prompt:
+
+Here is the question: {question}
+Please highlight the regions of the image that are relevant to the
+question.
+
+Stage 2 - Question Prompt:
+
+In addition to the original image, you are also given a visualization
+that highlights the regions relevant to the question.
+
+{prompt}
+
+### H.8 VSP（視覺-空間-規劃）任務
+
+#### H.8.1 vsp_google_map_visual_cot
+
+第 1 階段 - 生成提示：
+
+此影像顯示一張地圖，起點標記為「S」（藍色），目標標記為「G」（紅色）。您的任務：生成清晰的視覺化，突顯從 S 到 G 的最優路徑。繪製簡化地圖，顯示路線以及箭頭指示方向（北、南、東、西），並標記在各個方向上需要經過的十字路口數量。
+
+第 2 階段 - 問題提示：
+
+除了原始影像外，您還會獲得一張輔助視覺化影像，顯示路徑分析。
+
+作為專業的路線規劃者，您的任務是分析地圖並尋找從起始位置到目標的路線。由於編碼不在您的技能範圍內，您的方法依賴於地圖的邏輯推理。
+
+## 遊戲設置
+- 遊戲呈現完全可觀測的地圖。
+- 起始位置標記為藍色「S」，目標標記為紅色「G」。
+- 您的目標是找到從起始位置到目標的路徑。
+
+## 移動規則
+- 行動計劃涉及四個方向的移動：「W」（西）、「E」（東）、「N」（北）或「S」（南）。
+- 每次移動都伴隨著距離。距離按經過的十字路口數量計算。
+我們提供一個範例來進一步說明規則。
+
+[Example Image]
+
+在提供的範例中：
+- 您目前位於目標的西南方。
+- 如果您向北移動 1 個十字路口，您將位於目標的西方。
+- 如果您向東移動 4 個十字路口，您將到達目標。
+- 重要提示：請忽略街道和大道的名稱。名稱中的數字不能用來計算需要經過多少個十字路口。
+
+## 程序和輸出
+現在您將解決給定的迷宮。分析起點和目標之間的相對空間關係（例如西南方）。然後，使用格式 <方向>: <經過的十字路口數> 輸出路徑。
+例如：
+<Output>
+1. North: 1
+2. East: 4
+表示向北移動 1 個十字路口，向東移動 4 個十字路口。
+<Output>
+1. South: 1
+表示向南移動 1 個十字路口。
+在上述聚合輸出後，不要輸出任何額外內容。
+
+請為以下地圖輸出路徑：
+
+[Test Image]
+
+#### H.8.2 vsp_collision_visual_cot
+
+第 1 階段 - 生成提示：
+
+此影像顯示一張地圖，其中有一輛汽車、一個人和一個目標。您的任務：生成清晰的視覺化，分析距離和路徑。繪製簡化圖表，顯示從汽車到目標的網格距離和從人到目標的網格距離，以及箭頭指示其移動方向。
+
+第 2 階段 - 問題提示：
+
+除了原始影像外，您還會獲得一張輔助視覺化影像，顯示距離分析。
+
+作為專業的導航代理，您的任務是分析地圖並確定汽車和人通過目標所需的時間。
+
+## 遊戲設定
+- 遊戲呈現一個完全可觀測的地圖。地圖上有一個人、一輛車和一個目標。
+- 遊戲進一步指定了人和車的移動方向（「上」、「下」、「左」、「右」）。
+- 你的目標是確定車和人通過目標所需的時間。
+下圖顯示了玩家、車和目標的外觀。
+
+[Icon Image]
+
+我們提供一個示例來進一步說明規則。
+
+[Example Image]
+
+車向左移動，速度為 1.0 格每秒，人向上移動，速度為 0.5 格每秒。
+
+在這個提供的示例中：
+- 車距離目標 2 格遠。給定其速度為 1.0 格每秒，所需時間為 2 / 1.0 = 2 秒。
+- 人距離目標 1 格遠。給定其速度為 0.5 格每秒，所需時間為 1 / 0.5 = 2 秒。
+
+## 程序和輸出
+現在你將回答以下給定的地圖。為了解決它，請分別分析車和人。然後分別回答。
+例如：
+Car: 2.0
+Person: 2.0
+表示車和人分別需要 2.0 秒通過目標。
+上述彙總輸出後不要輸出任何額外內容。
+
+請分析並確定車和人通過目標所需的時間：
+
+[Test Image]
+
+車向 {car_dir} 移動，速度為 {car_speed}，人向 {person_dir} 移動，速度為 {person_speed}。
+
+### H.9 BabyVision 任務
+
+#### H.9.1 babyvision_fine_grained_visual_cot
+
+第 1 階段 - 生成提示：
+
+這張圖像包含需要仔細檢查的細微視覺細節。你的任務：生成一個突出並強調圖像中細微細節、細微差異和區分特徵的視覺化。使關鍵的判別元素更加突出且易於識別。
+
+第 2 階段 - 問題提示：
+
+除了原始圖像外，你還會獲得一個突出關鍵視覺元素的輔助視覺化圖像。
+
+{question}
+
+逐步思考並以 \boxed{Answer} 格式給出你的最終答案。
+
+#### H.9.2 babyvision_visual_tracking_visual_cot
+
+第 1 階段 - 生成提示：
+
+這張圖像涉及跟蹤物體或其移動。你的任務：生成一個突出感興趣的物體、其位置、軌跡或運動模式的視覺化。使跟蹤相關視覺元素變得更容易。
+
+第 2 階段 - 問題提示：
+
+除了原始圖像外，你還會獲得一個突出關鍵視覺元素的輔助視覺化圖像。
+
+{question}
+
+逐步思考並以 \boxed{Answer} 格式給出你的最終答案。
+
+### H.10 Uni-MMMU 任務
+
+#### H.10.1 uni_mmmu_jigsaw100_visual_cot
+
+完整提示詞：
+
+你是一個統一的視覺-語言模型。你將獲得：
+(1) 一個 2x2 參考圖像，其中右下角單元格被隱藏，以及
+(2) 兩個候選補丁圖像（「候選 0」和「候選 1」）。
+
+你的任務：
+- 對於每個候選，通過將該候選**精確地**放入右下角單元格來合成完成的 2x2 圖像。保持其他三個單元格的像素與參考完全相同（無濾鏡、無重新渲染）。如果大小不同，則僅縮放候選以適應該象限；**不要**旋轉、翻轉或改變顏色。
+- 比較兩個完成的結果，並決定哪個候選能產生正確的補全。
+
+**完全按以下順序輸出：**
+
+1) 一個單一圖像，其中候選 0 被放置在右下角單元格
+
+2) 一個單一圖像，其中候選 1 被放置在右下角單元格
+
+3) 比較接縫連續性、顏色/紋理漸變、結構對齐和全局語義的分析
+
+4) 一個嚴格的 JSON 物件，表達你的決定，格式為：
+<FINAL_ANSWER_JSON>
+{"choice": 0 或 1, "rationale": "<=30 字的決定性線索"}
+</FINAL_ANSWER_JSON>
+
+硬性約束：
+- 確定性、單一結果。無模糊表述、無多種可能。
+- 不談論提示詞、模型或管道的元認知。
+- 不要將任務重述為答案；應從視覺證據推理。
+- 唯一允許的編輯是將候選貼入右下角單元格及該單元格必要的大小匹配。所有其他像素必須保持與參考完全相同。
+
+輸入：
+
+#### H.10.2 uni_mmmu_maze100_visual_cot
+
+完整提示詞：
+
+你是一個精確的迷宮求解器。
+
+語義（適用於所有迷宮）
+- 黑色方塊：牆壁（不可通行）
+- 白色方塊：路徑（可行走）
+- 藍色點：起點（代理）
+- 綠色矩形框：目標（到達綠色框內的任何白色單元格即為成功）
+- 合法移動：僅上、下、左、右。每步一個單元格；無對角線、無跳躍；絕不跨越牆壁。
+
+**輸出格式（嚴格）**
+1) 多圖像模式 - 生成**一系列單獨的圖像**，每個移動一個：
+   - 每個輸出圖像必須描繪**應用一個合法移動後的**迷宮狀態。
+   - **不要**包含初始（移動前）狀態。
+   - 保持調色板/佈局/比例與輸入相同；僅藍色點移動。
+   - 返回的圖像數量**必須**等於最終答案中的移動數量（見第 2 步）。
+   - 絕對禁止：任何拼貼/蒙太奇/精靈表/網格/多面板/並排/堆疊圖像；無箭頭、標題或覆蓋層；無 GIF/動畫/視頻。
+
+2) 在所有步驟圖像之後，發出**恰好一行**，僅包含最終移動列表作為小寫字符串的 JSON 陣列，格式為：
+<ANSWER_JSON>["right","down","left"]</ANSWER_JSON>
+
+無額外內容
+- 無工具、無 OCR、無解釋，以及除單一 <ANSWER_JSON>.....</ANSWER_JSON> 行外無其他文字。
+- 不要重述指示或條件。
+
+提醒
+- 先決定完整路徑，然後發出圖像序列（每個移動一個圖像），然後發出單一 <ANSWER_JSON> 行。
+- 每個圖像一個移動；圖像必須是單獨的檔案/部分，不以任何方式拼接在一起。
+
+#### H.10.3 uni_mmmu_sliding54_visual_cot
+
+完整提示詞：
+
+你是一個精確的滑動拼圖求解器。
+
+語義
+- 拼圖是 3x3 網格，有 8 個彩色瓷磚和一個空白空間（顯示為紅色）。
+- 一個「移動」是將相鄰瓷磚**滑入**空白空間。
+- 移動以彩色瓷磚移動的方向命名（**不是**空白空間）。
+- 合法移動：僅上、下、左、右。每步一個瓷磚。
+
+**輸出格式（嚴格）**
+1) 多圖像模式 - 生成**一系列單獨的圖像**，每個移動一個：
+   - 每個輸出圖像必須描繪**應用一個移動後的**拼圖狀態。
+   - **不要**包含初始（移動前）狀態。
+   - 保持瓷磚顏色相同；僅位置改變。
+   - 返回的圖像數量**必須**等於最終答案中的移動數量。
+   - 絕對禁止：任何拼貼/蒙太奇/精靈表/網格/多面板/並排/堆疊圖像。
+
+2) 在所有步驟圖像之後，發出**恰好一行**，僅包含最終移動列表作為小寫字符串的 JSON 陣列，格式為：
+<ANSWER_JSON>["down","right","up"]</ANSWER_JSON>
+
+無額外內容
+- 無除單一 <ANSWER_JSON>.....</ANSWER_JSON> 行外的解釋。
+- 不要重述指示。
+
+## 附錄 I RA 和 AL 評估流程及完整提示詞規範
+
+### I.1 目的
+
+本附錄詳細記錄了用於視覺思維鏈（Visual CoT）品質評估的完整評估協議，使用兩個評判指標：
+
+- • RA（推理與視覺對齊度）
+- • AL（答案與視覺對齊度）
+
+RA（推理與視覺對齊度）
+
+AL（答案與視覺對齊度）
+
+該實現完全基於提示詞，並使用多模態 LLM 評判器。
+
+### I.2 單樣本輸入與元數據
+
+對於每個樣本 $i$，評估器讀取：
+
+- • 原始圖像：$I_{\text{orig}}^{(i)}$
+- • 生成的輔助圖像：$I_{\text{aux}}^{(i)}$
+- • 生成提示詞：$p_{\text{gen}}^{(i)}$
+- • 原始問題：$q^{(i)}$
+- • 最終第二階段答案：$a^{(i)}$
+- • 任務名稱：$t^{(i)}$
+
+原始圖像：$I_{\text{orig}}^{(i)}$
+
+生成的輔助圖像：$I_{\text{aux}}^{(i)}$
+
+生成提示詞：$p_{\text{gen}}^{(i)}$
+
+原始問題：$q^{(i)}$
+
+最終第二階段答案：$a^{(i)}$
+
+任務名稱：$t^{(i)}$
+
+元數據文件包含：
+
+```
+{
+  "doc_id": ...,
+  "task": ...,
+  "generation_prompt": ...,
+  "generated_images": [...],
+  "question": ...,
+  "stage2_answer": ...
+}
+```
+
+### I.3 指標定義
+
+RA。
+
+|  | $\mathrm{RA}_{i}=\mathcal{J}_{\mathrm{RA}}\!\left(I_{\text{orig}}^{(i)},I_{\text{aux}}^{(i)},p_{\text{gen}}^{(i)},q^{(i)},t^{(i)}\right)\in\{1,2,3,4,5\}$ |  |
+| --- | --- | --- |
+
+RA 評估生成的輔助視覺化是否遵循生成指示，以及其是否有用/相關。
+
+AL。
+
+|  | $\mathrm{AL}_{i}=\mathcal{J}_{\mathrm{AL}}\!\left(I_{\text{orig}}^{(i)},I_{\text{aux}}^{(i)},q^{(i)},a^{(i)},t^{(i)}\right)\in\{1,2,3,4,5\}$ |  |
+| --- | --- | --- |
+
+AL 評估最終答案是否與視覺證據和問題意圖一致。
+
+數據集級別平均值。
+
+對於 $N$ 個樣本：
+
+|  | $\overline{\mathrm{RA}}=\frac{1}{N}\sum_{i=1}^{N}\mathrm{RA}_{i},\qquad\overline{\mathrm{AL}}=\frac{1}{N}\sum_{i=1}^{N}\mathrm{AL}_{i}.$ |  |
+| --- | --- | --- |
+
+### I.4 端到端評估流程
+
+對於每個樣本：
+
+- 1. 載入元資料 JSON。
+- 2. 解析 generated_images（相對路徑可選地透過 base_dir 解析）。
+- 3. 構造 RA 提示：Base RA Prompt + Category-specific RA Addition。
+- 4. 呼叫多模態評判器，使用圖像 $[I_{\text{orig}},I_{\text{aux}}]$，解析 reasoning_visual_score。
+- 5. 構造 AL 提示：Base AL Prompt + Category-specific AL Addition。
+- 6. 呼叫多模態評判器，使用圖像 $[I_{\text{orig}},I_{\text{aux}}]$，解析 answer_visual_score。
+- 7. 保存輸出欄位：ra_score、ra_reasoning、al_score、al_reasoning。
+
+載入元資料 JSON。
+
+解析 generated_images（相對路徑可選地透過 base_dir 解析）。
+
+構造 RA 提示：Base RA Prompt + Category-specific RA Addition。
+
+呼叫多模態評判器，使用圖像 $[I_{\text{orig}},I_{\text{aux}}]$，解析 reasoning_visual_score。
+
+構造 AL 提示：Base AL Prompt + Category-specific AL Addition。
+
+呼叫多模態評判器，使用圖像 $[I_{\text{orig}},I_{\text{aux}}]$，解析 answer_visual_score。
+
+保存輸出欄位：ra_score、ra_reasoning、al_score、al_reasoning。
+
+### I.5 評判器呼叫設定
+
+- • 多模態評判器：GPT-4o 兼容端點（Azure OpenAI 介面）。
+- • 溫度：0.0。
+- • 最大回應令牌數：3000。
+- • 重試策略：度量級重試和 API 級重試，採用退避演算法。
+- • 圖像編碼：JPEG base64 負載。
+
+多模態評判器：GPT-4o 兼容端點（Azure OpenAI 介面）。
+
+溫度：0.0。
+
+最大回應令牌數：3000。
+
+重試策略：度量級重試和 API 級重試，採用退避演算法。
+
+圖像編碼：JPEG base64 負載。
+
+### I.6 提示構造規則
+
+提示構造使用以下優先級：
+
+- 1. 如果 task_category 被明確設定，附加該類別的評估標準。
+- 2. 否則，應用遺留任務名稱對應：
+- • illusionbench $\rightarrow$ perception
+- • chartqa $\rightarrow$ chart_table
+- • mathvista $\rightarrow$ mathematical
+- 3. 否則，僅使用基礎提示。
+
+如果 task_category 被明確設定，附加該類別的評估標準。
+
+否則，應用遺留任務名稱對應：
+
+- • illusionbench $\rightarrow$ perception
+- • chartqa $\rightarrow$ chart_table
+- • mathvista $\rightarrow$ mathematical
+
+illusionbench $\rightarrow$ perception
+
+chartqa $\rightarrow$ chart_table
+
+mathvista $\rightarrow$ mathematical
+
+否則，僅使用基礎提示。
+
+### I.7 完整基礎提示：RA
+
+您是視覺思維鏈任務的專業 AI 評估專家。
+
+## 任務背景
+- **任務**：{task}
+- **原始問題**：{question}
+
+## 您的目標
+評估**生成的視覺化圖像**是否正確遵循**生成提示**。
+
+## 提供的圖像
+- **圖像 1**：原始問題圖像（輸入）
+- **圖像 2+**：生成的視覺化圖像（為幫助回答問題而創建的輔助輸出）
+
+## 生成提示詞（指示模型生成的內容）
+"{generation_prompt}"
+
+## 評估標準
+
+### 1. 指令遵循度（40%）
+- 生成的圖像是否遵循生成提示詞指令？
+- 是否包含所有請求的視覺元素？
+- 是否符合指定的視覺化類型？
+
+### 2. 視覺品質（30%）
+- 生成的圖像是否清晰且結構良好？
+- 視覺元素是否正確呈現？
+- 是否有助於輔助視覺化？
+
+### 3. 與任務的相關性（30%）
+- 視覺化是否有助於回答原始問題？
+- 是否與任務背景相關？
+- 是否提供有用的視覺線索？
+
+## 評分標準（1-5）
+
+- **5 完美**：生成的圖像完全符合生成提示詞；所有指令均已遵循；品質優異；高度相關
+- **4 良好**：生成的圖像大部分符合提示詞（80-90%）；小問題；品質良好；相關
+- **3 適當**：生成的圖像部分符合提示詞（60-70%）；明顯問題；可接受品質
+- **2 不佳**：生成的圖像勉強符合提示詞（30-50%）；重大問題；品質或相關性不佳
+- **1 失敗**：生成的圖像完全無法符合提示詞；無法使用；無關
+
+## 重要事項
+- 重點關注**生成提示詞**是否被正確執行
+- 不要評估最終答案是否正確（這是單獨的指標）
+- 評估**視覺化品質**和**指令遵循度**
+
+## 輸出格式
+{
+  "reasoning_visual_score": X,
+  "reasoning": "對生成圖像如何符合生成提示詞的詳細評估"
+}
+
+### I.8 完整基礎提示詞：AL
+
+你是 Visual Chain-of-Thought 任務的專業人工智慧評估專家。
+
+## 任務背景
+- **任務**：{task}
+- **原始問題**：{question}
+
+## 你的目標
+評估**最終答案**是否與**生成的視覺化圖像**和**原始問題**一致。
+
+## 提供的圖像
+- **圖像 1**：原始問題圖像（輸入）
+- **圖像 2+**：生成的視覺化圖像（用於推導答案的輔助輸出）
+
+## 最終答案
+"{answer}"
+
+## 評估標準
+
+### 1. 視覺與答案的一致性（50%）
+- 生成圖像中的視覺證據是否支持該答案？
+- 你能否將答案追溯回視覺元素？
+- 答案與視覺之間是否存在矛盾？
+
+### 2. 問題與答案的對齊（30%）
+- 答案是否正確解決了原始問題？
+- 答案格式是否適當？
+- 是否是對問題的有效回應？
+
+### 3. 推理連貫性（20%）
+- 推理流程是否合理（原始問題 → 生成視覺化 → 答案）？
+- 答案是否從視覺化邏輯推導出來？
+- 整體 chain-of-thought 是否連貫？
+
+## 評分量表（1-5）
+
+- **5 完美**：答案與生成的視覺完全匹配且符合問題；
+  完全一致；邏輯嚴謹；推理正確
+- **4 良好**：答案大部分一致（80-90%）；
+  輕微不一致；推理普遍正確
+- **3 充分**：答案部分一致（60-70%）；
+  存在某些矛盾；推理有缺漏
+- **2 不佳**：答案勉強一致（30-50%）；
+  主要矛盾；推理有缺陷
+- **1 失敗**：答案與視覺或問題完全不一致；
+  自相矛盾；無意義
+
+## 重要註記
+- 著重於答案與生成視覺之間的**一致性**
+- 檢查答案是否邏輯上符合視覺化
+- 驗證答案是否解決原始問題
+- 不應評估生成提示是否被遵循（那是 RA 指標）
+
+## 輸出格式
+{
+  "answer_visual_score": X,
+  "reasoning": "詳細評估答案與視覺和問題的一致性"
+}
+
+### I.9 完整的類別特定補充
+
+#### A. 實際應用（real_world）
+
+RA 補充
+
+## 實際應用 - RA 標準
+- **安全性與可行性**：視覺化是否展示安全、實用的步驟？
+- **情境理解**：是否考慮實際約束條件
+  （時間、資源、安全）？
+- **可操作指導**：視覺步驟是否清楚到足以在實踐中遵循？
+- **倫理考量**：視覺化是否遵守安全協議和
+  倫理準則？
+
+AL 補充
+
+## 實際應用 - AL 標準
+- **實踐有效性**：答案在實踐上是否可行且安全？
+- **證據支持**：答案是否由展示實際執行的視覺證據支持？
+- **完整性**：答案是否涵蓋所有關鍵實際面向
+  （安全、資源）？
+- **倫理合理性**：答案在倫理上是否適當且安全？
+
+#### B. 幾何推理（mathematical）
+
+RA 補充
+
+## 數學推理 - RA 標準
+- **公式視覺化**：數學公式和方程式是否正確視覺化？
+- **逐步清晰度**：視覺化是否展示清楚的計算步驟？
+- **數值準確性**：所有數值和計算在視覺上是否正確？
+- **數學記號**：是否使用適當的數學記號？
+
+AL 補充
+
+## 數學推理 - AL 標準
+- **計算正確性**：答案在數學上是否準確？
+- **公式應用**：答案是否正確應用視覺化中展示的公式？
+- **邏輯一致性**：從視覺到答案的數學邏輯是否連貫？
+- **單位一致性**：單位和尺度是否正確維持？
+
+#### C. 物理（stem）
+
+RA 補充
+
+## 物理 - RA 標準
+- **科學準確性**：視覺化是否遵循科學原理和定律？
+- **技術精確性**：技術細節和過程是否準確描繪？
+- **領域知識**：是否展示正確的物理領域知識？
+- **實驗/過程視覺化**：過程或實驗是否適當說明？
+
+AL 補充
+
+## 物理 - AL 標準
+- **科學有效性**：答案在科學上是否正確？
+- **技術準確性**：答案是否與視覺化中顯示的技術/科學原理一致？
+- **證據支持**：答案是否由視覺化中的科學證據支持？
+- **領域一致性**：答案是否展示適當的物理領域理解？
+
+#### D. 謎題和遊戲（puzzles）
+
+RA 補充
+
+## 謎題和遊戲 - RA 標準
+- **規則遵循**：視覺化是否正確遵循遊戲/謎題規則？
+- **策略清晰性**：策略步驟或移動是否清楚視覺化？
+- **有效移動**：所有顯示的移動/步驟是否符合規則有效？
+- **解決方案路徑**：視覺化是否顯示解決方案的有效路徑？
+
+AL 補充
+
+## 謎題和遊戲 - AL 標準
+- **規則遵從**：答案是否遵循所有遊戲/謎題規則？
+- **解決方案有效性**：答案是否為謎題的有效解決方案？
+- **移動正確性**：最終的移動/步驟是否與視覺化中顯示的內容相符？
+- **勝利條件**：答案是否達成規定的目標/勝利條件？
+
+#### E. 圖表與表格推理（chart_table）
+
+RA 補充
+
+## 圖表與表格推理 - RA 標準
+- **數據突出顯示**：相關數據點是否適當突出顯示？
+- **趨勢視覺化**：趨勢、模式或關鍵值是否強調？
+- **標籤清晰性**：軸、標籤和圖例是否清楚標記？
+- **數據準確性**：提取/突出顯示的數據在數值上是否準確？
+
+AL 補充
+
+## 圖表與表格推理 - AL 標準
+- **數據準確性**：答案是否與圖表/表格中的實際數據值相符？
+- **趨勢正確性**：如果描述趨勢，解釋是否正確？
+- **數值精確性**：數值答案是否精確準確？
+- **無幻覺**：答案是否源自實際數據，而非幻覺？
+
+#### F. 空間智能（spatial）
+
+RA 補充
+
+## 空間智能 - RA 標準
+- **3D 理解**：視覺化是否正確表示 3D 空間關係？
+- **轉換準確性**：旋轉、平移或轉換是否正確？
+- **透視一致性**：空間透視是否正確維持？
+- **幾何精確性**：幾何關係是否準確視覺化？
+
+AL 補充
+
+## Spatial Intelligence - AL Criteria
+- **Spatial Correctness**: Is answer spatially accurate?
+- **Transformation Validity**: Do described transformations match visualization?
+- **Geometric Consistency**: Is answer geometrically consistent with shown
+  spatial relationships?
+- **Orientation Accuracy**: Are orientations and positions correctly described?
+
+#### G. Perception Reasoning ( perception )
+
+RA addition
+
+## Perception Reasoning - RA Criteria
+- **Object Highlighting**: Are relevant objects properly highlighted or marked?
+- **Scene Understanding**: Does visualization show correct scene interpretation?
+- **Feature Emphasis**: Are key perceptual features emphasized?
+- **Visual Clarity**: Is the visualization clear for perception tasks?
+
+AL addition
+
+## Perception Reasoning - AL Criteria
+- **Object Identification**: Are identified objects correct?
+- **Scene Accuracy**: Does answer accurately describe the scene?
+- **Attribute Correctness**: Are object attributes (color, shape, position) correct?
+- **Visual Evidence**: Is answer supported by visible evidence in images?
+
+### I.10 Scoring Outputs and Schema
+
+Per-sample output:
+
+{
+  "doc_id": "...",
+  "task": "...",
+  "json_path": "...",
+  "ra_score": 1..5 or null,
+  "ra_reasoning": "...",
+  "al_score": 1..5 or null,
+  "al_reasoning": "..."
+}
+
+### I.11 Notes on Robustness
+
+- • If JSON parsing of judge response fails, regex extraction is used as fallback.
+- • If all retries fail, score is returned as null .
+- • Multi-image tasks are supported by concatenating all original images before auxiliary images.
+
+If JSON parsing of judge response fails, regex extraction is used as fallback.
+
+If all retries fail, score is returned as null .
+
+Multi-image tasks are supported by concatenating all original images before auxiliary images.

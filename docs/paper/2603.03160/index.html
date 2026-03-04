@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kling-MotionControl 技術報告 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">Kling-MotionControl 技術報告</h1>
+  
+  <div class="en-title">Kling-MotionControl Technical Report</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Kling Team, Jialu Chen, Yikang Ding, Zhixue Fang, Kun Gai, Kang He, Xu He, Jingyun Hua, Mingming Lao, Xiaohan Li, Hui Liu, Jiwen Liu, Xiaoqiang Liu, Fan Shi, Xiaoyu Shi, Peiqin Sun, Songlin Tang, Pengfei Wan, Tiancheng Wen, Zhiyong Wu, Haoxian Zhang, Runze Zhao, Yuanxing Zhang, Yan Zhou</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.03160" target="_blank">2603.03160</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.03160" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.03160" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.03160" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Diffusion</span><span class="tag method">DiT</span><span class="tag method">Motion Retargeting</span><span class="tag method">Identity Injection</span>
+    <span class="tag task">Character Animation</span><span class="tag task">Motion Transfer</span><span class="tag task">Video Generation</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 角色動畫控制的統一框架：Kling-MotionControl
+
+角色動畫旨在通過從驅動視頻向參考圖像轉移動作動態來生成逼真的視頻。生成模型的最近進展為高保真角色動畫鋪平了道路。在本工作中，我們提出 Kling-MotionControl，一個專為強大、精確和富有表現力的整體角色動畫而設計的統一 DiT 框架。利用內聚系統中的分而治之策略，該模型協調異構動作表示，這些表示針對身體、面部和手部的不同特徵量身定制，有效地協調大規模結構穩定性與細粒度關節表達性。為確保強大的跨身份泛化，我們納入自適應身份無關學習，促進針對從逼真人類到風格化卡通角色等多樣角色的自然動作重定位。同時，我們通過精心的身份注入和融合設計確保忠實的外觀保留，進一步由利用綜合參考內容的主體庫機制支持。為確保實用性，我們實現了利用多階段蒸餾的高級加速框架，將推理速度提升超過 10 倍。Kling-MotionControl 通過智能語義動作理解和精確的文本響應性而與眾不同，允許超越視覺輸入的靈活控制。人類偏好評估表明，Kling-MotionControl 相比領先的商業和開源解決方案提供優異的性能，在整體動作控制、開放域泛化以及視覺品質和連貫性方面取得卓越保真度。這些結果將 Kling-MotionControl 確立為高質量、可控且逼真的角色動畫的穩健解決方案。</p>
+  
+  <div class="abstract-en">Character animation aims to generate lifelike videos by transferring motion dynamics from a driving video to a reference image. Recent strides in generative models have paved the way for high-fidelity character animation. In this work, we present Kling-MotionControl, a unified DiT-based framework engineered specifically for robust, precise, and expressive holistic character animation. Leveraging a divide-and-conquer strategy within a cohesive system, the model orchestrates heterogeneous motion representations tailored to the distinct characteristics of body, face, and hands, effectively reconciling large-scale structural stability with fine-grained articulatory expressiveness. To ensure robust cross-identity generalization, we incorporate adaptive identity-agnostic learning, facilitating natural motion retargeting for diverse characters ranging from realistic humans to stylized cartoons. Simultaneously, we guarantee faithful appearance preservation through meticulous identity injection and fusion designs, further supported by a subject library mechanism that leverages comprehensive reference contexts. To ensure practical utility, we implement an advanced acceleration framework utilizing multi-stage distillation, boosting inference speed by over 10x. Kling-MotionControl distinguishes itself through intelligent semantic motion understanding and precise text responsiveness, allowing for flexible control beyond visual inputs. Human preference evaluations demonstrate that Kling-MotionControl delivers superior performance compared to leading commercial and open-source solutions, achieving exceptional fidelity in holistic motion control, open domain generalization, and visual quality and coherence. These results establish Kling-MotionControl as a robust solution for high-quality, controllable, and lifelike character animation.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <p>Kling-MotionControl: Orchestrating Heterogeneous Motions for Adaptive Holistic Character Animation</p>
+<h1 id="kling-motioncontrol-technical-report">Kling-MotionControl Technical Report</h1>
+<p>Character animation aims to generate lifelike videos by transferring motion dynamics from a driving video to a reference image. Recent strides in generative models have paved the way for high-fidelity character animation. In this work, we present Kling-MotionControl , a unified DiT-based framework engineered specifically for robust, precise, and expressive holistic character animation. Leveraging a “divide-and-conquer” strategy within a cohesive system, the model orchestrates heterogeneous motion representations tailored to the distinct characteristics of body, face, and hands, effectively reconciling large-scale structural stability with fine-grained articulatory expressiveness. To ensure robust cross-identity generalization, we incorporate adaptive identity-agnostic learning, facilitating natural motion retargeting for diverse characters ranging from realistic humans to stylized cartoons. Simultaneously, we guarantee faithful appearance preservation through meticulous identity injection and fusion designs, further supported by a subject library mechanism that leverages comprehensive reference contexts. Furthermore, we enhance our proposed motion representations with 3D awareness, enabling precise alignment across diverse character orientations and flexible cinematic camera control via native text descriptions. To ensure practical utility, we implement an advanced acceleration framework utilizing multi-stage distillation, boosting inference speed by over 10 × \times . Kling-MotionControl distinguishes itself through intelligent semantic motion understanding and precise text responsiveness, allowing for flexible control beyond visual inputs. Human preference evaluations demonstrate that Kling-MotionControl delivers superior performance compared to leading commercial and open-source solutions, achieving exceptional fidelity in holistic motion control, open domain generalization, and visual quality and coherence. These results establish Kling-MotionControl as a robust solution for high-quality, controllable, and lifelike character animation.</p>
+<p>[Date]March 3, 2026 \metadata [Access] https://app.klingai.com/global/video-motion-control/new</p>
+<h2 id="1">1 簡介</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.03160/x1.png" loading="lazy"></figure> 圖 1：給定一張參考圖像和一支駕駛影片，Kling-MotionControl 生成高保真影片，其中參考主體忠實地模仿多粒度駕駛動作，包括身體運動、面部表情和手部姿態。
+我們的結果展示了精確的細粒度控制、對快速和複雜動態的健壯性，以及具有忠實身份保留的自然跨身份轉移，無縫推廣到動漫、卡通和風格化藝術品等多種角色。</p>
+<p>角色圖像動畫旨在通過將駕駛影片中的動作動態轉移到包含不同主體的參考圖像來生成動畫影片 [ 5 , 31 , 20 ]。這項技術在從數位虛擬化身創建到動畫製作和可控影片合成等應用中具有廣泛的潛力。基本目標是準確建模駕駛序列中的動作動態，並將其無縫適應到新角色，同時實現精確的動作控制並忠實保留參考的視覺外觀 [ 14 ]。</p>
+<p>最近在大規模影片生成模型 [ 30 , 16 , 18 ]，特別是 Diffusion Transformers (DiTs) [ 22 ] 方面的進展，已大幅推進了單圖像角色動畫領域的發展。儘管如此，早期方法主要聚焦於面部重演 [ 9 , 32 , 23 ] 或身體動作控制 [ 14 , 36 , 34 ] 的隔離任務。雖然最近的嘗試，如 Dreamina [ 1 ]、Runway Act-Two [ 2 ] 和 Wan-Animate [ 5 ]，已開始探索整體全身動畫，但它們常常難以有效平衡視覺品質與不同動作粒度的可控性。具體而言，這些方法經常在平衡大尺度肢體穩定性與細粒度細節（例如，面部微表情和手指關節運動）方面表現不佳，並在跨身份轉移期間遭受身份漂移，尤其是在動漫或動物等多樣形態的情況下。此外，當優先考慮動作約束時，它們經常失去對其他視覺屬性（例如，背景、相機運動）的控制。此外，禁止性的計算成本和有限的推理效率仍然是阻礙這些高保真模型實際部署的關鍵瓶頸。</p>
+<p>在本工作中，我們提出 Kling-MotionControl，一個統一的基於 DiT 的框架，設計用於健壯、精確、富有表現力且高效的整體角色動畫。除了作為強大的動作轉移工具外，它還充當一個智慧且可控的系統，能夠處理全面的動畫場景，從全身動作轉移到細粒度面部重演，同時保持卓越的身份保真度和推理效率。Kling-MotionControl 包含以下關鍵技術進步：</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.03160/x2.png" loading="lazy"></figure> 圖 2：我們提出的 Kling-MotionControl 的訓練和推理管道概述。</p>
+<ul>
+<li>
+<p>• <strong>統一多粒度動作編排</strong>。Kling-MotionControl 是一個統一的框架，編排針對不同動作粒度的固有特性量身定製的異質動作表示——具體來說是身體、臉部和手部。通過漸進式多階段訓練策略協調，這種「分而治之」的方法能夠實現結構穩定性（大尺度身體運動所需）和精緻表現力（面部微表情和複雜手指互動所需）的協調建模。該設計在單個統一模型中促進了從特寫肖像到動態全身場景的各種尺度的無縫動作轉移。關鍵是，它有效克服了先前工作中經常觀察到的大振幅運動中的健壯性問題和細粒度細節中缺乏精度的問題，從而最小化視覺偽影，同時確保面部表情、手部姿態和身體姿勢之間的協調一致。</p>
+</li>
+<li>
+<p>• <strong>自適應跨身份動作轉移</strong>。為了支持從逼真人類到風格化卡通甚至動物等多樣角色的健壯泛化，我們引入了身份無關的動作學習範例。該方法通過在幾何水平上將動態模式與駕駛主體的物理屬性解耦來提取動作的本質。補充這種幾何抽象，我們進一步納入語義動作建模模組來捕捉動作的高級意圖（例如，「扶額」、「拍手」）。這確保生成的動畫不僅在幾何上對齐，而且在語義上忠實於駕駛表演，有效解決複雜互動中的歧義。因此，Kling-MotionControl 在顯著的形態差異（例如，成人對兒童、人類對動物）之間實現自然的動作重定向，而無需手動校準。</p>
+</li>
+<li>
+<p>• <strong>忠實的身份保留與主體庫支援</strong>。Kling-MotionControl 通過專用的身份編碼和融合機制實現卓越的身份保真度。通過仔細提取和整合身份嵌入，Kling-MotionControl 有效確保參考角色的特徵在轉移期間被嚴格保留。此外，為了增強複雜場景中的健壯性，Kling-MotionControl 支援主體庫機制。與標準單圖像方法不同，此功能允許使用者提供額外的參考材料，例如目標角色的多視圖圖像或影片片段。此全面的上下文使模型能夠構建更健壯的身份表示，即使在極端姿勢或長時間生成期間，也能確保卓越的主體一致性並嚴格保留外觀細節。</p>
+</li>
+<li>
+<p>• <strong>具有自由視角相機控制的 3D 感知</strong>。多粒度動作表示通過大規模多視圖監督進一步賦予 3D 感知能力。該範例使 Kling-MotionControl 能夠感知駕駛動作的內在 3D 幾何和動態，超越簡單的 2D 平面對齐，支援動畫結果中角色方向的靈活指定。此外，它賦予靈活的電影攝影相機控制，允許使用者通過動態相機軌跡（例如，平移、縮放）執行自由視角渲染，由原生文字描述直接控制，同時保持嚴格的幾何一致性和結構完整性。</p>
+</li>
+<li>
+<p>• <strong>智慧文字回應能力</strong>。Kling-MotionControl 利用智慧 Prompt Enhancer (PE) 模組來橋接動作控制和文字指導之間的差距。這使模型能夠保持精確的動作遵守，同時對使用者文字提示高度回應。使用者可以通過文字靈活操縱場景元素、服裝風格和相機運動，確保超越參考圖像的高度創意可控性。</p>
+</li>
+<li>
+<p>• <strong>高效率推理加速</strong>。為了應對影片生成的高計算成本，我們實現了一個先進的加速框架。我們首先為教師模型引入了高效的雙分支採樣策略，以處理多條件 Classifier-Free Guidance (CFG)，而不必承擔多推理分支的計算負擔。為了進一步壓縮生成過程，我們優化了多階段蒸餾策略，實質性地減少了函數評估次數 (NFE)，產生了高品質的少步學生模型。此外，通過將條件梯度合併到學生模型中，我們有效繞過了通常與 CFG 相關的採樣開銷。這些全面的優化實現了超過 10 × \times 的端到端加速，同時保持了模型性能，顯著降低了部署成本。</p>
+</li>
+<li>
+<p>• <strong>全面資料策劃框架</strong>。為了賦予模型健壯的能力，我們提出了一個整體資料框架，整合了專用的策劃管道和可擴展的標註基礎設施。我們已收集了一個龐大的資料集，涵蓋廣泛的角色類型和多樣的動作動態。為了確保資料品質，我們基於多維標準實施了嚴格的篩選過程，包括關鍵指標，如整體影片品質分數、動作動態（例如，振幅和流暢度）和主體一致性。此外，該資料集通過高品質渲染資料和通過高速相機捕捉的素材進行補充，以支援快速和複雜運動的優化。最後，我們的細粒度標註系統涵蓋詳細的屬性，包括特定動作、微表情、人物物體互動和相機運動，提供豐富的指導以促進健壯模型訓練，實現專業級動畫生成。</p>
+</li>
+</ul>
+<p>統一多粒度動作編排。Kling-MotionControl 是一個統一的框架，編排針對不同動作粒度的固有特性量身定製的異質動作表示——具體來說是身體、臉部和手部。通過漸進式多階段訓練策略協調，這種「分而治之」的方法能夠實現結構穩定性（大尺度身體運動所需）和精緻表現力（面部微表情和複雜手指互動所需）的協調建模。該設計在單個統一模型中促進了從特寫肖像到動態全身場景的各種尺度的無縫動作轉移。關鍵是，它有效克服了先前工作中經常觀察到的大振幅運動中的健壯性問題和細粒度細節中缺乏精度的問題，從而最小化視覺偽影，同時確保面部表情、手部姿態和身體姿勢之間的協調一致。</p>
+<p>自適應跨身份動作轉移。為了支持從逼真人類到風格化卡通甚至動物等多樣角色的健壯泛化，我們引入了身份無關的動作學習範例。該方法通過在幾何水平上將動態模式與駕駛主體的物理屬性解耦來提取動作的本質。補充這種幾何抽象，我們進一步納入語義動作建模模組來捕捉動作的高級意圖（例如，「扶額」、「拍手」）。這確保生成的動畫不僅在幾何上對齐，而且在語義上忠實於駕駛表演，有效解決複雜互動中的歧義。因此，Kling-MotionControl 在顯著的形態差異（例如，成人對兒童、人類對動物）之間實現自然的動作重定向，而無需手動校準。</p>
+<p>忠實的身份保留與主體庫支援。Kling-MotionControl 通過專用的身份編碼和融合機制實現卓越的身份保真度。通過仔細提取和整合身份嵌入，Kling-MotionControl 有效確保參考角色的特徵在轉移期間被嚴格保留。此外，為了增強複雜場景中的健壯性，Kling-MotionControl 支援主體庫機制。與標準單圖像方法不同，此功能允許使用者提供額外的參考材料，例如目標角色的多視圖圖像或影片片段。此全面的上下文使模型能夠構建更健壯的身份表示，即使在極端姿勢或長時間生成期間，也能確保卓越的主體一致性並嚴格保留外觀細節。</p>
+<p>具有自由視角相機控制的 3D 感知。多粒度動作表示通過大規模多視圖監督進一步賦予 3D 感知能力。該範例使 Kling-MotionControl 能夠感知駕駛動作的內在 3D 幾何和動態，超越簡單的 2D 平面對齐，支援動畫結果中角色方向的靈活指定。此外，它賦予靈活的電影攝影相機控制，允許使用者通過動態相機軌跡（例如，平移、縮放）執行自由視角渲染，由原生文字描述直接控制，同時保持嚴格的幾何一致性和結構完整性。</p>
+<p>智慧文字回應能力。Kling-MotionControl 利用智慧 Prompt Enhancer (PE) 模組來橋接動作控制和文字指導之間的差距。這使模型能夠保持精確的動作遵守，同時對使用者文字提示高度回應。使用者可以通過文字靈活操縱場景元素、服裝風格和相機運動，確保超越參考圖像的高度創意可控性。</p>
+<p>高效率推理加速。為了應對影片生成的高計算成本，我們實現了一個先進的加速框架。我們首先為教師模型引入了高效的雙分支採樣策略，以處理多條件 Classifier-Free Guidance (CFG)，而不必承擔多推理分支的計算負擔。為了進一步壓縮生成過程，我們優化了多階段蒸餾策略，實質性地減少了函數評估次數 (NFE)，產生了高品質的少步學生模型。此外，通過將條件梯度合併到學生模型中，我們有效繞過了通常與 CFG 相關的採樣開銷。這些全面的優化實現了超過 10 × \times 的端到端加速，同時保持了模型性能，顯著降低了部署成本。</p>
+<p>全面資料策劃框架。為了賦予模型健壯的能力，我們提出了一個整體資料框架，整合了專用的策劃管道和可擴展的標註基礎設施。我們已收集了一個龐大的資料集，涵蓋廣泛的角色類型和多樣的動作動態。為了確保資料品質，我們基於多維標準實施了嚴格的篩選過程，包括關鍵指標，如整體影片品質分數、動作動態（例如，振幅和流暢度）和主體一致性。此外，該資料集通過高品質渲染資料和通過高速相機捕捉的素材進行補充，以支援快速和複雜運動的優化。最後，我們的細粒度標註系統涵蓋詳細的屬性，包括特定動作、微表情、人物物體互動和相機運動，提供豐富的指導以促進健壯模型訓練，實現專業級動畫生成。</p>
+<p>我們設想 Kling-MotionControl 作為一項重要的生產力工具，設計用於通過以前所未有的效率和靈活性提供電影級動作控制，從而增強專業動畫工作流程和日常創意應用。</p>
+<h2 id="2-evaluation">2 Evaluation</h2>
+<h3 id="21">2.1 評估設定</h3>
+<p>為確保全面的評估，我們構建了一個專用的基準測試集，包含 150 個高品質的測試案例，每個案例都包含一張參考圖像與來自不同主體的驅動視頻配對。
+我們採用基於人類偏好的主觀評估協議作為評估標準，旨在準確捕捉使用者感知的感知品質和語意保真度。
+對於每個樣本，參與者獨立進行我們的方法與基線方法的生成結果之間的兩兩比較，分配 Good/Same/Bad (GSB) 判斷，最終標籤由多數投票決定。
+我們報告 (G+S)/(B+S) 的比率作為評估指標，其中較高的分數表示較強的使用者偏好。
+此指標反映了我們的方法被判斷為「優於或不劣於」基線方法的程度。
+除了整體表現之外，我們還在五個特定維度上進行細粒度的 GSB 評估：</p>
+<ul>
+<li>• 視覺品質。評估逐幀的美學品質，著重於影像銳度、結構完整性以及單個幀內生成假影的缺失。</li>
+<li>• 動態品質。評估生成視頻序列的時間一致性，特別是檢查運動流暢度、幀間連貫性以及背景和角色元素在連續幀中的穩定性。</li>
+<li>• 身分保留。測量生成視頻在整個動畫過程中維持參考圖像可識別的身分特徵和外觀細節的能力。</li>
+<li>• 動作精確度。檢查整體身體動作轉移的精確性，確定生成的姿勢和手勢是否準確複製了驅動視頻的軌跡和幅度。</li>
+<li>• 表情精確度。評估面部動態與驅動來源的對齊，包括全局頭部姿勢的準確度和微表情的細微性。</li>
+</ul>
+<p>視覺品質。評估逐幀的美學品質，著重於影像銳度、結構完整性以及單個幀內生成假影的缺失。</p>
+<p>動態品質。評估生成視頻序列的時間一致性，特別是檢查運動流暢度、幀間連貫性以及背景和角色元素在連續幀中的穩定性。</p>
+<p>身分保留。測量生成視頻在整個動畫過程中維持參考圖像可識別的身分特徵和外觀細節的能力。</p>
+<p>動作精確度。檢查整體身體動作轉移的精確性，確定生成的姿勢和手勢是否準確複製了驅動視頻的軌跡和幅度。</p>
+<p>表情精確度。評估面部動態與驅動來源的對齊，包括全局頭部姿勢的準確度和微表情的細微性。</p>
+<p>此全面的 GSB 協議提供了一個統一的框架，用於評估從細粒度視覺細節到整體動作轉移的關鍵方面，並提供了真實世界使用者體驗的可靠指標。我們也將在未來納入額外的客觀指標來補充和擴展我們的定量評估。</p>
+<h3 id="22">2.2 實驗結果</h3>
+<p>與基準方法的比較。為進行比較評估，我們選擇 Dreamina [ 1 ] 和 Runway Act-Two [ 2 ] 來代表目前市場上最具競爭力的商用全身角色動畫解決方案。
+此外，我們還納入 Wan-Animate [ 5 ]，它是開源方法中的當前最先進方法。
+所有方法均在統一設置下評估，分辨率為 1080P，視訊時長相同，嚴格遵循每種方法的官方建議最佳實踐推理配置。文本提示在所有方法中語義對齊。
+針對這些競爭基準的 GSB 評估結果總結於表 1，GSB 評分的詳細分佈在圖 3 中可視化。
+數值結果表明，Kling-MotionControl 在每個評估維度上都超越了所有競爭對手，提供了優越或相當的性能。
+特別是，Kling-MotionControl 在整體偏好和視覺品質方面相比其他方法獲得了顯著更高的分數，展示了我們在生成高保真且視覺上連貫的動畫視訊方面的優越能力。</p>
+<p>表 1：Kling-MotionControl 與競爭對手在各種標準下的 GSB 指標數值結果。"Qual." 是 "Quality"（品質）的簡寫；"Preserv" 是 "Preservation"（保持）的簡寫；"Acc." 是 "Accuracy"（準確度）的簡寫。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.03160/x3.png" loading="lazy"></figure> 圖 3：GSB 評估結果的可視化（偏好率以百分比表示），比較 Kling-MotionControl 與 Dreamina、Runway Act-Two 和 Wan-Animate 在各種評估維度上的表現。注意：對於偏好率為 0% 的類別，省略了數值標籤。</p>
+<p>定性比較如圖 4 所示。
+前兩個案例凸顯了我們方法在建模和再現細緻面部表情和手部姿態方面的優越性。
+具體而言，Dreamina 在極端情感狀態下（例如，極度悲傷）表現出有限的表現力，並且與 Wan-Animate 類似，在複雜手勢方面表現不佳，經常導致手部運動錯誤和構件。
+Runway Act-Two 對複雜手部姿態和面部動態表現出較差的魯棒性，甚至在左上角案例中遭遇完全失敗。
+相比之下，Kling-MotionControl 實現了對極端和微妙表情以及複雜手部互動的精確複製，產生了高保真和富有表現力的結果。
+此外，競爭方法在跨身份轉移期間經常表現出身份不一致。
+例如，在左上角案例中，Dreamina 改變了兒童角色的肢體比例。
+相反，由於我們專門的動作重定向和身份解糾纏策略，我們的方法有效地處理了驅動對象和參考對象之間的重大差異，同時忠實地保留了參考身份。
+底部的兩個案例說明了在複雜、大幅度和快速運動場景下的比較性能。
+具體而言，Dreamina 在肢體關係方面遭受空間深度歧義，並表現出以肢體結構不完整或破裂為特徵的構件。
+Runway 在面對此類具有挑戰性的動作建模任務時容易發生災難性失敗。
+同時，Wan-Animate 完全無法再現快速和具有挑戰性的動態，伴隨著嚴重的外觀退化和明顯的全局色彩偏移。
+相比之下，我們的方法有效地處理了這些極端條件，生成精確和物理上合理的運動，無需遭受結構扭曲或外觀偏移。
+總之，這些定性比較驗證了 Kling-MotionControl 在生成高品質全身運動方面表現出色，成功實現了自然且適應性的跨身份轉移，具有高度保留的身份外觀和參考視覺線索。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.03160/x4.png" loading="lazy"></figure> 圖 4：與基準方法的定性比較。Kling-MotionControl 提供高保真全身角色動畫視訊，具有異常的表現力和運動準確度，同時保持忠實的身份和場景一致性。頂部：我們的方法產生更生動和精確的面部表情和手部姿態。底部：我們的框架對複雜和快速的身體運動表現出優越的魯棒性，產生更高保真的結果。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.03160/x5.png" loading="lazy"></figure> 圖 5：多種場景下生成結果的可視化。我們突出了 Kling-MotionControl 在跨多種身份生成高保真角色動畫時的能力，具有精確的動作模仿範圍（從複雜的身體動態到細緻的面部和手勢細節），同時忠實地保留外觀並保持優秀的文本可控性。
+最左列顯示參考影像，其餘列中為生成結果和驅動序列（內圖）。</p>
+<p>多種場景下的可視化結果。圖 5 進一步呈現了 Kling-MotionControl 在多種場景下生成的額外可視化結果。
+受益於我們統一框架，該框架融合了針對不同身體區域固有特徵量身定制的異質建模，Kling-MotionControl 成功處理了具有挑戰性的大規模全身運動，同時捕捉細緻的面部表情、唇部動作和複雜的手部互動，跨越多種鏡頭尺度，從特寫肖像到全身視圖。
+歸因於我們精心設計的自適應動作重定向和身份保留實現，我們的方法即使在身體形狀和外觀存在重大差異的對象之間（例如，兒童到成人、寫實到卡通）也能促進自然、無縫和穩健的動作轉移。
+至關重要的是，它嚴格保留參考影像的身份特徵，無需遭受身體扭曲或其他外觀構件。
+此外，利用我們的語義動作引導和提示增強器，Kling-MotionControl 在精確動作控制和高品質視訊生成的同時保持忠實的文本響應性。
+此能力允許靈活操控超越參考影像的屬性——例如角色服裝、背景元素和環境變化——從而顯著增強整體可控性。</p>
+<h2 id="3">3 相關工作</h2>
+<h3 id="31">3.1 影片擴散模型</h3>
+<p>Diffusion Models [ 13 ] 的出現徹底改變了影片合成的格局，實現了前所未有的可控性和高保真內容的生成。
+特別是，這些模型已被廣泛應用於以人類為中心的影片生成任務 [ 7 , 29 , 11 , 4 ]，成為角色動畫的基礎技術。
+影片擴散模型的早期探索主要通過在預訓練的基於影像的 U-Net [ 6 , 24 ] 架構中加入時間模組（如 3D 卷積或時間注意力機制）來建模跨幀依賴性 [ 3 , 10 ]。
+儘管取得了初步成功，但這些基於 U-Net 的範式在解析度和序列長度的可擴展性方面往往存在固有限制。
+因此，近期研究已轉向將 Diffusion Transformers (DiTs) [ 22 ] 作為主流骨幹網路。
+通過利用 3D VAEs 將影片壓縮成時空標記，並利用 Transformers 的可擴展注意力機制，DiTs 能有效捕捉長程時間動態並支持穩定的大規模生成 [ 16 , 30 , 17 , 18 ]。
+在本工作中，我們將完整的動畫框架建立在強大的 DiT 骨幹網路之上，利用其強大的生成能力以及關於人類結構和運動動態的豐富內部先驗，以促進精確的角色動畫。</p>
+<h3 id="32">3.2 角色動畫</h3>
+<p>身體動畫。身體動畫的先驅性工作，如 FOMM [ 25 ] 和 MRAA [ 26 ]，主要依賴於無監督光流估計來驅動由運動軌跡控制的源特徵扭曲。
+隨著潛在擴散模型（Latent Diffusion Models, LDMs）[ 24 ] 的出現，該領域已轉向使用結構引導的可控合成。
+一個主流方法利用顯式的二維骨骼姿態進行控制；例如，Animate Anyone [ 14 ] 引入了輕量級的 Pose Guider 來編碼骨骼信號，而 MimicMotion [ 34 ] 和 Animate-X [ 28 ] 進一步透過信心感知引導和顯式姿態增強策略改進了魯棒性。
+替代方法尋求融合三維先驗或表面細節：MagicAnimate [ 33 ] 採用 DensePose [ 8 ] 來建立密集對應關係，而 Champ [ 36 ] 和 MagicMan [ 12 ] 利用三維參數化模型（SMPL）[ 19 ] 來強制幾何一致性。
+最近，研究已擴展到處理複雜的人物-場景交互 [ 21 , 15 ]，並且正在將骨幹架構從 U-Nets 轉向擴散 Transformer（DiTs）[ 5 , 31 ]。
+在本工作中，我們設計了一個經過精心設計且魯棒的表示法，以高精度和表現力對全局身體動態進行建模。
+至關重要的是，我們進一步透過使用適應手部特徵的表示法來細化手部區域，從而有效地協調全局穩定性與細粒度的關節細節。</p>
+<p>臉部動畫。早期方法主要利用 GAN，透過神經關鍵點或三維參數化模型來驅動肖像動畫，進行影像扭曲。
+值得注意的是，LivePortrait [ 9 ] 最近實現了令人印象深刻的實時性能和控制。
+最近，向擴散模型的範式轉變顯著提升了生成質量。
+XPortrait [ 32 ] 透過基於修補區域的局部控制增強了跨身份重現，而 SkyReels-A1 [ 23 ] 展示了擴散 Transformer（DiTs）在高分辨率肖像合成中的可擴展性。
+X-Nemo [ 35 ] 進一步引入了一維潛在描述符來表示與外觀無關的臉部動態。
+與這些方法不同，我們精心設計了一個自適應表示法來對豐富且非結構化的臉部動態進行建模。
+這個建模被進一步優化以有效過濾出不必要的身份線索，同時加強對關鍵運動模式的捕捉，最終實現優越的身份解纏和微表情保真度。</p>
+<p>整體全身動畫。最近的先驅性工作，包括 Wan-Animate [ 5 ]、X-UniMotion [ 27 ] 和 DreamActor-M1 [ 20 ]，已啟動了整體全身動畫的探索。
+然而，這些方法仍然難以有效協調不同粒度的運動，並在統一框架內實現魯棒的身份-運動解纏和重新指定。
+因此，它們經常遭受視覺成件和嚴重的身份漂移，特別是在面對具有挑戰性的關節或進行跨身份運動轉移時。
+解決這些關鍵限制構成了本工作的主要焦點。</p>
+<h2 id="4-conclusion">4 Conclusion</h2>
+<p>In this paper, we present Kling-MotionControl , a unified DiT-based framework that achieves robust, precise, and expressive holistic character animation.
+By orchestrating heterogeneous motion representations tailored to the distinct characteristics of body, facial, and hand dynamics, our approach successfully achieves both large-scale structural stability and fine-grained articulatory expressiveness within a single cohesive system.
+Furthermore, we address the challenge of cross-identity transfer through adaptive motion learning, enabling natural adaptation to diverse characters.
+Through meticulously designed identity representation encoding and fusion, Kling-MotionControl effectively maintains subject identity consistency during motion transfer, and an innovative subject library allows users to provide additional reference identity information to further enhance appearance fidelity.
+Additionally, our advanced acceleration strategies boost inference efficiency by over 10 × \times , which, coupled with intelligent prompt enhancement, significantly elevates practical utility and multi-conditional controllability. Qualitative results and numerical human preference evaluations demonstrate that Kling-MotionControl outperforms state-of-the-art commercial and open-source solutions, delivering efficient and high-fidelity animation results characterized by precise holistic control, exceptional robustness against rapid dynamics, and faithful appearance preservation.</p>
+<h2 id="impact-statement">Impact Statement</h2>
+<p>The rapid evolution of character animation presented in this work offers significant potential for transforming digital entertainment, virtual reality, and creative content production. However, the capability to synthesize highly realistic human videos also brings forth critical ethical considerations. The precise control over body dynamics and facial reenactment, combined with faithful identity preservation, raises concerns regarding the potential for privacy violations, the unauthorized appropriation of likeness, and the risk of creating deceptive “deepfake” media.</p>
+<p>As with advanced generative technologies, there is a possibility that these methods could be misused to animate individuals without their consent, synthesizing actions or statements they never performed. Addressing these risks requires not only technical safeguards but also the collective development of ethical guidelines and legal frameworks. In this work, we are steadfastly committed to responsible research practices. We advocate for the implementation of safety mechanisms, such as content filtering and watermarking, to prevent misuse. All data processing and model development described herein adhere to strict ethical standards, intended to advance the fields of computer vision and graphics. We believe that by upholding these principles, we can harness the creative power of motion control technology while safeguarding societal trust and individual rights.</p>
+<h2 id="_1">貢獻者</h2>
+<p>所有貢獻者按姓氏字母順序列出。</p>
+<p>Jialu Chen、Yikang Ding、Zhixue Fang、Kun Gai、Kang He、Xu He、Jingyun Hua、Mingming Lao、Xiaohan Li、Hui Liu、Jiwen Liu、Xiaoqiang Liu、Fan Shi、Xiaoyu Shi、Peiqin Sun、Songlin Tang、Pengfei Wan、Tiancheng Wen、Zhiyong Wu、Haoxian Zhang * * * 專案主導、Runze Zhao、Yuanxing Zhang、Yan Zhou</p>
+<h2 id="_2">參考文獻</h2>
+<ul>
+<li>[1] Dreamina. https://dreamina.capcut.com/ .</li>
+<li>[2] Runway act-two. https://app.runwayml.com/ .</li>
+<li>Blattmann et al. [2023] Andreas Blattmann, Tim Dockhorn, Sumith Kulal, Daniel Mendelevitch, Maciej Kilian, Dominik Lorenz, Yam Levi, Zion English, Vikram Voleti, Adam Letts, et al. Stable video diffusion: Scaling latent video diffusion models to large datasets. arXiv preprint arXiv:2311.15127 , 2023.</li>
+<li>Chen et al. [2025] Liyang Chen, Tianxiang Ma, Jiawei Liu, Bingchuan Li, Zhuowei Chen, Lijie Liu, Xu He, Gen Li, Qian He, and Zhiyong Wu. Humo: Human-centric video generation via collaborative multi-modal conditioning. arXiv preprint arXiv:2509.08519 , 2025.</li>
+<li>Cheng et al. [2025] Gang Cheng, Xin Gao, Li Hu, Siqi Hu, Mingyang Huang, Chaonan Ji, Ju Li, Dechao Meng, Jinwei Qi, Penchong Qiao, et al. Wan-animate: Unified character animation and replacement with holistic replication. arXiv preprint arXiv:2509.14055 , 2025.</li>
+<li>Dhariwal and Nichol [2021] Prafulla Dhariwal and Alexander Nichol. Diffusion models beat gans on image synthesis. Advances in neural information processing systems , 34:8780–8794, 2021.</li>
+<li>Ding et al. [2025] Yikang Ding, Jiwen Liu, Wenyuan Zhang, Zekun Wang, Wentao Hu, Liyuan Cui, Mingming Lao, Yingchao Shao, Hui Liu, Xiaohan Li, et al. Kling-avatar: Grounding multimodal instructions for cascaded long-duration avatar animation synthesis. arXiv preprint arXiv:2509.09595 , 2025.</li>
+<li>Güler et al. [2018] Rıza Alp Güler, Natalia Neverova, and Iasonas Kokkinos. Densepose: Dense human pose estimation in the wild. In Proceedings of the IEEE conference on computer vision and pattern recognition , pages 7297–7306, 2018.</li>
+<li>Guo et al. [2024] Jianzhu Guo, Dingyun Zhang, Xiaoqiang Liu, Zhizhou Zhong, Yuan Zhang, Pengfei Wan, and Di Zhang. Liveportrait: Efficient portrait animation with stitching and retargeting control. arXiv preprint arXiv:2407.03168 , 2024.</li>
+<li>Guo et al. [2023] Yuwei Guo, Ceyuan Yang, Anyi Rao, Zhengyang Liang, Yaohui Wang, Yu Qiao, Maneesh Agrawala, Dahua Lin, and Bo Dai. Animatediff: Animate your personalized text-to-image diffusion models without specific tuning. arXiv preprint arXiv:2307.04725 , 2023.</li>
+<li>He et al. [2024] Xu He, Qiaochu Huang, Zhensong Zhang, Zhiwei Lin, Zhiyong Wu, Sicheng Yang, Minglei Li, Zhiyi Chen, Songcen Xu, and Xiaofei Wu. Co-speech gesture video generation via motion-decoupled diffusion model. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 2263–2273, 2024.</li>
+<li>He et al. [2025] Xu He, Zhiyong Wu, Xiaoyu Li, Di Kang, Chaopeng Zhang, Jiangnan Ye, Liyang Chen, Xiangjun Gao, Han Zhang, and Haolin Zhuang. Magicman: Generative novel view synthesis of humans with 3d-aware diffusion and iterative refinement. In Proceedings of the AAAI Conference on Artificial Intelligence , volume 39, pages 3437–3445, 2025.</li>
+<li>Ho et al. [2020] Jonathan Ho, Ajay Jain, and Pieter Abbeel. Denoising diffusion probabilistic models. Advances in neural information processing systems , 33:6840–6851, 2020.</li>
+<li>Hu [2024] Li Hu. Animate anyone: Consistent and controllable image-to-video synthesis for character animation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 8153–8163, 2024.</li>
+<li>Hu et al. [2025] Li Hu, Guangyuan Wang, Zhen Shen, Xin Gao, Dechao Meng, Lian Zhuo, Peng Zhang, Bang Zhang, and Liefeng Bo. Animate anyone 2: High-fidelity character image animation with environment affordance. arXiv preprint arXiv:2502.06145 , 2025.</li>
+<li>Kong et al. [2024] Weijie Kong, Qi Tian, Zijian Zhang, Rox Min, Zuozhuo Dai, Jin Zhou, Jiangfeng Xiong, Xin Li, Bo Wu, Jianwei Zhang, et al. Hunyuanvideo: A systematic framework for large video generative models. arXiv preprint arXiv:2412.03603 , 2024.</li>
+<li>Kuaishou [2024] Kuaishou. Kling AI. https://klingai.com/ , 2024.</li>
+<li>Li et al. [2024] Xuanyi Li, Daquan Zhou, Chenxu Zhang, Shaodong Wei, Qibin Hou, and Ming-Ming Cheng. Sora generates videos with stunning geometrical consistency. arXiv preprint arXiv:2402.17403 , 2024.</li>
+<li>Loper et al. [2015] Matthew Loper, Naureen Mahmood, Javier Romero, Gerard Pons-Moll, and Michael J. Black. SMPL: A skinned multi-person linear model. ACM Trans. Graphics (Proc. SIGGRAPH Asia) , 34(6):248:1–248:16, October 2015.</li>
+<li>Luo et al. [2025] Yuxuan Luo, Zhengkun Rong, Lizhen Wang, Longhao Zhang, and Tianshu Hu. Dreamactor-m1: Holistic, expressive and robust human image animation with hybrid guidance. In Proceedings of the IEEE/CVF International Conference on Computer Vision , pages 11036–11046, 2025.</li>
+<li>Men et al. [2025] Yifang Men, Yuan Yao, Miaomiao Cui, and Liefeng Bo. Mimo: Controllable character video synthesis with spatial decomposed modeling. In Proceedings of the Computer Vision and Pattern Recognition Conference , pages 21181–21191, 2025.</li>
+<li>Peebles and Xie [2023] William Peebles and Saining Xie. Scalable diffusion models with transformers. In Proceedings of the IEEE/CVF international conference on computer vision , pages 4195–4205, 2023.</li>
+<li>Qiu et al. [2025] Di Qiu, Zhengcong Fei, Rui Wang, Jialin Bai, Changqian Yu, Mingyuan Fan, Guibin Chen, and Xiang Wen. Skyreels-a1: Expressive portrait animation in video diffusion transformers. arXiv preprint arXiv:2502.10841 , 2025.</li>
+<li>Rombach et al. [2022] Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Björn Ommer. High-resolution image synthesis with latent diffusion models. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 10684–10695, 2022.</li>
+<li>Siarohin et al. [2019] Aliaksandr Siarohin, Stéphane Lathuilière, Sergey Tulyakov, Elisa Ricci, and Nicu Sebe. First order motion model for image animation. Advances in neural information processing systems , 32, 2019.</li>
+<li>Siarohin et al. [2021] Aliaksandr Siarohin, Oliver J Woodford, Jian Ren, Menglei Chai, and Sergey Tulyakov. Motion representations for articulated animation. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pages 13653–13662, 2021.</li>
+<li>Song et al. [2025] Guoxian Song, Hongyi Xu, Xiaochen Zhao, You Xie, Tianpei Gu, Zenan Li, Chenxu Zhang, and Linjie Luo. X-unimotion: Animating human images with expressive, unified and identity-agnostic motion latents. arXiv preprint arXiv:2508.09383 , 2025.</li>
+<li>Tan et al. [2024] Shuai Tan, Biao Gong, Xiang Wang, Shiwei Zhang, Dandan Zheng, Ruobing Zheng, Kecheng Zheng, Jingdong Chen, and Ming Yang. Animate-x: Universal character image animation with enhanced motion representation. arXiv preprint arXiv:2410.10306 , 2024.</li>
+<li>Team et al. [2025] Kling Team, Jialu Chen, Yikang Ding, Zhixue Fang, Kun Gai, Yuan Gao, Kang He, Jingyun Hua, Boyuan Jiang, Mingming Lao, et al. Klingavatar 2.0 technical report. arXiv preprint arXiv:2512.13313 , 2025.</li>
+<li>Wan et al. [2025] Team Wan, Ang Wang, Baole Ai, Bin Wen, Chaojie Mao, Chen-Wei Xie, Di Chen, Feiwu Yu, Haiming Zhao, Jianxiao Yang, et al. Wan: Open and advanced large-scale video generative models. arXiv preprint arXiv:2503.20314 , 2025.</li>
+<li>Wang et al. [2025] Xiang Wang, Shiwei Zhang, Longxiang Tang, Yingya Zhang, Changxin Gao, Yuehuan Wang, and Nong Sang. Unianimate-dit: Human image animation with large-scale video diffusion transformer. arXiv preprint arXiv:2504.11289 , 2025.</li>
+<li>Xie et al. [2024] You Xie, Hongyi Xu, Guoxian Song, Chao Wang, Yichun Shi, and Linjie Luo. X-portrait: Expressive portrait animation with hierarchical motion attention. In ACM SIGGRAPH 2024 Conference Papers , pages 1–11, 2024.</li>
+<li>Xu et al. [2024] Zhongcong Xu, Jianfeng Zhang, Jun Hao Liew, Hanshu Yan, Jia-Wei Liu, Chenxu Zhang, Jiashi Feng, and Mike Zheng Shou. Magicanimate: Temporally consistent human image animation using diffusion model. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pages 1481–1490, 2024.</li>
+<li>Zhang et al. [2024] Yuang Zhang, Jiaxi Gu, Li-Wen Wang, Han Wang, Junqi Cheng, Yuefeng Zhu, and Fangyuan Zou. Mimicmotion: High-quality human motion video generation with confidence-aware pose guidance. arXiv preprint arXiv:2406.19680 , 2024.</li>
+<li>Zhao et al. [2025] Xiaochen Zhao, Hongyi Xu, Guoxian Song, You Xie, Chenxu Zhang, Xiu Li, Linjie Luo, Jinli Suo, and Yebin Liu. X-nemo: Expressive neural motion reenactment via disentangled latent attention. arXiv preprint arXiv:2507.23143 , 2025.</li>
+<li>Zhu et al. [2024] Shenhao Zhu, Junming Leo Chen, Zuozhuo Dai, Zilong Dong, Yinghui Xu, Xun Cao, Yao Yao, Hao Zhu, and Siyu Zhu. Champ: Controllable and consistent human image animation with 3d parametric guidance. In European Conference on Computer Vision , pages 145–162. Springer, 2024.</li>
+</ul>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

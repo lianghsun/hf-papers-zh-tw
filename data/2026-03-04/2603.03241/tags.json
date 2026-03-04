@@ -1,0 +1,20 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Vision-Language Models",
+    "Generative Models"
+  ],
+  "task": [
+    "Visual Question Answering",
+    "Image Understanding",
+    "Spatial Reasoning",
+    "Multi-round Reasoning"
+  ],
+  "dataset": [
+    "UniG2U-Bench"
+  ],
+  "open_source": false
+}

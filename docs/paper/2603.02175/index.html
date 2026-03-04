@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiwi-Edit：通過指令和參考引導的多功能視頻編輯 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">Kiwi-Edit：通過指令和參考引導的多功能視頻編輯</h1>
+  
+  <div class="en-title">Kiwi-Edit: Versatile Video Editing via Instruction and Reference Guidance</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Yiqi Lin, Guoqiang Liang, Ziyun Zeng, Zechen Bai, Yanzhe Chen, Mike Zheng Shou</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.02175" target="_blank">2603.02175</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.02175" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.02175" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.02175" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Diffusion</span><span class="tag method">Transformer</span><span class="tag method">Query-based Architecture</span>
+    <span class="tag task">Video Editing</span><span class="tag task">Instruction Following</span><span class="tag task">Reference-guided Generation</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+基於指令的影片編輯已取得快速進展，然而目前的方法在精確視覺控制方面往往遇到困難，因為自然語言在描述複雜視覺細微差異時存在固有限制。儘管參考引導編輯提供了穩健的解決方案，但其潛力目前受到高品質配對訓練資料稀缺的瓶頸限制。為了彌補這一差距，我們引入了一個可擴展的資料生成管線，將現有的影片編輯配對轉換為高保真訓練四元組，利用影像生成模型來建立合成參考鷹架。使用此管線，我們構建了 RefVIE 這一大規模資料集，專為指令-參考追隨任務量身定製，並建立了 RefVIE-Bench 用於全面評估。此外，我們提出了一個統一的編輯架構 Kiwi-Edit，它將可學習的查詢和潛在視覺特徵結合用於參考語義引導。我們的模型通過漸進式多階段訓練課程在指令追隨和參考保真度方面取得顯著提升。廣泛的實驗表明，我們的資料和架構在可控影片編輯方面建立了新的最先進水準。所有資料集、模型和程式碼已發佈於 https://github.com/showlab/Kiwi-Edit。</p>
+  
+  <div class="abstract-en">Instruction-based video editing has witnessed rapid progress, yet current methods often struggle with precise visual control, as natural language is inherently limited in describing complex visual nuances. Although reference-guided editing offers a robust solution, its potential is currently bottlenecked by the scarcity of high-quality paired training data. To bridge this gap, we introduce a scalable data generation pipeline that transforms existing video editing pairs into high-fidelity training quadruplets, leveraging image generative models to create synthesized reference scaffolds. Using this pipeline, we construct RefVIE, a large-scale dataset tailored for instruction-reference-following tasks, and establish RefVIE-Bench for comprehensive evaluation. Furthermore, we propose a unified editing architecture, Kiwi-Edit, that synergizes learnable queries and latent visual features for reference semantic guidance. Our model achieves significant gains in instruction following and reference fidelity via a progressive multi-stage training curriculum. Extensive experiments demonstrate that our data and architecture establish a new state-of-the-art in controllable video editing. All datasets, models, and code is released at https://github.com/showlab/Kiwi-Edit.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="kiwi-edit">Kiwi-Edit：基於指令和參考引導的多功能視頻編輯</h1>
+<p>基於指令的視頻編輯已取得快速進展，但當前方法在精確視覺控制方面往往面臨困難，因為自然語言本質上在描述複雜視覺細節時存在局限性。儘管參考引導編輯提供了一個強大的解決方案，但其潛力目前受到高品質配對訓練資料稀缺的瓶頸限制。為了彌合這一差距，我們引入了一個可擴展的資料生成管道，該管道將現有視頻編輯對轉變為高保真訓練四元組，利用影像生成模型來創建合成參考支架。使用這個管道，我們構建了 RefVIE，一個為指令-參考跟隨任務量身打造的大規模資料集，並建立了 RefVIE-Bench 用於全面評估。此外，我們提出了一個統一的編輯架構 Kiwi-Edit，它將可學習的查詢和潛在視覺特徵同步化用於參考語義引導。我們的模型通過漸進式多階段訓練課程在指令跟隨和參考保真度方面實現了顯著的改進。廣泛的實驗證明，我們的資料和架構在可控視頻編輯中建立了新的最先進水準。所有資料集、模型和程式碼已發佈於 https://github.com/showlab/Kiwi-Edit 。</p>
+<p>Show Lab，新加坡國立大學</p>
+<p>https://showlab.github.io/Kiwi-Edit</p>
+<p>圖 1：本預覽圖展示了視頻編輯任務的選擇，包括僅指令和指令-參考場景，突出了 RefVIE 的卓越編輯能力。</p>
+<h2 id="1">1 介紹</h2>
+<p>社群媒體、娛樂和廣告中的視頻內容自訂化推動了對無障礙視頻編輯工具的前所未有的需求。
+基於指令的視頻編輯的最近進展（Cheng et al. , 2023 ; Bai et al. , 2025a ; Zi et al. , 2025 ; Wu et al. , 2025b ; He et al. , 2025）展示了顯著的進展，使用戶能夠通過自然語言命令修改視頻內容。
+這些方法利用強大的視頻擴散模型（Wan et al. , 2025 ; Kong et al. , 2024）來執行多種編輯操作，範圍從局部物體修改到全域風格轉移，同時保留內容和跨幀的時間連貫性。</p>
+<p>儘管取得了這些進展，但仍然存在一個關鍵限制：對純文本指令的依賴。
+在描述精確的視覺細節（如特定紋理、確切的物體身份或細微的風格特徵）時，自然語言本質上是模糊的。
+使用者經常希望通過視覺示例來表達編輯意圖，例如「將汽車替換為這款跑車」或「應用這幅畫的風格」，但純文本模型從根本上難以完成此類任務。
+參考引導的視頻編輯以文本指令和視覺參考為條件進行生成，為這一挑戰提供了自然的解決方案。</p>
+<p>然而，參考引導視頻編輯的開發受到數據稀缺的嚴重限制。
+訓練此類模型需要由源視頻、編輯指令、參考影像和目標視頻組成的高品質四元組，而現有資料集在規模上並未提供此格式。
+如表 1 所總結，雖然存在多個大規模基於指令的視頻編輯資料集（Wu et al. , 2025b ; Zi et al. , 2025 ; Bai et al. , 2025a ; Zhang et al. , 2025 ; He et al. , 2025），但沒有一個提供參考影像。
+少數探索參考引導編輯的工作（Mou et al. , 2025 ; Team et al. , 2025）依賴於對更廣泛研究社群不可訪問的專有數據。
+這個瓶頸從根本上阻礙了該領域的發展。</p>
+<p>為解決這一挑戰，我們整理了 RefVIE，一個用於指令-參考引導視頻編輯的大規模資料集。
+我們的關鍵洞見是強大的預訓練影像生成模型可以充當高保真參考合成器，使無需昂貴手動標註的可擴展數據構建成為可能。
+從提供源-目標視頻對的現有基於指令的視頻編輯資料集（Bai et al. , 2025a ; Zhang et al. , 2025 ; He et al. , 2025）開始，我們設計了一個自動化管道來合成缺失的參考影像。
+具體來說，我們利用視覺語言模型在視頻幀中對編輯區域進行定位，隨後使用最先進的影像編輯器生成捕捉預期編輯視覺本質的參考影像。
+通過嚴格的品質篩選和去重，我們從初始池中的 370 萬個樣本構建了 477K 個高品質四元組的資料集。據我們所知，RefVIE 是用於指令-參考引導視頻編輯的第一個大規模開放來源資源。</p>
+<p>基於此數據基礎，我們開發了 Kiwi-Edit，一個有效整合多模態條件的統一視頻編輯框架。
+我們的架構將凍結的多模態大型語言模型（MLLM）與擴散 Transformer（DiT）耦合，其中 MLLM 處理源視頻幀、文本指令和參考影像的交錯序列。
+我們採用了雙連接機制：查詢連接器（Query Connector）將可學習的查詢標記投影以提取編輯意圖，以及潛在連接器（Latent Connector）從參考影像中提取視覺特徵。
+這些連接器產生統一的上下文標記，通過交叉注意力引導 DiT。
+為了保留源視頻結構同時實現靈活的參考引導編輯，我們引入了混合潛在注入策略：源視頻特徵以可學習的時間步長相關標量進行元素級加法以保持結構，而參考影像特徵被連接到輸入序列以進行細粒度紋理轉移。
+三階段課程訓練策略確保穩定的收斂：MLLM-DiT 對齐、指令調整和參考引導微調。
+此外，為了實現嚴格的評估，我們建立了 RefVIE-Bench，一個包含 100 個手動驗證樣本的基準，用於評估參考遵循、指令合規性和時間一致性。</p>
+<p>總結來說，我們的貢獻有三方面：
+首先，我們整理了 RefVIE，一個包含 477K 個高品質四元組的大規模資料集，用於指令-參考引導視頻編輯，涵蓋局部編輯和背景替換。
+其次，我們引入了 RefVIE-Bench，一個全面的基準，專門用於評估參考相似性、指令準確性和時間一致性。
+最後，我們提出了一個統一的視頻編輯模型，通過新穎的 MLLM-DiT 架構設計和多階段訓練課程在純指令和參考引導任務上都達到最先進的性能。</p>
+<p>表 1：現有大規模指令和參考引導視頻編輯資料集的總結。</p>
+<h2 id="2">2 相關工作</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x2.png" loading="lazy"></figure> 圖 2：參考影像合成管道的工作流程。我們首先使用專門的接地和分割模型在目標視頻幀中定位編輯區域。隨後，我們利用專門的影像編輯模型合成高品質參考影像，以維持與指令的身份一致性。</p>
+<h3 id="21">2.1 基於指令的視頻編輯</h3>
+<p>鑑於從頭開始訓練穩健的文本轉視頻模型的挑戰，早期的普遍方法（Wu et al., 2023；Cong et al., 2023；Geyer et al., 2023；Kara et al., 2024；Ku et al., 2024；Qi et al., 2023）利用預訓練文本轉影像（T2I）模型的豐富生成先驗。這些方法通常採用微調或反演技術（Song et al., 2020）來實現指令引導的編輯。</p>
+<p>然而，基於 T2I 的方法經常遭受時間一致性限制和反演偽影的困擾，特別是在複雜運動或遮擋的情況下。因此，隨著開源視頻擴散模型（Hong et al., 2022；Kong et al., 2024；Wan et al., 2025）的出現，最近的研究已轉向利用這些原生視頻骨幹以確保更好的運動保真度。</p>
+<p>為了支持基於指令的訓練，InsV2V（Cheng et al., 2023）利用 InstructPix2Pix（Brooks et al., 2023）合成配對訓練資料，開創了該領域。針對資料稀缺的根本性挑戰，後續努力（Bai et al., 2025a；Zi et al., 2025；Wu et al., 2025b）專注於構建大規模合成資料集。例如，Senorita-2M（Zi et al., 2025）通過專家混合管道收集編輯對，而 Ditto（Bai et al., 2025a）利用編輯的關鍵幀和深度圖來生成編輯視頻。</p>
+<p>最近，為了增強指令遵循和語義理解，Omni-Video（Tan et al., 2025）和 OpenVE-Edit（He et al., 2025）將視覺語言模型（VLMs）整合到編輯框架中。</p>
+<h3 id="22">2.2 參考導向視頻編輯與資料集</h3>
+<p>僅依賴自然語言提示通常無法捕捉視覺想像的細微差別。文本在描述精確的空間關係、特定的視覺參考和時間動態方面存在固有限制，這在用戶意圖和模型輸出之間造成了差距。
+為了解決這個問題，近期研究（Mou et al. , 2025；Wei et al. , 2025；Team et al. , 2025）引入了參考圖像與文本指令相結合的方法，以實現更精確的視頻編輯。具體來說，InstructX（Mou et al. , 2025）和 Kling-Omni（Team et al. , 2025）等方法將多模態輸入饋送到 MLLM 中，以提取用於生成模組的統一表示。
+然而，儘管這些方法性能令人印象深刻，但它們在很大程度上依賴於專有的內部模型進行數據生成，並且需要大量手動驗證來策劃高品質的參考數據。
+表 1 中呈現了代表性視頻編輯資料集的摘要。
+在本研究中，我們的目標是透過引入 RefVIE 來民主化這種能力，RefVIE 是第一個針對指令-參考引導視頻編輯量身定制的大規模開源資料集。透過提供經過嚴格篩選和策劃的資料集，我們為研究社群提供了一項關鍵資源，使得能夠開發全面的編輯模型，有效地超越純文本控制的限制。</p>
+<h2 id="3-refvie">3 RefVIE 資料集與基準</h2>
+<h3 id="31">3.1 可擴展資料生成管線</h3>
+<p>推進參考導向影片編輯的主要瓶頸是高品質訓練四元組的稀缺性：$(V_{src},T_{inst},I_{ref},V_{tgt})$。手動策劃此類四元組資料成本高昂。為了解決這個問題，我們提出了一個可擴展的自動化管線，從現有的指令型影片編輯對中合成參考影像，有效地將標準三元組 $(V_{src},T_{inst},V_{tgt})$ 擴充為所需的四元組。如圖 3 所示，我們的管線通過四個不同階段處理來自公開可用資料集的大規模 370 萬原始樣本池。</p>
+<p><strong>階段 1. 來源彙總與篩選。</strong> 我們通過彙總三個開源指令型影片編輯資料集來初始化資料池：Ditto-1M（Bai et al.，2025a）、ReCo（Zhang et al.，2025）和 OpenVE-3M（He et al.，2025）。為確保訓練品質，我們使用 EditScore（Luo et al.，2025）來篩選這些樣本。基於人類驗證的試點研究，我們丟棄文字導向指令微調時 EditScore 低於 6 的樣本。對於參考導向生成，我們應用更嚴格的閾值（EditScore &gt; 8）並明確選擇歸類為「局部修改」或「背景替換」的任務，因為這些任務最能受益於視覺參考。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x3.png" loading="lazy"></figure> 圖 3：RefVIE 策劃管線。我們通過四個階段處理 370 萬原始樣本：來源彙總與篩選、接地與分割、參考影像合成和品質控制，產生 47.7 萬個高品質四元組。</p>
+<p><strong>階段 2. 接地與分割。</strong> 精確的空間定位對於生成一致的參考至關重要。我們採用 Qwen3-VL-32B（Bai et al.，2025b）來解釋編輯指令，並在目標影片的第一幀中接地感興趣的區域，因為目標影片包含了我們從中提取參考的所需編輯結果。
+對於「背景變更」，模型接地前景物體，以便在下一階段移除它，只留下新背景作為參考。
+對於「局部編輯」，模型接地已編輯的物體，以便將其提取為參考。
+這些粗糙的邊界框座標隨後由 SAM3（Carion et al.，2025）細化，以產生像素級精確的分割遮罩。未通過接地或分割檢查的配對被丟棄。</p>
+<p><strong>階段 3. 參考影像合成。</strong> 利用分割區域，我們使用 Qwen-Image-Edit-2511（Wu et al.，2025a）合成參考影像，如圖 2 所示。
+對於背景任務，我們提取並移除前景物體，然後內補該區域以產生作為參考的乾淨背景影像。
+對於局部編輯，我們提取目標物體並將其放在乾淨背景上，周圍空間最少，創建突出編輯物體外觀的緊密裁剪參考。
+為確保資料穩健性，我們還篩選出具有極端寬高比或解析度的生成影像。</p>
+<p><strong>階段 4. 品質控制與後處理。</strong> 在最後階段，我們使用 MLLM 執行語義對齐，驗證合成的參考影像與目標影片中的編輯內容一致，篩選出低保真度的生成結果。此外，為防止資料洩露和冗餘，我們從參考影像中提取 CLIP（Radford et al.，2021）特徵，並執行全局去重。
+這個嚴格的管線將初始的 370 萬個樣本池精煉為包含 47.7 萬個高品質指令參考影片四元組的高品質子集。跨篩選階段的詳細細分如圖 3 所示。</p>
+<h3 id="32">3.2 資料集統計</h3>
+<p>我們生成的資料集 RefVIE 是最大的開源參考引導視頻編輯集合，縮小了學術資源與商業功能之間的差距。圖 4 總結了資料集統計資訊。</p>
+<p>如圖 4 (a) 所示，任務分佈在局部物體添加、替換和背景變化之間保持良好平衡，確保訓練的模型能夠跨越不同編輯場景進行泛化，而不是過度擬合於單一任務類型。圖 4 (b) 說明了視頻時長分佈。大多數片段包含 80 至 110 幀，為模型學習長距離運動一致性和處理複雜物體運動提供了充分的時間背景。圖 4 (c) 展示了參考圖像示例，展示了視覺內容的多樣性，包括物體、紋理和背景。</p>
+<p>更多視覺化案例在補充資料中提供。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x4.png" loading="lazy"></figure> 圖 4：RefVIE 統計資訊和樣本視覺化。(a) 編輯任務類型的分佈。(b) 視頻時長的分佈。(c) 不同編輯類別的參考圖像示例。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x5.png" loading="lazy"></figure> 圖 5：我們統一編輯框架的概覽。我們整合一個凍結的 MLLM（Qwen2.5-VL-3B）來編碼多模態指令，透過查詢和參考潛在特徵的雙個可學習投影器將語義條件注入預先訓練的 Diffusion Transformer（Wan2.2-TI2V-5B）。為了保持源視頻的一致性，我們在 DiT 內採用混合注入策略：源視頻特徵以元素方式相加，而參考圖像特徵被連接到輸入序列。</p>
+<h3 id="33-benchmark-and-evaluation">3.3 Benchmark and Evaluation</h3>
+<p>RefVIE-Bench. Existing benchmarks predominantly focus on text-video alignment, neglecting the critical dimension of visual reference adherence. To rigorously evaluate this capability, we establish RefVIE-Bench, comprising 110 manually verified triplets ( V s ​ r ​ c , I r ​ e ​ f , T i ​ n ​ s ) (V_{src},I_{ref},T_{ins}) .
+Unlike our scalable synthetic training data, these benchmark samples undergo a rigorous three-stage manual verification process to ensure high quality and diversity.
+The benchmark evaluates two specific capabilities: Subject Reference (70 samples) and Background Replacement (40 samples). The larger allocation to object modification reflects its broader scope, encompassing diverse object categories such as vehicles, animals, clothing, and furniture, each with distinct visual attributes. In contrast, Background replacement represents a more unified task category focused on environment changes while preserving foreground dynamics.</p>
+<p>Evaluation Metrics. Traditional metrics like CLIP score only capture high-level semantic similarity, while FID measures distribution-level statistics rather than per-sample quality. Neither can assess whether specific textures are preserved or whether editing instructions are correctly followed. To address this, we employ a state-of-the-art MLLM (Gemini3 (Comanici et al. , 2025 ) ) as an automated judge, which evaluates each result on a scale of 1 to 5 across three dimensions.
+For subject reference, we evaluate Identity Consistency , Temporal Fidelity , and Physical Integration (e.g., tracking, shadows), while for background replacement, we assess Reference Fidelity , Matting Quality , and Visual Harmony (e.g., perspective, lighting). To ensure logical robustness, we enforce a hierarchical constraint where temporal and physical scores are capped by the primary identity score, preventing the model from assigning high ratings to edits that are temporally stable but semantically incorrect.</p>
+<h2 id="4-methodology">4 Methodology</h2>
+<h3 id="41">4.1 架構設計</h3>
+<p>如圖 5 所示，我們的框架包含兩個主要元件：用於語義理解的 Multimodal Large Language Model (MLLM) 和用於影片生成的 Diffusion Transformer (DiT)。MLLM 將多模態輸入（源影片、指令和可選的參考影像）編碼為條件信號，這些信號指導 DiT 生成編輯後的影片。</p>
+<p><strong>透過 MLLM 進行語義條件化。</strong> 我們採用 Qwen2.5-VL-3B (Bai et al., 2025c) 作為 MLLM 主幹網路。基礎模型權重被凍結，我們注入輕量級 Low-Rank Adaptation (Hu et al., 2022) (LoRA) 模組，使其適應影片編輯領域，同時不影響預訓練知識。</p>
+<p>MLLM 處理包含源影片幀、文字編輯指令和可選參考影像的交錯序列。從其輸出中，我們透過兩個專門的路徑提取條件特徵：</p>
+<p><strong>指令查詢 (Instructional Queries)：</strong> 我們使用一組可學習的查詢令牌（圖像任務為 256，影片編輯為 512，參考任務為 768）來萃取編輯意圖（例如「將天空變成紅色」）。這些通過查詢連接器 (Query Connector) (MLP) 投影，以與 DiT 的維度對齊。</p>
+<p><strong>參考潛在表示 (Reference Latents)：</strong> 對於需要特定視覺指導的任務，我們提取對應於參考影像的視覺令牌。這些通過單獨的潛在連接器 (Latent Connector) 投影。</p>
+<p>這些連接器的輸出被連接以形成統一的上下文令牌 (Context Tokens) 序列，它們作為 DiT 的交叉注意力層的鍵/值對，指導生成的語義內容。</p>
+<p>表 2：在 Gemini-2.5-Pro 上評估的 OpenVE-Bench 結果。</p>
+<p><strong>透過潛在注入進行結構條件化。</strong> 雖然 MLLM 上下文提供了語義指導，但保留源影片精確的結構佈局需要更直接的信號。我們發現標準交叉注意力對於細粒度的空間保留是不足夠的。因此，我們引入了一種混合注入策略。</p>
+<p><strong>源影片控制（逐元素注入）：</strong> 為了保留時空結構，我們使用 VAE 將源幀編碼到潛在空間。這些潛在表示由零初始化的 PatchEmbed 層處理。如圖 5 所示，我們不是連接這些特徵（我們發現這會導致訓練不穩定），而是將它們逐元素加到雜訊潛在 $\mathbf{z}_{t}$ 上。關鍵的是，此加法由一個可學習的、依賴時步的標量 $\gamma(t)$ 調制：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathbf{z}^{\prime}<em>{t}=\texttt{PatchEmbed}(\mathbf{z}</em>{t})+\gamma(t)\cdot\texttt{PatchEmbed}<em>{src}(\text{VAE}(\mathbf{x}</em>{src}))$</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>我們的消融研究確認了時步縮放是關鍵的；移除它會導致模型忽略源結構的細節，而用通道連接替代加法會降低可編輯性（見表 4）。</p>
+<p><strong>參考影像控制（序列連接）：</strong> 相反地，為了對參考物體強制執行高保真度，我們將參考影像視為視覺上下文的延伸。參考影像 $\mathbf{x}_{ref}$ 被補丁嵌入並連接到 DiT 的輸入序列。這有效地擴展了時空注意力窗口，允許模型直接從參考「複製」紋理細節。</p>
+<p><strong>訓練目標。</strong> 我們採用 Flow Matching (Lipman et al., 2022) 作為訓練目標，以最小化預測速度場 $\mathbf{v}_{\theta}$ 與真實漂移之間的均方誤差：</p>
+<p>|  | $\mathcal{L}<em>{\text{flow}}=\mathbb{E}</em>{t,\mathbf{z}<em>{0},\mathbf{z}</em>{1},\mathbf{c}}\left[||\mathbf{v}<em>{\theta}(\mathbf{z}</em>{t},t,\mathbf{c})-(\mathbf{z}<em>{1}-\mathbf{z}</em>{0})||^{2}\right]$ |  | (2) |
+| --- | --- | --- | --- |</p>
+<p>其中 $\mathbf{z}<em>{1}$ 是目標影片潛在表示，$\mathbf{z}</em>{0}$ 是標準高斯雜訊，$\mathbf{c}$ 代表多模態條件信號。</p>
+<h3 id="42-training-curriculum">4.2 Training Curriculum</h3>
+<p>Training a billion-parameter video generation model with multimodal conditions is computationally intensive and prone to optimization difficulties. To ensure stable convergence and effective alignment, we adopt a multi-stage progressive training curriculum as follows:</p>
+<p>Stage 1. MLLM-DiT Alignment. In the initial phase, we freeze both the MLLM base weights and DiT backbone. We train only the bridge components: the LoRA adapters, the Query/Latent Connectors, and the learnable query tokens. This stage uses text-based editing triplets ( V s ​ r ​ c , T i ​ n ​ s ​ t , V t ​ g ​ t ) (V_{src},T_{inst},V_{tgt}) and focuses on establishing a semantic mapping, ensuring the Connectors can translate MLLM representations into a format interpretable by the DiT’s cross-attention blocks.
+In this stage, the training data consists exclusively of high-quality image editing tasks sourced from GPT-Image-Edit (Wang et al. , 2025 ) and NHR-Edit (Kuprashevich et al. , 2025 ) , which provide a efficient way to align semantic space (Pan et al. , 2025 ) .</p>
+<p>Stage 2. Instructional Tuning. We subsequently unfreeze the DiT layers to enable joint optimization. The model continues training on text-based editing triplets ( V s ​ r ​ c , T i ​ n ​ s ​ t , V t ​ g ​ t ) (V_{src},T_{inst},V_{tgt}) from large-scale instructional image and video editing datasets.
+The training data for this stage combines the image datasets from Stage 1 with our curated instuction video editing subset (filtered with EditScore ≥ \geq 6) as detailed in Section 3.1 .
+This stage is crucial for learning general editing primitives (e.g., object removal, style transfer). To improve efficiency, we employ a resolution curriculum, initializing training with low-resolution clips ( 480 480 p) and progressively scaling to higher resolutions ( 720 720 p).</p>
+<p>Stage 3. Reference-Guided Fine-tuning. In the final stage, we introduce our curated RefVIE dataset to unlock precise visual control.
+We train on a mixture of instruction editing data from Stage 2 and new reference-guided quadruplets ( V s ​ r ​ c , T i ​ n ​ s ​ t , I r ​ e ​ f , V t ​ g ​ t ) (V_{src},T_{inst},I_{ref},V_{tgt}) .
+This stage refines the model’s ability to utilize the reference tokens for fine-grained textural transfer, ensuring the generated content aligns with user-provided visual examples.
+During all training stages, we set the maximum number of frames sampled from video to 81.</p>
+<h2 id="5-experiments">5 Experiments</h2>
+<p>Table 3 : Comparison of subject-reference and background-reference evaluation scores in RefVIE-Bench.</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x6.png" loading="lazy"></figure> Figure 6 : Qualitative results in OpenVE-Bench and VIE-Bench. Please zoom in for more details.</p>
+<h3 id="51">5.1 實作細節</h3>
+<p>對於影像資料，我們使用來自 NHR-Edit（Kuprashevich et al., 2025）和 GPT-Image-Edit（Wang et al., 2025）的三元組（指令、來源影像、編輯影像）資料集。
+我們使用預訓練的 Wan-TI2V-5B 作為 DiT 骨幹網絡，在開源資料集和我們提出的參考資料上微調 12K 步。
+我們將學習率設定為 2 × 10⁻⁵，全域批次大小為 128，採用梯度累積。
+在第 2 階段，我們以 1:1 的比例採樣影像和指令影片資料，首先在 360K 像素上訓練，然後在 960K 像素上訓練 10K 步。
+在第 3 階段，我們以 2:1:1 的比例採樣影像和指令影片資料以及帶有參考影像的影片，訓練 10K 步。
+請參閱補充材料以獲取詳細資訊。</p>
+<h3 id="52">5.2 主要結果</h3>
+<p><strong>指令編輯。</strong> 我們在 OpenVE-Benchmark（He et al., 2025）上將我們的模型與現有的最先進開源模型進行比較，包括 VACE（Jiang et al., 2025）、OmniVideo（Tan et al., 2025）、
+InsViE（Wu et al., 2025b）、ICVE（Liao et al., 2025）、Lucy-Edit（Team, 2025）和 DITTO（Bai et al., 2025a），以及閉源模型 Runway Aleph。
+評估設定遵循論文中報告的原始設定。
+如表 1 所示，我們的方法以 3.02 的總體分數超越所有開源基線，明顯超越先前最佳的 OpenVE-Edit 2.50。值得注意的是，我們的模型在背景變更方面表現優異，達到 3.84 的分數，甚至超過專有的 Runway Aleph 2.62。此外，將推論解析度增加至 1280 × 704（$1280\times 704$）並應用訓練課程策略會在所有指標上產生一致的效能改進。有趣的是，第 3 階段改進了局部編輯，但降低了背景效能。我們將其歸因於資料集對局部變更存在嚴重偏差。</p>
+<p><strong>指令和參考引導編輯。</strong> 我們將我們的方法與領先的商業影片生成模型進行比較，特別是 Runway Aleph 和 Kling-O1（Team et al., 2025）。如表 3 所示，我們在精心策劃的 RefVIE 上訓練的模型達到 3.31 的總體分數，略微超越 Runway Aleph 的 3.29。
+值得注意的是，我們的模型在身份一致性 3.98 和參考相似度 3.72 方面展現了競爭力。雖然專有的 Kling-O1 模型達到更高的絕對分數，這可能歸因於其參數數量明顯更多以及閉源訓練語料庫，但我們為開源參考引導影片編輯建立了最先進的基線。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x7.png" loading="lazy"></figure> 圖 7：我們提出的 RefVIE-Bench 中的定性結果。請放大以查看更多詳細資訊。</p>
+<h3 id="53">5.3 定性結果</h3>
+<p>圖 6 和圖 7 呈現了多種編輯任務的視覺比較。我們的模型展現了優越的指令追蹤和參考保留能力。指令追蹤：我們的模型準確捕捉來自源和參考的視覺語義。例如，它正確地定位了帽子（圖 6，第 3 列）和表格（圖 7，第 2 列）。參考一致性：如圖 7（第 3 列）的紅色邊界框所示，我們的方法即使在劇烈背景風格變化期間也能維持高主體一致性。更多定性結果已提供在附錄和補充材料中。</p>
+<h3 id="54">5.4 消融研究</h3>
+<p>條件設計。我們對源視頻輸入條件的模型結構進行消融研究，比較通道串聯與特徵相加策略。如表 4 所示，通道串聯效果不佳，而共享 patch embeddings 明顯降低結果至 1.01，確認了獨立特徵提取的必要性。「Add w/ timestep scaling」配置證明最為有效，在包括移除（2.63）和添加（2.01）的指令任務中優於基準。</p>
+<p>表 4：條件設計和使用影像資料的消融。</p>
+<p>表 5：架構選擇的消融。</p>
+<p>訓練課程。我們進行消融研究以驗證我們漸進式訓練階段的必要性，結果總結於表 4。
+首先，跳過 Alignment 階段導致災難性的效能下降，確認在 MLLM 和 DiT 之間建立粗略語義映射是有效指令追蹤的先決條件。
+其次，排除影像協同訓練在結構任務上性能下降（移除分數 2.84 $\to$ 2.58）。這表明雖然純視頻訓練可以達到高風格分數 4.07，但它缺乏影像編輯資料集提供的細粒度空間監督，這對複雜的局部操作至關重要。</p>
+<p>參考條件設計。為了驗證我們雙連接器設計的有效性，我們分析了 MLLM 中不同條件注入路徑的影響。
+如表 5 所示，僅依賴可學習指令查詢產生基準分數 3.20。雖然查詢能有效捕捉高層編輯意圖，但它們往往難以保留細粒度的視覺細節。
+通過 Latent Connector 引入參考 Latent 特徵，我們將來自參考影像的密集語義先驗明確注入至上下文。這個添加將分數改進至 3.30，展示結合稀疏指令查詢與密集視覺 latents 對於實現高保真參考遵循至關重要。</p>
+<h2 id="6">6 結論</h2>
+<p>本研究解決了參考引導影片編輯中高品質資料稀缺的關鍵問題。我們引入了一個可擴展的管線來合成 RefVIE，將現有的影片對轉換為豐富的指令-參考四元組，並建立 RefVIE-Bench 來標準化此領域的評估。利用此資料，我們統一的編輯模型 Kiwi-Edit 達到了最先進的性能，有效地縮小了使用者意圖與影片生成之間的差距。我們相信這種以資料為中心的方法為更可控且易於使用的影片內容創作奠定了堅實的基礎。</p>
+<h2 id="_1">參考文獻</h2>
+<ul>
+<li>Q. Bai, Q. Wang, H. Ouyang, Y. Yu, H. Wang, W. Wang, K. L. Cheng, S. Ma, Y. Zeng, Z. Liu, et al. (2025a) Scaling instruction-based video editing with a high-quality synthetic dataset . arXiv preprint arXiv:2510.15742 . Cited by: Table 1 , §1 , §1 , §1 , §2.1 , §3.1 , Table 2 , §5.2 .</li>
+<li>S. Bai, Y. Cai, R. Chen, K. Chen, X. Chen, Z. Cheng, L. Deng, W. Ding, R. Fang, C. Gao, et al. (2025b) Qwen3-vl technical report . ArXiv abs/2511.21631 . External Links: Link Cited by: §3.1 .</li>
+<li>S. Bai, K. Chen, X. Liu, J. Wang, W. Ge, S. Song, K. Dang, P. Wang, S. Wang, J. Tang, et al. (2025c) Qwen2. 5-vl technical report . arXiv preprint arXiv:2502.13923 . Cited by: §4.1 .</li>
+<li>T. Brooks, A. Holynski, and A. A. Efros (2023) Instructpix2pix: learning to follow image editing instructions . In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 18392–18402 . Cited by: §2.1 .</li>
+<li>N. Carion, L. Gustafson, Y. Hu, S. Debnath, R. Hu, D. Suris, C. Ryali, K. V. Alwala, H. Khedr, A. Huang, et al. (2025) Sam 3: segment anything with concepts . arXiv preprint arXiv:2511.16719 . Cited by: §3.1 .</li>
+<li>J. Cheng, T. Xiao, and T. He (2023) Consistent video-to-video transfer using synthetic dataset . arXiv preprint arXiv:2311.00213 . Cited by: §1 , §2.1 .</li>
+<li>G. Comanici, E. Bieber, M. Schaekermann, I. Pasupat, N. Sachdeva, I. Dhillon, M. Blistein, O. Ram, D. Zhang, E. Rosen, et al. (2025) Gemini 2.5: pushing the frontier with advanced reasoning, multimodality, long context, and next generation agentic capabilities . arXiv preprint arXiv:2507.06261 . Cited by: Appendix C , §3.3 .</li>
+<li>Y. Cong, M. Xu, C. Simon, S. Chen, J. Ren, Y. Xie, J. Perez-Rua, B. Rosenhahn, T. Xiang, and S. He (2023) Flatten: optical flow-guided attention for consistent text-to-video editing . arXiv preprint arXiv:2310.05922 . Cited by: §2.1 .</li>
+<li>M. Geyer, O. Bar-Tal, S. Bagon, and T. Dekel (2023) Tokenflow: consistent diffusion features for consistent video editing . arXiv preprint arXiv:2307.10373 . Cited by: §2.1 .</li>
+<li>H. He, J. Wang, J. Zhang, Z. Xue, X. Bu, Q. Yang, S. Wen, and L. Xie (2025) OpenVE-3m: a large-scale high-quality dataset for instruction-guided video editing . arXiv preprint arXiv:2512.07826 . Cited by: Table 1 , §1 , §1 , §1 , §2.1 , §3.1 , Table 2 , §5.2 .</li>
+<li>W. Hong, M. Ding, W. Zheng, X. Liu, and J. Tang (2022) Cogvideo: large-scale pretraining for text-to-video generation via transformers . arXiv preprint arXiv:2205.15868 . Cited by: §2.1 .</li>
+<li>E. J. Hu, Y. Shen, P. Wallis, Z. Allen-Zhu, Y. Li, S. Wang, L. Wang, W. Chen, et al. (2022) Lora: low-rank adaptation of large language models. . ICLR 1 ( 2 ), pp. 3 . Cited by: §4.1 .</li>
+<li>Z. Jiang, Z. Han, C. Mao, J. Zhang, Y. Pan, and Y. Liu (2025) Vace: all-in-one video creation and editing . arXiv preprint arXiv:2503.07598 . Cited by: Table 2 , §5.2 .</li>
+<li>O. Kara, B. Kurtkaya, H. Yesiltepe, J. M. Rehg, and P. Yanardag (2024) Rave: randomized noise shuffling for fast and consistent video editing with diffusion models . In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition , pp. 6507–6516 . Cited by: §2.1 .</li>
+<li>W. Kong, Q. Tian, Z. Zhang, R. Min, Z. Dai, J. Zhou, J. Xiong, X. Li, B. Wu, J. Zhang, et al. (2024) Hunyuanvideo: a systematic framework for large video generative models . arXiv preprint arXiv:2412.03603 . Cited by: §1 , §2.1 .</li>
+<li>M. Ku, C. Wei, W. Ren, H. Yang, and W. Chen (2024) Anyv2v: a tuning-free framework for any video-to-video editing tasks . arXiv preprint arXiv:2403.14468 . Cited by: §2.1 .</li>
+<li>M. Kuprashevich, G. Alekseenko, I. Tolstykh, G. Fedorov, B. Suleimanov, V. Dokholyan, and A. Gordeev (2025) Nohumansrequired: autonomous high-quality image editing triplet mining . arXiv preprint arXiv:2507.14119 . Cited by: §4.2 , §5.1 .</li>
+<li>X. Liao, X. Zeng, Z. Song, Z. Fu, G. Yu, and G. Lin (2025) In-context learning with unpaired clips for instruction-based video editing . arXiv preprint arXiv:2510.14648 . Cited by: Table 2 , §5.2 .</li>
+<li>Y. Lipman, R. T. Chen, H. Ben-Hamu, M. Nickel, and M. Le (2022) Flow matching for generative modeling . arXiv preprint arXiv:2210.02747 . Cited by: §4.1 .</li>
+<li>X. Luo, J. Wang, C. Wu, S. Xiao, X. Jiang, D. Lian, J. Zhang, D. Liu, et al. (2025) Editscore: unlocking online rl for image editing via high-fidelity reward modeling . arXiv preprint arXiv:2509.23909 . Cited by: §3.1 .</li>
+<li>C. Mou, Q. Sun, Y. Wu, P. Zhang, X. Li, F. Ye, S. Zhao, and Q. He (2025) Instructx: towards unified visual editing with mllm guidance . arXiv preprint arXiv:2510.08485 . Cited by: Table 1 , §1 , §2.2 .</li>
+<li>X. Pan, S. N. Shukla, A. Singh, Z. Zhao, S. K. Mishra, J. Wang, Z. Xu, J. Chen, K. Li, F. Juefei-Xu, et al. (2025) Transfer between modalities with metaqueries . arXiv preprint arXiv:2504.06256 . Cited by: §4.2 .</li>
+<li>C. Qi, X. Cun, Y. Zhang, C. Lei, X. Wang, Y. Shan, and Q. Chen (2023) Fatezero: fusing attentions for zero-shot text-based video editing . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 15932–15942 . Cited by: §2.1 .</li>
+<li>A. Radford, J. W. Kim, C. Hallacy, A. Ramesh, G. Goh, S. Agarwal, G. Sastry, A. Askell, P. Mishkin, J. Clark, et al. (2021) Learning transferable visual models from natural language supervision . In International conference on machine learning , pp. 8748–8763 . Cited by: §3.1 .</li>
+<li>J. Song, C. Meng, and S. Ermon (2020) Denoising diffusion implicit models . arXiv preprint arXiv:2010.02502 . Cited by: §2.1 .</li>
+<li>Z. Tan, H. Yang, L. Qin, J. Gong, M. Yang, and H. Li (2025) Omni-video: democratizing unified video understanding and generation . arXiv preprint arXiv:2507.06119 . Cited by: §2.1 , Table 2 , §5.2 .</li>
+<li>D. Team (2025) Lucy edit: open-weight text-guided video editing . External Links: Link Cited by: Table 2 , §5.2 .</li>
+<li>K. Team, J. Chen, Y. Ci, X. Du, Z. Feng, K. Gai, S. Guo, F. Han, J. He, K. He, et al. (2025) Kling-omni technical report . arXiv preprint arXiv:2512.16776 . Cited by: Table 1 , §1 , §2.2 , §5.2 , Table 3 .</li>
+<li>T. Wan, A. Wang, B. Ai, B. Wen, C. Mao, C. Xie, D. Chen, F. Yu, H. Zhao, J. Yang, et al. (2025) Wan: open and advanced large-scale video generative models . arXiv preprint arXiv:2503.20314 . Cited by: §1 , §2.1 .</li>
+<li>Y. Wang, S. Yang, B. Zhao, L. Zhang, Q. Liu, Y. Zhou, and C. Xie (2025) Gpt-image-edit-1.5 m: a million-scale, gpt-generated image dataset . arXiv preprint arXiv:2507.21033 . Cited by: §4.2 , §5.1 .</li>
+<li>C. Wei, Q. Liu, Z. Ye, Q. Wang, X. Wang, P. Wan, K. Gai, and W. Chen (2025) Univideo: unified understanding, generation, and editing for videos . arXiv preprint arXiv:2510.08377 . Cited by: §2.2 .</li>
+<li>C. Wu, J. Li, J. Zhou, J. Lin, K. Gao, K. Yan, S. Yin, S. Bai, X. Xu, et al. (2025a) Qwen-image technical report . External Links: 2508.02324 , Link Cited by: §3.1 .</li>
+<li>J. Z. Wu, Y. Ge, X. Wang, S. W. Lei, Y. Gu, Y. Shi, W. Hsu, Y. Shan, X. Qie, and M. Z. Shou (2023) Tune-a-video: one-shot tuning of image diffusion models for text-to-video generation . In Proceedings of the IEEE/CVF international conference on computer vision , pp. 7623–7633 . Cited by: §2.1 .</li>
+<li>Y. Wu, L. Chen, R. Li, S. Wang, C. Xie, and L. Zhang (2025b) Insvie-1m: effective instruction-based video editing with elaborate dataset construction . In Proceedings of the IEEE/CVF International Conference on Computer Vision , pp. 16692–16701 . Cited by: Table 1 , §1 , §1 , §2.1 , Table 2 , §5.2 .</li>
+<li>Z. Zhang, F. Long, W. Li, Z. Qiu, W. Liu, T. Yao, and T. Mei (2025) Region-constraint in-context generation for instructional video editing . arXiv preprint arXiv:2512.17650 . Cited by: Table 1 , §1 , §1 , §3.1 .</li>
+<li>B. Zi, P. Ruan, M. Chen, X. Qi, S. Hao, S. Zhao, Y. Huang, B. Liang, R. Xiao, and K. Wong (2025) Se \ \backslash ˜ norita-2m: a high-quality instruction-based dataset for general video editing by video specialists . arXiv preprint arXiv:2502.06734 . Cited by: Table 1 , §1 , §1 , §2.1 .</li>
+</ul>
+<h2 id="a">附錄 A 大綱</h2>
+<p>補充材料呈現以下部分以加強主要手稿：</p>
+<ul>
+<li>• 附錄 B 詳述資料建構流程與工作流。</li>
+<li>• 附錄 C 詳述基準測試結果。</li>
+<li>• 附錄 D 提供參考資料集的額外視覺化。</li>
+<li>• 附錄 E 展示與 SoTA 方法的進一步定量和定性比較。</li>
+</ul>
+<p>附錄 B 詳述資料建構流程與工作流。</p>
+<p>附錄 C 詳述基準測試結果。</p>
+<p>附錄 D 提供參考資料集的額外視覺化。</p>
+<p>附錄 E 展示與 SoTA 方法的進一步定量和定性比較。</p>
+<h2 id="b">附錄 B 資料集詳情</h2>
+<p>以下提示用於 MLLM 基礎化和參考影像分數篩選。</p>
+<h2 id="c">附錄 C 基準測試詳情</h2>
+<p>以下提示用於使用 Gemini（Comanici et al.，2025）進行 RefVIE-Bench 評估。</p>
+<h2 id="d">附錄 D 樣本視覺化</h2>
+<p>在本部分，我們展示來自高品質 RefVIE 的額外樣本，如圖 8、圖 9 和圖 10 所示。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x8.png" loading="lazy"></figure> 圖 8：我們 RefVIE 的範例。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x9.png" loading="lazy"></figure> 圖 9：我們 RefVIE 的範例。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x10.png" loading="lazy"></figure> 圖 10：我們 RefVIE 的範例。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x11.png" loading="lazy"></figure> 圖 11：在 OpenVE-Bench 上的視覺比較。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02175/x12.png" loading="lazy"></figure> 圖 12：在 VIE-Bench 上的視覺比較。下方指令不僅將該名男子替換為機器人，還將背景中的樹改為紅楓樹。只有我們的方法精確遵循此指令，如紅色方框中所突顯的。</p>
+<h2 id="e">附錄 E 定性比較</h2>
+<p>本部分使用僅指令輸入（圖 11–12）將我們的方法與 SoTA 方法進行比較。補充材料中提供了指令-參考-引導的演示影片。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

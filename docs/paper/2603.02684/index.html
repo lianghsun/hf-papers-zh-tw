@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HateMirage: An Explainable Multi-Dimensional Dataset for Decoding Faux Hate and Subtle Online Abuse — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">HateMirage: An Explainable Multi-Dimensional Dataset for Decoding Faux Hate and Subtle Online Abuse</h1>
+  
+
+  <div class="paper-meta">
+    
+    <span>Sai Kartheek Reddy Kasu, Shankar Biradar, Sunil Saumya, Md. Shad Akhtar</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.02684" target="_blank">2603.02684</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.02684" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.02684" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.02684" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">ROUGE-L</span><span class="tag method">Sentence-BERT</span>
+    <span class="tag task">Hate Speech Detection</span><span class="tag task">Explainability</span><span class="tag task">Text Classification</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+細微且間接的仇恨言論仍然是線上安全研究中未充分探索的挑戰，特別是當有害意圖被嵌入在誤導性或操縱性敘事中時。現有的仇恨言論資料集主要捕捉明顯的毒性內容，代表性不足地呈現了虛假資訊煽動或規範化仇恨的細微方式。為了解決這一差距，我們提出 HateMirage，一個新穎的虛假仇恨評論資料集，旨在推進關於源自虛假或扭曲敘事的仇恨的推理和可解釋性研究。該資料集的構建方式是識別來自事實查核來源的廣泛被駁斥的虛假資訊聲稱，並追蹤相關的 YouTube 討論，最終產生 4,530 條使用者評論。每條評論都沿著三個可解釋的維度進行標註：目標（受影響者）、意圖（評論背後的潛在動機或目標）和含義（其潛在的社會影響）。與先前的可解釋性資料集（如 HateXplain 和 HARE）不同，後者提供的是代幣級別或單一維度的推理，HateMirage 引入了一個多維度解釋框架，捕捉虛假資訊、傷害和社會後果之間的相互作用。我們使用 ROUGE-L F1 和 Sentence-BERT 相似度在 HateMirage 上對多個開源語言模型進行了基準測試，以評估解釋的連貫性。結果表明，解釋品質可能更多取決於預訓練的多樣性和面向推理的資料，而不是單純的模型規模。通過將虛假資訊推理與傷害歸因相結合，HateMirage 為可解釋仇恨檢測和負責任 AI 研究建立了新的基準。</p>
+  
+  <div class="abstract-en">Subtle and indirect hate speech remains an underexplored challenge in online safety research, particularly when harmful intent is embedded within misleading or manipulative narratives. Existing hate speech datasets primarily capture overt toxicity, underrepresenting the nuanced ways misinformation can incite or normalize hate. To address this gap, we present HateMirage, a novel dataset of Faux Hate comments designed to advance reasoning and explainability research on hate emerging from fake or distorted narratives. The dataset was constructed by identifying widely debunked misinformation claims from fact-checking sources and tracing related YouTube discussions, resulting in 4,530 user comments. Each comment is annotated along three interpretable dimensions: Target (who is affected), Intent (the underlying motivation or goal behind the comment), and Implication (its potential social impact). Unlike prior explainability datasets such as HateXplain and HARE, which offer token-level or single-dimensional reasoning, HateMirage introduces a multi-dimensional explanation framework that captures the interplay between misinformation, harm, and social consequence. We benchmark multiple open-source language models on HateMirage using ROUGE-L F1 and Sentence-BERT similarity to assess explanation coherence. Results suggest that explanation quality may depend more on pretraining diversity and reasoning-oriented data rather than on model scale alone. By coupling misinformation reasoning with harm attribution, HateMirage establishes a new benchmark for interpretable hate detection and responsible AI research.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="hatemirage">HateMirage: 用於解碼虛假仇恨和細微線上辱罵的可解釋多維度數據集</h1>
+<p>細微和間接的仇恨言論仍然是線上安全研究中未充分探索的挑戰，特別是當有害意圖嵌入在誤導或操縱性敘述中時。現有的仇恨言論數據集主要捕捉明顯的毒性內容，無法充分代表虛假信息以細微方式煽動或正常化仇恨的方式。為了解決這一差距，我們提出 HateMirage，一個新穎的虛假仇恨評論數據集，旨在推進關於從虛假或扭曲敘述中產生的仇恨的推理和可解釋性研究。該數據集是通過從事實核查來源中識別廣泛被辟謠的虛假信息聲明，並追蹤相關的 YouTube 討論而構建的，共包含 4,530 條用戶評論。每條評論都沿著三個可解釋的維度進行標註：目標（受影響的對象）、意圖（評論背後的基本動機或目標）和含義（其潛在的社會影響）。與先前的可解釋性數據集（如 HateXplain 和 HARE）不同，它們提供詞級或單一維度的推理，HateMirage 引入了一個多維度解釋框架，捕捉虛假信息、傷害和社會後果之間的相互作用。我們使用 ROUGE-L F1 和 Sentence-BERT 相似度在 HateMirage 上對多個開源語言模型進行基準測試，以評估解釋的連貫性。結果表明，解釋質量可能更多地取決於預訓練的多樣性和面向推理的數據，而不僅僅是模型規模。通過將虛假信息推理與傷害歸因相結合，HateMirage 為可解釋的仇恨檢測和負責任的人工智慧研究建立了新的基準。<strong>關鍵詞</strong>：虛假仇恨；仇恨言論；虛假信息；可解釋的自然語言處理；社群媒體安全；基準數據集</p>
+<p>HateMirage: 用於解碼虛假仇恨和細微線上辱罵的可解釋多維度數據集</p>
+<table>
+<thead>
+<tr>
+<th>Sai Kartheek Reddy Kasu 1∗ † † thanks: ∗ Work done at FLaMe.nlp Lab, IIIT Delhi. , Shankar Biradar 2 , Sunil Saumya 1 , Md. Shad Akhtar 3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 印度信息技術研究所達爾瓦德分校</td>
+</tr>
+<tr>
+<td>2 馬尼帕爾理工學院，馬尼帕爾高等教育學院，馬尼帕爾，卡納塔克邦，印度</td>
+</tr>
+<tr>
+<td>3 因德拉普拉斯特信息技術研究所德里分校</td>
+</tr>
+<tr>
+<td>saikartheekreddykasu@gmail.com, shankar.biradar@manipal.edu,</td>
+</tr>
+<tr>
+<td>sunil.saumya@iiitdwd.ac.in, shad.akhtar@iiitd.ac.in</td>
+</tr>
+</tbody>
+</table>
+<p>摘要內容</p>
+<h2 id="1-introduction">1.  Introduction</h2>
+<p>This paper contains examples of faux hate comments, included solely for research purposes. Some readers may find the content offensive or distressing. Reader discretion is advised.</p>
+<p>Online platforms such as YouTube, Facebook, and X (formerly Twitter) have become central spaces for communication and opinion exchange but also amplify harmful content, including hate speech and misinformation Schmidt and Wiegand ( 2017 ); Fortuna and Nunes ( 2018 ) . Despite advances in moderation, subtle and indirect hate, where hostility is masked through humor, irony, or fabricated narratives, remains difficult to detect. Such content often avoids explicit slurs or profanity, making it ambiguous even for human annotators and challenging for automated systems.</p>
+<p>Existing hate speech datasets, including HateXplain Mathew et al. ( 2021 ) , Hostility Detection Bhardwaj et al. ( 2020 ) , studies on geographic and cultural bias Tonneau et al. ( 2024 ) , and SemEval series corpora Zampieri et al. ( 2020 ); Premjith et al. ( 2024 ) , have enabled progress in classification and target identification. However, they largely focus on overt hate and surface-level toxicity cues. This limits model interpretability and fails to capture forms of hate that are manufactured, fueled, or triggered by misinformation.</p>
+<p>Building on the challenges of detecting subtle, context-dependent harm, recent work has identified Faux Hate Biradar et al. ( 2025 ) : hate speech expressed indirectly through misinformation or deceptive narratives. Unlike traditional hate, which uses overt hostility, Faux Hate embeds prejudice within misleading claims, making its harmful intent implicit. For example, a comment may falsely accuse a community of spreading disease, conveying resentment while hiding the premise’s falsity. Detecting such content requires contextual reasoning and background knowledge, which makes automated detection difficult. For instance, Table 1 contrasts traditional hatespeeches, which relies on direct attacks, with Faux Hate, which embeds prejudice in misleading or fabricated narratives, highlighting the need for contextual reasoning to interpret it effectively.</p>
+<p>Table 1: Illustrative examples comparing Traditional Hate comments with Faux Hate comments. Placeholders such as COUNTRY and GROUP/RELIGION denote target entities abstractly.</p>
+<p>Prior work Biradar et al. ( 2024 , 2025 ) mainly focused on the classification of Faux Hate, leaving the task of explaining its reasoning and potential harm largely unexplored. This limitation hinders a deeper understanding of how misinformation shapes and triggers hate. To address this gap, we introduce HateMirage 1 1 1 The term reflects the illusory nature of Faux Hate, where hateful expression appears genuine but is in fact shaped or amplified by fake narratives. , a dataset for reasoning and explainability in misinformation-driven hate. It contains 4,530 comments collected using a two-step process: we first gathered widely debunked claims from fact-checking websites (e.g., AltNews 2 2 2 https://www.altnews.in/ , FactChecker 3 3 3 https://www.factchecker.in/ ), then identified YouTube videos related to these claims and extracted associated comments. Each comment is annotated with Target, Intent, and Implication, capturing the reasoning that links deceptive narratives to harm.</p>
+<p>We benchmarked several open-source language models ranging from 1B to 8B parameters for the structured explanation generation task. The HateMirage dataset serves as a unified testbed, providing a consistent setup to evaluate model reasoning across the Target, Intent, and Implication dimensions. Each model was evaluated in two settings: zero-shot and RAG-based. Performance was measured using Sentence-BERT similarity and ROUGE-L F1 to assess semantic and lexical coherence. The analysis highlights variations across model architectures and settings, reflecting the complexity of reasoning required for multi-dimensional explanation generation.</p>
+<p>HateMirage thus makes implicit harm explicit, supporting research on interpretable NLP, explanation generation, and context-aware moderation Mathew et al. ( 2021 ); Yang et al. ( 2023 ) . By exposing the logic connecting misinformation to prejudice, it enables models and analysts to justify predictions, which is critical for trustworthy content moderation.</p>
+<h4 id="contributions">Contributions:</h4>
+<p>The key contributions of this work are summarized as follows:</p>
+<ul>
+<li>• HateMirage Dataset: We present HateMirage , a dataset of 4,530 Faux Hate comments, annotated with multi-dimensional explanations across Target, Intent, and Implication. These annotations capture the implicit narratives and reasoning underlying misinformation-driven hate speech, enabling interpretable analysis beyond surface-level classification.</li>
+<li>• Model Benchmarking: We evaluate a range of small and large language models on the task of explanation generation for Faux Hate, establishing initial baselines and highlighting the challenges of structured reasoning in this domain.</li>
+<li>• Research Testbed for Explainable NLP: By explicitly linking misinformation cues to hateful discourse, HateMirage provides a valuable resource for studying reasoning, interpretability, and responsible AI in online communities.</li>
+</ul>
+<p>HateMirage Dataset: We present HateMirage , a dataset of 4,530 Faux Hate comments, annotated with multi-dimensional explanations across Target, Intent, and Implication. These annotations capture the implicit narratives and reasoning underlying misinformation-driven hate speech, enabling interpretable analysis beyond surface-level classification.</p>
+<p>Model Benchmarking: We evaluate a range of small and large language models on the task of explanation generation for Faux Hate, establishing initial baselines and highlighting the challenges of structured reasoning in this domain.</p>
+<p>Research Testbed for Explainable NLP: By explicitly linking misinformation cues to hateful discourse, HateMirage provides a valuable resource for studying reasoning, interpretability, and responsible AI in online communities.</p>
+<h4 id="reproducibility">Reproducibility:</h4>
+<p>Prompt templates, annotation guidelines, RAG configuration, source code, and supporting fabricated claims are publicly available at https://github.com/Sai-Kartheek-Reddy/HateMirage . The HateMirage dataset is available for academic and research purposes only upon acceptance of the data usage agreement ( link ).</p>
+<h2 id="2">2. 文獻回顧</h2>
+<p>關於線上有害內容的現有文獻已在很大程度上將仇恨言論和錯誤資訊視為獨立領域，重點放在開發模型和資源以分別檢測仇恨或虛假內容。然而，這兩種現象的交集——使用者在廣泛被揭穿的宣稱背景下傳播仇恨言論——在很大程度上仍未被充分探討 Biradar et al. ( 2025 ); Mosleh et al. ( 2024 ) 。理解這種交集至關重要，因為它捕捉了社群媒體操縱的細微形式，以及意圖、目標和潛在後果之間複雜的相互作用。HateMirage 資料集旨在透過提供反映統一框架中仇恨和錯誤資訊的多維度註解來填補這一空白。</p>
+<p>表 2：跨越四個關鍵維度比較現有資料集：仇恨言論標籤、虛假/錯誤資訊標籤、結構化/多維度解釋性註解和跨領域範圍。跨領域屬性表示在單一資料集中整合兩個不同領域，允許研究其相互作用，而不是分別對待。✓ 表示功能存在，✗ 表示功能不存在。與先前的資源不同，HateMirage 納入所有四個維度，支持更豐富的分析和可解釋性。</p>
+<h4 id="_1">仇恨言論：</h4>
+<p>雖然幾個先前的資料集對仇恨言論和錯誤資訊研究做出了重大貢獻，但如表 2 所示，它們在結構化解釋性註解方面的範圍仍然有限。HateXplain Mathew et al. ( 2021 ) 純粹關注仇恨言論，並包括凸顯評論哪些部分具有仇恨性的 token 級別理由，但它並未解釋為什麼會做出此類評論或它們傳達的意圖和含義是什麼。HatEval Basile et al. ( 2019 ) 是另一個基準資料集，為多語言資料提供仇恨標籤，但缺乏任何解釋性或詮釋層，將分析限制在表面層級的分類。Implicit Hate ElSherief et al. ( 2021 ) 透過情境推理捕捉潛在和間接的仇恨，推進了該領域的發展，但它仍然沒有將仇恨表達與錯誤資訊線索或目標或意圖等結構化元件相連結。同樣，HARE Yang et al. ( 2023 ) 為仇恨類別提供解釋性資訊，但仍侷限於仇恨內容，未納入錯誤資訊或跨領域背景。</p>
+<h4 id="_2">錯誤資訊：</h4>
+<p>在錯誤資訊方面，CoAID Cui and Lee ( 2020 ) 和 FNVE Chen et al. ( 2025 ) 提供廣泛的虛假新聞資料，後者包括多模態證據和用於事實查核的解釋性文本。然而，兩者都缺乏仇恨或惡意的任何代表，使其不適合研究源自虛假敘述的仇恨。Hostile Bhardwaj et al. ( 2020 ) 結合仇恨和虛假內容，但將它們視為獨立類別；仇恨內容不是因果來自錯誤資訊，反之亦然。Deceptive Humor Kasu et al. ( 2025 ) 雖然概念上更接近 Faux Hate，但呈現偽裝為幽默的錯誤資訊，這使檢測變得複雜，並放大錯誤資訊傳播以及有害反應，但它也省略了結構化解釋性維度。</p>
+<p>相比之下，HateMirage 處理虛假仇恨評論（即 fake = 1 and hate = 1 ），具有跨越目標、意圖和含義的多維度結構化解釋。這種綜合設計能夠更深入地分析錯誤資訊如何塑造仇恨言論，並從社會、心理和語言學角度支持可解釋性。</p>
+<h2 id="3">3. 資料集概述</h2>
+<p>在本節中，我們呈現 HateMirage 資料集的全面概述。我們說明從信譽良好的事實查核網站收集廣泛被駁斥的虛假聲明的過程，隨後從國際英文新聞頻道抓取使用者評論。我們解釋了用於識別虛假和仇恨評論的自動標記程序，並詳細說明了結構化解釋的生成過程，該解釋捕捉每條評論的多維面向，包括目標、意圖和含義。最後，我們提供定量統計數據和代表性範例，以說明資料集的語言複雜性和多樣性。</p>
+<h3 id="31">3.1. 被駁斥虛假聲明的收集</h3>
+<p>HateMirage 資料集的基礎是一組精心策劃的廣泛被駁斥虛假聲明。這些聲明來自信譽良好的事實查核網站，例如 AltNews 4 4 4 https://www.altnews.in/ 和 FactCheckers 5 5 5 https://www.factchecker.in/，這些網站維護了已驗證和駁斥的錯誤資訊的綜合儲存庫。我們專注於在社群媒體上廣泛流傳的聲明，以確保資料集擷取既具有影響力又具有相關性的內容。每條聲明都經過仔細審查，以確認其虛假或誤導性地位，確保後續的資料收集和分析以驗證的資訊為基礎。這個精心策劃的聲明集合作為蒐集使用者評論和生成結構化解釋的起點，為研究錯誤資訊和仇恨言論的交集提供可靠的基礎。</p>
+<h3 id="32">3.2. 資料收集與標記</h3>
+<p>我們從信譽良好的國際英文新聞頻道的 YouTube 區段收集使用者評論，擷取純英文評論和代碼混合的印地文-英文評論，以反映社群媒體論述的語言多樣性。選擇國際頻道是為了減少可能因當地新聞報導偏向一方而產生的潛在偏差。每條評論都標記兩個二元標註：仇恨（0/1）和虛假（0/1）。標記過程使用 GPT-4 模型 Achiam et al.（2023）自動化進行，該模型通過檢索增強生成（RAG）Lewis et al.（2020）進行增強，以提供額外的接地背景文脈，從而實現更準確的預測。為了維持高資料品質，即使在 RAG 存在的情況下，我們也納入了人類在環自動化驗證階段。雖然檢索提供了支持背景，但模型輸出仍可能遭受幻覺、文化誤解或對代碼混合語言的敏感性問題。因此，隨機抽樣的標註由人類評估者手動審查，以驗證標籤正確性、解決模糊案例並檢測系統性偏差。此過程充當品質控制機制，增強對自動生成標籤可靠性的信心，並確保錯誤不會在最終資料集中擴散。</p>
+<h3 id="33">3.3. 結構化解釋生成</h3>
+<p>為了更好地理解虛假和仇恨評論的潛在動態，我們首先精選了僅包含虛假仇恨實例的資料，即同時標記為 fake = 1 和 hate = 1 的評論。這些實例來自現有的 FEUD 資料集 Biradar et al. ( 2025 )，該資料集先前從 Twitter 和 YouTube 收集，以及從 YouTube 頻道新近收集的額外評論。收集到的印地語-英語代碼混用評論隨後使用 GPT-4 模型翻譯成英語，利用其廣泛的預訓練多語言理解能力。我們有意避免文本前處理操作，如標點符號或特殊字符移除，以保留社群媒體論述中典型的原始語言風格和語境本質。英語翻譯更受偏好，因為大多數 LLMs 在英文文本上展現更強的性能和更廣泛的支援，確保下游處理和評估的一致性。</p>
+<p>基於這個精選資料集，我們的目標是超越二元分類，深入探討仇恨表達的潛在機制。為了實現這一目標，我們生成結構化解釋，捕捉三個關鍵維度：評論的目標對象、其背後的意圖，以及其對社會論述的潛在影響。這些解釋提供了對虛假仇恨行為的多維理解，能夠實現對使用者動機、攻擊性質及其社會影響的更豐富分析。</p>
+<p>我們採用 GPT-4 生成結構化解釋，因為其具有廣泛的預訓練世界知識、強大的推理能力和穩健的語言理解。虛假仇恨評論通常隱含地嵌入錯誤資訊，並依賴於細微的社會政治或文化參考，這使得簡單的模式匹配或較小的模型不足以應對。GPT-4 能夠有效地推斷未明確說明的目標對象、識別潛在意圖，並闡明更廣泛的影響，無需進行任務特定的微調。為了確保事實依據，我們採用 RAG 方法，在生成過程中用相關的經過事實檢查的證據補充 GPT-4。</p>
+<h4 id="_3">品質驗證（人機迴圈）：</h4>
+<p>解釋生成過程包括人機迴圈組件，其中抽樣輸出在生成過程中被持續監控和驗證，以保持品質、可靠性和一致性。品質在三個客觀維度上進行評估：事實一致性，確保每個解釋與經驗證的證據一致，不引入未經支持的主張；語義一致性，要求評論及其目標對象、意圖和影響欄位之間的邏輯對齐；以及語言清晰度，強調文法正確性、簡潔性和可解釋性。我們捨棄不符合上述品質標準的樣本。</p>
+<p>為了運作此工作流程，兩位評審者（一位專門研究仇恨言論的博士學位候選人和一位研究生）參與驗證。由於資料集是分批生成的，我們從每批中隨機抽樣 10–15% 的實例進行人工檢查。評審者針對檢索的證據評估解釋的事實一致性、語義一致性和語言清晰度。當發現不一致時，我們精煉檢索池並重新生成輸出。分歧通過討論得以解決，必要時手動整合解釋。所有評審者均提供了知情同意。這個反覆迭代的審計過程有助於防止系統性錯誤，並改進了檢索覆蓋範圍和解釋可靠性。</p>
+<h3 id="34-representative-examples">3.4.  Representative Examples</h3>
+<p>Table 3: Representative examples of Faux Hate comments illustrating how explanations are derived from comments rooted in fake or manipulative narratives. Each example decomposes the comment into its underlying fake claim base, the entities targeted, inferred author intent, and the broader social or emotional implications.</p>
+<p>The representative examples in Table 3 illustrate the multi-dimensional reasoning framework underlying HateMirage explanations. Each comment is deconstructed along three critical axes: Target , Intent , and Implication , which together delineate not just who is attacked, but why and with what social consequence. Identifying the Target demands recognizing both explicit mentions and implicit associations embedded within misinformation. Inferring the Intent requires discerning the author’s underlying motive, whether to vilify, delegitimize, or polarize, often veiled beneath seemingly informational or conspiratorial tones. Finally, articulating the Implication captures the downstream effects on collective perception, social cohesion, or intergroup trust, bridging linguistic form and societal impact. Capturing these dimensions is inherently challenging, as they often co-occur in subtle, context-dependent ways, requiring interpretive reasoning beyond surface-level toxicity cues. Together, these structured explanations provide a granular view of how deceptive narratives operationalize hate, advancing both interpretability and accountability in computational social science.</p>
+<h3 id="35">3.5. 定量分析</h3>
+<p>表 4 呈現了 HateMirage 資料集在所有欄位上的定量摘要：評論、目標、意圖和含義。該資料集包含語言學上多樣化的使用者評論，從簡短陳述到冗長貼文（最長達 800 個 token）。該表報告了每個欄位的關鍵指標：Avg Tokens（每個文本的平均 token 數）、Median Tokens（每個文本的中位數 token 數）、Min/Max Tokens（每個文本的最小和最大 token 數）、Avg Sentence Length（每個句子的平均 token 數）、Max Sentence Length（最長句子的 token 數）、Multi-Sentence %（包含多於一個句子的文本百分比）以及 Total Tokens（所有文本的總 token 數）。結構化說明簡潔明瞭，大多數目標註釋由一或兩個 token 組成，而意圖和含義文本平均涵蓋 14-15 個 token。超過 75% 的評論包含多個句子，突顯了使用者產生內容中存在的語言複雜性。這些統計數據說明了資料集的豐富性和多樣性，同時支持仇恨/虛假分類和多維度解釋性分析。</p>
+<p>表 4：HateMirage 資料集的定量摘要，報告完整資料集及其訓練和測試分割的關鍵統計數據。指標包括文本長度、句子結構和多句子普遍性，提供資料集語言複雜性和規模的概述。</p>
+<h2 id="4">4.  基準測試、實驗結果與分析</h2>
+<p>我們評估了多種語言模型，從小型到大型，以評估它們為虛假仇恨評論生成結構化解釋的能力。對於小型語言模型（SLMs），我們納入 LLaMA 變體 Grattafiori et al. ( 2024 )，例如 LLaMA-3.2-1B、LLaMA-3.2-3B、Qwen 變體 Yang et al. ( 2025 )，例如 Qwen-2.5-1.5B、Qwen-2.5-3B，以及 Microsoft Phi 模型 Abdin et al. ( 2024 )，例如 Phi-3-128k-3B。對於大型語言模型（LLMs），我們考慮 Mistral-v0.3-7B Jiang et al. ( 2023 ) 和 LLaMA-3.1-8B-Instruct。這些模型的選擇代表了多樣化的架構、參數規模和訓練範式，允許對其推理和解釋生成能力進行系統性比較。</p>
+<p>該任務被表述為結構化解釋生成問題，其中模型被提示為給定的評論提取並闡述「目標」、「意圖」和「含義」欄位。在零樣本設定中，模型僅被提供評論和清晰的指示，描述每個欄位的含義和預期格式。不執行微調或監督式調適。我們對所有生成使用貪心解碼以確保確定性和可重複的輸出，避免基於採樣方法引入的變異性。</p>
+<p>我們在兩個互補的設定中評估模型。在零樣本設定中，我們通過僅依賴預訓練知識和指示（不借助任何外部語境）來檢驗模型的內部推理能力。在 RAG 設定中，我們納入額外的接地知識，因為虛假仇恨通常涉及需要外部驗證的特定錯誤資訊敘述。我們使用 FAISS 構建了一個向量資料庫，並用來自事實查核平台的文件進行填充。所有文件均經過預處理以移除雜訊，並分割成適合檢索的段落級塊。</p>
+<p>對於每個評論，我們使用餘弦相似度進行語義搜尋，以檢索前五個最相關的證據文件。這些檢索到的文件作為語境被前置於輸入提示中，使模型能夠生成以經驗證的事實資訊為基礎的「目標」、「意圖」和「含義」解釋。為確保跨所有基準測試模型的完全確定性和可重複的輸出，我們對所有推理任務使用溫度 = 0 和 do_sample = False 的貪心解碼。此設定保證結果可以一致地複製，支援可重複性和跨不同模型配置的基準測試。</p>
+<p>對於評估，我們使用多個互補指標將生成的「目標」、「意圖」和「含義」解釋與金標註進行比較：Sentence-BERT 相似度 Reimers and Gurevych ( 2019 ) 和 ROUGE-L F1 Lin ( 2004 )。Sentence-BERT 相似度捕捉語義對齊，而 ROUGE-L F1 測量詞彙和結構重疊。這個組合一起為所有解釋欄位的意思和表面形式提供了平衡的評估。</p>
+<p>表 5：LLM 在零樣本和基於 RAG 設定中的效能比較。最高結果以粗體突顯，次佳結果用 † 標記。（指標以 % 報告）</p>
+<p>從表 5 可以看出，模型效能在模型大小、架構和接地策略之間差異顯著。在零樣本設定中，Phi-3-128k-3B-Instruct 模型在「目標」識別中明顯領先，達到最高的 SBERT 相似度（65.55%）和 ROUGE-L F1（50.36%）。對於「意圖」成分，Phi-3 再次表現競爭力，獲得次佳的 SBERT 相似度（61.11%）和最佳的 ROUGE-L F1（29.52%），表明在捕捉作者潛在動機方面具有強大能力。「含義」維度最為抽象且依賴於語境，最佳由 Mistral-v0.3-7B-Instruct 處理，該模型在兩個指標上均領先（SBERT = 55.64%，ROUGE-L F1 = 17.39%）。這些觀察表明，儘管更大的模型表現出更強的推理能力，但像 Phi-3 這樣的小型模型在識別虛假仇恨解釋的事實和角色焦點元素方面展現出異常的泛化能力。</p>
+<p>在基於 RAG 的設定下，效能趨勢保持一致，接地敏感成分有明顯改善。Phi-3-128k-3B-Instruct 模型保持強大效能，達到次佳「目標」結果（SBERT = 63.65%，ROUGE-L F1 = 47.81%）、最高「意圖」相似度（SBERT = 62.03%）和次佳「意圖」ROUGE-L（26.90%）。對於「含義」，Mistral-v0.3-7B-Instruct 再次表現穩健（SBERT = 53.68%，ROUGE-L F1 = 16.17%），反映了其在檢索語境支持下關於更廣泛社會影響推理的能力。</p>
+<p>總體而言，雖然 Qwen-2.5 和 LLaMA-3 變體等其他模型展現出溫和但均衡的結果，Phi-3 模型始終在多個維度上展現強大效能。一個可能的解釋是其訓練混合物包含大量合成和推理焦點數據，這可能鼓勵結構化和指示對齊的輸出，類似於我們參考資料的格式。</p>
+<p>同時，與 GPT-4 的相似性也可能起著作用。Phi 系列的先前文件表明受到 GPT-4 級別教師系統的影響，而且由於我們的參考解釋本身是由 GPT-4 生成的，ROUGE-L 等自動指標除了可獎勵潛在推理品質外，還可部分獎勵與參考生成器的措辭或言論風格的重疊。因此，觀察到的優勢應謹慎解釋。結果可能反映的是真實解釋能力與參考生成器風格對齐的組合。</p>
+<p>所有實驗均使用開源模型進行，推理在四個 NVIDIA GPU 的集群上執行，每個 GPU 具有 15GB 記憶體，總共 60GB。小型和大型語言模型均在相同的實驗條件下評估，以確保公平比較。</p>
+<h3 id="41">4.1.  錯誤分析</h3>
+<p>為了更好地理解 Faux Hate Explanation 任務中基準模型的局限性，我們對三個解釋維度的選定例子進行了定性錯誤分析：目標（Target）、意圖（Intent）和含義（Implication）（見表 6）。對於目標預測，定性檢查表明，在多個實例中，系統依賴於表面級別的線索，例如突出的名詞或早期提及的實體，這可能導致遺漏評論的真實焦點。例如，在諷刺或間接的訊息中，即使批評是針對記者或媒體行為人，模型也可能分配 <organization> 標籤。</p>
+<p>對於意圖（Intent），我們觀察到多個案例，其中模型產生通用或樣板化的解釋，例如「傳播仇恨或虛假敘述」，這可能忽視了包括諷刺、種族化嘲笑或政治立場在內的更微妙的動機。含義（Implication）似乎是最具挑戰性的維度。在多個審查的例子中，模型生成寬泛或欠具體的結果，例如「促進一般性的消極情緒或不安」，同時未能捕捉更具體的社會後果，例如替罪羊現象、感知到的制度偏見或雙重標準的強化。這一觀察與我們的人類評估結果相一致，其中含義（Implication）相比於目標（Target）和意圖（Intent）也表現出相對較低的一致性。</p>
+<p>總體而言，這些模式表明了過度泛化的傾向，以及在捕捉語用和語境相關含義方面的困難，凸顯了 Faux Hate Explanation 中多維推理的固有複雜性。</p>
+<p>表 6：錯誤分析，顯示目標（Target）、意圖（Intent）和含義（Implication）的模型預測。使用 <organization> 和 <user> 等佔位符來匿名化實體並通用範例。</p>
+<h3 id="42">4.2. 人工評估</h3>
+<p>HateMirage 資料集是使用 GPT-4 模型透過檢索增強生成（Retrieval-Augmented Generation, RAG）擴充上下文資訊而生成的。為了評估 HateMirage 資料集中 GPT-4 生成的解釋品質，我們首先將其與人工撰寫的解釋進行比較。為此，500 筆隨機選取的記錄由受過訓練的人工標註者獨立標註，他們為目標（Target）、意圖（Intent）和含意（Implication）各自撰寫解釋。隨後使用 SBERT 餘弦相似度和 ROUGE-L F1 分數針對人工撰寫的參考文本對 GPT-4 輸出進行定量評估，如表 7 所示。SBERT 主要反映語義一致性，而 ROUGE-L 則捕捉詞彙和片語層面的重疊。由於多個有效解釋可能在措辭上有所不同，但在意義上保持一致，因此可能會同時觀察到相對較高的 SBERT 值和較為中等的 ROUGE 分數。值得注意的是，500 筆記錄中有 208 筆在目標上超過 90% 的相似度閾值，意圖只有 7 筆，含意則為零，這突出了 GPT-4 能夠可靠地識別實體和一般動機，但在推理更廣泛的因果後果和細微含義方面仍存在挑戰。這一模式與我們獨立的人工評級研究一致，其中含意相對於目標和意圖也獲得較低的一致性。</p>
+<p>表 7：人工評估結果，比較 GPT-4 生成的解釋與 500 筆隨機抽樣記錄的人工撰寫解釋。</p>
+<p>此外，我們對資料集中 100 筆隨機選取的記錄進行了定量人工評估，由兩位人工標註者獨立標註。針對每筆記錄，標註者使用 1 分（差）到 5 分（優秀）的量表對 GPT-4 生成的目標、意圖和含意解釋進行評級。如圖 1 所示，目標的大多數評級介於 4 到 5 分之間，意圖接近 4 分，含意的評級介於 3 到 4 分之間。這些結果表明，雖然 GPT-4 能夠有效捕捉實體和一般動機，但捕捉更廣泛的因果後果和細微的社會含義仍然更具挑戰性，強調了在虛假仇恨內容中進行下游效應推理的內在難度。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02684/Human_Eval_Rating.png" loading="lazy"></figure> 圖 1：兩位標註者針對 GPT-4 生成的目標、意圖和含意解釋的平均評級比較。</p>
+<h2 id="5">5. 結論與未來工作</h2>
+<p>在本研究中，我們推出了 HateMirage，一個新穎的資料集，旨在推進對細微且具有欺騙性的有害線上內容的研究。與傳統仇恨言論或錯誤資訊語料庫不同，HateMirage 專注於虛假仇恨（Faux Hate），即仇恨敘述透過錯誤資訊或欺騙性框架間接出現的內容。每條評論都附有結構化、多維度的解釋註釋，捕捉目標（Target）、意圖（Intent）和含義（Implication），從而揭示通常被表面分析所忽視的隱含意義層次。透過提供這些豐富的解釋性註釋，HateMirage 旨在透過使潛在的有害推理更加透明且可解釋（即使對於非專家使用者）來支持研究和內容審核工作。我們進一步在解釋生成任務上對一系列語言模型進行了基準測試，建立了初始基線，並揭示了在錯誤資訊驅動的仇恨上進行結構化推理的關鍵挑戰。這些結果突出了當前模型能力與詮釋虛假仇恨所需的推理複雜性之間的重大差距。</p>
+<p>在未來工作中，我們計畫透過納入迷因與視覺敘述，將 HateMirage 擴展至多模態領域，以期能研究文本與圖像互動如何在不同社群媒體平臺上塑造欺騙性仇恨話語。此外，我們致力於探索生成與評估多維度解釋的自動化方法，包括解釋忠實度指標與基於模型的評估器，超越詞彙相似性以更好地評估推理一致性與基礎，為更具可解釋性與穩健性的內容審核系統鋪路。</p>
+<h2 id="6">6. 限制條件</h2>
+<p>雖然 HateMirage 資料集是一項獨特的資源，為虛假仇恨評論提供結構化、多維度的解釋，但必須承認某些限制條件。</p>
+<p>主要限制在於解釋的合成性質。註解是使用 GPT-4 搭配 RAG 生成的。這種方法是刻意選擇的，目的是為了降低人類標註者對高度令人沮喪和有毒內容的接觸，因為虛假仇恨可能在心理上令人不安；因此，人類驗證僅在 500 條記錄（佔整個資料集的約 11%）的小型隨機子集上進行。儘管採用了人類參與迴圈的驗證，這些模型生成的解釋可能缺乏純粹人類解釋的完整細微差別和情感可變性。這在抽象的 Implication（暗示）欄位中特別明顯，該欄位被證實是模型最難準確推斷的，相比於人類編寫的黃金標準更是如此。此外，該語料庫特別來自國際英語新聞頻道的 YouTube 評論，這意味著它可能無法完全代表虛假仇恨在所有社群媒體環境中傳播的方言和平台特定特徵。儘管存在這些限制條件，HateMirage 為研究虛假仇恨和開發推理與內容審核導向系統提供了寶貴的基礎。</p>
+<h2 id="7">7. 倫理聲明</h2>
+<p>HateMirage 資料集由國際新聞影片下方的公開 YouTube 留言構成。資料收集嚴格遵循 YouTube 的服務條款 6 6 6 https://www.youtube.com/t/terms 和隱私政策 7 7 7 https://policies.google.com/privacy。僅包含公開可訪問的留言；未使用任何私密或受限資料。考慮到內容的敏感性，採取了嚴格的匿名化程序：所有個人可識別資訊（PII），包括使用者名稱、個人檔案連結和時間戳記，均未收集，且適當地遮蔽了命名實體，以最小化重新識別的風險，並避免放大有害敘述。該資料集僅供學術研究使用，涵蓋可解釋 NLP、不實資訊和仇恨言論等領域。嚴格禁止公開重新發行。存取將在受控的研究專用授權下提供，要求申請者同意負責任使用條款，禁止任何形式的商業用途或在研究環境外進行生成式模型訓練。</p>
+<h4 id="_4">更廣泛的影響：</h4>
+<p>通過強調解釋性推理而非簡單分類，本工作旨在實現更透明和更負責任的審核系統，並支持有關不實資訊和仇恨言論之間相互作用的研究。結構化解釋可幫助審核團隊、事實查核者和研究人員更好地理解內容有害的原因，從而促進更安全的線上空間和更可解釋的人工智慧系統。然而，潛在風險仍然存在：惡意行為者可能會濫用結構化解釋來精心製作更複雜的仇恨敘述或針對脆弱群體。為了減輕這一風險，我們限制資料集存取、匿名化所有實體，並禁止在可能放大危害的生成式環境中進行重新發行或使用。總體而言，本工作旨在推進對細微線上危害的負責任科學分析，同時保護使用者隱私、最小化誤用，並反思可解釋 NLP 系統在敏感領域中的社會影響。</p>
+<h2 id="_5">致謝</h2>
+<p>M. S. Akhtar 感謝 IIIT Delhi 的 Infosys AI 中心（CAI）提供的部分支持。</p>
+<h2 id="8">8.  參考文獻</h2>
+<ul>
+<li>
+<p>M. Abdin, J. Aneja, H. Behl, S. Bubeck, R. Eldan, S. Gunasekar, M. Harrison, R. J. Hewett, M. Javaheripi, P. Kauffmann, 等人 (2024) Phi-4 技術報告。arXiv preprint arXiv:2412.08905。引用者：§4。</p>
+</li>
+<li>
+<p>J. Achiam, S. Adler, S. Agarwal, L. Ahmad, I. Akkaya, F. L. Aleman, D. Almeida, J. Altenschmidt, S. Altman, S. Anadkat, 等人 (2023) GPT-4 技術報告。arXiv preprint arXiv:2303.08774。引用者：§3.2。</p>
+</li>
+<li>
+<p>V. Basile, C. Bosco, E. Fersini, D. Nozza, V. Patti, F. M. R. Pardo, P. Rosso 及 M. Sanguinetti (2019) SemEval-2019 task 5：推特上針對移民和婦女的多語言仇恨言論偵測。在第 13 屆語意評估國際研討會論文集中，頁碼 54–63。引用者：§2、表 2。</p>
+</li>
+<li>
+<p>M. Bhardwaj, M. S. Akhtar, A. Ekbal, A. Das 及 T. Chakraborty (2020) 印地語敵意偵測數據集。arXiv preprint arXiv:2011.03588。引用者：§1、§2、表 2。</p>
+</li>
+<li>
+<p>S. Biradar, K. S. K. Reddy, S. Saumya 及 M. S. Akhtar (2024) 第 21 屆自然語言處理國際會議 (ICON) 論文集：解碼傳播仇恨故事中虛假敘事的共享任務 (Faux-Hate)。在第 21 屆自然語言處理國際會議 (ICON)：解碼傳播仇恨故事中虛假敘事的共享任務 (Faux-Hate) 論文集中，頁碼 1–5。引用者：§1。</p>
+</li>
+<li>
+<p>S. Biradar, S. Saumya 及 A. Chauhan (2025) Faux hate：揭開傳播仇恨故事中虛假敘事的網絡：跨語言印地語-英文混合代碼文本中的多標籤和多類別數據集。語言資源與評估 59 (1)，頁碼 477–508。引用者：§1、§1、§2、§3.3。</p>
+</li>
+<li>
+<p>L. Chen, Z. Qian, P. Li 及 Q. Zhu (2025) 多模態虛假新聞視頻解釋：數據集、分析和評估。arXiv preprint arXiv:2501.08514。引用者：§2、表 2。</p>
+</li>
+<li>
+<p>L. Cui 及 D. Lee (2020) COAID：COVID-19 醫療保健虛假信息數據集。arXiv preprint arXiv:2006.00885。引用者：§2、表 2。</p>
+</li>
+<li>
+<p>M. ElSherief, C. Ziems, D. Muchlinski, V. Anupindi, J. Seybolt, M. De Choudhury 及 D. Yang (2021) 潛在仇恨：用於理解隱性仇恨言論的基準。在 2021 年自然語言處理經驗方法會議論文集中，位置：線上及多米尼加聖胡安，頁碼 345–363。外部連結：連結。引用者：§2、表 2。</p>
+</li>
+<li>
+<p>P. Fortuna 及 S. Nunes (2018) 文本中自動偵測仇恨言論的調查。ACM Computing Surveys (CSUR) 51 (4)，頁碼 1–30。引用者：§1。</p>
+</li>
+<li>
+<p>A. Grattafiori, A. Dubey, A. Jauhri, A. Pandey, A. Kadian, A. Al-Dahle, A. Letman, A. Mathur, A. Schelten, A. Vaughan, 等人 (2024) Llama 3 模型群。arXiv preprint arXiv:2407.21783。引用者：§4。</p>
+</li>
+<li>
+<p>D. Jiang, Y. Liu, S. Liu, J. Zhao, H. Zhang, Z. Gao, X. Zhang, J. Li 及 H. Xiong (2023) 從 CLIP 到 DINO：多模態大型語言模型中的視覺編碼器呼喊。arXiv preprint arXiv:2310.08825。引用者：§4。</p>
+</li>
+<li>
+<p>S. K. R. Kasu, S. Biradar 及 S. Saumya (2025) 欺騙性幽默：用於橋接虛構聲明與幽默內容的合成多語言基準數據集。arXiv preprint arXiv:2503.16031。引用者：§2、表 2。</p>
+</li>
+<li>
+<p>P. Lewis, E. Perez, A. Piktus, F. Petroni, V. Karpukhin, N. Goyal, H. Küttler, M. Lewis, W. Yih, T. Rocktäschel, 等人 (2020) 用於知識密集型 NLP 任務的檢索增強生成。神經資訊處理系統進展 33，頁碼 9459–9474。引用者：§3.2。</p>
+</li>
+<li>
+<p>C. Lin (2004) ROUGE：摘要自動評估套件。在文本摘要分支拓展中，頁碼 74–81。引用者：§4。</p>
+</li>
+<li>
+<p>B. Mathew, P. Saha, S. M. Yimam, C. Biemann, P. Goyal 及 A. Mukherjee (2021) HateXplain：可解釋仇恨言論偵測的基準數據集。在人工智慧第 35 卷會議論文集中，頁碼 14867–14875。引用者：§1、§1、§2、表 2。</p>
+</li>
+<li>
+<p>M. Mosleh, R. Cole 及 D. G. Rand (2024) 虛假信息和有害語言是相互關聯的，而不是不同的挑戰。PNAS nexus 3 (3)，頁碼 pgae111。引用者：§2。</p>
+</li>
+<li>
+<p>B. Premjith, B. R. Chakravarthi, P. K. Kumaresan, S. Rajiakodi, S. Karnati, S. Mangamuru 及 C. Janakiram (2024) 泰盧固語代碼混合文本中仇恨和冒犯性語言偵測共享任務的發現 (HOLD-Telugu)@ DravidianLangTech 2024。在第四屆德拉威語言技術語音、視覺和語言研討會論文集中，頁碼 49–55。引用者：§1。</p>
+</li>
+<li>
+<p>N. Reimers 及 I. Gurevych (2019) Sentence-BERT：使用暹羅 BERT 網路的句子嵌入。arXiv preprint arXiv:1908.10084。引用者：§4。</p>
+</li>
+<li>
+<p>A. Schmidt 及 M. Wiegand (2017) 使用自然語言處理偵測仇恨言論的調查。在第五屆社交媒體自然語言處理國際研討會論文集中，頁碼 1–10。引用者：§1。</p>
+</li>
+<li>
+<p>M. Tonneau, D. Liu, S. Fraiberger, R. Schroeder, S. A. Hale 及 P. Röttger (2024) 從語言到地理：評估仇恨言論數據集中的文化偏見。在第 8 屆線上濫用和傷害研討會 (WOAH 2024) 論文集中，頁碼 283–311。引用者：§1。</p>
+</li>
+<li>
+<p>A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao, C. Huang, C. Lv, 等人 (2025) Qwen3 技術報告。arXiv preprint arXiv:2505.09388。引用者：§4。</p>
+</li>
+<li>
+<p>Y. Yang, J. Kim, Y. Kim, N. Ho, J. Thorne 及 S. Yun (2023) HARE：具有逐步推理的可解釋仇恨言論偵測。arXiv preprint arXiv:2311.00321。引用者：§1、§2、表 2。</p>
+</li>
+<li>
+<p>M. Zampieri, P. Nakov, S. Rosenthal, P. Atanasova, G. Karadzhov, H. Mubarak, L. Derczynski, Z. Pitenis 及 Ç. Çöltekin (2020) SemEval-2020 task 12：社交媒體中的多語言冒犯性語言識別 (OffensEval 2020)。arXiv preprint arXiv:2006.07235。引用者：§1。</p>
+</li>
+</ul>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

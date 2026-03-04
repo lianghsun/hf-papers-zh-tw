@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Transformer",
+    "Optimal Transport",
+    "Token Pruning",
+    "Attention Mechanism"
+  ],
+  "task": [
+    "Video Understanding",
+    "Video Question Answering",
+    "Video Captioning"
+  ],
+  "dataset": [],
+  "open_source": true
+}

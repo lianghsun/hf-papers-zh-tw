@@ -1,0 +1,19 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion",
+    "DiT",
+    "Motion Retargeting",
+    "Identity Injection"
+  ],
+  "task": [
+    "Character Animation",
+    "Motion Transfer",
+    "Video Generation"
+  ],
+  "dataset": [],
+  "open_source": false
+}

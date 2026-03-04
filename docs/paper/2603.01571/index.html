@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>超越長度擴展：為生成式獎勵模型協同廣度與深度 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">超越長度擴展：為生成式獎勵模型協同廣度與深度</h1>
+  
+  <div class="en-title">Beyond Length Scaling: Synergizing Breadth and Depth for Generative Reward Models</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Qiyuan Zhang, Yufei Wang, Tianhe Wu, Can Xu, Qingfeng Sun, Kai Zheng, Xue Liu, Chen Ma</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.01571" target="_blank">2603.01571</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.01571" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.01571" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.01571" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span><span class="tag domain">RL</span>
+    <span class="tag method">Chain-of-Thought</span><span class="tag method">Supervised Fine-Tuning</span><span class="tag method">Reinforcement Learning</span><span class="tag method">Reward Modeling</span>
+    <span class="tag task">Preference Evaluation</span><span class="tag task">Reward Modeling</span><span class="tag task">Text Evaluation</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+生成式獎勵模型（Generative Reward Models, GRMs）的最近進展已証明，擴展思維鏈（Chain-of-Thought, CoT）推理的長度能夠顯著提升評估的可靠性。然而，現有研究主要依賴於無結構的長度擴展，忽視了不同推理機制的不同效能：廣度思維鏈（Breadth-CoT, B-CoT，即多維度原則涵蓋）和深度思維鏈（Depth-CoT, D-CoT，即實質性判斷的合理性）。為了解決這一問題，我們引入 Mix-GRM，一個框架，通過模組化綜合管道將原始推理重新配置為結構化的 B-CoT 和 D-CoT，隨後採用監督微調（Supervised Fine-Tuning, SFT）和可驗證獎勵的強化學習（Reinforcement Learning with Verifiable Rewards, RLVR）來內化和優化這些機制。綜合實驗表明，Mix-GRM 在五個基準上建立了新的最先進水平，比領先的開源 RMs 平均超越 8.2%。我們的結果揭示了推理中的清晰分歧：B-CoT 在主觀偏好任務中具有優勢，而 D-CoT 在客觀正確性任務中表現優異。因此，將推理機制與任務不對齐會直接降低性能。此外，我們證明 RLVR 充當切換放大器，引發一種突現的極化現象，其中模型自發地配置其推理風格以匹配任務需求。合成數據和模型發佈於 https://huggingface.co/collections/DonJoey/mix-grm{Hugging Face}，代碼發佈於 https://github.com/Don-Joey/Mix-GRM{Github}。</p>
+  
+  <div class="abstract-en">Recent advancements in Generative Reward Models (GRMs) have demonstrated that scaling the length of Chain-of-Thought (CoT) reasoning considerably enhances the reliability of evaluation. However, current works predominantly rely on unstructured length scaling, ignoring the divergent efficacy of different reasoning mechanisms: Breadth-CoT (B-CoT, i.e., multi-dimensional principle coverage) and Depth-CoT (D-CoT, i.e., substantive judgment soundness). To address this, we introduce Mix-GRM, a framework that reconfigures raw rationales into structured B-CoT and D-CoT through a modular synthesis pipeline, subsequently employing Supervised Fine-Tuning (SFT) and Reinforcement Learning with Verifiable Rewards (RLVR) to internalize and optimize these mechanisms. Comprehensive experiments demonstrate that Mix-GRM establishes a new state-of-the-art across five benchmarks, surpassing leading open-source RMs by an average of 8.2\%. Our results reveal a clear divergence in reasoning: B-CoT benefits subjective preference tasks, whereas D-CoT excels in objective correctness tasks. Consequently, misaligning the reasoning mechanism with the task directly degrades performance. Furthermore, we demonstrate that RLVR acts as a switching amplifier, inducing an emergent polarization where the model spontaneously allocates its reasoning style to match task demands. The synthesized data and models are released at https://huggingface.co/collections/DonJoey/mix-grm{Hugging Face}, and the code is released at https://github.com/Don-Joey/Mix-GRM{Github}.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="_1">超越長度縮放：為生成式獎勵模型協同廣度與深度</h1>
+<p>生成式獎勵模型（Generative Reward Models, GRMs）的近期進展已經證明，延長思維鏈（Chain-of-Thought, CoT）推理的長度可以顯著提升評估的可靠性。然而，當前的工作主要依賴於非結構化的長度縮放，忽略了不同推理機制的不同效能：廣度思維鏈（Breadth-CoT, B-CoT，即多維度原則涵蓋）和深度思維鏈（Depth-CoT, D-CoT，即實質性判斷的健全性）。為了解決這個問題，我們引入了 Mix-GRM，這是一個框架，透過模組化合成管道將原始理由重新配置為結構化的 B-CoT 和 D-CoT，隨後採用監督微調（Supervised Fine-Tuning, SFT）和具有可驗證獎勵的強化學習（Reinforcement Learning with Verifiable Rewards, RLVR）來內化並優化這些機制。</p>
+<p>綜合實驗證明 Mix-GRM 在五個基準上建立了新的最先進水準，超越領先的開源獎勵模型平均 8.2%。我們的結果揭示了推理中的明確分化：B-CoT 受益於主觀偏好任務，而 D-CoT 在客觀正確性任務中表現優異。因此，將推理機制與任務不對齊會直接降低效能。此外，我們證明了 RLVR 作為一個切換放大器發揮作用，引發一種新興的極化現象，其中模型自發地分配其推理風格以符合任務需求。合成的資料和模型已在 Hugging Face 上發佈，程式碼已在 Github 上發佈。</p>
+<h2 id="1">1 介紹</h2>
+<p>強化學習 (RL) 已被證明是引發大型語言模型 (LLMs) 能力的關鍵後訓練機制 (Ouyang et al., 2022 ; DeepSeek-AI, 2025 ; Team, 2025a )。
+然而，隨著 RL 的野心從單一領域最佳化 (例如，數學) (Le et al., 2022 ; Shao et al., 2024 ; Wang et al., 2025a ) 擴展到通用對齐 (Lee et al., 2024 ; Shen et al., 2025 )，獎勵模型 (RM) 面臨著為來自多樣化、真實世界場景的日益複雜的查詢提供可靠反饋的挑戰 (Liu et al., 2025c ; Li et al., 2025a )。
+應對這一挑戰需要改變 RM 的設計方式。受到 CoT (Wei et al., 2022 ; Yang et al., 2025 ) 如何用推論時計算換取增強泛化性能的啟發，社群日益採用生成式獎勵模型 (GRMs) (Zheng et al., 2023 ; Yuan et al., 2024 ; Zhang et al., 2025a )。通過在結論前提示明確的評估理由，GRMs 旨在將 CoT 生成中觀察到的強大泛化轉移到獎勵建模任務中。</p>
+<p>基於這些成功，現有的 GRM 方法主要通過簡單地擴展 CoT 的長度 (Chen et al., 2026 ; 2025 ; Zhang et al., 2025c )，並使用大量評估信號對其進行反饋，例如細粒度特徵 (Kim et al., 2024 ) 或多視角批評 (Ankner et al., 2024 ) 來利用 CoT。然而，先前的 CoT 研究 (Sprague et al., 2025 ; Besta et al., 2025 ; Wang et al., 2024b ; Kambhampati et al., 2024 ) 已經確立，更長的 CoT 並不能普遍保證性能提升；相反，最優的結構偏差在不同領域差異很大。更關鍵的是，測試時縮放 (Zhang et al., 2026 ; 2025b ) 的最近洞見為這種差異提供了理論，將並行思維和序列思維確定為放大智慧的兩個基本、正交的機制。
+從概念上講，推理密集型任務 (例如，數學、程式碼) 需要序列驗證以確保演繹嚴謹性 (Wang et al., 2024a ; Liu et al., 2025a ; Lightman et al., 2024 )，而語義密集型任務 (例如，開放式生成) 受益於並行探索以確保對多樣性可能性的全面覆蓋 (Zheng et al., 2026 ; Pan et al., 2025 )。</p>
+<p>基於這一區分，我們主張推進 RM 需要將重點從單純擴展 CoT 長度轉移到使其推理機制與任務需求對齐。具體來說，這需要從靜態的、一刀切的 CoT 範本向混合推理機制轉變。
+因此，我們提出 Mix-GRM，在統一的獎勵建模框架內實現動態混合推理機制。具體來說，我們引入一個合成框架，將原始、非結構化的理由重新配置為兩種不同的長 CoT：廣度-CoT (B-CoT) 和深度-CoT (D-CoT)。
+為了實現這一點，我們首先將非結構化的理由解耦為原子化的「原則–判斷–判決」單元。這種模組化允許我們將這些單元重新組合成語法統一但結構多樣的路徑。舉例來說，B-CoT 通過跨不同原則 (例如，將「準確性」單元與「清晰度」單元相結合) 的並行聚合來綜合，以確保覆蓋。相反，D-CoT 通過首先執行直接推理過程來解決指令，從而擴展 CoT，進而實現基於生成的推理過程的重新評估判斷，以確保合理性。
+為了培養機制自適應對齐，我們通過將 B-CoT 與主觀偏好任務配對、將 D-CoT 與客觀正確性任務配對來構建協同混合數據集。我們首先通過在此混合上進行 SFT 初始化模型，隨後使用一般 RM 數據集通過 RLVR 對其進行最佳化，其中只有最終標籤可用。</p>
+<p>在五個標準基準上的全面實驗產生了三個關鍵結論：
+(1) 通用 SOTA 性能和下游效用：Mix-GRM 建立了新的最先進的技術，在一般獎勵基準上持續超越 Skywork-Reward 和 FARE-8B 等強大基線。更關鍵的是，這種優越性延伸到實際的下游任務：Mix-GRM 在離線 RL (DPO) 和測試時縮放 (Best-of-N) 中都展現了最佳級別的效用。
+(2) 推理機制的差異角色：
+我們的分析揭示了 B-CoT 主要受益於主觀偏好但會降低客觀正確性，而 D-CoT 在正確性上表現卓越，但代價是偏好。這證實了推理機制的效能取決於任務。
+(3) RLVR 作為開關放大器：混合機制為 RL 提供了優越的基礎。RLVR 對 Mix-GRM 的提升幅度比對 Base-GRM 的幅度更大。我們的分析表明 RLVR 自動銳化機制分配—自發地為偏好收斂到 B-CoT，為正確性收斂到 D-CoT。這證實了優化模型思考方式對於後訓練效能的重要性比單純擴展其寫作長度更關鍵。</p>
+<h2 id="2">2 相關工作</h2>
+<h3 id="21">2.1 生成式獎勵模型</h3>
+<p>生成式獎勵模型（Generative Reward Models）代表了從標量迴歸到明確推理的典範轉變。隨著基於提示的「LLM-as-a-Judge」典範發展而來（Zheng et al., 2023），GRM 被明確訓練以在偏好決策的同時生成自然語言的理由（Yuan et al., 2024）。在長思維鏈（long CoT）取得轉型性成功的推動下，該領域的研究軌跡已轉向不斷延長這些理由的長度。為了達成這一目標，許多研究利用 RL 來明確引出並穩定更長的思維鏈追蹤（Chen et al., 2026；2025；Whitehouse et al., 2026），同時互補性的工作利用詳細的評分標準/檢查清單來合成地擴展評估覆蓋範圍（Kim et al., 2024；Liu et al., 2026；Gunjal et al., 2026；Viswanathan et al., 2025）。然而，雖然這些策略成功地擴展了推理的數量，但它們通常依賴於靜態的、與任務無關的結構，忽視了一個關鍵細微差別：最優的推理機制本質上是依賴於任務的。</p>
+<h3 id="22">2.2 思維鏈的廣度與深度</h3>
+<p>思維鏈的演進從根本上以對多樣化結構的持續探索為特徵（Shinn et al., 2023；DeepSeek-AI, 2025）。除了簡單的線性鏈外，Tree of Thoughts（Yao et al., 2023）和 Graph of Thoughts（Besta et al., 2025）等框架引入了分支和循環拓撲，將推理框架化為對部分思想的結構化搜尋。作為這些複雜結構的補充，Skeleton-of-Thought（Ning et al., 2024）和 Self-Consistency（Wang et al., 2023）等方法展示了並行探索的有效性，利用橫向的廣度來增強穩健性和覆蓋範圍。總的來說，這些研究確立了推理不是與結構無關的；相反，特定的拓撲先驗——從深度序列樹到寬闊的並行集合——是在不同領域中解鎖最優性能所需的（Sprague et al., 2025），這一區別被我們的工作正式應用於獎勵建模。</p>
+<h2 id="3">3 方法論</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01571/x1.png" loading="lazy"></figure> 圖 1：Mix-GRM 的流程。(i) 標準化：我們將原始推理過程提取為模組化的原則–判斷–判決單位。(II) 機制合成：我們將模組重構為用於偏好的 B-CoT 或用於正確性的 D-CoT。(III) 訓練與推理：遵循 SFT 和 RLVR 訓練，模型達到機制自適應對齊，自動部署最優機制用於推理，並為離線強化學習和測試時間擴展等下游任務提供可靠信號。</p>
+<p>我們提出 Mix-GRM，一個旨在動態對齊推理機制與內在任務需求的框架。超越靜態、非結構化的推理序列，我們的方法將評估形式化為兩個正交的 CoT：B-CoT 強制執行多樣化原則的橫向聚合，以及 D-CoT 要求判斷的擴展。如圖 1 所示，我們的方法論包含三個關鍵階段：模組化模式標準化（§ 3.2）、機制合成（§ 3.3）和機制自適應對齐（§ 3.4）。</p>
+<h3 id="31">3.1 問題表述</h3>
+<p>假設 ${y_{A},y_{B}}$ 表示由兩個助手 A 和 B 為給定任務指令 $x$ 生成的兩個候選回應，一個正常的 GRM $\mathcal{M}$ 產生一個輸出序列，包括明確的評估推理過程 $c$ 和偏好判決 $v$，比較 $y_{A}$ 和 $y_{B}$ 的品質。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$(c,v)=\mathcal{M}(y_{A},y_{B}\mid x)$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>目標是確保 $v$ 與人類偏好保持一致。在我們的框架中，我們將完整輸入三元組表示為 $I=(x,y_{A},y_{B})$。</p>
+<h3 id="32">3.2 模組化綱要標準化</h3>
+<p>傳統的 GRM 通常將理由 $c$ 產生為非結構化的自由形式序列。
+受到近期基於檢查清單的評估（Viswanathan et al., 2025）的啟發，該評估主張將複雜的評估過程原子化為檢查清單驅動的要點，我們提出將這些原始理由重新配置為結構化的「原則-判斷-結論」綱要（圖 1，階段 I）。通過將複雜的理由轉換為原子單位，我們確保 RM 的推理過程既可解釋又可細粒度驗證。</p>
+<p>正式地，我們利用 LLM 將原始 $c$ 解析為結構化的原子單位 $\mathcal{S}$：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{S}={(p_{k},j_{k},v_{k})}_{k=1}^{K}$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $p_{k}$ 表示離散的評估原則（例如，「指令遵循」），$j_{k}$ 代表分析該原則的具體判斷（例如，「回應 B 直接解決……」），$v_{k}$ 是隨後的子結論（例如，「<B> 更好」）。此處 $K$ 通常範圍在 3 到 5 之間。</p>
+<p>這種原子分解產生更乾淨的學習訊號，並確保句法一致性（Li et al., 2025b），確保性能提升由思考機制（即廣度與深度）驅動，而非表面的風格模式。</p>
+<h3 id="33">3.3 機制合成</h3>
+<p>基於 $\mathcal{S}$，我們引入雙軌合成管道（圖 1，階段 II）來合成 B-CoT 和 D-CoT，如下所示：</p>
+<h4 id="b-cot">B-CoT 合成。</h4>
+<p>我們將 B-CoT 定義為不同原則的並行聚合，旨在克服單次推理的狹隘焦點。在主觀偏好任務中，其中「良好」的回應由多維度因素（例如語調、有用性和創意性）的同時滿足來定義，單軌推理通常會執著於主導特徵，同時忽視細微的、細粒度的細節。
+通過並行探索不同的推理路徑，並行思維提供了與人類偏好多面性質相一致的深思熟慮的廣度。
+為了模擬並行思維，我們將獨立抽樣視為對指令評估流形的隨機探索。通過從多個認知軌跡中抽樣 $N$ 個獨立的理由 ${c_{n}}<em>{n=1}^{N}$，我們引發了一組多樣化的隱藏原則，這些原則否則可能保持潛伏狀態。這些理由被解析為結構化模式 ${\mathcal{S}</em>{n}}$，隨後通過基於 LLM 的 Merge &amp; Deduplicate 轉換 $\mathcal{T}_{\text{merge}}$ 統一：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$C_{\text{B}}=\mathcal{T}<em>{\text{merge}}\left(\bigcup</em>{n=1}^{N}{(p,j,v)\in\mathcal{S}_{n}}\right)$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在此，我們過濾出頻率最低的原則。此合成產生了一個全面、無冗餘的原則譜，有效地擴展了模型的水平評估範圍。</p>
+<h4 id="d-cot">D-CoT 合成。</h4>
+<p>我們將 D-CoT 定義為判斷的擴展，以確保實質性推理的合理性，同時減輕膚淺的捷徑。與主觀偏好相反，在客觀正確性任務中「良好」的回應取決於嚴格的邏輯約束（例如數學證明或函數式代碼）。普通理由通常執著於表面層級的流暢性（例如專業語調或格式化），同時未能驗證底層的邏輯有效性。
+通過強制執行邏輯依賴的順序驗證，順序思維提供了與客觀正確性的嚴格要求自然一致的演繹嚴謹性。
+為了模擬順序思維，我們首先引發推理軌跡 $z$——一個源自 $x$ 的自我求解步驟，明確概述正確回應所需的最優解決路徑。認識到深度導向的推理對每個單位需要更高的認知負荷，我們有意通過抽樣焦點子集 $\mathcal{S}_{\text{sub}}\subset\mathcal{S}$（通常 $|K|\leq 3$）來權衡水平覆蓋以換取演繹嚴謹性。在這個推理引導判斷階段，每個單位的判斷被重新生成為軌跡 $z$ 的導數：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\tilde{j}<em>{k}=\mathcal{T}</em>{\text{refine}}(p_{k}\mid z)$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>為了確保評估過程是透明的，並明確基於模型自身的邏輯，我們將 $z$ 直接注入至領導單位 $\tilde{j}<em>{1}$。最終的 $C</em>{\text{D}}$ 通過序列化這些精化單位來構建，將判決轉化為由軌跡 $z$ 錨定的實質性分析過程。</p>
+<h3 id="34">3.4 機制自適應對齊</h3>
+<p>訓練分為兩個階段進行（圖 1，面板 III）：在混合 CoT 資料集上進行 SFT，其後以 GRPO（Shao et al., 2024）來將裁決與人類標籤對齊。</p>
+<h4 id="sft">SFT。</h4>
+<p>遵循 Frick et al.（2025），我們將通用 RM 訓練資料分為兩個領域：偏好（主觀）和正確性（客觀）。我們透過將 $C_{\text{B}}$ 分配給偏好實例，將 $C_{\text{D}}$ 分配給正確性實例，來構造混合資料集 $\mathcal{D}_{\text{mix}}$。</p>
+<p>我們首先透過在 $\mathcal{D}<em>{mix}$ 上進行 SFT 來初始化策略 $\pi</em>\theta$。給定 $I$，模型被訓練來生成相應的 CoT $c\in{c_{\text{B}},c_{\text{D}}}$ 以及裁決 $v$。</p>
+<h4 id="grpo-rlvr">經由 GRPO 的 RLVR。</h4>
+<p>為了最佳化裁決準確性，我們採用經由 GRPO（Shao et al., 2024）的 RLVR，僅針對與真實標籤的一致性來獎勵模型：</p>
+<p>|  | $$\begin{split}\mathcal{J}<em>{\text{GRPO}}(\theta)=\mathbb{E}</em>{\begin{subarray}{c}I\sim\mathcal{D}\
+{o_{i}}\sim\pi_{\theta_{\text{old}}}\end{subarray}}\Bigg[&amp;\frac{1}{G}\sum_{i=1}^{G}\bigg(\frac{\pi_{\theta}(o_{i}|I)}{\pi_{\theta_{\text{old}}}(o_{i}|I)}\hat{A}<em>{i}-\beta\mathbb{D}</em>{\text{KL}}(\pi_{\theta}||\pi_{\text{ref}})\bigg)\Bigg]\end{split}$$ |  |
+| --- | --- | --- |</p>
+<p>獎勵由裁決一致性定義：若生成的裁決 $v_i$ 與真實人類標籤相符，則分配正獎勵，否則分配 $-1$。此過程充當切換放大器，導致出現突發的極化現象：模型自發地學習將 B-CoT 與偏好任務耦合，將 D-CoT 與正確性任務耦合，以最大化獎勵，如在 § 5 中實證驗證的那樣。這證實了模型自主地收斂到每個領域的最優思考風格。</p>
+<h2 id="4">4 實驗</h2>
+<p>我們跨越三個目標來評估 Mix-GRM：（1）與 SoTA 基準相比的總體效能；（2）機制效率以量化 B- 和 D-CoT 的領域特定優勢；以及（3）在離線 RL 和測試時間擴展中的下游效用。</p>
+<p>表 1：RM 在獎勵基準上的效能。在開源模型中，每列的最高分數以粗體表示，第二高的分數以下劃線表示。「Overall」表示每個基準內的平均分數。專有 LLM（灰色行）僅供參考。† RB-v1 / v2 指 RewardBench v1 和 v2。</p>
+<h3 id="41">4.1 實驗設置</h3>
+<h4 id="_2">通用獎勵基準。</h4>
+<p>我們採用五個廣泛認可的通用獎勵建模基準：RewardBench (Lambert et al., 2025 ) 、RewardBench-v2 (Malik et al., 2025 ) 、RMB (Zhou et al., 2025a ) 、RM-Bench (Liu et al., 2025b ) 和 PPE (Frick et al., 2025 ) 。
+這些基準涵蓋了廣泛的任務範圍，從數學、編程和開放式對話等常見任務，到包含事實性和指令遵循等專門能力的任務。
+對於整體效能，我們報告標準基準級配對比較準確度以評估獎勵能力。
+對於細粒度機制效率分析，我們聚合來自這些基準的實例，並根據其原始任務元數據將其重新分類為兩個基本領域：正確性和偏好。
+這些基準的詳細統計數據和具體領域對應關係見附錄 A.3 。</p>
+<h4 id="_3">基礎模型和訓練資料來源。</h4>
+<p>我們採用 Qwen3-8B-Base (Team, 2025b ) 進行訓練，使用包含 30,000 個樣本（9K SFT、21K RLVR）的複合語料庫，跨越五個資料集：HelpSteer3 (Wang et al., 2025b ) （對話、STEM 與多語言）、Code-Preference （編程）、Math-DPO （數學）、WildGuard (Han et al., 2024 ) （安全性）和 OffsetBias (Park et al., 2024 ) （指令遵循）。
+詳細的採樣協議和統計分佈見附錄 A.2 。其他訓練實現設置見第 A 節。</p>
+<h4 id="_4">基準方法。</h4>
+<p>我們將提出的 RM 與 7 個頂級 RM 進行比較，跨越兩個範式：
+(1) 判別式：由 Skywork-Reward-v0.2-Llama-3.1-8B (Liu et al., 2024 ) 代表，這是通過 Bradley-Terry 建模訓練的領先純量模型；以及
+(2) 生成式：包含強化學習驅動的推理模型（JudgeLRM-7B (Chen et al., 2025 ) 、RM-R1-Instruct (Chen et al., 2026 ) 、RM-R1-Distill、DeepSeek-GRM-16B (Liu et al., 2025c ) ）、合成縮放方法（FARE-8B (Xu et al., 2026 ) ）和基於準則的方法 RubricRM-8B (Liu et al., 2026 ) 。值得注意的是，RubricRM-8B 包含兩階段 LLM，由準則生成器和基於準則的判決器組成。</p>
+<p>表 2：按領域分組的 RM 效能。「Avg.」表示領域平均值。我們使用彩色下標標註相對於同一階段 SFT 基線中 Base-GRM 的效能差距（↑ \uparrow 表示增益，↓ \downarrow 表示下降）。每欄最高分數用粗體標記，次高分數用底線標記。† RM-B 指 RM-Bench。</p>
+<p>表 3：使用不同獎勵模型在指令遵循和數學推理基準上訓練的 DPO 策略模型的效能。「Avg.」是每個領域中所有基準得分的平均值。在每一欄中，最高分數用粗體標記，次高分數用底線標記。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01571/x2.png" loading="lazy"></figure> 圖 2：跨四個具有挑戰性的推理和編程基準的最佳 10 10 效能。Mix-GRM（我們的方法）在所有任務中持續達到最高準確度，能有效識別數學和程式碼生成場景中的解決方案。紅色和綠色線條分別表示隨機和預言選擇基線。</p>
+<h3 id="42">4.2 基準測試中的整體性能</h3>
+<p>表 1 從三個維度驗證了我們 Mix-GRM 的有效性。</p>
+<h4 id="sft_1">混合 SFT 的有效性</h4>
+<p>：單靠混合 SFT，Mix-GRM 就達到了 75.1 的顯著平均分數。這個性能超越了需要計算昂貴 RL 來激發長 CoT 能力的 GRM——outperform RM-R1-Instruct by 5.0 和 DeepSeek-GRM-16B by 9.9。此外，它擊敗了 RubricRM-8B（+0.4），該模型依賴於複雜但靜態的 rubric-template CoT。這證實了對齐推理機制可作為一種有力的替代策略，與專注於 RL 探索或靜態範本工程的方法並行。</p>
+<h4 id="_5">資料效率的優越性</h4>
+<p>：Mix-GRM 以極少的資料實現了這些改進。儘管 FARE-8B 依靠大規模擴展（$\approx 2.5\mathrm{M}$ 個樣本）達到 75.9，Mix-GRM 在 SFT 階段使用僅 $9\mathrm{K}$ 個樣本達到了相當的 75.1。這項發現突顯了優化 CoT 機制產生了大幅更高的訓練信號密度，相比蠻力資料集擴展實現了資料效率。</p>
+<h4 id="rlvr">透過 RLVR 的切換放大</h4>
+<p>：Mix CoT 將 RLVR 階段的效能最大化，解鎖比非結構化 CoT 更大的性能提升。RLVR 將 Mix-GRM 提升 4.3（$75.1\rightarrow 79.4$），相比之下 Base-GRM 的提升為 3.6（$73.3\rightarrow 76.9$）。因此，相對於 Base-GRM 的性能差距從 1.8（SFT）擴大到 2.5（RLVR），確認了對齐機制為 RL 提供了更具可探索性的基礎。此外，我們的後續分析（第 5 節）揭示了這些改進從根本上由機制分配中一種突現的極化現象支撑，其中 RLVR 將模型的推理風格銳化以匹配任務特定的需求。</p>
+<h3 id="43">4.3 機制效率</h3>
+<p>表 2 揭示機制效能嚴格依賴於任務類型。在 SFT 階段，我們觀察到明顯的效能權衡：B-CoT 透過橫向涵蓋改善 Preference，但降低了 Correctness（72.2 → 70.2），而 D-CoT 增強演繹合理性但在 Preference 上失敗（68.2 → 65.9）。這些結果表明，簡單延長 CoT 長度並不能保證普遍進展；雖然原則擴展便於多維度評估，但對深度推理沒有內在優勢。然而，Mix-GRM 透過協同相互增強克服這些限制。透過整合正交優勢，它不僅超越了 Base-GRM（70.2 → 71.8），而且令人驚訝地在各自的優勢領域上超越專門的單一模式模型（例如，在 Correctness 上超越 Depth-only）。這種協同作用在 RLVR 階段變得至關重要，此時單一模式機制遇到硬性效能上限——最值得注意的是，Mix-GRM（Breadth）在正確性任務上達到高原。相比之下，Mix-GRM 使 RL 優化能夠達到更優越的上限（78.7）。這證實了 CoT 結構本身充當 RL 優化的瓶頸；混合結構不僅繼承組件優勢，而且構建了超越孤立機制內在限制的穩健推理框架。</p>
+<h3 id="44">4.4 下游應用效用</h3>
+<p>為了驗證 Mix-GRM 的實際應用效用，我們將其應用於兩個下游應用：(i) 作為離線強化學習的獎勵信號，以及 (ii) 作為測試時間縮放的驗證器。我們在附錄 B 中提供這些應用設定的詳細描述。</p>
+<h4 id="_6">離線強化學習的獎勵模型</h4>
+<p>在通過直接偏好最佳化（DPO）進行的離線 RL 中（Rafailov et al., 2023），RM 構造高品質的偏好對 $(y_{w},y_{l})$ 來監督策略對齊。
+表 3 顯示在這些信號上訓練的模型在指令跟隨中達到 12.1 的峰值勝率，超越了 FARE-8B（12.0）和 RubricRM（10.5）。
+至關重要的是，這種對齊增益不會損害推理能力；在數學領域，Mix-GRM 保持 46.4 的最先進準確度，超過了 RubricRM（45.9）和 RM-R1-Instruct（45.8）。
+具體來說，Mix-GRM 在 GSM8K 上達到 $77.6\%$，相比 SFT 基準線（$75.1\%$）展示了明確的領先優勢。
+這些結果確認了 Mix-GRM 提供可靠的監督，使策略能夠內化有益性和正確性。</p>
+<h4 id="_7">測試時間縮放的獎勵模型</h4>
+<p>針對測試時間縮放，利用增加的推理時間計算來增強泛化能力，Mix-GRM 充當強健的驗證器，通過 Best-of-N 選擇對候選項進行重新排序以識別最優解。
+遵循 JETTS 協定（Zhou et al., 2025b），我們在 4 個不同的基準上評估來自 Llama-3.1-8B 生成器的 $N=10$ 個樣本：MATH 和 CHAMP（數學），以及 MBPP+ 和 BigCodeBench（編程）。如圖 2 所示，我們的方法始終獲得最高的準確度，為 8B 規模的重新排序器設定了新的最先進水準。性能優勢在推理密集型任務中尤其明顯；例如，在 MATH 上，我們的模型達到 $43.2\%$ 的準確度，超越了由 RL 驅動的 RM-R1（$37.7\%$）和數據密集型的 FARE-8B（$35.2\%$）。這確認了我們的方法為邏輯驗證提供了比依賴大規模數據擴展或通用 RL 的方法更具判別性的信號。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01571/x3.png" loading="lazy"></figure> 圖 3：CoT 機制的結構演進。該圖表追蹤 4 個指標：每次判斷的平均標記長度、平均原則計數，以及被分類為具有廣度或深度特徵的 CoT 百分比。</p>
+<h2 id="5-analysis">5 Analysis</h2>
+<h4 id="switching-cot-mechanism-analysis">Switching CoT Mechanism Analysis.</h4>
+<p>Visualizing structural transformations (Figure 3 ) reveals how our pipeline reshapes reasoning mechanisms.
+Here, Single-mode strategies show extreme trade-offs: Mix-GRM (Breadth) expands horizontally (high principle count), while Mix-GRM (Depth) extends vertically (long judgments). In contrast, Mix-GRM (SFT) achieves a robust union of both, which is further expanded into a broader reasoning manifold by RLVR .
+First, the polarization of Breadth and Depth baselines confirms the rigidity of static templates, which create capability blind spots by sacrificing either reasoning depth or semantic coverage. Second, the balanced profile of Mix-GRM (SFT) indicates successful internalization of different distinct mechanisms. Most pivotally, the global expansion during RLVR validates our hypothesis of mechanism polarization. By optimizing for verdict accuracy, the model spontaneously converges on domain-specific mechanism biases—amplifying D-CoT for correctness while reinforcing B-CoT for preference. This emergent specialization confirms that our proposed alignment is not a handcrafted heuristic, but an inherent structural necessity discovered by the model to maximize evaluation efficacy.</p>
+<h4 id="emergent-polarization-analysis">Emergent Polarization Analysis.</h4>
+<p>To determine whether the emergent polarization toward domain-specific reasoning ( i . e ., B-CoT for Preference and D-CoT for Correctness) is actively driven by RLVR or merely inherited from SFT priors, we analyzed the distribution of generated CoT structures on the test set using specific structural indicators ( e . g ., principle counts and trigger phrases). Although the SFT training data was completely domain-aligned, the post-SFT model achieved only a 73% structural match rate during inference. Remarkably, following RLVR—which relies exclusively on final verdict supervision without explicit structural labels—this alignment surged to 95%. This substantial improvement confirms that the model transcends static SFT priors, autonomously learning to select and optimize the most effective reasoning structure for each domain during the reinforcement learning phase.</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.01571/x4.png" loading="lazy"></figure> Figure 4: Ablation of B-CoT synthesis. (a) Aggregation Scale: Performance as aggregated rationales ( N N ) increases from 1 (Vanilla) to 4. (b) Principle Selection: Comparison of Random, Full, and Consistency (Top-10) selection from the N = 4 N=4 pool. Orange / blue lines denote Preference/Correctness; dashed lines indicate the Vanilla baseline.</p>
+<h4 id="scaling-selection-analysis">Scaling &amp; Selection Analysis.</h4>
+<p>To understand the mechanics of B-CoT , we decouple the impact of quantity (aggregation scale) from quality (principle selection) as shown in Figure 4 .1) Quantity (Scaling): Figure 4 (a) demonstrates that performance improves monotonically as the number of parallel CoTs ( N N ) increases from 1 to 4. This confirms that “breadth" functions by expanding coverage; by aggregating diverse perspectives, the model minimizes the risk of overlooking critical error patterns.2) Quality (Selection): However, more is not always better. Figure 4 (b) compares three strategies within the N = 4 N=4 pool: Breadth Rand \text{Breadth}<em>{\text{Rand}} , Breadth Full \text{Breadth}</em>{\text{Full}} , and Breadth Top10 \text{Breadth}<em>{\text{Top10}} , where Top-10 means ten most frequent principles appearing across 4 CoTs. We observe a clear hierarchy: Breadth Top10 &gt; Breadth Full &gt; Breadth Rand \text{Breadth}</em>{\text{Top10}}&gt;\text{Breadth}<em>{\text{Full}}&gt;\text{Breadth}</em>{\text{Rand}} . While the full pool improves over random sampling, it is the Top-10 consensus that achieves the highest gains ( 71.8 / 72.7 71.8/72.7 ).
+This suggests a denoising effect where low-frequency principles introduce noise, while high-frequency ones form a more robust “reasoning consensus.” Thus, representativeness—not just volume—is vital for robust breadth.</p>
+<h4 id="computational-overhead-and-token-cost-analysis">Computational Overhead and Token Cost Analysis.</h4>
+<p>To ensure a transparent comparison of computational overhead, we designed our pipelines to maintain strict algorithmic fairness and token parity across reasoning styles. First, regarding data synthesis, both B-CoT (which samples twice and merges rationales) and D-CoT (which generates a solve trace before synthesizing the final CoT) utilize approximately two reasoning passes. Notably, we strictly prohibit introducing new information during the merge phase, limiting it solely to merging and deduplication; therefore, it does not constitute an additional reasoning pass. This parity ensures that observed performance differences stem from structural efficacy rather than raw compute disparities. Second, as detailed in Table 4 , the token consumption during Data Synthesis, RLVR Training, and Inference remains highly comparable across configurations. These marginal differences confirm that B-CoT , D-CoT , and our adaptive Mix-CoT operate within the exact same order of magnitude of compute cost.</p>
+<p>Table 4: Accounting table reporting the compute and token costs. Token consumption across our proposed methods remains within the same order of magnitude.</p>
+<h4 id="case-study">Case Study.</h4>
+<p>Table 5 elucidates the structural mechanisms behind the observed double dissociation. Case 1 demonstrates why B-CoT dominates preference tasks: acting as a multi-dimensional scanner, it successfully penalizes a detailed but language-mismatched response by validating lateral constraints ( e . g ., Linguistic Alignment ), whereas D-CoT exhibits attentional tunneling,” fixating on verifying historical facts while missing the high-level language mismatch. Conversely, Case 2 reveals why D-CoT is essential for correctness: its step-by-step derivation acts as a logic probe, allowing it to spot subtle factual hallucinations ( e . g ., K &gt; M ​ g K&gt;Mg ) hidden within a lengthy explanation. Here, B-CoT actively fails due to feature interference,” where it mistakes superficial comprehensiveness (length and formatting) for logical validity. This confirms that while Breadth is necessary for satisfying diverse user preferences, Depth is the non-negotiable driver for rigorous verification.</p>
+<p>Table 5: Case Study. Case 1 shows how B-CoT aggregates diverse principles to identify subtle preference nuances. Case 2 shows how D-CoT performs step-by-step verification to catch logical errors.</p>
+<h2 id="6">6 結論</h2>
+<p>本研究證明，超越單純的長度擴展，GRM 的可靠性從根本上由不同推理機制的整合驅動。
+通過引入 Mix-GRM，我們證明了獎勵模型的前沿領域在於協同兩個正交的推理機制：B-CoT 用於多維度覆蓋，D-CoT 用於判斷的健全性。通過機制自適應對齊，Mix-GRM 確保 RM 的推理機制精確校準至任務的性質。最終，這些發現將 GRM 開發的焦點從蠻力擴展轉移到結構優化。</p>
+<h2 id="_8">限制</h2>
+<p>雖然 Mix-GRM 通過機制對齊顯著增強了評估的可靠性，我們識別出兩個主要限制值得進一步調查：</p>
+<h4 id="_9">推理流形的細粒度性。</h4>
+<p>我們的框架成功捕捉了主觀偏好與客觀正確性之間的雙重分離，我們將其識別為推理流形的主要軸。然而，這一二元論代表了多樣化對齊景觀的粗粒度映射。現實世界中的任務通常存在於連續的頻譜上，或涉及複雜混合的需求，這些需求精妙地融合了演繹嚴謹性與多維度的細微差別。雖然我們證明了模型的推理結構自發地向這兩個主要極點收斂，但我們目前的分類可能作為更高維度機制空間的低秩近似。未來的工作可以探索更細粒度的分類法，以實現更精確的任務-機制校準。</p>
+<h4 id="_10">顯式混合任務中的僵化性。</h4>
+<p>雖然我們的分析表明 RLVR 誘發了一種向專門化推理極點收斂的內在傾向，這種出現的極化在面對高度複雜、跨域場景時可能引入結構僵化。目前的框架擅長將專門化機制與其各自的領域對齐，但我們的發現最終證明了對於獎勵結構而言「一刀切不適用所有」。新興的現實應用，例如智能體深度研究，越來越需要嚴格演繹邏輯與高品質、風格化寫作的顯式動態融合。推理風格的自發銳化可能目前會以喪失這種通用靈活性為代價。因此，未來研究的邏輯下一步是開發專門的混合分割基準，以顯式評估風格與邏輯之間的權衡，同時設計更複雜、細粒度的混合結構（例如軟路由機制），能夠流暢地在推理流形上轉換。</p>
+<h2 id="_11">參考文獻</h2>
+<ul>
+<li>Ankner et al. (2024) Zachary Ankner, Mansheej Paul, Brandon Cui, Jonathan D. Chang, and Prithviraj Ammanabrolu. Critique-out-loud reward models, 2024. URL https://arxiv.org/abs/2408.11791 .</li>
+<li>Besta et al. (2025) Maciej Besta, Florim Memedi, Zhenyu Zhang, Robert Gerstenberger, Guangyuan Piao, Nils Blach, Piotr Nyczyk, Marcin Copik, Grzegorz Kwaśniewski, Jürgen Müller, Lukas Gianinazzi, Ales Kubicek, Hubert Niewiadomski, Aidan O'Mahony, Onur Mutlu, and Torsten Hoefler. 揭示思想鏈、樹和圖的神秘面紗。Pattern Analysis and Machine Intelligence Transactions，頁 10967–10989，2025。</li>
+<li>Chen et al. (2025) Nuo Chen, Zhiyuan Hu, Qingyun Zou, Jiaying Wu, Qian Wang, Bryan Hooi, and Bingsheng He. Judgelrm: Large reasoning models as a judge, 2025. URL https://arxiv.org/abs/2504.00050 .</li>
+<li>Chen et al. (2026) Xiusi Chen, Gaotang Li, Ziqi Wang, Bowen Jin, Cheng Qian, Yu Wang, Hongru WANG, Yu Zhang, Denghui Zhang, Tong Zhang, Hanghang Tong, and Heng Ji. RM-r1: 獎勵建模即推理。在 International Conference on Learning Representations 中，2026。URL https://openreview.net/forum?id=1ZqJ6jj75q 。</li>
+<li>Cobbe et al. (2021) Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano, Christopher Hesse, and John Schulman. 訓練驗證器求解數學應用題，2021。URL https://arxiv.org/abs/2110.14168 。</li>
+<li>Cui et al. (2024) Ganqu Cui, Lifan Yuan, Ning Ding, Guanming Yao, Bingxiang He, Wei Zhu, Yuan Ni, Guotong Xie, Ruobing Xie, Yankai Lin, Zhiyuan Liu, and Maosong Sun. Ultrafeedback: 透過規模化人工智慧反饋促進語言模型。在 International Conference on Machine Learning 中，2024。</li>
+<li>DeepSeek-AI (2025) Team DeepSeek-AI. DeepSeek-r1 透過強化學習在大語言模型中激勵推理。Nature，頁 633–638，2025。</li>
+<li>Ding et al. (2023) Ning Ding, Yulin Chen, Bokai Xu, Yujia Qin, Shengding Hu, Zhiyuan Liu, Maosong Sun, and Bowen Zhou. 透過擴展高品質指令對話來增強聊天語言模型。在 Conference on Empirical Methods in Natural Language Processing 中，2023。</li>
+<li>Dubois et al. (2024) Yann Dubois, Percy Liang, and Tatsunori Hashimoto. 長度控制的 AlpacaEval：自動評估器的簡單無偏方法。在 Conference on Language Modeling 中，2024。</li>
+<li>Frick et al. (2025) Evan Frick, Tianle Li, Connor Chen, Wei-Lin Chiang, Anastasios Nikolas Angelopoulos, Jiantao Jiao, Banghua Zhu, Joseph E. Gonzalez, and Ion Stoica. 如何評估 RLHF 的獎勵模型。在 The Thirteenth International Conference on Learning Representations 中，2025。</li>
+<li>Gunjal et al. (2026) Anisha Gunjal, Anthony Wang, Elaine Lau, Vaskar Nath, Yunzhong He, Bing Liu, and Sean M. Hendryx. 評分規則作為獎勵：超越可驗證領域的強化學習。在 International Conference on Learning Representations 中，2026。URL https://openreview.net/forum?id=c1bTcrDmt4 。</li>
+<li>Han et al. (2024) Seungju Han, Kavel Rao, Allyson Ettinger, Liwei Jiang, Bill Yuchen Lin, Nathan Lambert, Yejin Choi, and Nouha Dziri. WILDGUARD：開放式的大語言模型安全風險、越獄和拒絕一站式審核工具。在 International Conference on Neural Information Processing Systems 中，2024。</li>
+<li>Hendrycks et al. (2021) Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, and Jacob Steinhardt. 使用 MATH 資料集測量數學問題求解能力。在 Conference on Neural Information Processing Systems Datasets and Benchmarks Track 中，2021。</li>
+<li>Kambhampati et al. (2024) Subbarao Kambhampati, Karthik Valmeekam, Lin Guan, Mudit Verma, Kaya Stechly, Siddhant Bhambri, Lucas Saldyt, and Anil Murthy. 立場：大語言模型無法規劃，但可在 LLM-modulo 框架中幫助規劃。在 International Conference on Machine Learning 中，2024。</li>
+<li>Kim et al. (2024) Seungone Kim, Jamin Shin, Yejin Cho, Joel Jang, Shayne Longpre, Hwaran Lee, Sangdoo Yun, Seongjin Shin, Sungdong Kim, James Thorne, and Minjoon Seo. Prometheus：在語言模型中誘導細粒度評估能力。在 International Conference on Learning Representations 中，2024。</li>
+<li>Koncel-Kedziorski et al. (2016) Rik Koncel-Kedziorski, Subhro Roy, Aida Amini, Nate Kushman, and Hannaneh Hajishirzi. MAWPS：數學應用題儲存庫。在 Conference of the North American Chapter of the Association for Computational Linguistics 中，頁 1152–1157，2016。</li>
+<li>Lambert et al. (2025) Nathan Lambert, Valentina Pyatkin, Jacob Morrison, LJ Miranda, Bill Yuchen Lin, Khyathi Chandu, Nouha Dziri, Sachin Kumar, Tom Zick, Yejin Choi, Noah A. Smith, and Hannaneh Hajishirzi. RewardBench：評估語言建模的獎勵模型。在 Findings of the Association for Computational Linguistics: NAACL 2025 中，頁 1755–1797，2025。</li>
+<li>Le et al. (2022) Hung Le, Yue Wang, Akhilesh Deepak Gotmare, Silvio Savarese, and Steven C.H. Hoi. CodeRL：透過預訓練模型和深度強化學習精通程式碼生成。在 International Conference on Neural Information Processing Systems 中，2022。</li>
+<li>Lee et al. (2024) Harrison Lee, Samrat Phatale, Hassan Mansoor, Thomas Mesnard, Johan Ferret, Kellie Lu, Colton Bishop, Ethan Hall, Victor Carbune, Abhinav Rastogi, and Sushant Prakash. RLAIF vs. RLHF：使用人工智慧反饋擴展人類反饋強化學習。在 International Conference on Machine Learning 中，2024。</li>
+<li>Li et al. (2024) Tianle Li, Wei-Lin Chiang, Evan Frick, Lisa Dunlap, Banghua Zhu, Joseph E. Gonzalez, and Ion Stoica. 從實時資料到高品質基準：Arena-hard 管道，2024。URL https://lmsys.org/blog/2024-04-19-arena-hard/ 。</li>
+<li>Li et al. (2025a) Yi-Chen Li, Tian Xu, Yang Yu, Xuqin Zhang, Xiong-Hui Chen, Zhongxiang Ling, Ningjing Chao, Lei Yuan, and Zhi-Hua Zhou. 通用獎勵模型：存在於大型語言模型內部，2025a。URL https://arxiv.org/abs/2506.23235 。</li>
+<li>Li et al. (2025b) Zhuang Li, Yuncheng Hua, Thuy-Trang Vu, Haolan Zhan, Lizhen Qu, and Gholamreza Haffari. SCAR：透過風格一致性感知回應排序進行資料選擇，以實現大型語言模型的高效指令微調。在 Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) 中，頁 12756–12790，2025b。</li>
+<li>Lightman et al. (2024) Hunter Lightman, Vineet Kosaraju, Yuri Burda, Harrison Edwards, Bowen Baker, Teddy Lee, Jan Leike, John Schulman, Ilya Sutskever, and Karl Cobbe. 讓我們逐步驗證。在 International Conference on Learning Representations 中，2024。URL https://openreview.net/forum?id=v8L0pN6EOi 。</li>
+<li>Liu et al. (2025a) Chengwu Liu, Ye Yuan, Yichun Yin, Yan Xu, Xin Xu, Zaoyu Chen, Yasheng Wang, Lifeng Shang, Qun Liu, and Ming Zhang. SAFE：透過回顧性步驟感知形式驗證增強大型語言模型的數學推理。在 Annual Meeting of the Association for Computational Linguistics 中，2025a。</li>
+<li>Liu et al. (2024) Chris Yuhao Liu, Liang Zeng, Jiacai Liu, Rui Yan, Jujie He, Chaojie Wang, Shuicheng Yan, Yang Liu, and Yahui Zhou. Skywork-reward：大型語言模型中獎勵建模的訣竅集合，2024。URL https://arxiv.org/abs/2410.18451 。</li>
+<li>Liu et al. (2023) Jiawei Liu, Chunqiu Steven Xia, Yuyao Wang, and LINGMING ZHANG. 你的 ChatGPT 生成的程式碼真的正確嗎？大型語言模型程式碼生成的嚴格評估。在 Conference on Neural Information Processing Systems 中，2023。</li>
+<li>Liu et al. (2026) Tianci Liu, Ran Xu, Tony Yu, Ilgee Hong, Carl Yang, Tuo Zhao, and Haoyu Wang. OpenRubrics：朝向獎勵建模和大語言模型對齊的可擴展合成評分規則生成，2026。URL https://arxiv.org/abs/2510.07743 。</li>
+<li>Liu et al. (2025b) Yantao Liu, Zijun Yao, Rui Min, Yixin Cao, Lei Hou, and Juanzi Li. RM-bench：具有微妙性和風格的語言模型獎勵模型基準。在 International Conference on Learning Representations 中，2025b。</li>
+<li>Liu et al. (2025c) Zijun Liu, Peiyi Wang, Runxin Xu, Shirong Ma, Chong Ruan, Peng Li, Yang Liu, and Yu Wu. 推論時間通用獎勵建模的擴展，2025c。URL https://arxiv.org/abs/2504.02495 。</li>
+<li>Lu et al. (2023) Pan Lu, Liang Qiu, Kai-Wei Chang, Ying Nian Wu, Song-Chun Zhu, Tanmay Rajpurohit, Peter Clark, and Ashwin Kalyan. 透過策略梯度進行動態提示學習以進行半結構化數學推理，2023。URL https://arxiv.org/abs/2209.14610 。</li>
+<li>Malik et al. (2025) Saumya Malik, Valentina Pyatkin, Sander Land, Jacob Morrison, Noah A. Smith, Hannaneh Hajishirzi, and Nathan Lambert. RewardBench 2：推進獎勵模型評估，2025。URL https://arxiv.org/abs/2506.01937 。</li>
+<li>Mao et al. (2024) Yujun Mao, Yoon Kim, and Yilun Zhou. CHAMP：用於大型語言模型數學推理能力細粒度分析的競賽級資料集。在 Findings of the Association for Computational Linguistics 中，頁 13256–13274，2024。</li>
+<li>Ning et al. (2024) Xuefei Ning, Zinan Lin, Zixuan Zhou, Zifu Wang, Huazhong Yang, and Yu Wang. 思想骨架：提示大語言模型進行有效的平行生成。在 International Conference on Learning Representations 中，2024。</li>
+<li>Ouyang et al. (2022) Long Ouyang, Jeff Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul Christiano, Jan Leike, and Ryan Lowe. 訓練語言模型透過人類反饋遵循指令。在 International Conference on Neural Information Processing Systems 中，2022。</li>
+<li>Pan et al. (2025) Jiayi Pan, Xiuyu Li, Long Lian, Charlie Snell, Yifei Zhou, Adam Yala, Trevor Darrell, Kurt Keutzer, and Alane Suhr. 學習適應性平行推理與語言模型，2025。URL https://arxiv.org/abs/2504.15466 。</li>
+<li>Park et al. (2024) Junsoo Park, Seungyeon Jwa, Ren Meiying, Daeyoung Kim, and Sanghyuk Choi. OffsetBias：利用無偏資料調整評估器。在 Findings of the Association for Computational Linguistics: EMNLP 中，頁 1043–1067，2024。</li>
+<li>Rafailov et al. (2023) Rafael Rafailov, Archit Sharma, Eric Mitchell, Christopher D Manning, Stefano Ermon, and Chelsea Finn. 直接偏好最佳化：你的語言模型祕密地是一個獎勵模型。在 Conference on Neural Information Processing Systems 中，2023。URL https://openreview.net/forum?id=HPuSIXJaa9 。</li>
+<li>Shao et al. (2024) Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei Zhang, Mingchuan Zhang, Y. K. Li, Y. Wu, and Daya Guo. DeepSeekMath：在開放語言模型中推進數學推理的極限，2024。URL https://arxiv.org/abs/2402.03300 。</li>
+<li>Shen et al. (2025) Wei Shen, Guanlin Liu, YuYue, Ruofei Zhu, Qingping Yang, Chao Xin, and Lin Yan. 探索強化學習中的資料擴展趨勢與效果（人類反饋）。在 Annual Conference on Neural Information Processing Systems 中，2025。</li>
+<li>Shinn et al. (2023) Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao. Reflexion：具有言語強化學習的語言代理。在 International Conference on Neural Information Processing Systems 中，2023。</li>
+<li>Sprague et al. (2025) Zayne Rea Sprague, Fangcong Yin, Juan Diego Rodriguez, Dongwei Jiang, Manya Wadhwa, Prasann Singhal, Xinyu Zhao, Xi Ye, Kyle Mahowald, and Greg Durrett. 要進行思維鏈還是不要？思維鏈主要在數學和符號推理上有幫助。在 International Conference on Learning Representations 中，2025。</li>
+<li>Team (2025a) Kimi Team. Kimi K1.5：與大語言模型進行強化學習的擴展，2025a。URL https://arxiv.org/abs/2501.12599 。</li>
+<li>Team (2025b) Qwen Team. Qwen3 技術報告，2025b。URL https://arxiv.org/abs/2505.09388 。</li>
+<li>Viswanathan et al. (2025) Vijay Viswanathan, Yanchao Sun, Xiang Kong, Meng Cao, Graham Neubig, and Tongshuang Wu. 檢查清單比獎勵模型更適合對齊語言模型。在 Conference on Neural Information Processing Systems 中，2025。URL https://openreview.net/forum?id=RPRqKhjrr6 。</li>
+<li>Wang et al. (2025a) Junqiao Wang, Zeng Zhang, Yangfan He, Zihao Zhang, Xinyuan Song, Yuyang Song, Tianyu Shi, Yuchen Li, Hengyuan Xu, Kunyu Wu, Xin Yi, Zhongwei Wan, Xinhang Yuan, Zijun Wang, Kuan Lu, Menghao Huo, Tang Jingqun, Guangwu Qian, Keqin Li, Qiuwu Chen, and Lewei He. 透過程式碼生成中的強化學習增強程式碼大語言模型：調查，2025a。URL https://arxiv.org/abs/2412.20367 。</li>
+<li>Wang et al. (2024a) Peiyi Wang, Lei Li, Zhihong Shao, Runxin Xu, Damai Dai, Yifei Li, Deli Chen, Yu Wu, and Zhifang Sui. Math-shepherd：在沒有人類註解的情況下逐步驗證並強化大語言模型。在 Annual Meeting of the Association for Computational Linguistics 中，2024a。</li>
+<li>Wang et al. (2023) Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc V Le, Ed H. Chi, Sharan Narang, Aakanksha Chowdhery, and Denny Zhou. 自洽性改進語言模型中的思維鏈推理。在 International Conference on Learning Representations 中，2023。URL https://openreview.net/forum?id=1PL1NIMMrw 。</li>
+<li>Wang et al. (2024b) Yubo Wang, Xueguang Ma, Ge Zhang, Yuansheng Ni, Abhranil Chandra, Shiguang Guo, Weiming Ren, Aaran Arulraj, Xuan He, Ziyan Jiang, Tianle Li, Max Ku, Kai Wang, Alex Zhuang, Rongqi Fan, Xiang Yue, and Wenhu Chen. MMLU-Pro：更穩健且具有挑戰性的多任務語言理解基準。在 International Conference on Neural Information Processing Systems 中，2024b。</li>
+<li>Wang et al. (2025b) Zhilin Wang, Jiaqi Zeng, Olivier Delalleau, Hoo-Chang Shin, Felipe Soares, Alexander Bukharin, Ellie Evans, Yi Dong, and Oleksii Kuchaiev. Helpsteer3-preference：跨多種任務和語言的開放人類註解偏好資料。在 The Thirty-ninth Annual Conference on Neural Information Processing Systems Datasets and Benchmarks Track 中，2025b。URL https://openreview.net/forum?id=lovsIkZLnI 。</li>
+<li>Wei et al. (2022) Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed H. Chi, Quoc V. Le, and Denny Zhou. 思維鏈提示在大型語言模型中引發推理。在 International Conference on Neural Information Processing Systems 中，2022。</li>
+<li>Whitehouse et al. (2026) Chenxi Whitehouse, Tianlu Wang, Ping Yu, Xian Li, Jason E Weston, Ilia Kulikov, and Swarnadeep Saha. J1：透過強化學習在作為評判者的大語言模型中激勵思考。在 International Conference on Learning Representations 中，2026。URL https://openreview.net/forum?id=dnJEHl6DI1 。</li>
+<li>Xu et al. (2026) Austin Xu, Xuan-Phi Nguyen, Yilun Zhou, Chien-Sheng Wu, Caiming Xiong, and Shafiq Joty. 基礎自動評估器：為推理中心領域擴展多任務生成評估器訓練。在 The Fourteenth International Conference on Learning Representations 中，2026。URL https://openreview.net/forum?id=89Ei7PVpNl 。</li>
+<li>Yang et al. (2025) Shiming Yang, Yuxuan Tong, Xinyao Niu, Graham Neubig, and Xiang Yue. 揭示長思維鏈推理的神秘面紗。在 International Conference on Machine Learning 中，2025。URL https://openreview.net/forum?id=OLodUbcWjB 。</li>
+<li>Yao et al. (2023) Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Thomas L. Griffiths, Yuan Cao, and Karthik Narasimhan. 思想樹：使用大型語言模型進行深思熟慮的問題求解。在 International Conference on Neural Information Processing Systems 中，2023。</li>
+<li>Yu et al. (2024) Longhui Yu, Weisen Jiang, Han Shi, Jincheng YU, Zhengying Liu, Yu Zhang, James Kwok, Zhenguo Li, Adrian Weller, and Weiyang Liu. MetaMath：為大型語言模型自助生成數學問題。在 International Conference on Learning Representations 中，2024。</li>
+<li>Yuan et al. (2024) Weizhe Yuan, Richard Yuanzhe Pang, Kyunghyun Cho, Xian Li, Sainbayar Sukhbaatar, Jing Xu, and Jason Weston. 自獎勵語言模型。在 International Conference on Machine Learning 中，2024。</li>
+<li>Zhang et al. (2026) Duzhen Zhang, Zhong-Zhi Li, Ming-Liang Zhang, Jiaxin Zhang, Zengyan Liu, Yuxuan Yao, Haotian Xu, Junhao Zheng, Xiuyi Chen, Yingying Zhang, Fei Yin, Jiahua Dong, Zhijiang Guo, Le Song, and Cheng-Lin Liu. 從系統 1 到系統 2：推理大語言模型調查。IEEE Pattern Analysis &amp; Machine Intelligence Transactions，頁 3335–3354，2026。</li>
+<li>Zhang et al. (2025a) Lunjun Zhang, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, and Rishabh Agarwal. 生成驗證器：作為下一個令牌預測的獎勵建模。在 International Conference on Learning Representations 中，2025a。</li>
+<li>Zhang et al. (2025b) Qiyuan Zhang, Fuyuan Lyu, Zexu Sun, Lei Wang, Weixu Zhang, Wenyue Hua, Haolun Wu, Zhihan Guo, Yufei Wang, Niklas Muennighoff, Irwin King, Xue Liu, and Chen Ma. 大型語言模型中的測試時間擴展調查：什麼、如何、在哪裡以及效果如何？，2025b。URL https://arxiv.org/abs/2503.24235 。</li>
+<li>Zhang et al. (2025c) Qiyuan Zhang, Yufei Wang, Yuxin Jiang, Liangyou Li, Chuhan Wu, Yasheng Wang, Xin Jiang, Lifeng Shang, Ruiming Tang, Fuyuan Lyu, and Chen Ma. 群眾比較推理：為作為評判者的大語言模型解鎖全面評估。在 Annual Meeting of the Association for Computational Linguistics 中，2025c。</li>
+<li>Zheng et al. (2023) Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric Xing, Hao Zhang, Joseph E. Gonzalez, and Ion Stoica. 透過 MT-bench 和 chatbot arena 評判大語言模型作為評判者。在 Conference on Neural Information Processing Systems Datasets and Benchmarks Track 中，2023。</li>
+<li>Zheng et al. (2026) Tong Zheng, Hongming Zhang, Wenhao Yu, Xiaoyang Wang, He Xing, Runpeng Dai, Rui Liu, Huiwen Bao, Chengsong Huang, Heng Huang, and Dong Yu. Parallel-R1：透過強化學習邁向平行思考。在 International Conference on Learning Representations 中，2026。URL https://openreview.net/forum?id=wOmjeBN6hP 。</li>
+<li>Zhou et al. (2025a) Enyu Zhou, Guodong Zheng, Binghai Wang, Zhiheng Xi, Shihan Dou, Rong Bao, Wei Shen, Limao Xiong, Jessica Fan, Yurong Mou, Rui Zheng, Tao Gui, Qi Zhang, and Xuanjing Huang. RMB：大型語言模型對齊中獎勵模型的綜合基準。在 International Conference on Learning Representations 中，2025a。</li>
+<li>Zhou et al. (2025b) Yilun Zhou, Austin Xu, PeiFeng Wang, Caiming Xiong, and Shafiq Joty. 評估評判者作為評估器：大語言模型作為評判者作為測試時間擴展評估器的 JETTS 基準。在 International Conference on Machine Learning 中，2025b。URL https://openreview.net/forum?id=CgJEHynkJt 。</li>
+<li>Zhuo et al. (2025) Terry Yue Zhuo, Vu Minh Chien, Jenny Chim, Han Hu, Wenhao Yu, Ratnadira Widyasari, Imam Nur Bani Yusuf, Haolan Zhan, Junda He, Indraneil Paul, Simon Brunner, Chen GONG, James Hoang, Armel Randy Zebaze, Xiaoheng Hong, Wen-Ding Li, Jean Kaddour, Ming Xu, Zhihan Zhang, Prateek Yadav, Naman Jain, Alex Gu, Zhoujun Cheng, Jiawei Liu, Qian Liu, Zijian Wang, David Lo, Binyuan Hui, Niklas Muennighoff, Daniel Fried, Xiaoning Du, Harm de Vries, and Leandro Von Werra. BigCodeBench：使用多樣化函式呼叫和複雜指令對程式碼生成進行基準測試。在 International Conference on Learning Representations 中，2025。</li>
+</ul>
+<h2 id="a">附錄 A 訓練實現</h2>
+<h3 id="a1">A.1 超參數設置</h3>
+<p>我們在表 7 和表 7 中提供詳細的超參數設置。</p>
+<p>表 6：SFT 的超參數設置。</p>
+<h3 id="a2">A.2 訓練數據來源詳情</h3>
+<p>為了培養通用的獎勵能力，有必要整理一個涵蓋多樣化現實世界場景的訓練語料庫。
+我們通過從代表性數據源執行分層隨機採樣來構建數據集，確保在不同對齊領域中實現平衡覆蓋，包括通用聊天、STEM、編碼、數學、安全、多語言和指令跟隨。
+具體的源數據集、其對應的領域和採樣統計詳見表 8。</p>
+<p>表 8：從領域特定源採樣的訓練數據的組成和統計。</p>
+<h3 id="a3">A.3 訓練數據合成詳情</h3>
+<p>為了為 SFT 合成 CoT 數據，我們利用 DeepSeek-v3（0324 快照）作為骨幹生成器。
+生成過程配置的採樣溫度為 T = 0.8 T=0.8，以促進軌跡中的多樣性同時保持邏輯連貫性。
+值得注意的是，我們避免使用一致性過濾：
+與丟棄合成結論與真實人類標籤不同的樣本的常見做法相反，我們的經驗驗證表明，對完整合成的 CoT 進行訓練比積極過濾產生更優越的性能，無論結論是否一致。</p>
+<h3 id="a4">A.4 離線強化學習細節</h3>
+<p>為了嚴格控制時間資料洩漏並確保與我們評估基準的發佈日期的公平比較，我們選擇 Llama-3-8B 作為基礎基礎模型。離線強化學習管道由兩個階段組成：SFT 初始化和 DPO。</p>
+<h4 id="sft_2">策略初始化 (SFT)。</h4>
+<p>我們首先通過在複合數據集上微調 Llama-3-8B 來衍生受監督的策略模型。該數據集確保基本的指令跟隨和推理能力，包含 UltraChat 數據集（Ding et al., 2023）和來自 MetaMathQA（Yu et al., 2024）的 40 ​ K 40\mathrm{K} 個隨機樣本。</p>
+<p>我們使用 2 2 個 epoch、學習率 2 ​ e − 5 2\mathrm{e}{-5} 和最大序列長度 2 , 048 2,048 個 token 來訓練模型。此 SFT 模型作為後續 DPO 階段的初始策略 π ref \pi_{\text{ref}}。</p>
+<h4 id="rm-dpo">透過 RM 標籤的 DPO 資料建構。</h4>
+<p>為了評估不同 RM 的實際效用，我們使用它們在統一的來源數據集上標註偏好。</p>
+<p>提示來源包括從 UltraFeedback（Cui et al., 2024）隨機抽樣的 10 ​ K 10\mathrm{K} 條指令和來自 MetaMathQA 的 40 ​ K 40\mathrm{K} 條指令。</p>
+<p>對於每條指令 x x，我們使用 gpt-4o-mini 以 0.8 0.8 的溫度生成 N = 5 N=5 個多樣化的候選回應。</p>
+<p>我們採用成對評分聚合策略來構建最終的偏好對 ( x , y w , y l ) (x,y_{w},y_{l})。具體來說，對於 5 個回應的集合，我們生成所有可能的成對組合（ ( 5 2 ) = 10 \binom{5}{2}=10 對）。目標 RM 評估每一對，為首選回應（選中的）分配 + 1 +1 點，為非首選回應（拒絕的）分配 0 點。在遍歷所有配對後，我們計算每個回應的累積分數。總分最高的回應被選為正樣本（ y w y_{w}），總分最低的回應被選為負樣本（ y l y_{l}）。這些標註的成對數據隨後用於通過 DPO 訓練策略。</p>
+<h2 id="b">附錄 B 評估實現</h2>
+<h3 id="b1">B.1 核心基準</h3>
+<p>以下是基準和相應任務覆蓋的列表。</p>
+<p>表 9：評估的一般獎勵基準的任務覆蓋。</p>
+<h3 id="b2">B.2 離線強化學習評估基準</h3>
+<p>為了全面評估從 DPO 衍生的策略，我們在兩個不同領域進行評估：數學推理和開放式指令跟隨。</p>
+<h4 id="_12">數學推理。</h4>
+<p>我們採用四個具有挑戰性的資料集套件來評估模型的演繹邏輯和問題解決能力：GSM8k（Cobbe et al., 2021）、MATH（Hendrycks et al., 2021）、MAWPS（Koncel-Kedziorski et al., 2016）和 TabMWP（Lu et al., 2023）。這些基準涵蓋了從小學算術到競賽級數學和表格處理的廣泛難度範圍。</p>
+<h4 id="_13">指令跟隨。</h4>
+<p>為了實現通用對齊和對話多功能性，我們採用兩個廣泛使用的基準：AlpacaEval-2（Dubois et al., 2024）和 Arena-Hard v0.1（Li et al., 2024）。評估使用自動評估器在頭對頭設置中執行，其中模型的回應與基準參考進行比較以確定勝率。我們嚴格遵循官方推薦的配置以確保可重現性。</p>
+<h3 id="b3">B.3 測試時間擴展評估基準</h3>
+<p>依照 JETTS 設置（Zhou et al., 2025b），我們執行 Best-of-10 重新排序評估，其中模型從混合的候選回應池中選擇最優解決方案。我們報告基準最具挑戰性的四個子集上的結果：用於數學推理的 MATH（Hendrycks et al., 2021）、用於競賽級數學的 CHAMP（Mao et al., 2024），以及用於程式碼生成的 MBPP+（Liu et al., 2023）和 BigCodeBench（Zhuo et al., 2025）。此選擇測試模型在複雜場景中識別正確推理路徑的能力。</p>
+<h2 id="c">附錄 C 提示模板</h2>
+<p>為了與既定的社群標準保持一致，我們的 Vanilla-CoT 生成採用了最初在 MT-Bench（Zheng et al., 2023）和 RewardBench（Lambert et al., 2025）中引入的代表性提示。</p>
+<p>使用標準提示生成原始 Vanilla-CoT 後，我們採用專門的提取提示將非結構化文本解析為模組化的「原則–判斷–裁定」（Principle–Judgment–Verdict）架構。</p>
+<p>利用解析的架構，我們引入專門的提示來合成兩種目標形態。對於 Breadth-CoT，合成過程涉及合併衍生自至少兩個 Vanilla-CoT 回應的模組化元件，隨後進行去重複步驟以確保多樣性涵蓋。</p>
+<p>相比之下，Depth-CoT 的合成依賴於推理引導的評估機制。我們最初提示模型深入推理指令。我們隨後使用此生成的推理來基於從解析架構中提取的選定原則進行重新評估，捨棄其先前的理由以確保新的判斷純粹由嚴謹推理驅動。</p>
+<h2 id="d">附錄 D 獎勵模型在偏好和正確性上的效能</h2>
+<p>為提供關於我們模型效能的更細粒度觀點，我們報告基於各基準提供的元數據在特定任務上的詳細效能。我們將這些任務分類到兩個不同的表格中：表 10 用於主觀偏好任務，表 11 用於客觀正確性任務。這種細粒度報告作為主文本中討論的機制級效能的詳細分解，為 B-CoT 和 D-CoT 之間的機制-任務協同性提供更深入的實驗證據。</p>
+<p>表 10：RM 在偏好相關子任務上的效能。「Avg.」是子任務之間的平均分數。每列最佳值為粗體；次佳值為下劃線。</p>
+<p>表 11：RM 在正確性相關子任務上的效能。「Avg.」是此區塊內的平均值。每列最佳值為粗體；次佳值為下劃線。</p>
+<h2 id="e">附錄 E 敏感性和穩健性</h2>
+<p>資料合成過程包括兩個主要階段：原始推理過程的採樣，以及隨後的 B-CoT/D-CoT 合成。為了保證此管線的可靠性，我們進行了專注於管線穩定性和對雜訊的穩健性的實證分析。</p>
+<h4 id="_14">管線穩定性的定量評估</h4>
+<p>為了確保我們的提取和優化模組不會引入系統性錯誤或降低資料品質，我們在訓練集上追蹤了合成資料在管線各階段的解決方案準確度。如表 12 所示，準確度在各項轉換中保持高度穩定。合併步驟（B-CoT）解決了矛盾並提高了準確度，而 D-CoT 生成對正確推理路徑保持高保真度。這證實了中間處理步驟能夠可靠地保持資料品質，不會產生災難性的退化。</p>
+<p>表 12：合成管線不同階段的解決方案準確度追蹤，展示了中間轉換的穩定性。</p>
+<h4 id="_15">對雜訊的穩健性</h4>
+<p>LLM 生成的推理過程的一個常見問題是需要嚴格過濾以確保完全正確性。我們在 SFT 階段進行了消融研究，以測量雜訊的影響。我們比較了在 99K 嚴格驗證的 CoT 資料（針對正確的最終判決進行過濾）上訓練的模型與在 99K 含雜訊的 CoT 資料（無嚴格正確性過濾）上訓練的模型。如表 13 所示，SFT 性能差異可以忽略不計。這表示我們的方法對合成推理過程中的雜訊具有高度的穩健性，不需要提取管線的完美準確度即可有效。因此，我們在主要實驗中採用未過濾的資料設定，以顯著降低資料整理的計算成本，同時不犧牲性能。</p>
+<p>表 13：含雜訊和嚴格過濾的合成資料之間的 SFT 性能比較。</p>
+<p>此外，我們在模式提取和原始推理過程生成中都利用開源的 DeepSeek-V3 模型。我們的合成管線在開源模型上的有效性進一步強調了其穩健性和可推廣性，證明它對底層 LLM 的選擇並不過度敏感。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

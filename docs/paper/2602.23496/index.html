@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGDC：用於醫學影像分割的結構引導動態卷積 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">SGDC：用於醫學影像分割的結構引導動態卷積</h1>
+  
+  <div class="en-title">SGDC: Structurally-Guided Dynamic Convolution for Medical Image Segmentation</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Bo Shi, Wei-ping Zhu, M. N. S. Swamy</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2602.23496" target="_blank">2602.23496</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2602.23496" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2602.23496" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2602.23496" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Medical</span>
+    <span class="tag method">Dynamic Convolution</span><span class="tag method">Auxiliary Branch</span><span class="tag method">Structure Extraction</span>
+    <span class="tag task">Medical Image Segmentation</span><span class="tag task">Boundary Detection</span>
+    <span class="tag open">Open Source</span>
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p>Spatially variant dynamic convolution provides a principled approach of integrating spatial adaptivity into deep neural networks. However, mainstream designs in medical segmentation commonly generate dynamic kernels through average pooling, which implicitly collapses high-frequency spatial details into a coarse, spatially-compressed representation, leading to over-smoothed predictions that degrade the fidelity of fine-grained clinical structures. To address this limitation, we propose a novel Structure-Guided Dynamic Convolution (SGDC) mechanism, which leverages an explicitly supervised structure-extraction branch to guide the generation of dynamic kernels and gating signals for structure-aware feature modulation. Specifically, the high-fidelity boundary information from this auxiliary branch is fused with semantic features to enable spatially-precise feature modulation. By replacing context aggregation with pixel-wise structural guidance, the proposed design effectively prevents the information loss introduced by average pooling. Experimental results show that SGDC achieves state-of-the-art performance on ISIC 2016, PH2, ISIC 2018, and CoNIC datasets, delivering superior boundary fidelity by reducing the Hausdorff Distance (HD95) by 2.05, and providing consistent IoU gains of 0.99\%-1.49\% over pooling-based baselines. Moreover, the mechanism exhibits strong potential for extension to other fine-grained, structure-sensitive vision tasks, such as small-object detection, offering a principled solution for preserving structural integrity in medical image analysis. To facilitate reproducibility and encourage further research, the implementation code for both our SGE and SGDC modules has been is publicly released at https://github.com/solstice0621/SGDC.</p>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <p>2026 \jmlrworkshop Full Paper – MIDL 2026 \jmlrvolume – 079 \midlauthor \Name Bo Shi \orcid 0009-0005-6565-1589 \Email bo.shi@mail.concordia.ca \Name Wei-ping Zhu \orcid 0000-0001-7955-7044 \Email weiping@ece.concordia.ca \Name M.N.S Swamy \orcid 0000-0002-3989-5476 \Email swamy@encs.concordia.ca \addr Department of Electrical and Computer Engineering, Concordia University</p>
+<h1 id="sgdc">SGDC：結構導向動態卷積用於醫學影像分割</h1>
+<p>空間變異性動態卷積提供了一種結構化的方法，將空間自適應性整合到深層神經網路中。然而，醫學分割中的主流設計通常通過平均池化生成動態核，這隱含地將高頻空間細節坍縮為粗糙的、空間壓縮的表示，導致過度平滑的預測，降低了細粒度臨床結構的保真度。為了解決這一限制，我們提出了一種新型結構導向動態卷積（SGDC）機制，該機制利用顯式監督的結構萃取分支來指導動態核和門控信號的生成，以實現結構感知的特徵調制。具體而言，來自此輔助分支的高保真邊界資訊與語義特徵融合，以實現空間精確的特徵調制。通過將上下文聚合替換為像素級的結構指導，所提設計有效防止了平均池化引入的資訊遺失。實驗結果表明，SGDC 在 ISIC 2016、PH2、ISIC 2018 和 CoNIC 資料集上達到最先進的效能，通過將 Hausdorff Distance（HD95）降低 2.05 來提供卓越的邊界保真度，並相對於基於池化的基準提供 0.99%-1.49% 的一致 IoU 增益。此外，該機制展現出向其他細粒度、結構敏感視覺任務（如小物體檢測）擴展的強大潛力，為醫學影像分析中保護結構完整性提供了一個結構化的解決方案。為了便於再現性並鼓勵進一步研究，我們的 SGE 和 SGDC 模組的實現程式碼已公開發佈在 https://github.com/solstice0621/SGDC。</p>
+<h2 id="1">1 簡介</h2>
+<p>醫學影像分割中的核心挑戰在於擴展網路感受野 [ Chen et al.(2017)Chen, Papandreou, Kokkinos, Murphy, and
+Yuille ] 以進行語義理解與保持高空間解析度以實現精確邊界描繪之間的權衡。為前者設計的操作往往會危及後者，導致對臨床診斷至關重要的複雑結構的保真度損失。</p>
+<p>一個突出的研究方向引入了明確的邊界監督 [ Lin et al.(2023)Lin, Zhang, Fang, Chen, Cheng, and
+Chen , Lin et al.(2025)Lin, Zhang, Fang, Chen, Cheng, and
+Chen ] ，通常採用輔助分支來學習邊界資訊以指導主分割網路。雖然被廣泛採用，但此類指導的效用受到所採用融合機制的根本限制。將邊界特徵壓縮為單一通道注意力圖的策略造成內在的資訊瓶頸，防止豐富結構線索的傳輸。相反，依賴於簡單串聯或加法的方法則面臨這些高頻細節被後續卷積操作平滑化的風險。因此，保持結構保真度需要更深層次且更具互動性的融合機制，能夠以結構先驗有效調節語義特徵，而非簡單的聚合。</p>
+<p>一種更為進階的方法是空間可變動態卷積 [ Chen et al.(2020)Chen, Dai, Liu, Chen, Yuan, and Liu , Lou and Yu(2025) ] ，其採用核預測網路為每個空間位置生成唯一的卷積參數。這使得高度自適應、位置感知的特徵提取成為可能，並增強了局部結構建模。此範式中的現有方法著重於語義感知，從區域特徵鄰域本身 [ Li et al.(2021)Li, Hu, Wang, Li, She, Zhu, Zhang, and
+Chen ] 或來自不同網路階段的特徵 [ Lou and Yu(2025) ] 生成指導。儘管這些方法較為複雜，但它們都存在一個臨界缺陷：依賴自適應平均池化來生成動態核。此操作會丟棄對邊界處理至關重要的像素級位置資訊，導致生成的核依賴於粗糙的空間歧義信號，最終導致細節的過度平滑化。</p>
+<p>超越池化操作，更根本的限制在於條件信號本身的內在性質。在現有的範式中，指導隱含地來自網路自身的骨幹特徵 [ Wang et al.(2025)Wang, Chen, Lin, Han, and Ding ] 。這些特徵本質上被訓練以最大化類內一致性以進行語義識別，導致由低頻資訊主導的空間平滑表示。使用此類語義同質信號來生成動態核產生了一個悖論：核的任務是細化邊界，但它們以已經抑制結構細節的特徵為條件。因此，無論空間解析度為何，生成的核對於細微的幾何變化（如細邊界或不規則輪廓）保持不敏感。</p>
+<p>這些限制表明語義特徵單獨不足以驅動空間自適應核，特別是在需要邊界精度時。動態機制應從提供特定的源受益，該源明確編碼結構線索，而非依賴隱含的條件信號 [ Li et al.(2021)Li, Hu, Wang, Li, She, Zhu, Zhang, and
+Chen ] ，這些信號來自池化或融合的語義。引入監督的邊界引導流提供語義途徑無法提供的高頻資訊，使核生成過程能夠回應對於精確醫學分割至關重要的局部幾何變化。</p>
+<p>我們提出了一個新穎的結構引導動態卷積（SGDC）網路（SGD-Net），一個旨在透過兩項核心創新直接解決此結構資訊損失的框架。首先，我們引入了無平均池化的 SGDC 機制，其利用明確的高保真度結構指導（而非池化的語義資訊）來生成空間感知的動態核和門控信號，從而實現對邊界細節敏感的自適應特徵細化。其次，我們提出了結構指導提取器（SGE），一個獨立監督的輔助分支，從多尺度特徵產生多通道引導圖，提供 SGDC 模組所需的高頻結構線索。</p>
+<h2 id="2">2 相關研究</h2>
+<h3 id="21">2.1 動態卷積</h3>
+<p>動態卷積已經發展成為一種強大的機制，通過使模型參數適應輸入來增強神經網路的表示能力。這一演進的早期階段以 CondConv [ Yang et al.(2019)Yang, Bender, Le, and Ngiam ] 和 DynamicConv [ Chen et al.(2020)Chen, Dai, Liu, Chen, Yuan, and Liu ] 等樣本變異方法為特徵，引入了為每個輸入影像生成一組獨特卷核的概念。然而，這些方法主要依賴全域平均池化（GAP）來聚合全域上下文向量用於卷核生成。雖然對影像分類有效，但這種設計本質上是空間不變的；它在整個影像上應用相同的動態卷核，對背景和細粒度前景結構的處理是相同的，這對於需要空間精度的密集預測任務（如分割）來說並非最優。</p>
+<p>為了解決樣本變異方法的定位瓶頸，範例已轉向空間變異動態卷積，可根據其引導源分為兩個流。第一個流由 Involution [ Li et al.(2021)Li, Hu, Wang, Li, She, Zhu, Zhang, and Chen ] 、Condconv [ Yang et al.(2019)Yang, Bender, Le, and Ngiam ] 和 [ Wang et al.(2025)Wang, Chen, Lin, Han, and Ding ] 等方法代表，使用隱含自引導，其中卷核生成僅以目標像素的局部鄰域為條件，甚至嚴格地從個別像素實例衍生以避免空間聚合。第二個流採用隱含異質源引導，通過 OverLock 網路中的 Contmix 動態卷積模組 [ Lou and Yu(2025) ] 實現。Contmix 通過聚合網路不同階層級別的特徵組合來構建條件訊號。然而，儘管具有改善的空間適應性，但這種設計在應用於醫學影像分割時存在一個關鍵限制：普遍依賴自適應平均池化進行上下文壓縮，這隱含地將高頻空間細節折疊成粗糙表示。條件訊號來自網路的語義骨幹，該骨幹針對類別內一致性進行最優化。這種固有的同質性抑制了精確邊界描繪所需的高頻變異。因此，使用這些語義池化的訊號驅動動態卷核會產生一個根本性的悖論：細化機制實際上對它打算保留的細微結構是盲目的。</p>
+<h3 id="22">2.2 分割中的顯式結構引導</h3>
+<p>與動態卷積平行，顯式邊界監督方法 [ Lin et al.(2023)Lin, Zhang, Fang, Chen, Cheng, and
+Chen , Lin et al.(2025)Lin, Zhang, Fang, Chen, Cheng, and
+Chen ] 採用多任務框架來顯式學習邊界資訊，有效地為結構保真度提供寶貴的高頻線索。然而，它們的有效性從根本上受到低效融合機制的限制。常見的策略——例如將邊界特徵壓縮成單通道注意力圖——會產生嚴重的資訊瓶頸。此外，簡單的逐元素相加或串聯往往無法有效地調制語義特徵，導致後續層中銳利邊緣細節被沖淡。因此，儘管成功提取了邊緣，這些方法仍然缺乏一種有力的機制來充分利用這個結構資訊進行有效的特徵細化。</p>
+<h2 id="3">3 方法論</h2>
+<h3 id="31">3.1 整體架構</h3>
+<p>我們提出的 SGD-Net，如圖 1 (a) 所示，基於分層編碼器–解碼器架構構建。為了實現穩健的特徵提取，我們採用在 ImageNet 上預訓練的 Res2Net-50 骨幹網絡來生成多尺度特徵圖。最淺層的特徵進一步由 Transformer 編碼器變體 [ Lin et al.(2025)Lin, Zhang, Fang, Chen, Cheng, and Chen ] 處理，以捕捉長距離依賴關係。該編碼器採用具有多尺度步長 (16, 16)、(8, 8)、(4, 4)、(2, 2) 的稀疏採樣策略，大幅縮減序列長度，僅貢獻 8.07 GFLOPs 的模型複雜度。類似地，雙注意力模組僅應用於最深編碼器層（8x8 解析度）以增強全局語義上下文，僅增加 2.01 GFLOPs。</p>
+<p>我們網絡的核心創新涉及 SGE 和 SGDC 模組，分別如圖 1 (b) 和 (c) 所示，這些模組用於在將多尺度特徵傳遞到專為邊界恢復設計的解碼器之前進行細化。我們採用反向注意力機制，而非簡單的串聯。在每個解碼階段，該模組利用上採樣的高級語義特徵，表示為 $\mathbf{F}<em>{\text{up}}$，來生成反向注意力遮罩，表述為 $1-\sigma(\mathbf{F}</em>{\text{up}})$。該遮罩應用於淺層特徵以抑制最顯著的區域（通常是病灶中心），並強制網絡專注於挖掘邊界處的細粒度結構細節。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2602.23496/fig.jpg" loading="lazy"></figure> 圖 1：(a) 我們提出的 SGD-Net 的示意圖。(b) SGE 模組的結構。(c) SGDC 模組的結構</p>
+<p>為了確保全面和有效的訓練，我們的網絡通過多輸出監督策略進行最佳化。解碼器在三個不同的尺度上產生分割預測。來自更粗糙尺度的輸出，稱為輔助輸出，提供中間監督信號。這種深度監督技術確保網絡所有深度的特徵表示都得到有效最佳化。</p>
+<p>此外，我們的 SGE 生成一份專用邊界圖。該輸出直接受到真實邊界圖的監督，迫使 SGE 明確學習高保真度結構指導。這確保提供給我們核心模組 SGDC 的指導既準確又富含必要的邊界細節。</p>
+<h3 id="32-structure-guidance-extractor">3.2 Structure Guidance Extractor</h3>
+<p>The SGE module, detailed in Fig. 1 (b), is designed to generate the high-fidelity structural guidance essential for our SGDC mechanism. Its core innovation lies in the decoupling of two distinct tasks: generating a single channel edge map for explicit supervision and a multi-channel structural guidance feature for the SGDC modules. This design is crucial because the ideal representations for these tasks differ; supervision requires sharp, precise contours, whereas guidance benefits from richer, multi-dimensional information. The SGE workflow begins by processing features from two distinct network stages: the deep, semantic-rich features from the final encoder block and the shallow, high-resolution features from the first encoder. To align their channel dimensions and ensure computational efficiency, the deep features are first projected into a lower-dimensional space via a 1 × 1 1\times 1 convolution. Both feature streams are then processed to extract structural details. In contrast to methods using learnable convolutions for this task, we employ a classic, non-trainable Sobel operator whose fixed kernels explicitly inject a stable and efficient structural guidance into the network, obviating the need to learn basic gradient extraction from scratch. We consciously employ a deterministic Sobel operator over learnable convolutions for this stage. While learnable layers offer flexibility, they are prone to overfitting to specific semantic textures in deep networks, potentially diluting the purity of boundary cues. The fixed Sobel operator acts as a ’structural anchor’, ensuring that the extracted guidance remains strictly faithful to geometric gradients regardless of the varying semantic contexts. This injects a stable, domain-independent structural prior into the dynamic mechanism. This process is enhanced through an ”Edge Modulation” operation, formulated as:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>F m ​ o ​ d = F i ​ n ⊙ σ ​ ( ( F i ​ n ∗ K x ) 2 + ( F i ​ n ∗ K y ) 2 ) F_{mod}=F_{in}\odot\sigma\left(\sqrt{(F_{in}<em>K_{x})^{2}+(F_{in}</em>K_{y})^{2}}\right)</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>where F i ​ n F_{in} is the input feature, ∗ * denotes convolution with the Sobel kernels ( K x , K y K_{x},K_{y} ), ⊙ \odot the element-wise multiplication, and σ \sigma is the Sigmoid function. This operation selectively amplifies feature activations corresponding to edges. During the fusion stage, the processed deep and shallow features are concatenated. This combined feature map is then passed through a 3 × 3 3\times 3 convolution to promote effective interaction and integration. Finally, this refined feature is fed into two independent convolutional heads to generate the decoupled outputs. The single channel edge map is directly supervised by ground-truth boundary maps to ensure localization accuracy, while the Structural Guidance is passed to the SGDC modules, providing the essential high-frequency information that enables effective boundary-aware feature refinement.</p>
+<h3 id="33-structure-guided-dynamic-convolution-module">3.3 Structure-Guided Dynamic Convolution Module</h3>
+<p>標準動態卷積儘管具有空間自適應性，但從根本上受到依賴池化操作的限制，而池化操作會降低結構細節。為了克服這一點，我們提出了 SGDC，一種新穎的特徵精化單元，用引導驅動方法替代傳統的池化驅動方法。如圖 1 (c) 所示，SGDC 是以輕量級參數化頭部為中心的特徵處理區塊，該頭部為並行雙分支執行體生成自適應權重。</p>
+<p>SGDC 模組接收兩個輸入：來自編碼器的主特徵圖 Feature X（$F_{X}$）和來自 SGE 的多通道結構引導（$F_{guidance}$）。這些特徵通過元素級加法融合，形成參數生成頭的輸入，該頭是單個 1x1 卷積。它為每個空間位置動態生成三個輸出：動態核心權重（$W_{dyn}$）和兩個閘門信號，Gate1（$g_{1}$）和 Gate2（$g_{2}$）。</p>
+<p>這個雙分支體通過兩個互補的並行分支處理輸入特徵 $F_{X}$。在分支之前，通過 LayerNorm 層對 $F_{X}$ 進行正規化至關重要。主動態分支應用「unfold」操作將正規化特徵圖分解為重疊的局部補丁。生成的核心權重（$W_{dyn}$）通過「Softmax」函數以作為空間變化的加權係數。然後計算補丁的加權和—此過程等同於大核心、空間變化卷積—結果通過「fold」操作重組並由 Gate2（$g_{2}$）調節。第二分支是局部精化路徑，用 Gate1（$g_{1}$）調節正規化特徵，並使用 3x3 深度卷積進行處理。</p>
+<p>兩個分支的輸出隨後通過元素級求和合併，此分支級融合通過主殘差連接加回原始 $F_{X}$。這種雙分支設計遵循互補特徵處理的原則。由 SGE 驅動的動態分支在內容自適應調節和長程結構建模方面表現出色。然而，純粹的動態運算符有時可能在同質區域引入空間不穩定或過度反應。採用靜態深度卷積的局部精化分支提供確定性高頻通道。通過聚合這兩個流，SGDC 確保特徵圖受益於自適應結構塑形，同時保留標準卷積提供的基本紋理完整性和訓練穩定性。特徵圖通過第二個 LayerNorm 層傳遞到前饋網路（FFN），該網路由兩個 1x1 卷積和中間 GELU 激活組成。最終殘差連接整合 FFN 輸出。整個操作可以簡潔地表述為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$F^{\prime}<em>{X}=\text{LayerNorm}(F</em>{X})$</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$F_{mix}={\text{dynamic}}(F^{\prime}<em>{X},W</em>{dyn},g_{2})+{\text{local}}(F^{\prime}<em>{X},g</em>{1})$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$F_{out}=\text{FFN}(\text{LayerNorm}(F_{X}+F_{mix}))+(F_{X}+F_{mix})$</th>
+<th></th>
+<th>(4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>SGDC 模組在多個尺度上展現功能互補性。在細緻解析度下，引導信號主要驅動細節精化和邊緣銳化。相反地，在粗糙語義級別，它防止池化操作典型的過度平滑，從而保持拓撲完整性，即使在深層也能分離不同的語義區域。</p>
+<h3 id="34">3.4 損失函數</h3>
+<p>為確保語義表示和結構保真度的全面監督，我們使用複合多任務目標函數對 SGD-Net 進行端到端優化。該目標將多尺度分割預測的深度監督與結構先驗的顯式邊界監督相結合。總損失 $\mathcal{L}_{\text{total}}$ 的公式為：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{total}}=\sum</em>{i=1}^{3}\mathcal{L}<em>{\text{seg}}(o</em>{i},M_{\text{gt}})+\lambda\cdot\mathcal{L}<em>{\text{edge}}(o</em>{e},E_{\text{gt}})$</th>
+<th></th>
+<th>(5)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中第一項表示分割損失。為了促進穩健的梯度流動並加快收斂速度，我們採用深度監督策略，將損失應用於來自三個不同解碼器尺度的預測 ${o_{1},o_{2},o_{3}}$ 與地面真實遮罩 $M_{\text{gt}}$ 進行比較。$\mathcal{L}_{\text{seg}}$ 項本身是結合二元交叉熵（BCE）和 Dice 損失的混合損失，設計用於處理像素級分類準確度，同時緩解醫學分割中固有的類別不平衡問題。</p>
+<p>第二項 $\mathcal{L}<em>{\text{edge}}$ 對 SGE 模組生成的單通道邊界圖 $o</em>{e}$ 提供直接監督。我們為該項採用 Dice 損失，以強制預測結構先驗與地面真實邊界 $E_{\text{gt}}$ 之間的高保真度對齊。超參數 $\lambda$ 作為權衡因子，用於平衡語義和結構學習目標。在我們的實驗中，我們將 $\lambda=3$ 進行經驗設定，以強調邊界保留的重要性。</p>
+<h2 id="4">4 實驗與結果</h2>
+<h3 id="41">4.1 實作細節</h3>
+<p>我們在多個公開資料集上評估 SGD-Net：ISIC 2016 [ Gutman et al.(2016)Gutman, Codella, Celebi, Helba, Marchetti, Mishra, and Halpern ] 、ISIC 2018 [ Codella et al.(2019)Codella, Rotemberg, Tschandl, Celebi, Dusza, Gutman, Helba, Kalloo, Liopyris, Marchetti, et al. ] 和 PH2 [ Mendonça et al.(2013)Mendonça, Ferreira, Marques, Marcal, and Rozeira ] 用於皮膚病變分割，以及 CoNIC 資料集 [ Graham et al.(2021b)Graham, Jahanifar, Vu, Hadjigeorghiou, Leech, Snead, Raza, Minhas, and Rajpoot ] 用於細胞核分割。對於 ISIC 2018，我們報告 5 折交叉驗證結果。對於 ISIC 2016 和 PH2，為了評估跨資料集的泛化能力，模型在 ISIC 2016 上訓練，在 PH2 上測試。CoNIC 資料集按 7:1:2 的比例分為訓練、驗證和測試集。我們使用 Dice Coefficient 和 Intersection over Union (IoU) 作為主要評估指標。模型效率使用 FLOPs 和參數數量進行評估。</p>
+<p>模型使用 Adam 優化器進行優化，初始學習率為 $1 \times 10^{-4}$，採用多項式學習率衰減。我們使用批次大小 16，輸入影像大小為 $256\times 256$。編碼器使用 ImageNet 預訓練的 Res2Net-50 [ Gao et al.(2019)Gao, Cheng, Zhao, Zhang, Yang, and Torr ] 權重初始化，並微調 50 個 epoch。為了確保可重現性，我們指定關鍵設置：邊界地面真實 $E_{gt}$ 通過形態學梯度運算（膨脹減去腐蝕）生成，產生固定的 3 像素厚度。在 SGDC 模組內部，動態 unfold-fold 運算使用 $7 \times 7$ 鄰域核。資料增強遵循標準協議（隨機翻轉和 $\pm 20^{\circ}$ 旋轉），使用 Albumentations。所有實驗均在單個 NVIDIA L4 GPU 上進行。為了確保公平比較，我們採用 [ Lin et al.(2023)Lin, Zhang, Fang, Chen, Cheng, and Chen ] 的實驗設置作為我們的主要基準。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2602.23496/vis.png" loading="lazy"></figure> 圖 2：ISIC 2018 [ Codella et al.(2019)Codella, Rotemberg, Tschandl, Celebi, Dusza, Gutman, Helba, Kalloo, Liopyris, Marchetti, et al. ] 和 CoNIC [ Graham et al.(2021b)Graham, Jahanifar, Vu, Hadjigeorghiou, Leech, Snead, Raza, Minhas, and Rajpoot ] 上的定性結果和結構引導圖的比較</p>
+<p>表 1：ISIC 2016 [ Gutman et al.(2016)Gutman, Codella, Celebi, Helba, Marchetti, Mishra, and Halpern ] 和 PH2 [ Mendonça et al.(2013)Mendonça, Ferreira, Marques, Marcal, and Rozeira ] 資料集上與其他方法的 Dice 和 IoU 比較。</p>
+<p>表 2：ISIC 2018 資料集 [ Codella et al.(2019)Codella, Rotemberg, Tschandl, Celebi, Dusza, Gutman, Helba, Kalloo, Liopyris, Marchetti, et al. ] 上與其他最先進方法的 Dice 和 IoU 比較，以及模型複雜度指標。</p>
+<p>表 3：CoNIC 資料集 [ Graham et al.(2021b)Graham, Jahanifar, Vu, Hadjigeorghiou, Leech, Snead, Raza, Minhas, and Rajpoot ] 上的性能比較。</p>
+<h3 id="42">4.2 實驗結果</h3>
+<p><strong>與最先進方法的比較：</strong> 如表 1 和表 2 所示，SGD-Net 在皮膚病變分割上達到了最先進的性能。在 ISIC 2016→PH2 測試中，它達到了 92.93% Dice 和 87.29% IoU，分別超過了最佳先前方法 0.37% 和 0.69%。在 ISIC 2018 上，我們的方法達到了 91.41% Dice 和 84.96% IoU，持續超越 TransUNet 和 CTO 等經典架構。值得注意的是，SGD-Net 也超越了最近具有競爭力的模型，包括 UNet v2（90.47% Dice）和基於 Mamba 的方法 VM-UNet V2（90.79% Dice）。此外，我們的 5 折交叉驗證的標準差表明了我們方法的穩健性。儘管參數數量少於 TransUNet 等大規模模型（75M vs. 114M），SGD-Net 在 Dice 和平均 IoU 上達到了顯著改進。這證實了性能提升源於提出的 SGDC 機制，而非單純的模型容量擴展。</p>
+<p>在 CoNIC 挑戰中（表 3），與其他方法相比，SGD-Net 達到了 81.61% Dice、69.46% IoU 和 68.79% PQ，在所有三項指標上排名第一。在模型效率方面，我們的網絡以相當的 FLOPs 和參數數量達到了這些改進。</p>
+<p>圖 2 提供了在 ISIC 2018 和 CoNIC 數據集上的定性比較，突出展示了我們方法的優越性能和可解釋性。在頂行中，皮膚病變與周圍組織呈現極低對比度的情況下，基線方法（CTO）無法識別微弱的過渡，導致嚴重的欠分割。相比之下，SGD-Net 準確地描繪出完整的病變結構。同樣地，對於底行中密集的細胞核，如紅色放大框所突出顯示的，我們的方法保留了細粒度的幾何拓撲，而基線方法則產生模糊和碎片化的掩碼。這種性能差距可以通過中間特徵圖來解釋：我們的結構引導圖（第 5 列）生成了銳利、高對比度的回應，精確地突出結構梯度，而基線的邊界預測（第 6 列）在空間上顯得分散且粗糙。這個視覺證據證實了我們的 SGE 成功提取了高保真的結構先驗，SGDC 模塊隨後利用這些先驗來防止基於池化的範式所具有的過度平滑特徵。觀察到的改進主要由精確的邊界描繪和複雜背景中誤報的有效抑制驅動。這些收益源於 SGE、SGDC 和解碼器之間的協同作用。同樣值得一提的是，SGE 採用了語義調制，以確保結構提取僅在深層語義特徵的支持下被激活，從而在非語義梯度（例如毛髮或紋理）進入動態機制之前過濾掉它們。這種引導隨後驅動 SGDC 根據有效的結構線索對特徵進行調制，結合解碼器的反向注意機制。總體而言，這種設計確保了高特異性，使模型能夠將真實的病變邊界與背景伪影區分開來。</p>
+<p>表 4：ISIC 2018 上不同 SGD-Net 變體的消融研究 [ Codella et al.(2019)Codella, Rotemberg, Tschandl, Celebi, Dusza, Gutman, Helba, Kalloo, Liopyris, Marchetti, et al. ]。</p>
+<p>表 5：ISIC 2018 上 SGDC 模塊的內部機制消融。我們分析了引導來源和雙分支架構的影響。「自引導」意味著使用輸入特徵本身來生成注意力，模擬標準動態卷積。</p>
+<p>表 6：ISIC 2018 上不同邊緣提取算子的消融研究。雖然 Laplacian 顯示出更高的敏感性，但 Sobel 因其結構穩定性和單一回應特性而被選中。</p>
+<h3 id="43-ablation-study">4.3 Ablation Study</h3>
+<p>We conduct a comprehensive ablation study on the ISIC 2018 dataset to validate both the incremental contributions of SGD-Net modules (Table 4 ) and the internal mechanisms of our SGDC module (Table 5 ). As shown in Table 4 , the standard baseline (2) consisting of Res2Net + ViT exhibits a high HD95 of 32.63, indicating that semantic features alone lack sufficient spatial precision for accurate lesion delineation, notably, when the ViT component is removed (as seen in the Res2Net-only variant), the HD95 remains high at 30.54, further highlighting the baseline’s struggle with boundary localization. In variant (3), we incorporate the Structural Guidance Encoder (SGE) into the baseline by adding the SGE-generated guidance feature to the baseline feature map via element-wise addition before feeding it to the decoder, which reduces the HD95 by 14.05 points to 18.58. This empirically confirms that explicit structural priors provide a crucial inductive bias that semantic features alone cannot capture.</p>
+<p>To rigorously assess the effectiveness of the fusion strategy, we replace the simple addition used in variant (4) with Contmix [ Lou and Yu(2025) ] , a recent dynamic convolution module that also leverages the SGE-generated guidance features. Despite its complexity, Contmix underperforms relative to the simple addition, yielding a higher HD95 of 24.21. This outcome illustrates the ”pooling trap”: its adaptive pooling aggregates spatial context, inadvertently smoothing out high-frequency structural details provided by the SGE. In contrast, our SGDC module avoids pooling and employs a dual-branch design, enabling more precise integration of guidance features and leading to superior segmentation performance.</p>
+<p>To further isolate the source of these gains, we analyze the internal components of SGDC in Table 5 . First, we explicitly evaluated the model’s robustness to weak or unavailable boundary annotations. Even when removing the explicit boundary guidance ( λ = 0 \lambda=0 ), the model maintains a competitive Dice of 90.37%. This validates that the fixed Sobel operator serves as an objective structural prior. Unlike learnable modules that are prone to collapse without supervision, this fixed prior prevents kernel degeneration, ensuring stability even when boundary labels are absent. However, the rise in HD95 (23.51) confirms that explicit supervision remains crucial for boundary precision. Second, regarding the guidance source, we implemented a Self-Guidance” variant where kernels are generated from the input feature F X F_{X} itself, simulating standard implicit dynamic convolutions. This degradation leads to a sharp increase in HD95 (16.09 → \rightarrow 21.34), confirming that semantic features alone are insufficient for precise boundary delineation, and the performance gain stems specifically from the explicit structural prior.
+In the last, ablating the dual branches reveals a clear division of labor: removing the Local Branch causes a spike in HD95 (18.95), indicating that the static depthwise convolution acts as a deterministic “safety net” for high-frequency details, whereas removing the Dynamic Branch drops the Dice score (89.92), highlighting its role in capturing long-range semantic context. This confirms that SGDC succeeds through the complementary integration of stable local processing and adaptive dynamic modulation.</p>
+<p>Table 7: Sensitivity analysis of the hyperparameter λ \lambda on ISIC 2018 dataset. λ = 3 \lambda=3 achieves the optimal trade-off.</p>
+<p>We analyzed different structural priors in Table 6. First, fixed operators consistently outperform learnable convolutions, indicating that learnable layers tend to overfit to dataset-specific semantics, whereas fixed operators provide the objective gradient signals necessary for stable modulation. Second, regarding the choice of fixed operator, While Laplacian achieves the highest Dice (92.11%), its second-order nature produces a zero-crossing double-response, creating ambiguity by highlighting boundary-adjacent regions. In contrast, Sobel provides a clean, single-response gradient. Although marginally lower in Dice, Sobel offers superior structural stability. Tests on CoNIC confirm that Laplacian degrades due to susceptibility to textural interference, whereas Sobel remains robust. Thus, we prioritize the geometric reliability of Sobel.</p>
+<p>Finally, we investigate the impact of the loss weight λ \lambda in Eq. (5). As shown in Table 7, λ = 3 \lambda=3 yields the optimal performance. This is theoretically grounded in our deep supervision design: since we employ three active segmentation heads (weights 1:1:1), a weight of λ = 3 \lambda=3 for the single structural head ensures a macroscopic 1:1 magnitude balance between the total semantic objective and the structural objective. In contrast, that a lower weight ( λ = 1 \lambda=1 ) fails to provide sufficient guidance, resulting in high-noise gradients that degrade performance below the baseline ( λ = 0 \lambda=0 ). On the other hand, a higher weight ( λ = 5 \lambda=5 ) leads to over-regularization.</p>
+<h2 id="5">5 結論</h2>
+<p>在本研究中，我們識別並解決了空間變異動態卷積方法的一個關鍵限制，即依賴自適應平均池化進行核生成導致細粒度結構細節退化的問題。為了克服這一瓶頸，我們提出的 SGD-Net 融合了 SGDC 模組，這是一個無平均池化單元，專門設計用於在特徵調制過程中保留高頻信息。</p>
+<p>與其透過聚合壓縮空間上下文不同，SGDC 透過利用輔助 SGE 分支提供的結構先驗來生成空間精確的核，使得動態調制能夠適應局部結構而不犧牲細節。我們的實驗結果表明，這種設計有效地減輕了基於池化方法固有的過平滑問題，根據 HD95 測量邊界保真度獲得了顯著改進。</p>
+<p>進一步的內部分析表明，性能提升不僅源自於額外結構線索的加入，而是源自 SGDC 確定性局部精細化與其自適應動態調制之間的協同相互作用。我們認為這種策略對於需要細粒度結構高保真度的更廣泛視覺任務（例如小物體檢測）具有重大潛力。</p>
+<h2 id="_1">參考文獻</h2>
+<ul>
+<li>
+<p>[Bi et al.(2016)Bi, Kim, Ahn, Feng, and Fulham] Lei Bi, Jinman Kim, Euijoon Ahn, Dagan Feng, and Michael Fulham. Automated skin lesion segmentation via image-wise supervised learning and multi-scale superpixel based cellular automata. In 2016 IEEE 13th international symposium on biomedical imaging (ISBI), pages 1059–1062. IEEE, 2016.</p>
+</li>
+<li>
+<p>[Bi et al.(2017)Bi, Kim, Ahn, Kumar, Fulham, and Feng] Lei Bi, Jinman Kim, Euijoon Ahn, Ashnil Kumar, Michael Fulham, and Dagan Feng. Dermoscopic image segmentation via multistage fully convolutional networks. IEEE transactions on biomedical engineering, 64(9):2065–2074, 2017.</p>
+</li>
+<li>
+<p>[Chen et al.(2024)Chen, Mei, Li, Lu, Yu, Wei, Luo, Xie, Adeli, Wang, et al.] Jieneng Chen, Jieru Mei, Xianhang Li, Yongyi Lu, Qihang Yu, Qingyue Wei, Xiangde Luo, Yutong Xie, Ehsan Adeli, Yan Wang, et al. Transunet: Rethinking the u-net architecture design for medical image segmentation through the lens of transformers. Medical Image Analysis, 97:103280, 2024.</p>
+</li>
+<li>
+<p>[Chen et al.(2017)Chen, Papandreou, Kokkinos, Murphy, and Yuille] Liang-Chieh Chen, George Papandreou, Iasonas Kokkinos, Kevin Murphy, and Alan L Yuille. Deeplab: Semantic image segmentation with deep convolutional nets, atrous convolution, and fully connected crfs. IEEE transactions on pattern analysis and machine intelligence, 40(4):834–848, 2017.</p>
+</li>
+<li>
+<p>[Chen et al.(2020)Chen, Dai, Liu, Chen, Yuan, and Liu] Yinpeng Chen, Xiyang Dai, Mengchen Liu, Dongdong Chen, Lu Yuan, and Zicheng Liu. Dynamic convolution: Attention over convolution kernels. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages 11030–11039, 2020.</p>
+</li>
+<li>
+<p>[Codella et al.(2019)Codella, Rotemberg, Tschandl, Celebi, Dusza, Gutman, Helba, Kalloo, Liopyris, Marchetti, et al.] Noel Codella, Veronica Rotemberg, Philipp Tschandl, M Emre Celebi, Stephen Dusza, David Gutman, Brian Helba, Aadi Kalloo, Konstantinos Liopyris, Michael Marchetti, et al. Skin lesion analysis toward melanoma detection 2018: A challenge hosted by the international skin imaging collaboration (isic). arXiv preprint arXiv:1902.03368, 2019.</p>
+</li>
+<li>
+<p>[Gao et al.(2019)Gao, Cheng, Zhao, Zhang, Yang, and Torr] Shang-Hua Gao, Ming-Ming Cheng, Kai Zhao, Xin-Yu Zhang, Ming-Hsuan Yang, and Philip Torr. Res2net: A new multi-scale backbone architecture. IEEE transactions on pattern analysis and machine intelligence, 43(2):652–662, 2019.</p>
+</li>
+<li>
+<p>[Graham et al.(2021a)Graham, El-Nouby, Touvron, Stock, Joulin, Jégou, and Douze] Benjamin Graham, Alaaeldin El-Nouby, Hugo Touvron, Pierre Stock, Armand Joulin, Hervé Jégou, and Matthijs Douze. Levit: a vision transformer in convnet's clothing for faster inference. In Proceedings of the IEEE/CVF international conference on computer vision, pages 12259–12269, 2021a.</p>
+</li>
+<li>
+<p>[Graham et al.(2021b)Graham, Jahanifar, Vu, Hadjigeorghiou, Leech, Snead, Raza, Minhas, and Rajpoot] Simon Graham, Mostafa Jahanifar, Quoc Dang Vu, Giorgos Hadjigeorghiou, Thomas Leech, David Snead, Shan E Ahmed Raza, Fayyaz Minhas, and Nasir Rajpoot. Conic: Colon nuclei identification and counting challenge 2022. arXiv preprint arXiv:2111.14485, 2021b.</p>
+</li>
+<li>
+<p>[Gutman et al.(2016)Gutman, Codella, Celebi, Helba, Marchetti, Mishra, and Halpern] David Gutman, Noel CF Codella, Emre Celebi, Brian Helba, Michael Marchetti, Nabin Mishra, and Allan Halpern. Skin lesion analysis toward melanoma detection: A challenge at the international symposium on biomedical imaging (isbi) 2016, hosted by the international skin imaging collaboration (isic). arXiv preprint arXiv:1605.01397, 2016.</p>
+</li>
+<li>
+<p>[Lee et al.(2020)Lee, Kim, Lee, Kim, and Ro] Hong Joo Lee, Jung Uk Kim, Sangmin Lee, Hak Gu Kim, and Yong Man Ro. Structure boundary preserving segmentation for medical image with ambiguous boundary. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages 4817–4826, 2020.</p>
+</li>
+<li>
+<p>[Li et al.(2021)Li, Hu, Wang, Li, She, Zhu, Zhang, and Chen] Duo Li, Jie Hu, Changhu Wang, Xiangtai Li, Qi She, Lei Zhu, Tong Zhang, and Qifeng Chen. Involution: Inverting the inherence of convolution for visual recognition. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pages 12321–12330, 2021.</p>
+</li>
+<li>
+<p>[Lin et al.(2023)Lin, Zhang, Fang, Chen, Cheng, and Chen] Yi Lin, Dong Zhang, Xiao Fang, Yufan Chen, Kwang-Ting Cheng, and Hao Chen. Rethinking boundary detection in deep learning models for medical image segmentation. In International conference on information processing in medical imaging, pages 730–742. Springer, 2023.</p>
+</li>
+<li>
+<p>[Lin et al.(2025)Lin, Zhang, Fang, Chen, Cheng, and Chen] Yi Lin, Dong Zhang, Xiao Fang, Yufan Chen, Kwang-Ting Cheng, and Hao Chen. Rethinking boundary detection in deep learning-based medical image segmentation. Medical Image Analysis, page 103615, 2025.</p>
+</li>
+<li>
+<p>[Lou and Yu(2025)] Meng Lou and Yizhou Yu. Overlock: An overview-first-look-closely-next convnet with context-mixing dynamic kernels. In Proceedings of the Computer Vision and Pattern Recognition Conference, pages 128–138, 2025.</p>
+</li>
+<li>
+<p>[Mendonça et al.(2013)Mendonça, Ferreira, Marques, Marcal, and Rozeira] Teresa Mendonça, Pedro M Ferreira, Jorge S Marques, André RS Marcal, and Jorge Rozeira. Ph 2-a dermoscopic image database for research and benchmarking. In 2013 35th annual international conference of the IEEE engineering in medicine and biology society (EMBC), pages 5437–5440. IEEE, 2013.</p>
+</li>
+<li>
+<p>[Peng et al.(2025)Peng, Chen, and Sonka] Yaopeng Peng, Danny Z Chen, and Milan Sonka. U-net v2: Rethinking the skip connections of u-net for medical image segmentation. In 2025 IEEE 22nd International Symposium on Biomedical Imaging (ISBI), pages 1–5. IEEE, 2025.</p>
+</li>
+<li>
+<p>[Ronneberger et al.(2015)Ronneberger, Fischer, and Brox] Olaf Ronneberger, Philipp Fischer, and Thomas Brox. U-net: Convolutional networks for biomedical image segmentation. In International Conference on Medical image computing and computer-assisted intervention, pages 234–241. Springer, 2015.</p>
+</li>
+<li>
+<p>[Schlemper et al.(2019)Schlemper, Oktay, Schaap, Heinrich, Kainz, Glocker, and Rueckert] Jo Schlemper, Ozan Oktay, Michiel Schaap, Mattias Heinrich, Bernhard Kainz, Ben Glocker, and Daniel Rueckert. Attention gated networks: Learning to leverage salient regions in medical images. Medical image analysis, 53:197–207, 2019.</p>
+</li>
+<li>
+<p>[Wang et al.(2025)Wang, Chen, Lin, Han, and Ding] Ao Wang, Hui Chen, Zijia Lin, Jungong Han, and Guiguang Ding. Lsnet: See large, focus small. In Proceedings of the Computer Vision and Pattern Recognition Conference, pages 9718–9729, 2025.</p>
+</li>
+<li>
+<p>[Yang et al.(2019)Yang, Bender, Le, and Ngiam] Brandon Yang, Gabriel Bender, Quoc V Le, and Jiquan Ngiam. Condconv: Conditionally parameterized convolutions for efficient inference. Advances in neural information processing systems, 32, 2019.</p>
+</li>
+<li>
+<p>[Zhang et al.(2024)Zhang, Yu, Jin, Gu, Ling, and Tao] Mingya Zhang, Yue Yu, Sun Jin, Limei Gu, Tingsheng Ling, and Xianping Tao. Vm-unet-v2: rethinking vision mamba unet for medical image segmentation. In International symposium on bioinformatics research and applications, pages 335–346. Springer, 2024.</p>
+</li>
+</ul>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

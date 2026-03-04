@@ -1,0 +1,22 @@
+{
+  "domain": [
+    "CV",
+    "Medical"
+  ],
+  "method": [
+    "Dynamic Convolution",
+    "Auxiliary Branch",
+    "Structure Extraction"
+  ],
+  "task": [
+    "Medical Image Segmentation",
+    "Boundary Detection"
+  ],
+  "dataset": [
+    "ISIC 2016",
+    "PH2",
+    "ISIC 2018",
+    "CoNIC"
+  ],
+  "open_source": true
+}

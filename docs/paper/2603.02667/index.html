@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DREAM：視覺理解與文本到圖像生成的交匯點 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">DREAM：視覺理解與文本到圖像生成的交匯點</h1>
+  
+  <div class="en-title">DREAM: Where Visual Understanding Meets Text-to-Image Generation</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Chao Li, Tianhong Li, Sai Vidyaranya Nuthalapati, Hong-You Chen, Satya Narayan Shukla, Yonghuan Yang, Jun Xiao, Xiangjun Fan, Aashu Singh, Dina Katabi, Shlok Kumar Mishra</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.02667" target="_blank">2603.02667</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.02667" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.02667" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.02667" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Diffusion</span><span class="tag method">Contrastive Learning</span><span class="tag method">Masking</span>
+    <span class="tag task">Text-to-Image Generation</span><span class="tag task">Image Classification</span><span class="tag task">Semantic Segmentation</span><span class="tag task">Depth Estimation</span><span class="tag task">Visual Representation Learning</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># DREAM：統一視覺表徵學習與文本到圖像生成的框架
+
+在單一模型中統一視覺表徵學習和文本到圖像（T2I）生成仍然是多模態學習的核心挑戰。我們引入 DREAM，一個統一的框架，同時優化判別式和生成式目標，同時學習強大的視覺表徵。DREAM 建立在兩項關鍵技術之上：在訓練期間，Masking Warmup 是一個漸進式遮罩排程，從最小遮罩開始以建立表徵學習所需的對比對齊，然後逐漸過渡到完全遮罩以實現穩定的生成式訓練。在推理時，DREAM 採用 Semantically Aligned Decoding 將部分遮罩的圖像候選與目標文本對齐，並選擇最佳候選進行進一步解碼，在不需要外部重排序器的情況下改善文本圖像保真度（+6.3%）。僅在 CC12M 上訓練，DREAM 在 ImageNet 線性探測準確度上達到 72.7%（相比 CLIP 提升 +1.1%），FID 為 4.25（相比 FLUID 提升 +6.2%），在少樣本分類、語義分割和深度估計中也有一致的提升。這些結果表明判別式和生成式目標可以產生協同效應，允許統一的多模態模型在視覺理解和生成方面都表現優異。</p>
+  
+  <div class="abstract-en">Unifying visual representation learning and text-to-image (T2I) generation within a single model remains a central challenge in multimodal learning. We introduce DREAM, a unified framework that jointly optimizes discriminative and generative objectives, while learning strong visual representations. DREAM is built on two key techniques: During training, Masking Warmup, a progressive masking schedule, begins with minimal masking to establish the contrastive alignment necessary for representation learning, then gradually transitions to full masking for stable generative training. At inference, DREAM employs Semantically Aligned Decoding to align partially masked image candidates with the target text and select the best one for further decoding, improving text-image fidelity (+6.3%) without external rerankers. Trained solely on CC12M, DREAM achieves 72.7% ImageNet linear-probing accuracy (+1.1% over CLIP) and an FID of 4.25 (+6.2% over FLUID), with consistent gains in few-shot classification, semantic segmentation, and depth estimation. These results demonstrate that discriminative and generative objectives can be synergistic, allowing unified multimodal models that excel at both visual understanding and generation.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="dream">DREAM：視覺理解與文本到圖像生成的融合</h1>
+<p>在單一模型中統一視覺表徵學習和文本到圖像（T2I）生成仍然是多模態學習中的核心挑戰。
+我們介紹 DREAM，一個統一的框架，在學習強大視覺表徵的同時聯合優化判別目標和生成目標。DREAM 基於兩項關鍵技術構建：在訓練期間，Masking Warmup 是一個漸進式遮蔽排程，從最小遮蔽開始以建立表徵學習所需的對比對齊，然後逐漸轉換為完全遮蔽以進行穩定的生成訓練。在推理時，DREAM 採用 Semantically Aligned Decoding 將部分遮蔽的圖像候選與目標文本對齊，並選擇最佳候選進行進一步解碼，改進文本–圖像保真度（+6.3%）而無需外部重排序器。僅在 CC12M 上訓練，DREAM 達到 72.7% 的 ImageNet 線性探測準確度（相比 CLIP 提升 +1.1%）和 4.25 的 FID（相比 FLUID 提升 +6.2%），在少樣本分類、語義分割和深度估計中取得一致的收益。這些結果證明判別目標和生成目標可以是協同的，允許統一的多模態模型在視覺理解和生成方面都表現出色。</p>
+<p>Chao Li at \metadata [Code] https://github.com/chaoli-charlie/dream</p>
+<h2 id="1">1 簡介</h2>
+<p>多模態學習的演進一直存在著一個反覆出現的分裂，即代表性模型與生成式模型之間的分裂。判別式視覺-語言系統（如 CLIP）利用對比對齊來學習語義豐富的表示，而文本到圖像 (T2I) 生成模型（包括基於擴散的系統和遮罩自迴歸 (MAR) 方法）則通過學習條件資料分佈來生成高保真度的圖像。儘管取得了進展，但在單一的、完全可訓練的架構中統一強大的視覺理解和高品質的 T2I 生成仍然是一個開放的挑戰。</p>
+<p>這種分裂源於對比對齊和生成式建模之間的最佳化不匹配。對比對齊需要最小的資料破壞，而生成式建模則依賴於攻擊性遮罩或雜訊注入來學習基礎分佈。因此，樸素的最佳化常常導致不穩定的共同最佳化，其中模型要麼實現對齊但合成效果較差，要麼退化為僅生成式表示。最近的努力通過凍結視覺編碼器來解決這一張力，但這種設計選擇限制了通過端到端聯合最佳化而產生的協同表示的潛力。</p>
+<p>在這項工作中，我們展示了可以通過仔細管理時間最佳化動態來有效地解決這一衝突。我們引入 DREAM，這是一個統一的框架，通過遮罩預熱 (Masking Warmup) 來協調對比語義與 MAR 式生成。我們從低遮罩比率（$\sim$ 15%）開始訓練，優先學習強大的對比特徵以進行影像-文字對齊。在訓練過程中，遮罩比率從均值線性增加的截斷高斯分佈中採樣，使模型能夠逐漸融入生成式目標。一旦分佈達到高遮罩機制（$\sim$ 75%），它將保持固定，防止對已學習對齊特徵的干擾，同時能夠繼續改進生成能力。這種進展確保模型首先建立語義錨點，然後掌握密集重建。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x1.png" loading="lazy"></figure> 圖 1：在 CC12M 上訓練的自監督和文本到圖像生成模型的性能。DREAM（黃色）在判別軸和生成軸上形成外包絡線，超過所有基準線，統一了強大的視覺理解與高品質的文本到圖像生成。</p>
+<p>在 CC12M 上訓練時，我們的框架達到 72.7% 的 ImageNet-1K 線性探測準確度（超過 CLIP 1.1%），以及 4.25 的文本到圖像 FID（比 FLUID 改進 6.2%）。此外，如圖 1 所示，DREAM 在少樣本分類、語義分割和深度估計中展示了一致的增益，表明生成式訊號增強了底層空間表示的魯棒性。</p>
+<p>除了聯合訓練外，我們的統一架構還支持一種新穎的推論時策略，我們稱之為語義對齊解碼 (Semantically Aligned Decoding)，它利用 DREAM 的內部對比表示來引導生成。與先前依賴外部基於 CLIP 的重排序的工作不同，我們的方法使用模型自身的對齊知識來評估部分解碼的候選，消除了對輔助模型的需求。這種自引導方法提高了文字-圖像保真度 6.3%，同時相比需要外部引導的方法達到了 10.1% 的吞吐量提升，展示了我們統一設計帶來的有效性和效率收益。我們總結我們的貢獻如下。</p>
+<ul>
+<li>• <strong>通過遮罩預熱實現統一的多模態框架</strong>：我們使用遮罩預熱排程為遮罩自迴歸 (MAR) 模型統一視覺表示學習和 T2I 生成，該排程有效地協調目標之間的張力，即使當遮罩在其峰值保持固定時也能保持穩定性。</li>
+<li>• <strong>語義對齊解碼</strong>：我們引入了一種零樣本的自引導解碼策略，該策略利用模型的內部對比表示進行生成引導，與外部 CLIP 重排序器相比展示了卓越的計算效率和有效性。</li>
+<li>• <strong>綜合實驗驗證</strong>：我們針對自監督和生成式基準線廣泛評估我們的統一框架，展示了其在經典判別指標（線性探測、微調、少樣本分類、語義分割和深度估計）以及生成指標（Fréchet Inception Distance (FID) 和 CLIP Score (CS)）上的優越性能。</li>
+</ul>
+<h2 id="2">2 相關工作</h2>
+<p><strong>計算機視覺中的自監督學習</strong></p>
+<p>自監督學習 (SSL) 已成為一個強大的範例，通過利用內在的影像結構，從未標記的資料中學習視覺表示。早期的對比方法如 SimCLR 和 MoCo 將同一影像的增強視圖之間的協議最大化，同時排斥負樣本。後來的非對比方法如 BYOL、SwAV 和 DINO 移除了明確的負樣本，簡化了訓練，同時保持強大的效能。CLIP 通過將對比學習應用於成對的影像–文字資料，標誌著一個範例轉變，產生了語義豐富的表示，現在支撐著許多視覺–語言和生成模型。</p>
+<p><strong>文字轉影像生成</strong></p>
+<p>現代 T2I 生成主要由基於擴散的架構驅動，這些架構通過迭代去噪實現逼真的結果，但採樣成本很高。自迴歸和遮罩令牌預測方法通過以並行或自適應順序生成影像令牌來提高效率，縮小與擴散的品質差距。最近的工作已從離散令牌表示轉向連續令牌表示以進一步提升品質：MAR 表明具有高遮罩率的連續令牌自迴歸建模產生了最先進的類別條件生成，FLUID 展示了這種範例導致比離散令牌化方法更有效的文字條件生成。</p>
+<p><strong>統一表示和生成</strong></p>
+<p>越來越多的工作探索自監督表示學習和生成建模之間的協同效應。早期的努力主要集中在單模態設定：MAGE 擴展了遮罩影像建模以支持生成和識別，而 M3AE 在統一的視覺–語言框架中結合了遮罩自編碼和對比目標，儘管其表示的轉移效果不如 CLIP 的有效。更近期的多模態模型如 Janus、Show-o 和 Harmon 旨在統一判別性理解和 T2I 生成。這些工作是重要的進展，但主要針對 VQA 風格的任務（回答關於影像的問題），而非核心視覺判別任務，如分類、分割和深度估計。最近的研究表明，即使視覺編碼器在分類或深度估計上表現不佳，也能通過利用文字編碼器中的文字先驗來實現強大的 VQA 效能。REPA 通過將 DINO-v2 特徵注入擴散 transformer 隱層，耦合表示品質和生成保真度，改善了穩定性和樣本品質，而 RAE 使用凍結的 DINO-v2 編碼器進行 T2I 生成。
+我們直接將 DREAM 與 REPA 進行比較，並間接與 Harmon 和 Janus 進行比較，它們分別使用來自 MAR 和 CLIP 的凍結視覺編碼器。</p>
+<h2 id="3">3 方法</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x2.png" loading="lazy"></figure> 圖 2：DREAM 框架。圖像透過 Stable Diffusion VAE 編碼成連續 token，並根據遮蔽預熱排程隨機遮蔽。視覺編碼器與文本進行對比學習，解碼器以文本為條件，透過基於擴散的重構損失預測遮蔽 token。文本條件化僅應用於解碼器，確保編碼器在沒有文本捷徑的情況下學習視覺表示。</p>
+<p>DREAM 在連續影像潛在空間上採用 ViT 基礎的編碼器–解碼器架構。編碼器學習語言對齊的視覺特徵，解碼器透過基於擴散的重構損失根據文本生成圖像。重要的是，文本條件化僅應用於解碼器，確保編碼器在不依賴語言捷徑的情況下學習視覺表示（參見圖 2）。</p>
+<h3 id="31">3.1 架構</h3>
+<p><strong>連續分詞化（Continuous Tokenization）</strong></p>
+<p>我們使用 Stable Diffusion 的預訓練 VAE 編碼器（rombach2022high）將影像編碼為連續潛在表示。這種連續分詞化保留細粒度的空間資訊，同時保持計算效率。</p>
+<p><strong>視覺編碼器（Vision Encoder）</strong></p>
+<p>我們的編碼器遵循 MAR 的架構（li2023mage）。我們在編碼器輸入前加上可學習的緩衝區令牌 [ B ]，以增強表示容量和訓練穩定性。編碼器僅處理緩衝區令牌和未遮罩的令牌。</p>
+<p><strong>文字編碼器（Text Encoders）</strong></p>
+<p>我們採用兩個具有不同角色的文字編碼器。
+對於對比對齐（contrastive alignment），使用 OpenAI CLIP 分詞器（radford2021clip）對標題進行分詞（77 個令牌），並由 CLIP 文字 transformer 進行編碼，該 transformer 遵循（tian2023stablerep），將文字特徵投影到視覺編碼器的潛在空間中。
+對於生成（generation），使用 SentencePiece（kudo2018sentencepiece）對標題進行分詞（128 個令牌），並由凍結的 T5-XXL（raffel2020exploring）進行編碼。
+一個輕量級的 6 層文字對齐器隨後將 T5 嵌入投影到解碼器的潛在空間中，為遮罩自回歸生成提供條件。</p>
+<p><strong>文字轉圖像解碼器（Text-to-Image Decoder）</strong></p>
+<p>我們的解碼器採用 FLUID 的架構，但與上述編碼器配對，形成統一的編碼器–解碼器模型。
+每個區塊包含自注意力、交叉注意力和前饋層。
+自注意力操作於視覺令牌，而交叉注意力根據文字特徵對生成進行條件化。
+在訓練期間，遮罩的視覺令牌被可學習令牌替換，解碼器使用雙向注意力預測這些遮罩令牌，類似於 BERT。
+編碼器和解碼器各包含總 transformer 區塊的一半。
+我們的大型（L）配置使用 32 層（每個模組 16 層），隱藏寬度為 1024，共 570M 個參數。</p>
+<p><strong>輸出頭（Output Head）</strong></p>
+<p>為了預測連續潛在令牌，我們附加一個輕量級六層 MLP 擴散頭（li2024autoregressive），其匹配 transformer 的嵌入維度。擴散過程遵循改進的 DDPM 公式（nichol2021improved；li2024autoregressive），在訓練期間使用具有 1000 步的餘弦雜訊排程，在推理期間使用 100 個重新採樣步驟。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x3.png" loading="lazy"></figure> 圖 3：語義對齐解碼（Semantically Aligned Decoding）。該模型生成 K K 個平行候選項，每個都部分解碼到中間時間步 t t。編碼器通過比較每個候選項的視覺嵌入與提示嵌入來評分，最高分的候選項會被完全解碼—在不使用外部重新排序器的情況下改進圖像保真度和文字對齐。</p>
+<h3 id="32">3.2 訓練目標</h3>
+<p><strong>擴散重構損失</strong></p>
+<p>我們採用與（li2024autoregressive；fan2024Fluid）相同的擴散損失，其中條件分佈 $p(x\mid z)$ 通過去噪建模如下：</p>
+<p>|  | $\mathcal{L}<em>{\text{diff}}(z,x)=\mathbb{E}</em>{\epsilon,t}\left[||\epsilon-\epsilon_{\theta}(x_{t}|t,z)||^{2}\right]$ |  | (1) |
+| --- | --- | --- | --- |</p>
+<p>其中 $\epsilon\sim\mathcal{N}(0,I)$ 是高斯雜訊，而 $x_{t}=\sqrt{\bar{\alpha}<em>{t}}x+\sqrt{1-\bar{\alpha}</em>{t}}\epsilon$ 表示在變異數排程 $\bar{\alpha}<em>{t}$ 下，時步 $t$ 處的雜訊潛在空間。去噪網路 $\epsilon</em>{\theta}$ 預測以編碼器嵌入 $z$ 為條件的雜訊，實現端到端梯度傳播。我們為每張影像採樣四個獨立的雜訊等級，以改進梯度估計，無需重新計算 $z$。</p>
+<p>我們針對具有超過 50% 的標記被遮罩的樣本計算擴散損失，因為高遮罩比對於有效的生成建模至關重要（li2024autoregressive）。</p>
+<p><strong>對比學習</strong></p>
+<p>我們進一步整合 CLIP 風格的對比學習（radford2021clip）以對齊影像和文本表示。
+給定 $N$ 個配對樣本 $(x_{i}^{I},x_{i}^{T})$，我們計算 InfoNCE 損失如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}<em>{\text{I}}=-\sum</em>{i=1}^{N}\log\frac{e^{\,\text{sim}(f_{I}(\text{aug}<em>{I}(x</em>{i}^{I})),f_{T}(x_{i}^{T}))/\tau}}{\sum_{k=1}^{N}e^{\,\text{sim}(f_{I}(\text{aug}<em>{I}(x</em>{i}^{I})),f_{T}(x_{k}^{T}))/\tau}}.$</th>
+<th></th>
+<th>(2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\text{sim}(\cdot,\cdot)$ 表示餘弦相似度，$\tau$ 是可學習的溫度參數。
+對稱的文本到影像項 $\mathcal{L}<em>{T}$ 以類似方式計算，最終對比目標為 $\mathcal{L}</em>{\text{clip}}=(\mathcal{L}<em>{I}+\mathcal{L}</em>{T})/2$。</p>
+<p>我們將 CLIP 損失計算的最大遮罩比上限設定為 75%，因為過度遮罩會降低判別學習的效果（li2023scaling；li2023mage）。</p>
+<p><strong>聯合最佳化</strong></p>
+<p>總損失聯合最佳化生成和對齊：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\mathcal{L}=\mathcal{L}<em>{\text{diff}}+\lambda\cdot\mathcal{L}</em>{\text{clip}},$</th>
+<th></th>
+<th>(3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\lambda$ 平衡擴散和對比項。</p>
+<h3 id="33">3.3 遮罩預熱</h3>
+<p>聯合訓練中的一個關鍵挑戰是兩個目標的衝突要求：對比學習受益於完整的視覺背景，而生成式建模需要激進的遮罩。我們透過遮罩預熱排程來解決此問題，該排程逐漸增加到訓練其餘部分的固定穩定值。遮罩比率從截斷高斯分佈中取樣（$\sigma=0.55$，範圍 [0, 1.0]）。分佈的平均值在前 36 個 epoch 內從 0 線性增加到 1.0。之後，平均值固定在 1.0，對應於完全遮罩的影像。</p>
+<p>表 1：在 CC12M 上訓練的自監督式和文字轉影像模型的定量比較。我們在兩個任務上評估模型：視覺理解，由 ImageNet-1K 上的線性探測（「LP」）和微調（「FT」）精度測量，以及影像生成，使用 CC12M 和零樣本 MS-COCO 上的 FID 和 CLIP Score（CS）評估。藍色顯示的指標是在 40K 樣本上計算的。DREAM 在兩個任務上都實現了強大的效能，在保持具有競爭力的表徵品質的同時，超越了專業的生成式模型，包括與使用額外監督的方法相比†。「✗」表示沒有文字轉影像功能的模型，「–」表示未報告的結果。</p>
+<h3 id="34">3.4 推論</h3>
+<p><strong>表示提取。</strong></p>
+<p>對於線性探測和微調，編碼器輸出特徵進行全局平均池化，並輸入至任務特定頭部（線性探測或微調分類器）。對於語義分割和深度估計，我們凍結視覺編碼器並評估特徵，遵循 ( simeoni2025dinov3 ) 的線性探測協議。</p>
+<p><strong>影像生成。</strong></p>
+<p>對於影像生成，DREAM 採用 MAR 的下一組標記預測策略 ( li2024autoregressive )：從完全遮罩序列開始，遮罩比例使用餘弦排程 ( chang2022maskgit ; li2023mage ) 在預設的 64 步驟內從 1.0 退火至 0。解碼使用溫度取樣和完全隨機化的標記順序，如同 MAR 的做法。</p>
+<p><strong>語義對齊解碼。</strong></p>
+<p>我們引入一種零次學習語義解碼策略，在解碼過程中選擇最符合文字的候選。如圖 3 所示，給定一個提示，DREAM 會生成 K 個候選—由不同隨機種子初始化的獨立解碼軌跡。在 64 個解碼步驟的一小部分後（t &lt;&lt; 64），DREAM 為所有 K 個候選生成部分解碼的潛在變數。這些部分潛在變數被輸入至視覺編碼器以獲得視覺表示，使用 DREAM 的對比文本編碼器根據提示對文字-影像對齐進行評分（已被證明可靠地檢索部分解碼影像；見圖 7）。只有評分最高的候選才繼續進行剩餘的解碼步驟以生成完整影像。</p>
+<p>此方法與先前的候選排名方法 ( chang2023muse ; ramesh2022hierarchical ) 在兩個方面有根本區別：（1）選擇在潛在層級進行，只解碼了部分影像，避免了生成完整影像的成本；（2）模型使用其自身學習的對齊方式，而非外部視覺-語言模型。</p>
+<p>表 2：視覺理解和文本到影像生成的統一評估。在 CC12M 訓練的模型在兩種範式上的比較：（a）視覺理解，以 ImageNet 及其魯棒性基準的 Top-1 準確率（%）測量；（b）文本到影像生成，以 CC12M 和零次學習 MS-COCO 上的 FID 和 CLIP Score（CS）測量。CC12M 的 FID 和 CS 計算於 50K 樣本，MS-COCO 的 FID 和 CS 計算於 30K 樣本。
+✗ 表示本身無法進行文本到影像生成的模型。</p>
+<h2 id="4">4 實驗與結果</h2>
+<h3 id="41">4.1 實現細節</h3>
+<p>資料。</p>
+<p>我們在 Conceptual 12M (CC12M) ( changpinyo2021cc12m ) 上進行訓練，包含 11.3M 個影像-文本對。影像被中心裁剪為 256 × 256 256\times 256，並採用水平翻轉作為資料增強 ( li2024autoregressive )。我們在 ImageNet-1K ( 5206848 ) 上評估表示學習能力，並在 CC12M 和 MS-COCO ( lin2014microsoft ) 上評估生成品質。</p>
+<p>訓練。</p>
+<p>所有模型使用 AdamW 優化器 ( β 1 = 0.9 , β 2 = 0.95 \beta_{1}=0.9,\beta_{2}=0.95 ) ( loshchilov2017decoupled ) 訓練 49 個 epoch，批次大小為 2048。我們採用常數學習率，並進行 12 個 epoch 的線性預熱至最大值 8 × 10 − 4 8\times 10^{-4}。DREAM 另外採用上述 36 個 epoch 的漸進式遮蔽預熱。評估使用模型權重的指數移動平均 (EMA)，衰減率為 0.9999。</p>
+<h3 id="42">4.2 統一效能</h3>
+<p>表 1 呈現 DREAM 與在 CC12M 上訓練的現有模型的全面比較，涵蓋判別式和生成式基準。
+如圖所示，大多數在 CC12M 上訓練的先前 T2I 模型僅專注於生成品質，很少評估其視覺編碼器的判別能力。相比之下，DREAM 在線性探測和微調分類準確度上優於其他表示學習模型，且無需依賴額外的標籤或監督。在生成方面，DREAM 優於純生成模型，如 LPL (在 CC12M 上 FID：+31.7%，CS：+19.9%) 和 SCAD (在 MS-COCO 上 FID：+15.7%，CS：+14.1%)。</p>
+<h3 id="43">4.3 判別性表徵</h3>
+<p>以下，我們分析 DREAM 在三個基準模型系列中學到的表徵和生成行為：(1) 僅對比學習 (CLIP)、(2) 僅生成模型 (MAR、FLUID)，以及 (3) 表徵對齐生成模型 (REPA)。</p>
+<p>所有基準模型共享相同的編碼器–解碼器 Transformer 架構，僅在目標函數和條件化方面有所不同。CLIP 使用編碼器搭配對比損失，產生強大的表徵但無法進行生成。MAR 原本是類別條件化的，我們在重新實現時去除了類別條件化。FLUID 是解碼器專用模型，我們將其調整為編碼器–解碼器設置；它可以看作是在解碼器中添加文字條件化的 MAR，確保編碼器在沒有文字捷徑的情況下學習表徵。DREAM 建立在 FLUID 的基礎上，引入了 Masking Warmup 並對編碼器最後一層應用 CLIP 對比損失。</p>
+<p>REPA 通過對齐中間編碼器特徵來擴展 FLUID，特別是第 6 層的未遮罩令牌與來自預訓練 CLIP-L 編碼器的特徵對齐 ( radford2021clip )。REPA 原本是為類別條件化擴散模型開發的 ( yu2025repa )，在此適應了文字條件化。我們採用 CLIP-L 作為教師模型，而不是 ( yu2025repa ) 中使用的預設 DINO-v2 教師，因為在我們的設置中它在經驗上對文字到圖像生成保真度產生更強的效果（參考第 7.2.3 節）。</p>
+<p>由於 CLIP 和 MAR 缺乏 T2I 能力，我們僅評估它們的編碼器表徵，而 FLUID、REPA 和 DREAM 則在判別性和生成性基準上進行評估。</p>
+<p><strong>線性探測。</strong> 線性探測是評估以自監督方式學到的視覺表徵內在品質的標準評估協議。如表 2 所示，生成模型——包括無條件的 (MAR) 和文字條件化的 (FLUID)——無法學到與 CLIP 等對比模型一樣強大的表徵。相比之下，使用 CLIP 風格對齐目標訓練的模型 (REPA 和 DREAM) 相較於它們的生成基線達到了大幅更高的線性探測準確度。我們也觀察到 SD-VAE 令牌化並未傷害 CLIP 的性能，因為我們能夠在 StableRep ( tian2023stablerep ) 中用 SD-VAE 令牌重現在像素上訓練的 CLIP 的線性探測準確度。</p>
+<p>DREAM 達到了 72.7% 的線性探測準確度，超越其生成基線 FLUID 28.6%。此外，DREAM 超越 CLIP 1.1%，儘管共享相同的對比目標。這突出表明，將語言對齐對比學習與擴散型重構耦合在一起產生了更具語義連貫性且可轉移的視覺表徵。</p>
+<p><strong>微調。</strong> 按照 ( li2023mage ) 的協議，我們在 ImageNet-1K 上微調所有模型，並評估它們在多個超分佈 ImageNet 變體上的魯棒性。如表 2 所示，DREAM 不僅達到了強大的域內性能——在 ImageNet-1K 上超越 CLIP +1.6% 和 REPA +1.0%——還展示了對分佈偏移的顯著優越泛化能力。</p>
+<p>在所有超分佈基準上，DREAM 始終提供最高的準確度，在平均水平上超越 CLIP +2.8% 和 REPA +2.4%。使用 CLIP 風格對齐訓練的模型 (REPA 和 DREAM) 在微調後可靠地超越 CLIP 和它們僅生成的對應物，確認了集成生成目標與學習魯棒、可轉移的視覺特徵是協同的。DREAM 的增益在最具挑戰性的變體 (IN-A 和 IN-H) 上尤其明顯，強調了其超越訓練分佈進行泛化的能力。</p>
+<p><strong>少樣本學習。</strong> 先前的工作已經確立了高品質表徵對於少樣本圖像分類至關重要 ( wang2019simpleshot ; tian2020rethinking ; dhillon2019baseline )。在凍結特徵上訓練的簡單線性分類器可以達到具競爭力的性能。按照標準 5-way、5-shot 協議 ( tian2023stablerep ; wang2019simpleshot ; el2023learning )，我們在 14 個基準數據集上評估 DREAM。如表 3 所示，DREAM 在所有數據集上始終超越所有基準模型。值得注意的是，它超越次佳模型 CLIP 的幅度顯著 (+4.1%)。</p>
+<p><strong>密集預測</strong> 表 9 報告了密集預測任務的結果。DREAM 在 ADE20K 上達到了 36.8% mIoU (+1.9 相比 CLIP) 和 NYU Depth v2 上的 RMSE 為 0.60，與 REPA 相當，同時超越 CLIP 6.25%。這些增益表明擴散重構目標增強了空間接地性，因為去噪完整圖像促進編碼器學習像素對齊特徵，有效地轉移到密集預測。</p>
+<p>表 3：不同模型的少樣本轉移評估。我們在 14 個數據集上報告 5-way、5-shot 分類準確度。我們用粗體標示每個數據集的最佳性能。DREAM 在大多數數據集上超越其他模型。</p>
+<p><strong>零樣本魯棒性。</strong></p>
+<p>由於 DREAM 使用可變遮罩比例進行訓練，它在重遮罩下更具韌性。我們通過在遮罩級別上評估零樣本準確度（圖 7），比較標準 CLIP、具有遮罩 warm-up 的 CLIP (CLIP-M) 和 DREAM。漸進式 warm-up 對 CLIP-M 和 DREAM 相比 CLIP 提高了魯棒性，一旦超過 20% 的圖像被遮罩，增益約為 0.7%。DREAM 在所有遮罩級別上始終超越 CLIP-M，反映了通過擴散型重構學到的局部接地表徵的益處。這個優勢在極端遮罩 (遮罩比例 &gt; 0.8) 時變得明顯，其中 DREAM 達到了 CLIP 零樣本準確度的 6.2 × 倍以上，突出了聯合對比–生成訓練所賦予的韌性。</p>
+<h3 id="44-t2i">4.4 T2I 生成</h3>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x4.png" loading="lazy"></figure> 圖 4：DREAM 在不同模型大小（B/L/H/G）下的效能表現，其中 $\sigma = 0.45$。上圖：IN-1K 上的線性探測。下圖：CC12M-50K 上的 FID，有無語意對齊解碼。DREAM 在不同規模的兩個指標上都一致地優於基線方法。</p>
+<p>我們在 CC12M 和 MS-COCO 上評估 DREAM 的文字轉圖像生成，使用 FID 和 CLIP Score (CS) 指標，遵循 ( chang2023muse )。如表 2 所示，DREAM 在 CC12M 上達到最佳結果，FID 為 4.25，CS 為 30.1，優於生成式基線方法 FLUID 和 REPA。與 FLUID 相比，DREAM 將 FID 改進 0.28（+6.2%），CS 略有提升，這表明將對比對齊與生成式訓練相結合增強了重建保真度，而不會損害語意對齊。REPA 達到 4.42 的 FID，與先前報告一致 ( yu2025repa )，但仍然弱於 DREAM（-4%）。</p>
+<p>在 MS-COCO 零樣本生成上，DREAM 達到最高的 CS（31.5）和具競爭力的 FID（10.4），與 FLUID 相差 0.8。有趣的是，同樣是表示對齐方法的 REPA 也顯示類似的趨勢：在 CC12M 上有強大的 FID，但在 MS-COCO 上效能較弱，這表明表示驅動的先驗可能對 CC12M 和 COCO 之間的領域和標題不匹配敏感。相比之下，DREAM 在這種轉換下能維持更強的文字–圖像對齐，如其更高的 CS 所反映的。</p>
+<h2 id="5">5 分析</h2>
+<p>我們分析 DREAM 的設計選擇，以釐清啟用統一表示–生成學習的原理。我們檢視：(1) 聯合優化的增益是否隨模型大小增加而擴展；(2) 遮蔽調度和損失超參數如何影響表示–生成權衡；以及 (3) 在固定計算預算下，解碼過程中的語意引導如何影響生成品質。</p>
+<p>除非另有說明，消融實驗使用在 CC12M 上訓練 49 個 epoch 的 DREAM-L，採用標準配置：遮蔽標準差 $\sigma = 0.45$、CLIP 損失權重 $\lambda = 0.005$，以及不使用語意對齐解碼的生成。這與第 4 節的主要設置不同，後者使用 $\sigma = 0.55$ 搭配語意對齐解碼；絕對值會改變，但相對趨勢保持一致。額外的消融實驗請見附錄。</p>
+<h3 id="51">5.1 縮放行為</h3>
+<p>圖 4 顯示 DREAM 在表示和生成方面都能有效地縮放。線性探測精度隨著模型規模單調增加，遵循標準的縮放趨勢。生成品質同樣改善：FID 從 5.67（DREAM-B）下降到 4.89（DREAM-G），與純生成基準線（如 FLUID）相匹配。這些結果表明對比目標和生成目標是協同的，而不是在容量上相互競爭。</p>
+<p>語義對齐解碼在所有規模上都提供一致的提升，使 DREAM 能夠以顯著的幅度超越 FLUID（在 L 上 +6.2%、在 H 上 +5.0%，以及在 G 上 +6.0%）。這表明語義指導從根本上增強了生成，而不是特定模型規模的假因。</p>
+<h3 id="52-key-design-ablations">5.2 Key Design Ablations</h3>
+<h4 id="521-masking-schedule-design">5.2.1 Masking Schedule Design.</h4>
+<p>Unifying representation learning and T2I generation is challenging because the two objectives favor opposite masking regimes. To study this trade-off, we compare four masking strategies on DREAM: FX , a fixed truncated Gaussian as in FLUID; UNI , a uniform distribution; CD , a cooldown schedule that decreases masking over time; and our proposed WM , which progressively increases the masking ratio.</p>
+<p>Table 4: Effect of Masking Schedule</p>
+<p>As shown in Table. 4 , FX masking which naively combines high masking with a contrastive loss leads to unstable training and poor performance in both representation learning and generation. In contrast, UNI and CD train stably but underperform the FLUID baseline in generative quality (FID = 4.53; Table 2 ), as they insufficiently emphasize sustained high-masking regimes (FID -6.8% and -18.9% vs. WM ). Evidently, WM resolves this conflict improving on both the representation and generation front while retaining stable joint optimization throughout the course of training (Refer to Fig. 6 )</p>
+<h4 id="522-effect-of-diffusion-reconstruction">5.2.2 Effect of Diffusion Reconstruction</h4>
+<p>We further show that DREAM’s gains in representation learning do not stem from masking warmup alone, but from the synergistic co-optimization of contrastive learning and generative reconstruction. To isolate this effect, we compare three models: (1) a CLIP baseline, (2) CLIP-M, which applies masking warmup to CLIP, and (3) DREAM, which incorporates warmup by design.</p>
+<p>Table 5: Effect of Masking Warmup and Diffusion Loss</p>
+<p>As shown in Table 5 , naively adding masking warmup to CLIP degrades performance, as the high masking regime later in training disrupts discriminative representations. In contrast, DREAM leverages high masking to learn robust representations, enabled by the diffusion reconstruction loss, which stabilizes training and provides complementary generative supervision.</p>
+<h4 id="523-efficiency-of-semantically-aligned-decoding">5.2.3 Efficiency of Semantically Aligned Decoding</h4>
+<p>Table 6: Efficiency of DREAM decoding under fixed compute budgets (A100 GPU). We compare the throughput (images/sec), FID, and CLIP Score (CS) for varying candidate counts K K against using pretrained CLIP as external reranker. SD : Semantically Aligned Decoding.</p>
+<p>Finally, we compare DREAM decoding with an external CLIP reranker under a fixed compute budget measured by the number of forward encoder (NFE) passes. As shown in Table 6 , DREAM achieves higher throughput than CLIP reranking under the same NFE budget, both with and without Semantically Aligned Decoding (SD).</p>
+<p>This efficiency gain arises because external CLIP reranking can only score fully generated images, requiring all candidates to be decoded before selection. In contrast, DREAM evaluates candidates directly in the latent space using partially generated image embeddings, avoiding redundant full generations and reducing decoding overhead. Consequently, DREAM maintains higher throughput even for K = 1 K=1 , with additional benefits as K K increases. Moreover, under a fixed budget, increasing K K has minimal impact on throughput (1.77–1.86 images/sec), indicating good scalability.</p>
+<p>In terms of quality, DREAM without SD ( K = 1 K=1 ) already outperforms CLIP reranking under the same 128 NFE budget in FID (4.34 vs. 4.50). With SD enabled, DREAM ( K = 9 K=9 ) further improves both fidelity and semantic alignment, achieving a 5.6% reduction in FID and a 1.7% increase in CLIP score while maintaining comparable throughput. Overall, DREAM provides a more efficient and effective alternative to post-hoc CLIP-based reranking.</p>
+<h2 id="6">6 結論</h2>
+<p>我們介紹了 DREAM，一個用於表示學習和文字轉圖像生成的統一多模態框架。通過 Masking Warmup 協調對比學習和生成目標，以及通過 Semantically Aligned Decoding 改進推理，DREAM 展示了強大的判別性理解和高保真生成可以在單一架構內共存。我們希望 DREAM 能夠作為邁向更通用的視覺-語言系統的一步，並且可以通過擴展到更大規模的成對資料集進行延伸。</p>
+<h2 id="_1">參考文獻</h2>
+<h2 id="7">7 額外結果</h2>
+<h3 id="71">7.1 定性結果</h3>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x5.png" loading="lazy"></figure> 圖 5：DREAM 生成的圖像範例，有無 Semantically Aligned Decoding (SD) 的對比。沒有 Semantically Aligned Decoding 時，輸出呈現出結構不夠連貫且低階模糊較多的特徵。應用 Semantically Aligned Decoding 會產生具有更清晰細節和與提示更高一致性的圖像，與 FID 和 CLIP 分數中觀察到的改進相符。</p>
+<p>我們視覺化生成的圖像以理解 Semantically Aligned Decoding 的效果。圖 5 顯示，使用 Semantically Aligned Decoding 時，生成的圖像往往呈現出更穩定的結構和更少的低階偽影，與 FID 中觀察到的改進一致。</p>
+<p>這個效果與文字引導檢索步驟的角色相符：由於中間潛在變量被訓練為與文本編碼器語義對齐，基於提示檢索候選項鼓勵選擇既與預期內容相符又能乾淨重建的潛在變量。我們的語義分割結果進一步表明視覺編碼器編碼了強大的物體級線索，暗示 Semantically Aligned Decoding 主要在推理期間強化這種語義基礎。</p>
+<p>因此，解碼過程自然偏向於在保持更強分布級真實性的同時，與提示在語義上連貫的樣本。額外的定性範例包含在圖 8、9 和 10 中。</p>
+<h3 id="72">7.2 定量結果</h3>
+<h4 id="721">7.2.1 遮罩熱身的穩定性</h4>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x6.png" loading="lazy"></figure> 圖 6：DREAM 在不同遮罩標準差下的性能。左：IN-1K 上的線性探測。右：CC12M-50K 上的 FID，不使用語義對齐解碼。
+由於訓練尚未收斂且 FID &gt;&gt; 50，我們未繪製第 12 個 epoch 的 FID 值。曲線顯示當 σ &gt; 0.35 時，線性探測和 FID 即使在遮罩熱身結束後仍保持穩定。</p>
+<p>在圖 6 中，我們繪製了三個遮罩標準差（σ ∈ {0.35, 0.45, 0.55}）在訓練過程中的線性探測精度和 FID（在 CC12M 上）。對於 σ ∈ {0.45, 0.55}，兩個指標在整個訓練過程中單調改進。相比之下，當 σ = 0.35 時，線性探測在遮罩熱身結束後開始降級。這表明穩定的統一需要遮罩分佈超過特定的方差閾值。更大的標準差在遮罩熱身結束後保留更多輕度遮罩樣本，確保有足夠的未遮罩視覺上下文可用於計算 CLIP loss 並維持判別性能。</p>
+<p>總的來說，這些結果表明，給定明確定義的遮罩標準差，遮罩熱身能夠穩定地聯合最佳化判別目標和生成目標。</p>
+<h4 id="722-repa-loss">7.2.2 應用 REPA loss 的層</h4>
+<p>表 7：關於與預訓練 CLIP 編碼器對齐層的消融研究。在較淺層應用 loss 會產生更好的線性探測（LP）性能，而在較深層應用會改進生成品質（更低的 FID），突出了表示與生成品質之間的權衡。</p>
+<p>按照 yu2025repa 中描述的方法，我們消融了表示與預訓練 CLIP ViT-L/16 模型對齋的層，並選擇了 FID 分數最低的層。我們在視覺編碼器的輸出上應用線性探測。如表 7 所示，在第 6 層應用 REPA 產生最佳的生成性能，達到最低的 FID。有趣的是，我們觀察到一個一致的趨勢，即較深的對齋層會降級線性探測精度。</p>
+<h4 id="723-repa-clip-dinov2">7.2.3 REPA 的 CLIP 與 DINOv2 監督</h4>
+<p>表 8：視覺骨幹的效果</p>
+<p>此外，我們比較了使用預訓練 CLIP 和 DINOv2 視覺編碼器（REPA 中的預設設定）訓練的 REPA。為了公平起見，在使用 DINOv2 監督時，我們也進行了消融並按照用於 CLIP 的相同協議選擇最優特徵層。我們發現 REPA loss 的最優層為第 8 層。</p>
+<p>如表 8 所示，使用 DINOv2 監督的 REPA 達到更高的線性探測精度，表示對下游識別任務的語義表示更強。然而，這種改進並未轉化為更好的文本到影像生成品質：使用 DINOv2 訓練的 REPA 相比於 CLIP 監督的 REPA 表現出更差的 FID。這表明雖然 DINOv2 提供更強的類別級表示，但 CLIP 的文本對齋監督在指導生成模型朝著高保真、文本一致的影像生成方面更加有效。</p>
+<h3 id="73">7.3 密集預測</h3>
+<p>表 9：凍結主幹網路在密集預測任務上的效能。結果報告於語義分割（在 ADE20K zhou2017scene 上）和深度估計（在 NYU Depth V2 silberman2012indoor 上）使用線性探針 simeoni2025dinov3 mIoU：平均交集-聯集比；PixAcc：像素精度；RMSE：均方根誤差；ARel：絕對相對誤差。</p>
+<h3 id="74">7.4 零樣本魯棒性</h3>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x7.png" loading="lazy"></figure> 圖 7：CLIP、CLIP 加遮罩熱身（CLIP-M）和 DREAM 在不同遮罩比率下零樣本精度的比較。綠色陰影區域標示 DREAM 超越 CLIP 的遮罩級別。</p>
+<h2 id="8">8 額外消融實驗</h2>
+<p>我們提供超參數的進一步消融實驗，這些超參數能夠統一表示。我們的消融實驗表明模型的效能，無論是在表示學習還是文本到影像生成中，在不同數值下保持相對穩定，證明我們的遮罩熱身框架是穩定的。</p>
+<p>我們遵循主論文分析部分的相同預設設定：消融實驗使用在 CC12M 上訓練 49 個時期的 DREAM-L，採用標準配置：遮罩標準差 $\sigma=0.45$（我們之前已建立這導致表示學習和生成之間穩定的聯合優化），CLIP 損失權重 $\lambda=0.005$，以及無語義對齊解碼的生成。我們以灰色突顯預設設定，並以粗體標示每個消融實驗中的最佳數值。</p>
+<h3 id="81">8.1 遮罩排程</h3>
+<p>我們詳細描述在表 4 中評估的遮罩排程。除非另外說明，所有排程使用截斷高斯分佈，標準差為 0.45，計算 CLIP 損失的最大遮罩比率為 0.75（即 75% 的令牌被遮罩），以及計算 MAR 損失的最小遮罩比率為 0.5。全局最小和最大遮罩比率分別固定為 0 和 1.0。</p>
+<ul>
+<li>• FX：以 1.0 為中心的固定截斷高斯分佈。</li>
+<li>• UNI：固定均勻分佈。</li>
+<li>• CD：一個高斯分佈，其平均值從 1.0 開始，在前 36 個時期內線性遞減至 0.0，之後保持固定在 0.0。</li>
+<li>• WM：一個高斯分佈，其平均值從 0.0 開始，在前 36 個時期內線性遞增至 1.0，之後保持固定在 1.0。</li>
+</ul>
+<p>FX：以 1.0 為中心的固定截斷高斯分佈。</p>
+<p>UNI：固定均勻分佈。</p>
+<p>CD：一個高斯分佈，其平均值從 1.0 開始，在前 36 個時期內線性遞減至 0.0，之後保持固定在 0.0。</p>
+<p>WM：一個高斯分佈，其平均值從 0.0 開始，在前 36 個時期內線性遞增至 1.0，之後保持固定在 1.0。</p>
+<h3 id="82">8.2 遮蔽的標準差</h3>
+<p>表 10：遮蔽分佈的標準差（$\sigma$）</p>
+<p>我們的遮蔽暖身從 $\mathcal{N}(\mu,\sigma^{2})$ 抽樣遮蔽比例，並裁剪到 $[0,1]$。為了研究變異數的影響，我們改變 $\sigma$，並額外納入 UNI，一個通過均勻遮蔽分佈來近似高變異數極限的排程。</p>
+<p>如表 10 所示，將 $\sigma$ 從 0.35 增加到 0.45–0.55 改善了表示質量和生成性能：線性探測從 72.0% 增加到 72.7%，而 FID 從 4.74 降低到 4.57。將變異數推至極端（UNI）進一步將線性探測提升至 73.1%，但使 FID 惡化至 4.88，表明過度均勻的遮蔽減少了對高遮蔽重建機制的強調，而這對於強大的生成是必需的。</p>
+<p>總體而言，$\sigma\in[0.45,0.55]$ 範圍內的適度變異數產生最佳的生成品質，同時保持接近最優的表示性能。論文中第 4 節使用設定 $\sigma=0.55$，這與最佳 FID（4.57）相符，並提供略強於 $\sigma=0.45$ 的線性探測。</p>
+<p>論文中第 4 節使用設定 $\sigma=0.55$，因為它在線性探測和 FID 分數之間達到平衡。</p>
+<h3 id="83">8.3 遮蔽暖身的持續時間</h3>
+<p>表 11：遮蔽暖身持續時間</p>
+<p>我們消融了遮蔽暖身的持續時間。如表 11 所示，在 30–42 個時期的暖身持續時間內，線性探測準確度大致保持穩定，僅表現出細微差異。相比之下，生成品質展現出明確的最優值：36 個時期的暖身達到最低 FID（4.57），優於較短和較長的排程。這表明暖身持續時間主要影響生成保真度而非判別性能，適度的長度提供了最佳平衡。</p>
+<h3 id="84">8.4 擴散損失的最小比例</h3>
+<p>表 12：改變擴散損失的最小遮蔽比例（$\gamma$）</p>
+<p>我們消融了計算擴散損失時使用的最小遮蔽比例 $\gamma$。如第 3.2 節所討論的，生成訓練受益於足夠高的遮蔽比例，以促進學習輸入分佈。</p>
+<p>表 12 顯示設定 $\gamma=0.5$（例如，50% 的標記被遮蔽）產生最佳的生成性能，在測試的配置中達到最低 FID（4.57）。相比之下，當 $\gamma$ 從 0.25 增加到 0.75 時，線性探測準確度下降，表明非常高的最小遮蔽閾值減少了訓練期間看到的低遮蔽樣本數量，並限制了重建損失對表示學習的貢獻。</p>
+<p>總體而言，$\gamma$ 的適度值在判別和生成目標之間提供了更好的平衡。</p>
+<h3 id="85-clip">8.5 CLIP 損失的最大遮罩比例</h3>
+<p>表 13：CLIP 損失的最大遮罩比例變化（ϕ \phi ）</p>
+<p>我們對計算 CLIP 損失時使用的最大遮罩比例 ϕ \phi 進行了消融研究。如表 13 所示，將 ϕ \phi 從 0.25 增加到 0.75 會導致線性探測準確率的持續提升。較大的上界允許更多樣本保留足夠的可見內容，以在對比目標中有意義地參與，從而強化所學到的表徵。</p>
+<p>然而，設定 ϕ = 1.0 \phi=1.0 會略微降低效能。當影像變成完全或幾乎完全遮罩時，沒有足夠的視覺背景資訊進行有效的文本對比學習，這會削弱表徵品質。</p>
+<p>總的來說，擴散損失的最小遮罩比例和 CLIP 損失的最大遮罩比例共同控制參與兩個目標的樣本之間的重疊程度，從而影響生成式重構和判別式對齊之間的平衡。</p>
+<h3 id="86-clip-lambda">8.6 CLIP 損失權重（ λ \lambda ）</h3>
+<p>表 14：CLIP 損失權重的影響（ λ \lambda ）</p>
+<p>我們還對 CLIP 損失的權重 λ \lambda 進行了消融研究，該權重在表徵和生成目標之間進行平衡。表 14 顯示，不同權重下 LP 和 FID 沒有劇烈變化，這證明了 DREAM 框架的穩定性。</p>
+<h3 id="87-token-clip">8.7 緩衝區 Token 上的 CLIP 損失</h3>
+<p>表 15：CLIP 損失的應用。</p>
+<p>我們進一步研究了將 CLIP 損失限制在緩衝區 Token 上與將其應用於緩衝區和影像 Token 上相比是否能帶來任何益處。如表 15 所示，將 CLIP 監督限制在緩衝區 Token 會略微降低線性探測準確率，而 FID 保持不變。</p>
+<h3 id="88-clip">8.8 應用 CLIP 損失的層</h3>
+<p>表 16：CLIP 損失層</p>
+<p>與 REPA 類似，我們也對應用 CLIP 損失的層進行了消融研究。我們在凍結的視覺編碼器的最終層（第 12 層）上應用線性探測。如表 16 所示，較深的層會單調地改進線性探測（66.6% → \to 72.5%），而 FID 保持穩定（4.51–4.71）。最深層（第 12 層）同時實現了強大的判別性能和競爭力的生成品質，表明在最終編碼器層（其中存在最抽象的語義特徵）進行語言對齊能成功產生語義基礎的表徵，而不會干擾解碼器的生成容量。</p>
+<p>值得注意的是，我們的框架在相同深度上展現出比 REPA 更高的線性探測效能（與表 2 中的第 6 層進行比較），因為 CLIP 損失為視覺編碼器提供了比 REPA 更強的文本監督。</p>
+<h3 id="89">8.9 候選者數量</h3>
+<p>表 17：候選者數量（K K）的影響</p>
+<p>本文研究了在固定計算預算 128 個前向編碼器（NFE）傳遞下，生成的候選者數量對 FID 和 CLIP 分數的影響。更多候選者意味著在自迴歸解碼的早期階段生成更多部分序列，能夠進行更早期的語義選擇。</p>
+<p>表 17 顯示，將候選者從 1 增加到 9 將 FID 改進了 6.3%（4.57 → 4.28）並將 CLIP 分數改進了 3.4%（29.1 → 30.1），超過 9 後回報遞減。這些改進表明語義對齊解碼有效地利用了編碼器的語義豐富視覺表徵——通過文本編碼器訪問——突出了 DREAM 中表徵學習和生成之間的協同作用。</p>
+<h2 id="9">9 實現細節</h2>
+<p>在下一節中，我們提供訓練設置的詳細描述，並包含 DREAM、REPA 和語義對齊解碼的虛擬代碼。完整實現將公開提供。</p>
+<p>MAR li2024autoregressive 是一個類別條件編碼器–解碼器模型，其中編碼器以類別標籤作為輸入。
+FLUID fan2024Fluid 是一個文本到圖像模型，使用在連續令牌上運作的 Transformer 架構，這些令牌與文本令牌進行交叉注意。</p>
+<p>DREAM 借鑑了 MAR 和 FLUID 的架構設計。我們採用 MAR 的編碼器設計，但移除了類別條件途徑，確保沒有文本信息進入視覺編碼器。在解碼器端，我們使用 FLUID 的架構並僅在此階段引入文本條件化。這防止了視覺特徵和文本之間的捷徑，並確保編碼器學習到的所有判別和密集預測能力均源自視覺輸入。</p>
+<p>我們使用 CLIP 對比損失 radford2021clip 將編碼器的視覺表徵與文本對齊。概念上，DREAM 從編碼器移除了文本條件化，而是訓練編碼器預測相關的文本語義，僅在解碼器內重新引入文本條件化。</p>
+<h3 id="91">9.1 圖像分詞器和反分詞器</h3>
+<p>我們採用來自 Stable Diffusion rombach2022high 的 kl-f8-ft-EMA 自編碼器，一個廣泛使用的連續分詞器。圖像首先被編碼成 32 × 32 潛在網格，每個令牌有 4 個通道。為了與離散分詞器保持一致，我們將每個 2 × 2 潛在令牌塊分組為單個令牌，得到最終序列包含 256 個令牌，每個令牌有 16 個通道。反分詞器從預測的連續表徵重構圖像。</p>
+<h3 id="92-vit">9.2 ViT 架構</h3>
+<h4 id="921-vision-encoder">9.2.1 Vision Encoder</h4>
+<p>在 tokenizer 之後，潛在序列長度變為 256。在訓練期間，tokens 在被送入編碼器之前會被遮蔽和丟棄。我們在未遮蔽的序列前面添加 64 個緩衝 tokens，以確保穩定性。
+更具體地說，我們使用標準的 ViT 架構 dosovitskiy2020image，其由一堆 Transformer blocks dosovitskiy2020image 組成，其中每個 block 由一個多頭自注意力 block 和一個 MLP block 組成。我們使用兩個可學習的位置嵌入，一個添加到編碼器的輸入，另一個添加到解碼器的輸入。</p>
+<p>我們使用編碼器輸出的特徵進行分類任務，例如線性探測、少量樣本遷移學習和微調。在線性探測和微調中，我們對編碼器輸出應用平均池化以進行線性分類，並針對語義分割和深度估計使用相應的視覺嵌入。</p>
+<h4 id="922">9.2.2 文本編碼器</h4>
+<p>我們使用兩個文本編碼器，每個在訓練期間發揮不同的作用。這種分離能夠直接與先前的工作進行比較，並確保我們的對比和生成目標遵循既定的慣例。</p>
+<p>對於對比對齐，圖說文字使用 OpenAI CLIP tokenizer（77 個 tokens）進行 tokenize，並使用 CLIP 文本 transformer 進行編碼，遵循 tian2023stablerep 中的設置。所得特徵被投影到視覺編碼器的潛在空間中。</p>
+<p>對於生成，圖說文字使用 SentencePiece（128 個 tokens）進行 tokenize，並使用凍結的 T5-XXL 模型 raffel2020exploring 進行編碼。一個輕量級的 6 層文本對齐器將 T5 嵌入投影到解碼器的潛在空間中，為解碼器提供條件作用。此文本條件化模組遵循 FLUID fan2024Fluid 中使用的設計。</p>
+<h3 id="93">9.3 模型大小</h3>
+<p>我們評估四種模型規模：Base (B)、Large (L)、Huge (H) 和 Giant (G)。在所有設置中，編碼器和解碼器共享相同數量的 transformer blocks（例如，一個 32 block 的模型為編碼器和解碼器各分配 16 個 blocks）。</p>
+<ul>
+<li>• Base (B)：24 個 blocks，隱藏大小 768</li>
+<li>• Large (L)：32 個 blocks，隱藏大小 1024</li>
+<li>• Huge (H)：40 個 blocks，隱藏大小 1280</li>
+<li>• Giant (G)：48 個 blocks，隱藏大小 1664</li>
+</ul>
+<p>Base (B)：24 個 blocks，隱藏大小 768</p>
+<p>Large (L)：32 個 blocks，隱藏大小 1024</p>
+<p>Huge (H)：40 個 blocks，隱藏大小 1280</p>
+<p>Giant (G)：48 個 blocks，隱藏大小 1664</p>
+<p>Huge 配置對應於一個 $\sim$ 1B 參數的編碼器-解碼器模型。
+Giant 配置（總共 $\sim$ 2B 參數）提供一個具有約 1B 參數（921M）的編碼器，使我們能夠在 1B 編碼器系統中研究擴展行為。</p>
+<h3 id="94">9.4 預訓練</h3>
+<p>第 10 節總結了所有實驗中使用的預設預訓練配置。除非另有說明，所有模型均訓練 49 個 epochs。</p>
+<h4 id="941-dream">9.4.1 DREAM 訓練</h4>
+<p>DREAM 使用漸進式遮蔽熱身（progressive masking warm-up），其中遮蔽比率遵循移位截斷高斯分佈。最小和最大遮蔽比率分別固定為 0 和 1.0。分佈的均值在前 36 個 epochs 中從 0 線性增加到 1.0，然後在剩餘 epochs 中固定為 1.0。此排程可實現從完全可見輸入到強大生成性能所需的高遮蔽體制的平穩轉變。</p>
+<h4 id="942-repa">9.4.2 REPA 訓練</h4>
+<p>REPA yu2025repa 最初是為擴散 Transformer 提出的，其中帶噪聲的中間編碼器狀態與來自預訓練視覺編碼器的清晰影像特徵對齊。
+在我們針對遮蔽影像建模的調整中，我們改為將視覺編碼器的未遮蔽令牌與使用預訓練 CLIP-L 編碼器從完整影像計算的對應特徵對齊。這以與我們的遮蔽令牌訓練設置相容的方式提供 REPA 風格的特徵監督。</p>
+<h4 id="943-clip">9.4.3 CLIP 訓練</h4>
+<p>我們的 CLIP 基準線在全 49 個 epochs 中不使用遮蔽進行訓練。</p>
+<h4 id="944-fluid-mar">9.4.4 FLUID 和 MAR 訓練</h4>
+<p>FLUID 和 MAR 基準線按照 MAR 遮蔽排程 li2024autoregressive 訓練 49 個 epochs：遮蔽比率從以 1.0（100% 遮蔽）為中心、標準差為 0.25 的截斷高斯分佈中採樣，範圍限制在 [0.7, 1.0]。此設置允許我們直接評估視覺編碼器並評估僅在解碼器中應用文本條件的效果。</p>
+<h3 id="95">9.5 推論</h3>
+<h4 id="951">9.5.1 生成</h4>
+<p>DREAM 採用 MAR li2024autoregressive 解碼程序，透過在每一步預測隨機選擇的潛在代幣集合來生成影像。在推論時，我們從完全遮罩的潛在序列開始，並按照餘弦排程迭代降低遮罩比例。預設情況下，我們在此排程中使用 64 步。在每次迭代中，DREAM 首先為所有目前被遮罩的位置預測連續潛在值。隨後套用代幣級溫度採樣，透過在預測的潛在向量中添加溫度縮放噪聲。最後，DREAM 不像 MAGE 那樣使用基於信心或位置的排序，而是遵循 MAR 的完全隨機排序：位置的子集被統一採樣並重新遮罩，以匹配下一次迭代的目標遮罩比例。此過程逐步精化潛在表示，直到所有位置都被填充。</p>
+<h4 id="952-classifier-free-guidance-cfg">9.5.2 無分類器引導（Classifier-free guidance, CFG）</h4>
+<p>我們透過隨機移除訓練樣本中 10% 的文本條件，用空值代幣替換提示詞來採用無分類器引導。這訓練模型使用相同的擴散頭來產生條件和無條件預測。</p>
+<p>在推論期間，我們執行模型兩次：一次使用空提示詞，一次使用給定的文本。這產生無條件和條件表示 $z_u$ 和 $z_c$。引導噪聲預測計算為</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\varepsilon=\varepsilon_{\theta}(x_{t}\mid t,z_{u})\;+\;\omega\cdot\big(\varepsilon_{\theta}(x_{t}\mid t,z_{c})-\varepsilon_{\theta}(x_{t}\mid t,z_{u})\big)$</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\omega$ 表示引導強度。由於我們使用固定採樣溫度 1，不套用額外的溫度縮放。</p>
+<p>針對採樣，我們掃過兩個 CFG 排程：常數尺度和線性遞增尺度，並報告最佳的 CLIP 和 FID 分數。</p>
+<h4 id="953">9.5.3 語義分割</h4>
+<p>針對語義分割，我們遵循 DINOv3 simeoni2025dinov3 設定。在視覺編碼器的凍結補丁特徵上訓練線性層，並在 ADE20K zhou2017scene（150 類別）上評估。我們報告平均 IoU 和像素精度。線性頭透過 40k 次迭代進行訓練，學習率為 $1\times 10^{-4}$，使用具有 1.5k 預熱步數的餘弦衰減排程。</p>
+<h4 id="954">9.5.4 深度估計</h4>
+<p>針對深度估計，我們遵循 DINOv2 oquab2023dinov2 協議。線性頭在凍結補丁特徵上訓練，並在 NYU Depth v2 silberman2012indoor 上評估。我們報告 RMSE 和 ARel。訓練使用 38.4k 次迭代，學習率為 $3\times 10^{-4}$、餘弦排程器和 12.8k 預熱步數。</p>
+<h2 id="10">10 訓練設定</h2>
+<p>表 18：CLIP 的預訓練設定。</p>
+<p>表 19：MAR 和 FLUID 的預訓練設定。</p>
+<p>表 20：REPA 的預訓練設定。</p>
+<p>表 21：DREAM 的預訓練設定。</p>
+<p>表 22：線性探測設定。</p>
+<p>表 23：微調設定。</p>
+<p>演算法 1 DREAM 的訓練迴圈</p>
+<p>演算法 2 REPA 基準模型的訓練迴圈，為遮罩影像建模實作</p>
+<p>演算法 3 語義對齊解碼</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x8.png" loading="lazy"></figure> 圖 8：DREAM-L (0.57B) 模型根據 CC12M 字幕生成的影像，CFG = 5.0。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x9.png" loading="lazy"></figure> 圖 9：DREAM-H (1.1B) 模型根據 CC12M 字幕生成的影像，CFG = 5.0。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02667/x10.png" loading="lazy"></figure> 圖 10：DREAM-G (2.4B) 模型根據 CC12M 字幕生成的影像，CFG = 5.0。</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

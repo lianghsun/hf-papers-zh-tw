@@ -1,0 +1,17 @@
+{
+  "domain": [
+    "CV",
+    "Multimodal"
+  ],
+  "method": [
+    "Diffusion",
+    "Motion Control",
+    "Keyframe Guidance"
+  ],
+  "task": [
+    "Video Editing",
+    "Video Synthesis"
+  ],
+  "dataset": [],
+  "open_source": false
+}

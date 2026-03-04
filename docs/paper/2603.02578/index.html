@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大型語言模型的可控性如何？跨行為粒度的統一評估 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">大型語言模型的可控性如何？跨行為粒度的統一評估</h1>
+  
+  <div class="en-title">How Controllable Are Large Language Models? A Unified Evaluation across Behavioral Granularities</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Ziwen Xu, Kewei Xu, Haoming Xu, Haiwen Hong, Longtao Huang, Hui Xue, Ningyu Zhang, Yongliang Shen, Guozhou Zheng, Huajun Chen, Shumin Deng</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.02578" target="_blank">2603.02578</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.02578" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.02578" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.02578" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">NLP</span>
+    <span class="tag method">Steering Methods</span><span class="tag method">Behavioral Control</span>
+    <span class="tag task">Text Generation</span><span class="tag task">Controllability Evaluation</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+大型語言模型（LLMs）日益被部署在社會敏感領域，然而其不可預測的行為，從意圖不一致到人格矛盾，都構成了重大風險。我們引入 SteerEval，一個用於評估 LLM 可控性的階層式基準，涵蓋三個領域：語言特徵、情感和人格。每個領域結構化為三個規範等級：L1（要表達什麼）、L2（如何表達）和 L3（如何具現化），將高層級的行為意圖連結到具體的文本輸出。使用 SteerEval，我們系統地評估當代轉向方法，揭示控制在更細粒度的等級往往會退化。我們的基準為安全且可控的 LLM 行為提供了一個有原則且可解釋的框架，為未來研究奠定基礎。</p>
+  
+  <div class="abstract-en">Large Language Models (LLMs) are increasingly deployed in socially sensitive domains, yet their unpredictable behaviors, ranging from misaligned intent to inconsistent personality, pose significant risks. We introduce SteerEval, a hierarchical benchmark for evaluating LLM controllability across three domains: language features, sentiment, and personality. Each domain is structured into three specification levels: L1 (what to express), L2 (how to express), and L3 (how to instantiate), connecting high-level behavioral intent to concrete textual output. Using SteerEval, we systematically evaluate contemporary steering methods, revealing that control often degrades at finer-grained levels. Our benchmark offers a principled and interpretable framework for safe and controllable LLM behavior, serving as a foundation for future research.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="_1">大型語言模型的可控性如何？行為粒度的統一評估</h1>
+<p>大型語言模型（LLMs）越來越多地被部署在社會敏感領域，但其從目標錯位到人格不一致的不可預測行為，造成了重大風險。我們引入 SteerEval，一個針對三個領域的 LLM 可控性評估的階層式基準：語言特徵、情感和人格。每個領域結構為三個規範等級：L1（表達什麼）、L2（如何表達）和 L3（如何具現化），將高層次的行為意圖連接到具體的文字輸出。使用 SteerEval，我們系統地評估當代引導方法，揭示出控制在更細粒度的等級中經常降低。我們的基準為安全且可控的 LLM 行為提供了一個有原則且可解釋的框架，作為未來研究的基礎。</p>
+<h1 id="_2">大型語言模型的可控性如何？行為粒度的統一評估</h1>
+<p>Ziwen Xu^{1,2} 1 1 腳註標記: 1 ,
+Kewei Xu^1 † † 致謝: 平等貢獻。 ,
+Haoming Xu^1 ,
+Haiwen Hong^2 ,
+Longtao Huang^2 ,
+Hui Xue^2 , Ningyu Zhang^1 , Yongliang Shen^1 , Guozhou Zheng^1 , Huajun Chen^1 , Shumin Deng^3 † † 致謝: 通訊作者。</p>
+<p>^1 浙江大學，^2 阿里巴巴集團 ^3 新加坡國立大學，NUS-NCS 聯合實驗室，新加坡</p>
+<h2 id="1">1 介紹</h2>
+<p>大型語言模型（LLMs）在廣泛的任務中展現出令人印象深刻的性能，從對話和摘要到推理和創意生成（Zhao et al., 2023）。
+這些進展加速了 LLMs 在社會敏感領域（如教育、醫療保健和決策支持）中的部署，在這些領域模型輸出可以直接影響人類行為和福祉。
+然而，除了令人印象深刻的能力外，LLMs 也可能表現出不可預測或不良的行為，包括與使用者意圖不一致、情緒出現意外轉變，以及人格表達不一致。
+此類失敗在實際環境中造成具體風險，使得可靠的行為控制不僅是可取的，而是必要的 Anwar et al.（2024）；Sharkey et al.（2025）。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02578/x1.png" loading="lazy"></figure> 圖 1：行為控制目標可按粒度組織。
+例如，自主性的目標從高層級目標（第 1 級）發展到受限的表達方式（第 2 級），最後發展到可直接檢查的表面實現（第 3 級）。</p>
+<p>在面向人類的應用中控制 LLM 行為涉及兩個互補的維度：內容（模型表達什麼）和粒度（其表達的特異性水平）。
+這種區分可由 Marr 的三層分析框架（Marr, 1982）提供啟發：在高層級，通信需要確定預期的訊息（類似於內容）、制定連貫的計畫來傳達它（類似於中級規範），並產生具體實現（類似於細粒度實例化）。
+同樣地，有效的模型引導需要對模型溝通的內容及其精確表達方式進行可解釋的控制，從抽象意圖到具體文本實現。</p>
+<p>受此類比啟發，我們引入一個分層基準 SteerEval，設計用於系統評估 LLM 可引導性。
+我們利用分層概念自動合成資料並手動驗證以確保品質。
+SteerEval 沿著兩個互補的軸線組織行為控制。首先，控制目標被分組為三個領域：語言特徵、情感和人格。
+其次，每個領域在結構上分為三個規範級別：第 1 級（計算級別：要表達什麼）、第 2 級（演算法級別：如何表達）和第 3 級（實現級別：如何將其實例化）。
+例如，如圖 1 所示，在人格領域，第 1 級定義情感極性（自主性或依賴性），第 2 級限制用於傳達它的語調或框架，第 3 級強制具體的詞彙實現。
+這種分層組織提供了一個有原則且可解釋的架構，連接高層級行為意圖和具體文本輸出，便於系統評估引導方法。</p>
+<p>使用 SteerEval，我們對當代 LLM 引導方法進行全面評估，涵蓋各個領域和規範級別。
+我們的分析揭示了細微的模式：雖然某些方法在粗粒度級別上保持可靠的控制，但隨著約束變得更加細粒度和行為精確，其性能往往會下降。
+通過將模型引導框架化為分層行為控制問題，SteerEval 為引導可預測、可控且社會安全的 LLMs 的發展提供了一個嚴格、可解釋且可行的基準。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02578/data_examples.jpg" loading="lazy"></figure> 圖 2：來自三個領域人格、情感和語言特徵的範例情況，跨 L1 ～ L3 層級。
+以語言特徵為例，核心引導目標是增加冗餘。
+在第 1 級（L1），模型被引導表達一般意圖「增加冗餘」，從「簡潔措辭」轉向「精心設計的重複」。
+在第 2 級（L2），引導指定了實現策略，從「單一表達」轉向「改述重述」。
+在第 3 級（L3），強制執行原子性的可驗證標記，需要包含「(i.e.,」。
+這些範例說明了每個級別如何逐步將模型輸出從抽象意圖限制到具體表面證據。
+更多細節在第 § 3 節提供。</p>
+<h2 id="2">2 初步背景</h2>
+<h3 id="21">2.1 導向任務</h3>
+<p>在沒有導向的情況下，模型生成 $\hat{y}=M(x)$。
+導向方法以 $g$ 為條件來構建推理時間介入 $\mathcal{I}_{g}$，產生</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\hat{y}<em>{\mathrm{steered}}=\mathcal{I}</em>{g}!\left(M,x\right)$</th>
+<th></th>
+<th>(1)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>在這項工作中，$\mathcal{I}<em>{g}$ 採用以下兩種形式之一：
+(i) 基於提示的導向，它將概念提示 $p</em>{g}$ 前置到輸入中，得出 $M(p_{g}|x)$；或
+(ii) 基於激活的導向，它在前向傳播過程中使用概念特定向量修改中間激活。</p>
+<p>導向通過評估 $\hat{y}_{\mathrm{steered}}$ 是否更好地表達目標概念 $g$，同時保持通用回應品質（包括指令跟隨和流暢性）來進行評估。
+所有介入和評估都使用開源框架 EasyEdit2 Xu et al. (2025) 實施。</p>
+<h3 id="22">2.2 現有基準</h3>
+<p>先前的導向基準在範圍上很狹隘，針對特定的行為 Zou et al. (2023); Im and Li (2025) 或任務 Makelov (2024)，例如個性 (Perez et al., 2023)、情感 (Han et al., 2024; Farooq et al., 2025) 或安全性 (Siu et al., 2025; Han et al., 2025; Wang et al., 2025)。
+異質的概念定義和數據格式使得跨方法比較困難。</p>
+<p>AXBENCH (Wu et al., 2025b) 通過標準化跨導向方法的評估在一定程度上解決了這個問題，但其概念源自稀疏自編碼器 (SAEs) 特徵描述 (Lieberum et al., 2024)，而不是顯式行為定義，缺乏領域或粒度結構，並且不提供用於訓練的概念目標偏好對。
+此外，其評估提示是從 Alpaca-Eval Dubois et al. (2024) 採樣的，而不是根據特定概念量身定製的。</p>
+<p>我們使用 SteerEval 來解決這些限制，這是一個配備了可擴展自動化數據合成管道的分層概念基準。SteerEval 涵蓋多個行為領域，並將每個領域組織成三個規範級別，並提供概念目標偏好數據和概念對齊評估集，實現跨領域和粒度級別的系統性和公平的可控性評估。</p>
+<h3 id="23">2.3 認知中的層級控制</h3>
+<p>有效的行為控制依賴於層級組織和目標導向的調節。
+Marr 的三層分析框架（Marr, 1982）區分了計算目標、算法表示和物理實現，突出了行為如何從相互作用的抽象層次中產生。
+同時，認知控制的理論（Botvinick and Braver, 2015；Badre, 2025）描述了在這些層次中選擇和調節行為的機制，使得從抽象意圖到具體執行的靈活行為成為可能。</p>
+<p>受到這些原則的啟發，我們的基準將轉向目標組織在粗粒度行為領域和更細粒度的 L1 ∼ \sim L3 規格級別上，為分析轉向信號如何與模型內部層級相互作用提供了一個原則性的框架。</p>
+<h2 id="3">3 層級轉向基準</h2>
+<h3 id="31">3.1 設計原則</h3>
+<p>我們設計一個基準來探測概念轉向的邊界，通過在逐漸更嚴格的粒度約束下測試相同的核心目標。
+受到 Marr 的三層分析框架（Marr, 1982）的啟發，我們用三級層級組織轉向目標，該層級分離了跨領域和領域內的規格。
+我們使用自動化管道綜合多領域數據，通過問題改寫來緩解概念洩漏，並使用配對樣本和結合自動過濾與人工審查的兩階段品質控制流程來確保偏好的可靠性。</p>
+<h3 id="32">3.2 粒度階層設計</h3>
+<p>操控方法通常針對單一「目標概念」進行評估，然而現實世界的控制目標在粒度上存在差異，從高層次的意圖到具體的表面約束。
+至關重要的是，在粗粒度層級上的成功並不能保證在更細粒度層級上的成功。</p>
+<p>我們主張這種差異源於行為概念在模型內部階層中佔據不同的深度。
+人格反映更高層級、持久的性質傾向先驗；
+情感捕捉中層級、取決於上下文的情感趨勢；
+語言特徵塑造低層級的表面表現。
+此外，每個領域都包含其自身的內部漸進層級，形成越來越具體的屬性階層。</p>
+<p>受此觀點指導，我們在三個領域（即人格、情感和語言特徵）中構建我們的基準，並將每個概念組織成三級粒度階層。
+此設計使我們能夠系統地探究操控方法在何處保持穩健性，以及在何處開始失效。
+圖 2 展示了跨領域和層級的代表性實例。</p>
+<h4 id="1l1">層級 1（L1）計算層級。</h4>
+<p>L1 通過定義高層次的操控意圖而不限制表面表現來指定要表達的內容。
+此層級允許多樣化的輸出，並測試一種方法是否可靠地將行為偏向預期的方向。
+如圖 2 所示，L1 目標包括自主性（人格）、高度熱情（情感）或增加冗餘性（語言特徵），沿著目標維度移動輸出而無需規定表現方式。</p>
+<h4 id="2l2">層級 2（L2）演算法層級。</h4>
+<p>L2 通過指定表現策略同時保留 L1 的目標來指定如何表達意圖，測試操控是否控制表達方式而不僅僅是目標方向。
+圖 2 展示了代表性的 L2 案例。
+在人格中，L2 目標是「通過自主選擇來表達自主性」，從「聽從他人」轉移到「決策是自主做出的」。
+在情感中，L2 目標是「使用慶祝式強調」，從「中立讚美」轉移到「活力充沛的讚美」。
+在語言特徵中，L2 專注於「立即改述」，從「單一表達」轉變為「改述陳述」。</p>
+<h4 id="3l3">層級 3（L3）實現層級。</h4>
+<p>L3 通過將 L2 策略轉化為原子化、可驗證的表面約束來定義如何實例化表達，施加最細粒度的控制要求。
+圖 2 說明了代表性的 L3 案例。
+在人格中，L3 目標是「使用自著以實例化自主性」，其中原始輸出包含「沒有自著」，而操控後的輸出「包含自著」。
+在情感中，L3 目標是「使用 hooray 來表達熱情」，從「沒有 hooray」轉移到「包含 hooray」。
+在語言特徵中，L3 目標是「使用（即，以實例化立即改述」，從「沒有（即，」轉移到「包含（即，」。
+雖然這些約束提供了表現的明確證據，但它們可能會干擾指令遵循，使 L3 成為最嚴格的設定。</p>
+<p>整體而言，L1 → L3 的進展從意圖、到策略、到可驗證的證據，實現了對操控穩健性更具診斷性的評估，如表 1 所總結。</p>
+<p>表 1：粒度層級、其在自然文本中的典型出現頻率和抽象性之間的關係。更細粒度的目標頻率較低、抽象性較低，但更易直接驗證。</p>
+<h3 id="33">3.3 自動化數據合成管道</h3>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02578/x2.png" loading="lazy"></figure> 圖 3：自動化數據合成管道。</p>
+<p>我們通過完全自動化的多階段合成管道構建基準（圖 3）。
+它包含三個階段：</p>
+<h4 id="_3">層級概念合成。</h4>
+<p>如圖 3 的步驟 1 所示，用戶提供或隨機抽樣一個 domain_name。以此標識符為條件，LLM 生成一個有界的 domain_description，定義域的範疇並劃分相鄰域，該描述被用作後續生成的全局約束（附錄 D.1）。給定 domain_name、domain_description 和目標數據量，我們隨後合成一個三層概念層級（L1 \sim L3），具有明確的粒度分離和具體的 L3 約束（附錄 D.2）；粒度級別的正式定義在第 3.2 節中。</p>
+<h4 id="_4">問題生成與精煉。</h4>
+<p>如圖 3 的步驟 2 所示，對於每個概念，我們生成一組多樣化的概念條件問題，具有固定的訓練/測試分割，以及一個錨點問題及其參考（正、負）答案以校準風格和難度（附錄 D.3）。為了減少問題措辭提示目標概念的偽影，我們隨後通過將每個問題轉向相關但不同的概念來重寫它，同時保持域的背景（附錄 D.4）。</p>
+<h4 id="_5">配對答案生成。</h4>
+<p>如圖 3 的步驟 3 所示，我們為每個重寫的問題生成一個對比答案對：一個匹配答案滿足目標概念，一個 not_matching 答案表現出相反的行為。該對受限於在詞彙級別進行最小編輯，以最大化結構重疊並隔離概念承載差異（附錄 D.5）。</p>
+<h3 id="34">3.4 質量保證</h3>
+<p>為了確保數據質量，我們實施了一個結合自動化驗證與結構化人工審查的兩階段質量保證框架。</p>
+<p>階段 1：自動化驗證。此階段專注於數據生成期間的格式和大小一致性。
+由於大語言模型可能無法在單一次通過中滿足所有約束，每項任務會生成多個候選輸出。
+這些候選輸出經歷自動化格式和完整性檢查，之後驗證的子集按序列截斷以匹配目標大小，確保標準化的數據結構和精確的縮放。</p>
+<p>階段 2：人工小組審查。此階段確保語義忠實性和標籤準確性。
+專業 NLP 標註者按域和粒度分配，遵循標準化工作流程：指南熟悉、隨機 \sim 20% 子集上的校準、雙獨立驗證與共識，以及對標記問題的集體解決。
+此流程減少主觀性，提高一致性，並確保高質量的域、粒度和偏好標註。所有數據由內部審查委員會審查隱私和安全。我們在 MIT 許可證下發佈了該數據集。</p>
+<h3 id="35">3.5 資料集統計</h3>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02578/dataset_structure.png" loading="lazy"></figure> 圖 4：我們資料集的階層結構和樣本分佈。</p>
+<p>該資料集是通過上述自動化合成管道構建的，並經過人工驗證以確保品質。
+它是一個結構化的配對偏好資料集，圍繞 3 個主要領域組織：Personality、Sentiment 和 Language Features。
+反映 Marr 啟發的階層結構，每個領域被組織成三個粒度級別（Level 1、Level 2、Level 3），每個級別包含 8 個獨立概念。
+對於每個概念，資料集提供 70 個訓練樣本、30 個測試樣本和 5 個驗證樣本。
+每個樣本包含一個問題，配對一個匹配和一個不匹配的回答。
+總計，核心基準包含 7{,}560 個樣本。
+各領域和粒度級別的詳細分佈如圖 4 所示。
+此外，專注於 Reasoning Patterns 的專門領域被獨立構建以測試邏輯特定的引導；該領域的詳細資訊可在附錄 B 中找到。</p>
+<p>表 2：跨領域、粒度級別和指標的性能。每個領域包含三個粒度級別 L1 至 L3。我們報告 Concept Score（CS）（0–4 範圍）和 Harmonic Mean（HM）（相同範圍）。HM 是 Concept Score、Instruction Score 和 Fluency Score 的調和平均。每個模型區塊內的最佳和次佳結果都已突出顯示。</p>
+<h3 id="36">3.6 欄位和使用規格</h3>
+<p>如附錄 A 中圖 7 所示，domain 和 domain_description 定義了更廣泛的資料類別及其解釋範圍。
+在此階層下，concept、concept_id 和 concept_description 欄位表徵與該領域相關的特定概念及其描述。
+question 欄位是專門設計來引出該概念的探測。
+最後，出於引導目的，matching 和 not_matching 分別對應於嚴格遵守或偏離目標概念的回應。</p>
+<h2 id="4">4 實驗</h2>
+<h3 id="41">4.1 實驗設定</h3>
+<h4 id="_6">模型與引導方法。</h4>
+<p>我們在 Gemma-2-9B-Instruct Team（2024a）、Qwen-2.5-7B-Instruct Team（2024c）和 Llama-3.1-8B-Instruct Team（2024b）上進行評估。
+對於基於提示的基準方法，我們使用 0-shot Prompt Wu et al.（2025b）和 3-shot Prompt。
+對於基於激活的引導基準方法，我們包括 PCA、DiffMean Marks and Tegmark（2023）和 RePS Wu et al.（2025c）。
+我們也報告 Vanilla（無引導）。
+詳細的超參數見附錄 B。</p>
+<h4 id="_7">評估。</h4>
+<p>所有方法都在開放式生成設定中進行測試。
+不需要引導因子的方法，即 Vanilla 和 Prompt（0-shot），直接在測試集上進行評估。
+在 Prompt（3-shot）設定中，從訓練集中隨機抽樣 3 個偏好對作為上下文示例。
+對於 PCA、DiffMean 和 RePS，引導因子在驗證集上搜尋以找到最佳縮放值，然後應用於生成及在測試集上進行評估。
+對於每個引導概念，我們使用 gpt-4.1-mini 在 5 點量表 ${0,1,2,3,4}$ 上針對三個維度對模型回應進行評分：
+（i）概念分數，測量輸出傳達預期概念的準確性，
+（ii）指令分數，測量其遵循指令的程度，
+以及（iii）流暢度分數，測量語言品質、連貫性和可讀性；
+我們另外報告由這三個分數的調和平均數（HM）給出的聚合分數，以降低任何單一維度中低性能的權重。</p>
+<h3 id="42">4.2 主要結果</h3>
+<p>我們在表 2 中呈現主要結果，隨後進行整體、層級和領域的分析。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02578/few_shot_analysis.png" loading="lazy"></figure> (a) Few-Shot 分析</p>
+<h4 id="_8">整體比較。</h4>
+<p>基於提示的引導在整體上優於基於激活的引導。我們通過計算在所有領域和所有層級上平均的調和平均值（HM）來評估整體性能。
+在 Gemma-2-9B-Instruct 上，Prompt（0/3-shot）達到 HM=3.10/3.12，明顯高於基於激活的方法（PCA 1.11、DiffMean 1.98、RePS 2.56）和 Vanilla（0.81）；
+在 Qwen-2.5-7B-Instruct 和 Llama-3.1-8B-Instruct 上也觀察到一致的結論。
+此外，Few-shot 進一步改進了提示方法。
+在基於激活的方法中，直接從數據訓練引導向量的 RePS，一貫強於無訓練基線 PCA 和 DiffMean，但整體上仍落後於提示方法，這與先前的研究結果一致（Wu et al., 2025c）。</p>
+<h4 id="_9">層級分析。</h4>
+<p>在各領域平均結果中，基於激活的引導對概念粒度高度敏感。
+在 Gemma-2-9B-Instruct 上，基於激活的方法（PCA/DiffMean/RePS）的調和平均值（HM）從 L1 時的 1.67/2.76/2.94 下降到 L3 時的 0.05/0.07/1.72。
+隨著目標規範變得更精細（L1 → L3），性能急劇下降，這與直覺一致，即更精細的層級在 Marr 層次結構中需要更深層的處理。
+相比之下，基於提示的引導在所有層級上都表現強勁且穩定，HM 從 L1 到 L3 保持在 3.0 左右。
+我們在 Qwen-2.5-7B-Instruct 和 Llama-3.1-8B-Instruct 上觀察到類似的趨勢。
+值得注意的是，基於激活的方法在最粗糙的層級（L1）上可以匹配甚至超越提示方法的性能，這與先前的研究結果相反（Wang et al., 2025）。
+然而，它們在 L2 和 L3 上明顯落後，且隨著粒度增加，差距不斷擴大，這也有助於解釋為什麼基於提示的引導經常在 AXBENCH 上主導基於激活的引導（Wu et al., 2025b）。</p>
+<h4 id="_10">領域分析。</h4>
+<p>在層級平均結果中，基於提示的引導在所有三個模型上保持強勁且穩定，HM 始終維持在 3.0 左右。
+相比之下，基於激活的引導表現出明確的領域相關性。以 RePS 為例，在三個模型上平均，它在個性特徵上達到最高 HM，約為 2.43，其次是情感約為 2.37，以及語言特徵約為 2.25。
+總體而言，這些趨勢支持我們的假設，即我們基準中的個性特徵、情感和語言特徵可以通過 Marr 的三層分析來解釋：不同領域施加不同的引導需求，基於激活的干預在領域間的遷移一致性不如提示方法。</p>
+<h2 id="5">5 分析</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02578/x3.png" loading="lazy"></figure> 圖 6：詳細案例研究。</p>
+<h3 id="51">5.1 依語境示例數量進行縮放</h3>
+<p>我們研究語境內示例的數量如何影響基於提示的引導。
+圖 5(a) 展示了從 0-shot 到 16-shot 的趨勢，涵蓋代表性的概念–領域對，涵蓋粗粒度（L1/L2）和細粒度（L3）目標。
+對於 L1/L2，少數示例通常會產生大部分收益，然後飽和，這與少次提示幫助模型推斷預期任務並消歧義不夠明確的指令的現象一致（Brown et al., 2020；Min et al., 2022）。
+對於 L3，增加更多示例通常不夠有幫助，甚至可能有害，這可能是因為額外的示例會引入特殊的表面線索，增加捷徑匹配或干擾已經很緊的約束（Min et al., 2022）。
+這種粗到細的差異也與認知的分層解釋大致相容 Botvinick（2008）；Miller et al.（2017）。</p>
+<h3 id="52">5.2 依引導強度進行縮放</h3>
+<p>我們研究引導因子如何影響基於激活的引導。
+圖 5(b) 報告了在 Qwen-2.5-7B-Instruct 上針對多個因子設定的 RePS 和 DiffMean 的概念、指令、流暢性和調和平均數，涵蓋語言特徵和個性中的 L1 ∼ \sim L3 概念。</p>
+<p>總體而言，增加引導因子傾向於改善概念分數，但超出特定範圍後，它可能會明顯降低指令跟隨和流暢性，導致在適度強度下調和平均數達到峰值。
+這反映了概念強制與通用能力保留之間的權衡，與先前的發現一致（Tigges et al., 2023；Zou et al., 2023；Durmus et al., 2024；Taimeskhanov et al., 2026）。
+此外，這種效應對 L1 最為明顯。粗粒度目標通常能產生更清晰、更一致的引導方向，而縮放引導因子提供了額外的自由度來加強概念轉移（Mikolov et al., 2013；Pennington et al., 2014），在調整得當時可能優於提示。
+對於 L2/L3，趨勢不夠一致，收益較小，這表明我們評估的基於激活的方法在更強的規範約束下無法可靠地進行細粒度控制。</p>
+<h3 id="53">5.3 案例研究</h3>
+<p>圖 6 展示了在三個粒度級別上實例化的代表性概念，以及在不同控制方法下的對應模型輸出。
+這些範例說明我們的級別捕捉了不同的控制需求，且控制行為隨著粒度呈現系統性變化。</p>
+<h4 id="l1">L1 通常易於控制而不損害整體品質。</h4>
+<p>在 L1，目標是粗粒度的概念引導。
+如圖 6 所示，控制通常可以順利地應用於多個提示，增強概念表達，同時在很大程度上保持指令遵循和流暢性。
+這與先前的證據一致，即推理時介入可以控制高層級輸出特性（如主題和情感），同時保持非目標任務的性能（Turner et al., 2023）。</p>
+<h4 id="l2">L2 揭示了概念實現與整體能力之間的權衡。</h4>
+<p>在 L2，目標限制了表達的方式。
+圖 6 中的案例揭示了概念引導與指令遵循之間反覆出現的張力。
+有些案例保持強大的指令遵循和流暢的回答，但未能以指定的方式實現概念；而其他案例則通過犧牲指令遵循或流暢性來實現所需的風格，類似於 Li et al.（2023）的觀察。</p>
+<h4 id="l3">L3 即使犧牲整體能力也仍然困難。</h4>
+<p>在 L3，目標變成直接可檢查的標記級約束。
+圖 6 顯示大多數控制方法都難以滿足這種細粒度要求。
+值得注意的是，即使在加強控制且整體能力下降的情況下，概念得分通常仍然較低，這表明原子約束滿足比 L1 ∼ \sim L2 控制在實質上要困難得多。</p>
+<h2 id="6">6 相關工作</h2>
+<p>控制包括許多技術，其中兩種常見的方式是提示式控制（prompt-based steering），它使用精心設計的指令或例子來引導生成（Perez et al., 2023；Han et al., 2024；Wu et al., 2025b），以及激活式控制（activation-based steering），它使用學習到的概念方向對隱藏激活進行干預（Rimsky et al., 2024；Pres et al., 2024；Arditi et al., 2025；Han et al., 2025；Bartoszcze et al., 2025；Zhu et al., 2025；Zhang et al., 2025；Bayat et al., 2025；Chen et al., 2025b；Wu et al., 2025a；Sun et al., 2025；Sheng et al., 2025；Bigelow et al., 2025；Zhang et al., 2026；Xu et al., 2026；Sarfati et al., 2026；Park et al., 2026；Beaglehole et al., 2026）。對於激活式控制，無訓練方法如 PCA 和 DiffMean（Marks and Tegmark, 2023）從表示統計量估計方向，而有訓練方法（Wu et al., 2024；Cao et al., 2024）如 RePS（Wu et al., 2025c）則使用偏好風格的目標學習方向。</p>
+<p>然而，這些方法通常只在有限的行為或小規模任務集上進行評估，例如情感、安全性和角色（Han et al., 2024；Farooq et al., 2025；Tak et al., 2025；Siu et al., 2025；Han et al., 2025；Wang et al., 2025；Arditi et al., 2025；Sangayya Hiremath et al., 2026）。AXBENCH 改善了跨方法的可比性，但其概念源自 Sparse Autoencoder（SAE）特徵（Bricken et al., 2023；Templeton et al., 2024；Gao et al., 2024；Huben et al., 2024；Shu et al., 2025），這些特徵通常很細粒度且未按領域或粒度組織。此外，其評估提示是抽樣而非設計來測試特定概念（Wu et al., 2025b）。Steer-Bench（Chen et al., 2025a）研究內在的模型可控性，而非提供用於比較控制方法的基準。總體而言，模型行為是否可以以系統化、可預測且階層結構化的方式受到控制仍然是開放問題；回答這個問題需要一個階層式控制基準，能夠在概念層級之間進行評估，並分析控制如何影響模型行為的層級。</p>
+<h2 id="7">7 結論</h2>
+<p>我們引入 SteerEval，這是一個階層式基準，用於利用高品質合成偏好資料在行為領域和概念粒度層級上評估大型語言模型的控制。我們的結果表明，隨著控制目標變得更深層和更嚴格指定，控制性能以系統化和可預測的方式降低，揭示了現有方法的明確邊界和失敗模式。透過明確這些限制，SteerEval 為開發更可靠、更穩健且更可解釋的大型語言模型行為控制方法提供了有原則的基礎。</p>
+<h2 id="_11">限制</h2>
+<p>儘管我們盡力而為，某些方面仍然超出本論文的範圍。</p>
+<p>概念和領域的涵蓋範圍。我們在有限的設定中實例化我們的層次結構（例如，語言特徵和個性）。雖然該管道是可擴展的，但我們不涵蓋多輪對話、工具使用、長上下文交互或安全關鍵領域；將這些設定的擴展留給未來工作。</p>
+<p>實驗設定。我們研究單輪提示和單一概念控制。我們不測試多輪對話、多個概念的組合或順序/迭代引導，這些在實際使用中很常見。</p>
+<p>方法調整。引導結果取決於提取選擇（層、數據配對）和係數選擇。雖然我們掃過強度，但我們不聲稱對每個概念的最優調整，特別是在 L2/L3。</p>
+<p>LLM-as-a-judge。我們依賴基於 LLM 的評估來進行概念/指令/流暢性評估。此類評判者可能存在偏見，對提示敏感，並可能過度或不足地評估細粒度合規性。分數應理解為近似信號，而非確定的基本事實。</p>
+<h2 id="_12">倫理聲明</h2>
+<p>我們的基準刻畫了 LLM 在各個領域和粒度級別上的可控性邊界；
+然而，其可擴展管道意味著濫用風險，因此我們建議在部署時進行安全監控和能力保留檢查。
+我們不在基準中收集或包含個人數據。
+總體而言，我們不預期此工作會產生重大倫理或社會影響。</p>
+<h2 id="_13">參考文獻</h2>
+<ul>
+<li>Anwar et al. (2024) Usman Anwar, Abulhair Saparov, Javier Rando, Daniel Paleka, Miles Turpin, Peter Hase, Ekdeep Singh Lubana, Erik Jenner, Stephen Casper, Oliver Sourbut, Benjamin L. Edelman, Zhaowei Zhang, Mario Günther, Anton Korinek, José Hernández-Orallo, Lewis Hammond, Eric J. Bigelow, Alexander Pan, Lauro Langosco, Tomasz Korbak, Heidi Zhang, Ruiqi Zhong, Seán Ó hÉigeartaigh, Gabriel Recchia, Giulio Corsi, Alan Chan, Markus Anderljung, Lilian Edwards, Yoshua Bengio, Danqi Chen, Samuel Albanie, Tegan Maharaj, Jakob N. Foerster, Florian Tramèr, He He, Atoosa Kasirzadeh, Yejin Choi, and David Krueger. 2024. 大型語言模型對齊與安全的基礎性挑戰。CoRR，abs/2404.09932。</li>
+<li>Arditi et al. (2025) Andy Arditi, Owain Evans, and Jack Lindsey. 2025. Persona vectors：監控與控制語言模型中的角色特性。http://arxiv.org/abs/2507.21509。</li>
+<li>Badre (2025) David Badre. 2025. 認知控制。心理學年度評論，76(第 76 卷，2025):167–195。</li>
+<li>Bartoszcze et al. (2025) Lukasz Bartoszcze, Sarthak Munshi, Bryan Sukidi, Jennifer Yen, Zejia Yang, David Williams-King, Linh Le, Kosi Asuzu, and Carsten Maple. 2025. 大型語言模型的表徵工程：調查與研究挑戰。CoRR，abs/2502.17601。</li>
+<li>Bayat et al. (2025) Reza Bayat, Ali Rahimi-Kalahroudi, Mohammad Pezeshki, Sarath Chandar, and Pascal Vincent. 2025. 在稀疏空間中引導大型語言模型激活。CoRR，abs/2503.00177。</li>
+<li>Beaglehole et al. (2026) Daniel Beaglehole, Adityanarayanan Radhakrishnan, Enric Boix-Adsera, and Mikhail Belkin. 2026. 朝向人工智慧模型的通用引導與監控。科學，391(6787):787–792。</li>
+<li>Bigelow et al. (2025) Eric J. Bigelow, Daniel Wurgaft, YingQiao Wang, Noah D. Goodman, Tomer D. Ullman, Hidenori Tanaka, and Ekdeep Singh Lubana. 2025. 信念動態揭示上下文內學習與激活引導的雙重性質。CoRR，abs/2511.00617。</li>
+<li>Botvinick and Braver (2015) Matthew Botvinick and Todd Braver. 2015. 動機與認知控制：從行為到神經機制。心理學年度評論，66(第 66 卷，2015):83–113。</li>
+<li>Botvinick (2008) Matthew M Botvinick. 2008. 行為與前額葉功能的分層模型。認知科學趨勢，12(5):201–208。</li>
+<li>Bricken et al. (2023) Trenton Bricken, Adly Templeton, Joshua Batson, Brian Chen, Adam Jermyn, Tom Conerly, Nick Turner, Cem Anil, Carson Denison, Amanda Askell, Robert Lasenby, Yifan Wu, Shauna Kravec, Nicholas Schiefer, Tim Maxwell, Nicholas Joseph, Zac Hatfield-Dodds, Alex Tamkin, Karina Nguyen, Brayden McLean, Josiah E Burke, Tristan Hume, Shan Carter, Tom Henighan, and Christopher Olah. 2023. 朝向單義性：使用字典學習分解語言模型。Transformer Circuits Thread。Https://transformer-circuits.pub/2023/monosemantic-features/index.html。</li>
+<li>Brown et al. (2020) Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, and Dario Amodei. 2020. 語言模型是少樣本學習器。在神經信息處理系統 33 的進展：2020 年神經信息處理系統年度會議，NeurIPS 2020，2020 年 12 月 6 日至 12 日，虛擬。</li>
+<li>Cao et al. (2024) Yuanpu Cao, Tianrong Zhang, Bochuan Cao, Ziyi Yin, Lu Lin, Fenglong Ma, and Jinghui Chen. 2024. 大型語言模型的個性化引導：透過雙向偏好優化的多功能引導向量。在神經信息處理系統 38 的進展：2024 年神經信息處理系統年度會議，NeurIPS 2024，加拿大溫哥華，BC，2024 年 12 月 10 日至 15 日。</li>
+<li>Chen et al. (2025a) Kai Chen, Zihao He, Taiwei Shi, and Kristina Lerman. 2025a. Steer-bench：評估大型語言模型可引導性的基準。arXiv 預印本 arXiv:2505.20645。</li>
+<li>Chen et al. (2025b) Runjin Chen, Zhenyu Zhang, Junyuan Hong, Souvik Kundu, and Zhangyang Wang. 2025b. SEAL：大型語言模型的可引導推理校準，免費版。CoRR，abs/2504.07986。</li>
+<li>Dubois et al. (2024) Yann Dubois, Balázs Galambosi, Percy Liang, and Tatsunori B. Hashimoto. 2024. 長度控制的 alpacaeval：消除自動評估器偏差的簡單方法。CoRR，abs/2404.04475。</li>
+<li>Durmus et al. (2024) Esin Durmus, Alex Tamkin, Jack Clark, Jerry Wei, Jonathan Marcus, Joshua Batson, Kunal Handa, Liane Lovitt, Meg Tong, Miles McCain, Kunal Handa, Liane Lovitt, Meg Tong, Miles McCain, Oliver Rausch, Saffron Huang, Sam Bowman, Stuart Ritchie, Tom Henighan, and Deep Ganguli. 2024. 評估特徵引導：緩解社會偏見的案例研究。</li>
+<li>Farooq et al. (2025) Misbah Farooq, Varuna De Silva, Rahul Rahulamathavan, and Xiyu Shi. 2025. 透過激活向量操控的大型語言模型情感引導。在 DSP 中，第 1–5 頁。IEEE。</li>
+<li>Gao et al. (2024) Leo Gao, Tom Dupré la Tour, Henk Tillman, Gabriel Goh, Rajan Troll, Alec Radford, Ilya Sutskever, Jan Leike, and Jeffrey Wu. 2024. 稀疏自動編碼器的縮放與評估。CoRR，abs/2406.04093。</li>
+<li>Han et al. (2024) Chi Han, Jialiang Xu, Manling Li, Yi Fung, Chenkai Sun, Nan Jiang, Tarek F. Abdelzaher, and Heng Ji. 2024. 詞嵌入是語言模型的引導向量。在計算語言學協會第 62 屆年度會議論文集（第 1 卷：長論文），ACL 2024，泰國曼谷，2024 年 8 月 11 日至 16 日，第 16410–16430 頁。計算語言學協會。</li>
+<li>Han et al. (2025) Peixuan Han, Cheng Qian, Xiusi Chen, Yuji Zhang, Denghui Zhang, and Heng Ji. 2025. 內部激活作為引導不安全 LLM 行為的北極星。CoRR，abs/2502.01042。</li>
+<li>Huben et al. (2024) Robert Huben, Hoagy Cunningham, Logan Riggs, Aidan Ewart, and Lee Sharkey. 2024. 稀疏自動編碼器在語言模型中找到高度可解釋的特徵。在第十二屆國際學習表徵會議，ICLR 2024，奧地利維也納，2024 年 5 月 7 日至 11 日。OpenReview.net。</li>
+<li>Im and Li (2025) Shawn Im and Yixuan Li. 2025. 引導方法的統一理解與評估。CoRR，abs/2502.02716。</li>
+<li>Li et al. (2023) Kenneth Li, Oam Patel, Fernanda B. Viégas, Hanspeter Pfister, and Martin Wattenberg. 2023. 推論時干預：從語言模型引出真實答案。在神經信息處理系統 36 的進展：2023 年神經信息處理系統年度會議，NeurIPS 2023，美國路易斯安那州紐奧良，2023 年 12 月 10 日至 16 日。</li>
+<li>Lieberum et al. (2024) Tom Lieberum, Senthooran Rajamanoharan, Arthur Conmy, Lewis Smith, Nicolas Sonnerat, Vikrant Varma, János Kramár, Anca D. Dragan, Rohin Shah, and Neel Nanda. 2024. Gemma scope：在 Gemma 2 上開放稀疏自動編碼器。CoRR，abs/2408.05147。</li>
+<li>Makelov (2024) Aleksandar Makelov. 2024. 稀疏自動編碼器與監督特徵相符，用於 IOI 任務上的模型引導。在 ICML 2024 機械可解釋性研討會。</li>
+<li>Marks and Tegmark (2023) Samuel Marks and Max Tegmark. 2023. 真相的幾何：大型語言模型中真值/假值資料集表徵的新興線性結構。CoRR，abs/2310.06824。</li>
+<li>Marr (1982) David Marr. 1982. 視覺：對人類視覺資訊表徵與處理的計算調查。MIT 出版社。</li>
+<li>Mikolov et al. (2013) Tomás Mikolov, Wen-tau Yih, and Geoffrey Zweig. 2013. 連續空間詞表徵中的語言規律性。在人類語言技術：北美計算語言學協會章節會議論文集，2013 年 6 月 9 日至 14 日，美國喬治亞州亞特蘭大威斯汀桃樹廣場酒店，第 746–751 頁。計算語言學協會。</li>
+<li>Miller et al. (2017) George A Miller, Galanter Eugene, and Karl H Pribram. 2017. 計畫與行為結構。在行為科學系統研究中，第 369–382 頁。Routledge。</li>
+<li>Min et al. (2022) Sewon Min, Xinxi Lyu, Ari Holtzman, Mikel Artetxe, Mike Lewis, Hannaneh Hajishirzi, and Luke Zettlemoyer. 2022. 重新思考演示的角色：是什麼使上下文內學習起作用？在 2022 年自然語言處理經驗方法會議論文集，EMNLP 2022，阿拉伯聯合大公國阿布達比，2022 年 12 月 7 日至 11 日，第 11048–11064 頁。計算語言學協會。</li>
+<li>Park et al. (2026) Kiho Park, Todd Nief, Yo Joong Choe, and Victor Veitch. 2026. Softmax 的資訊幾何：探測與引導。預印本，arXiv:2602.15293。</li>
+<li>Pennington et al. (2014) Jeffrey Pennington, Richard Socher, and Christopher D. Manning. 2014. Glove：詞表徵的全局向量。在 2014 年自然語言處理經驗方法會議論文集，EMNLP 2014，2014 年 10 月 25 日至 29 日，卡達多哈，ACL 特別興趣小組 SIGDAT 會議，第 1532–1543 頁。ACL。</li>
+<li>Perez et al. (2023) Ethan Perez, Sam Ringer, Kamile Lukosiute, Karina Nguyen, Edwin Chen, Scott Heiner, Craig Pettit, Catherine Olsson, Sandipan Kundu, Saurav Kadavath, Andy Jones, Anna Chen, Benjamin Mann, Brian Israel, Bryan Seethor, Cameron McKinnon, Christopher Olah, Da Yan, Daniela Amodei, Dario Amodei, Dawn Drain, Dustin Li, Eli Tran-Johnson, Guro Khundadze, Jackson Kernion, James Landis, Jamie Kerr, Jared Mueller, Jeeyoon Hyun, Joshua Landau, Kamal Ndousse, Landon Goldberg, Liane Lovitt, Martin Lucas, Michael Sellitto, Miranda Zhang, Neerav Kingsland, Nelson Elhage, Nicholas Joseph, Noemí Mercado, Nova DasSarma, Oliver Rausch, Robin Larson, Sam McCandlish, Scott Johnston, Shauna Kravec, Sheer El Showk, Tamera Lanham, Timothy Telleen-Lawton, Tom Brown, Tom Henighan, Tristan Hume, Yuntao Bai, Zac Hatfield-Dodds, Jack Clark, Samuel R. Bowman, Amanda Askell, Roger B. Grosse, Danny Hernandez, Deep Ganguli, Evan Hubinger, Nicholas Schiefer, and Jared Kaplan. 2023. 使用模型編寫的評估發現語言模型行為。在計算語言學協會中的研究成果：ACL 2023，加拿大多倫多，2023 年 7 月 9 日至 14 日，第 13387–13434 頁。計算語言學協會。</li>
+<li>Pres et al. (2024) Itamar Pres, Laura Ruis, Ekdeep Singh Lubana, and David Krueger. 2024. 朝向對 LLM 中行為引導干預的可靠評估。CoRR，abs/2410.17245。</li>
+<li>Rimsky et al. (2024) Nina Rimsky, Nick Gabrieli, Julian Schulz, Meg Tong, Evan Hubinger, and Alexander Matt Turner. 2024. 透過對比激活相加引導 Llama 2。在計算語言學協會第 62 屆年度會議論文集（第 1 卷：長論文），ACL 2024，泰國曼谷，2024 年 8 月 11 日至 16 日，第 15504–15522 頁。計算語言學協會。</li>
+<li>Sangayya Hiremath et al. (2026) Basavaraj Sangayya Hiremath, Marco Polignano, Marco Levantesi, Giovanni Semeraro, Ernesto William De Luca, and Amos Poznanski. 2026. 狀態級線性調制 (SLIM)：引導大型語言模型的新穎方法。神經網路，199:108708。</li>
+<li>Sarfati et al. (2026) Raphaël Sarfati, Eric Bigelow, Daniel Wurgaft, Jack Merullo, Atticus Geiger, Owen Lewis, Tom McGrath, and Ekdeep Singh Lubana. 2026. 信念的形狀：語言模型後驗表徵流形上的幾何、動態與干預。預印本，arXiv:2602.02315。</li>
+<li>Sharkey et al. (2025) Lee Sharkey, Bilal Chughtai, Joshua Batson, Jack Lindsey, Jeff Wu, Lucius Bushnaq, Nicholas Goldowsky-Dill, Stefan Heimersheim, Alejandro Ortega, Joseph Bloom, et al. 2025. 機械可解釋性中的開放問題。arXiv 預印本 arXiv:2501.16496。</li>
+<li>Sheng et al. (2025) Leheng Sheng, Changshuo Shen, Weixiang Zhao, Junfeng Fang, Xiaohao Liu, Zhenkai Liang, Xiang Wang, An Zhang, and Tat-Seng Chua. 2025. Alphasteer：透過原理性零空間約束學習拒絕引導。CoRR，abs/2506.07022。</li>
+<li>Shu et al. (2025) Dong Shu, Xuansheng Wu, Haiyan Zhao, Daking Rai, Ziyu Yao, Ninghao Liu, and Mengnan Du. 2025. 關於稀疏自動編碼器的調查：解釋大型語言模型的內部機制。在計算語言學協會中的研究成果：EMNLP 2025，中國蘇州，2025 年 11 月 4 日至 9 日，第 1690–1712 頁。計算語言學協會。</li>
+<li>Siu et al. (2025) Vincent Siu, Nicholas Crispino, David Park, Nathan W. Henry, Zhun Wang, Yang Liu, Dawn Song, and Chenguang Wang. 2025. Steeringsafety：LLM 中表徵引導的系統性安全評估框架。</li>
+<li>Sun et al. (2025) Jiuding Sun, Sidharth Baskaran, Zhengxuan Wu, Michael Sklar, Christopher Potts, and Atticus Geiger. 2025. Hypersteer：利用超網路的大規模激活引導。CoRR，abs/2506.03292。</li>
+<li>Taimeskhanov et al. (2026) Magamed Taimeskhanov, Samuel Vaiter, and Damien Garreau. 2026. 朝向理解引導強度。預印本，arXiv:2602.02712。</li>
+<li>Tak et al. (2025) Ala N. Tak, Amin Banayeeanzade, Anahita Bolourani, Mina Kian, Robin Jia, and Jonathan Gratch. 2025. 大型語言模型中情感推論的機械可解釋性。在計算語言學協會研究成果，ACL 2025，奧地利維也納，2025 年 7 月 27 日至 8 月 1 日，第 13090–13120 頁。計算語言學協會。</li>
+<li>Team (2024a) Gemma Team. 2024a. Gemma：基於 Gemini 研究與技術的開放模型。CoRR，abs/2403.08295。</li>
+<li>Team (2024b) Llama Team. 2024b. Llama 3 模型群。CoRR，abs/2407.21783。</li>
+<li>Team (2024c) Qwen Team. 2024c. Qwen2.5：基礎模型陣營。</li>
+<li>Templeton et al. (2024) Adly Templeton, Tom Conerly, Jonathan Marcus, Jack Lindsey, Trenton Bricken, Brian Chen, Adam Pearce, Craig Citro, Emmanuel Ameisen, Andy Jones, Hoagy Cunningham, Nicholas L Turner, Callum McDougall, Monte MacDiarmid, C. Daniel Freeman, Theodore R. Sumers, Edward Rees, Joshua Batson, Adam Jermyn, Shan Carter, Chris Olah, and Tom Henighan. 2024. 單義性縮放：從 Claude 3 Sonnet 提取可解釋特徵。Transformer Circuits Thread。</li>
+<li>Tigges et al. (2023) Curt Tigges, Curt Tigges, Oskar Hollinsworth, Curt Tigges, Atticus Geiger, Atticus Geiger, Oskar Hollinsworth, Neel Nanda, Neel Nanda, Atticus Geiger, and Neel Nanda. 2023. 大型語言模型中情感的線性表徵。http://arxiv.org/abs/2310.15154。</li>
+<li>Turner et al. (2023) Alexander Matt Turner, Lisa Thiergart, David Udell, Gavin Leech, Ulisse Mini, and Monte MacDiarmid. 2023. 激活相加：不使用優化的語言模型引導。CoRR，abs/2308.10248。</li>
+<li>Wang et al. (2025) Mengru Wang, Ziwen Xu, Shengyu Mao, Shumin Deng, Zhaopeng Tu, Huajun Chen, and Ningyu Zhang. 2025. 超越提示工程：透過引導目標原子的 LLM 強健行為控制。在計算語言學協會第 63 屆年度會議論文集（第 1 卷：長論文），ACL 2025，奧地利維也納，2025 年 7 月 27 日至 8 月 1 日，第 23381–23399 頁。計算語言學協會。</li>
+<li>Wu et al. (2025a) Lyucheng Wu, Mengru Wang, Ziwen Xu, Tri Cao, Nay Oo, Bryan Hooi, and Shumin Deng. 2025a. 自動化安全多模態大型語言模型的引導。在 2025 年自然語言處理經驗方法會議論文集，EMNLP 2025，中國蘇州，2025 年 11 月 4 日至 9 日，第 792–814 頁。計算語言學協會。</li>
+<li>Wu et al. (2025b) Zhengxuan Wu, Aryaman Arora, Atticus Geiger, Zheng Wang, Jing Huang, Dan Jurafsky, Christopher D. Manning, and Christopher Potts. 2025b. Axbench：引導 LLM？甚至簡單基準也優於稀疏自動編碼器。在第四十二屆國際機器學習會議，ICML 2025，加拿大不列顛哥倫比亞省溫哥華，2025 年 7 月 13 日至 19 日。OpenReview.net。</li>
+<li>Wu et al. (2024) Zhengxuan Wu, Aryaman Arora, Zheng Wang, Atticus Geiger, Dan Jurafsky, Christopher D. Manning, and Christopher Potts. 2024. Reft：語言模型的表徵微調。在神經信息處理系統 38 的進展：2024 年神經信息處理系統年度會議，NeurIPS 2024，加拿大不列顛哥倫比亞省溫哥華，2024 年 12 月 10 日至 15 日。</li>
+<li>Wu et al. (2025c) Zhengxuan Wu, Qinan Yu, Aryaman Arora, Christopher D. Manning, and Christopher Potts. 2025c. 改進的語言模型表徵引導。CoRR，abs/2505.20809。</li>
+<li>Xu et al. (2025) Ziwen Xu, Shuxun Wang, Kewei Xu, Haoming Xu, Mengru Wang, Xinle Deng, Yunzhi Yao, Guozhou Zheng, Huajun Chen, and Ningyu Zhang. 2025. Easyedit2：易於使用的大型語言模型編輯引導框架。CoRR，abs/2504.15133。</li>
+<li>Xu et al. (2026) Ziwen Xu, Chenyan Wu, Hengyu Sun, Haiwen Hong, Mengru Wang, Yunzhi Yao, Longtao Huang, Hui Xue, Shumin Deng, Zhixuan Chu, Huajun Chen, and Ningyu Zhang. 2026. 為什麼引導有效：朝向語言模型參數動態的統一視角。預印本，arXiv:2602.02343。</li>
+<li>Zhang et al. (2026) Hengyuan Zhang, Zhihao Zhang, Mingyang Wang, Zunhai Su, Yiwei Wang, Qianli Wang, Shuzhou Yuan, Ercong Nie, Xufeng Duan, Qibo Xue, Zeping Yu, Chenming Shang, Xiao Liang, Jing Xiong, Hui Shen, Chaofan Tao, Zhengwu Liu, Senjie Jin, Zhiheng Xi, Dongdong Zhang, Sophia Ananiadou, Tao Gui, Ruobing Xie, Hayden Kwok-Hay So, Hinrich Schütze, Xuanjing Huang, Qi Zhang, and Ngai Wong. 2026. 定位、引導與改進：大型語言模型中可行機械可解釋性的實踐調查。CoRR，abs/2601.14004。</li>
+<li>Zhang et al. (2025) Jinghao Zhang, Yuting Liu, Wenjie Wang, Qiang Liu, Shu Wu, Liang Wang, and Tat-Seng Chua. 2025. 具有對比激活引導的個性化文本生成。在計算語言學協會第 63 屆年度會議論文集（第 1 卷：長論文），ACL 2025，奧地利維也納，2025 年 7 月 27 日至 8 月 1 日，第 7128–7141 頁。計算語言學協會。</li>
+<li>Zhao et al. (2023) Wayne Xin Zhao, Kun Zhou, Junyi Li, Tianyi Tang, Xiaolei Wang, Yupeng Hou, Yingqian Min, Beichen Zhang, Junjie Zhang, Zican Dong, Yifan Du, Chen Yang, Yushuo Chen, Zhipeng Chen, Jinhao Jiang, Ruiyang Ren, Yifan Li, Xinyu Tang, Zikang Liu, Peiyu Liu, Jian-Yun Nie, and Ji-Rong Wen. 2023. 大型語言模型調查。CoRR，abs/2303.18223。</li>
+<li>Zhu et al. (2025) Minjun Zhu, Yixuan Weng, Linyi Yang, and Yue Zhang. 2025. 大型語言模型的個性對齊。在第十三屆國際學習表徵會議，ICLR 2025，新加坡，2025 年 4 月 24 日至 28 日。OpenReview.net。</li>
+<li>Zou et al. (2023) Andy Zou, Long Phan, Sarah Li Chen, James Campbell, Phillip Guo, Richard Ren, Alexander Pan, Xuwang Yin, Mantas Mazeika, Ann-Kathrin Dombrowski, Shashwat Goel, Nathaniel Li, Michael J. Byun, Zifan Wang, Alex Mallen, Steven Basart, Sanmi Koyejo, Dawn Song, Matt Fredrikson, J. Zico Kolter, and Dan Hendrycks. 2023. 表徵工程：人工智慧透明度的由上至下方法。CoRR，abs/2310.01405。</li>
+</ul>
+<h2 id="a">附錄 A 資料集案例</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02578/x4.png" loading="lazy"></figure> 圖 7：資料項目的欄位規範。domain 和 concept 欄位定義了階層式的主題，由問題進行探查。matching 和 not_matching 用作模型引導的對比回應。</p>
+<p>本章節呈現代表性的資料集案例，以說明我們資料的結構和標註。
+圖 7 顯示資料項目的欄位規範，包括 domain 和 concept 定義、探查問題，以及用於模型引導的對比回應。</p>
+<h2 id="b">附錄 B 詳細實驗設置</h2>
+<p>遵循先前的研究（Wu et al., 2025b；Wang et al., 2025；Bigelow et al., 2025），我們在單一中後層進行引導：分別對 Gemma-2-9B-Instruct、Qwen-2.5-7B-Instruct 和 Llama-3.1-8B-Instruct 應用第 20 層、第 14 層和第 12 層。
+對於 PCA、DiffMean 和 RePS，我們在應用引導向量時在驗證集上搜索每個概念的最佳引導因子；詳細數值在表 3、4、5、6 中報告。
+其他超參數與 AxBench 和 RePS 一致。
+所有實驗均使用三個 NVIDIA A800 GPU 進行，歷時一週。</p>
+<p>表 3：在語言特徵領域中，跨所有概念和模型應用引導向量時的引導因子。</p>
+<p>表 4：在人格領域中，跨所有概念和模型應用引導向量時的引導因子。</p>
+<p>表 5：在推理模式領域中，跨所有概念和模型應用引導向量時的引導因子。</p>
+<p>表 6：在情感領域中，跨所有概念和模型應用引導向量時的引導因子。</p>
+<h2 id="c">附錄 C 詳細實驗結果</h2>
+<p>所有領域在三個粒度級別（L1–L3）上的詳細實驗結果可在表 7、8、9、10 中找到。
+我們報告概念分數（CS）、指令分數（IS）、流暢性分數（FS）及其調和平均數（HM）。所有指標都在 0–4 的量表上評估。</p>
+<p>表 7：語言特徵領域在三個粒度級別（L1–L3）上的詳細實驗結果。我們報告概念分數（CS）、指令分數（IS）、流暢性分數（FS）及其調和平均數（HM）。所有指標都在 0–4 的量表上評估。</p>
+<p>表 8：個性領域在三個粒度級別（L1–L3）上的詳細實驗結果。我們報告概念分數（CS）、指令分數（IS）、流暢性分數（FS）及其調和平均數（HM）。所有指標都在 0–4 的量表上評估。</p>
+<p>表 9：推理模式領域在三個粒度級別（L1–L3）上的詳細實驗結果。我們報告概念分數（CS）、指令分數（IS）、流暢性分數（FS）及其調和平均數（HM）。所有指標都在 0–4 的量表上評估。</p>
+<p>表 10：情感領域在三個粒度級別（L1–L3）上的詳細實驗結果。我們報告概念分數（CS）、指令分數（IS）、流暢性分數（FS）及其調和平均數（HM）。所有指標都在 0–4 的量表上評估。</p>
+<h2 id="d">附錄 D 自動資料合成提示</h2>
+<h3 id="d1">D.1 領域規範提示</h3>
+<p>我們使用以下提示範本將領域關鍵字擴展為明確、有界、具體的領域描述，作為後續資料合成的全局約束。</p>
+<h3 id="d2">D.2 粒度級別概念合成提示</h3>
+<p>我們使用以下提示範本基於指定的領域描述和指定的合成資料量，合成三級概念層次結構（L1-L3）。</p>
+<h3 id="d3">D.3 問題集生成提示</h3>
+<p>我們使用以下提示範本生成與概念相關的多樣化問題集。這些問題隨後被分為包含 70 個問題的訓練集和包含 30 個問題的測試集。</p>
+<h3 id="d4">D.4 問題精煉提示</h3>
+<p>我們使用以下提示重新表述問題，減少直接揭示目標概念的詞彙或語義線索。</p>
+<h3 id="d5">D.5 最小差異對比答案對生成提示</h3>
+<p>我們使用以下提示範本生成具有最大結構重疊和最少詞彙級別差異的對比答案對，從而突出概念上的差異。</p>
+<h2 id="e">附錄 E 評估提示</h2>
+<h3 id="e1">E.1 概念評估提示</h3>
+<p>我們使用以下提示範本評估與目標概念的相關性</p>
+<h3 id="e2">E.2 指令評估提示</h3>
+<p>我們使用以下提示範本評估模型遵循指令的能力</p>
+<h3 id="e3">E.3 流暢性評估提示</h3>
+<p>我們使用以下提示範本評估模型生成的回應的流暢性</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>

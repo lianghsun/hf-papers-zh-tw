@@ -1,0 +1,18 @@
+{
+  "domain": [
+    "CV"
+  ],
+  "method": [
+    "ViT",
+    "Transformer",
+    "Correlation Network"
+  ],
+  "task": [
+    "3D Tracking",
+    "Scene Flow Estimation",
+    "Dense Optical Flow",
+    "3D Reconstruction"
+  ],
+  "dataset": [],
+  "open_source": false
+}

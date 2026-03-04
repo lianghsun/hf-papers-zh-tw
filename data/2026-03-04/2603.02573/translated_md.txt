@@ -1,0 +1,587 @@
+# Track4World：前向式世界中心密集 3D 追蹤所有像素
+
+從單目視頻估計每個像素的 3D 軌跡對於全面理解視頻的 3D 動態至關重要且前景光明。
+最近的單目 3D 追蹤工作展示了令人印象深刻的效能，但僅限於追蹤第一幀上的稀疏點或用於密集追蹤的緩慢優化框架。
+在本論文中，我們提出一個前向式模型，稱為 Track4World，能夠在世界中心坐標系中高效地進行整體 3D 追蹤視頻中的每個像素。
+基於由 VGGT 風格 ViT 編碼的全域 3D 場景表示，Track4World 應用一種新穎的 3D 相關機制，同時估計任意幀對之間的逐像素 2D 和 3D 密集光流。估計的場景流連同重建的 3D 幾何，使後續能夠高效地 3D 追蹤此視頻的每個像素。
+在多個基準上的廣泛實驗表明，我們的方法在 2D/3D 光流估計和 3D 追蹤中始終優於現有方法，凸顯其在實際 4D 重建任務中的魯棒性和可擴充性。
+
+## 1 簡介
+
+從視頻重建 4D 動態 [ ngo2024delta , xiao2024spatialtracker , ren2023lidar , zhu2024motiongs , cao2025reconstructing , zhang2025tapip3d , lu2025trackingworld , liu2025trace , feng2025st4rtrack , liang2025zero , zhang2025pomato ] 是一項具有重要意義的任務，在機器人學、動畫製作、物理定律推導和其他領域 [ huang2026pointworld , zhao2024m , gu2025diffusion , burgert2025gowiththeflow ] 中具有深遠的應用前景。為了掌握視頻的整體動態，必須從單目視頻輸入預測三維空間中所有像素的動態運動。然而，這仍然是一個極具挑戰性的問題：單目幾何重建在從單視角觀測恢復 3D 時天生具有歧義性，進一步在不同時間步追蹤三維點會增加額外的複雜性。
+
+儘管最近的進展已經解決了這個問題的某些孤立方面，但對每個像素進行穩健且整體的 3D 追蹤仍然是一個未解決的問題。一些最近的基於追蹤的方法（例如 St4RTrack [ feng2025st4rtrack ]、SpatialTrackerV2 (STV2) [ xiao2025spatialtrackerv2 ]、DELTA [ ngo2024delta ]）將前饋式 3D 幾何估計 [ wang2025vggt , wang2024dust3r ] 與時間關聯相結合進行 3D 追蹤。雖然取得了令人印象深刻的性能和準確性，但這些方法僅限於對第一幀上的點進行 3D 追蹤，無法捕捉後續幀中新像素的運動。另一項名為 TrackingWorld [ lu2025trackingworld ] 的工作通過融合多種模態（例如 2D 流 [ karaev2024cotracker3 ]、遮罩 [ yao2025uni4d ] 和深度先驗 [ piccinelli2024unidepth ]）實現了所有幀的密集 3D 追蹤。雖然有效，但該管道計算成本高昂，並且受到無法學習聯合時空先驗的限制，通常導致時間上不一致或次優的解決方案。遵循前饋式 3D 重建方法（如 DUSt3R [ wang2024dust3r ]、VGGT [ wang2025vggt ] 和 Pi3 [ wang2025pi ]）的最新趨勢，設計一個高效的前饋式模型來實現單目視頻中每個像素的整體 3D 追蹤成為一個有前景的研究方向。
+
+在本工作中，我們提出了 Track4World，一個前饋式框架，旨在以世界中心坐標系估計單目視頻中每一幀的每個像素的 3D 追蹤。遵循前饋設計趨勢，Track4World 建立在類似 VGGT 的 ViT 風格 3D 幾何重建框架 [ wang2025vggt , wang2025pi , lin2025depth ] 之上，並關聯不同的幀來估計世界中心坐標系中每個像素的密集 3D 追蹤。
+
+設計這樣的關聯方案進行每個像素的 3D 追蹤在計算上非常昂貴。一個簡單的解決方案是推廣 3D 追蹤方法 Spatial Tracker V2 (STV2) [ xiao2025spatialtrackerv2 ] 或 DELTA [ ngo2024delta ]，以追蹤每個像素。然而，明確預測所有幀上每個像素的軌跡在計算上是不可行的。大量的像素在訓練和推理過程中導致無法負擔的記憶體和計算消耗，並且跨越不同幀產生大量冗餘的 3D 軌跡。
+
+與其直接預測所有像素的 3D 軌跡，Track4World 改為預測兩幀場景流作為整體 3D 視頻動態的表示。我們從高效的配對運動估計方法（如 St4RTrack [ feng2025st4rtrack ] 和 ZeroMSF [ liang2025zero ]）中汲取靈感，以估計任意幀對之間的密集場景流。隨後，估計的配對運動可以容易地用於構造視頻中任意像素的 3D 追蹤。通過將連續追蹤問題分解為配對場景流估計，我們顯著降低了計算冗餘，將其轉化為一個更容易管理的任務。
+
+然而，將類似 VGGT 的 ViT 風格 3D 重建框架有效地適配到密集場景流估計仍然是一個開放的研究問題。一個直接的解決方案可能涉及附加一個運動解碼頭來直接迴歸 3D 場景流 [ feng2025st4rtrack , liang2025zero ]。然而，這種隱式迴歸方法通常對數據需求量大，需要大量的 3D 訓練數據集和高度參數化的網路。此外，它們通常難以捕捉細粒度的運動細節，導致追蹤精度次優。相反，最先進的 3D 追蹤方法（如 STV2 [ xiao2025spatialtrackerv2 ]）和 2D 光流方法（如 RAFT [ teed2020raft ]）已經證明構建相關體積並迭代更新運動場能夠產生顯著更精確的結果。基於這一洞察，我們退一步採用有效且準確的基於相關性的估計方案，以納入一個新穎的基於相關性的迭代 3D 場景流估計策略，該策略專門為我們前饋框架內的密集像素級預測量身定製。
+
+我們提出的迭代相關性方案不同於所有現有的基於相關性的方法，以解決密集 3D 追蹤的特定挑戰。
+
+(1) 稀疏到密集。為了管理全像素場景流估計的計算開銷，我們避免在全原始解析度上執行迭代相關性更新。相反，我們在一組稀疏錨點上操作，隨後通過學習的上採樣恢復整個影像的密集運動。
+
+(2) 2D 到 3D 相關性。我們規避了先前工作 [ xiao2025spatialtrackerv2 , zhang2025tapip3d ] 中使用的昂貴的 3D 空間相關性（通常需要在 3D 空間中進行 k-最近鄰搜尋，隨後進行交叉注意操作）。我們引入了一種新穎的混合相關機制，該機制有效地融合了來自 ViT 主幹的 3D 幾何特徵嵌入，利用 2D 像素級相關性。這個設計使我們能夠快速計算 3D 流更新，而無需明確構造沉重的 3D 空間相關性。
+
+(3) 2D-3D 聯合監督。我們的 2D 到 3D 相關機制內在地支持 2D 和 3D 流的雙重預測。這種結構對齐使得一個聯合監督策略能夠利用豐富的 2D 流數據集為 3D 場景流任務提供輔助訓練信號。因此，我們有效地規避了 3D 真值註釋的嚴重缺乏，利用 2D 流訓練來顯著增強我們模型的泛化能力。
+
+(4) 全局場景流。與傳統場景流估計方法（限於相鄰幀）不同，我們的框架設計用於估計視頻序列中任意幀對之間的流，不限於相鄰幀。通過同時處理整個視頻序列，我們的網路利用全局時間上下文來解決局部歧義，補償可能在孤立幀對中出現的估計誤差。
+
+在估計了整個視頻的準確的配對 2D-3D 流後，Track4World 在全局坐標系中融合 3D 軌跡，然後構造世界中心坐標系中每個像素的整體 3D 追蹤。實驗結果表明我們的方法提供了準確、靈活且全面的 3D 運動估計。廣泛的實驗證明 Track4World 在世界坐標系中實現了穩健的密集 3D 追蹤，始終優於現有的基準方法 [ liang2025zero , xiao2025spatialtrackerv2 , zhang2025pomato ]。
+
+## 2 相關工作
+
+### 2.1 影片幾何估計
+
+影片幾何估計旨在從影片生成時間上一致的點圖。早期工作聚焦於基於最佳化的精化，例如 RobustCVD [ kopf2021robust ] 和 CasualSAM [ zhang2022structure ]，它們使用幾何約束優化深度和相機參數。最近的可微分 SLAM 方法，例如 MegaSaM [ li2024megasam ]、Uni4D [ yao2025uni4d ] 和 ViPE [ huang2025vipe ]，納入深度先驗和對應圖進行影片級點圖預測。
+
+第二類研究探索資料驅動的方法 [ wang2024dust3r , lu2024align3r , zhang2024monst3r , chen2025easi3r , leroy2024grounding , yang2025fast3r , wang2025vggt , jiang2025geo4d , wang2025continuous , xiong2025human3r , chen2025ttt3r , zhuo2025streaming , li2026unish ]，利用世界中心的幾何進行穩健且一致的估計。然而，VGGT [ wang2025vggt ] 證明相機中心的深度和姿態往往優於世界中心的表示法。因此，包括 GeometryCrafter [ xu2025geometrycrafter ]、Pi3 [ wang2025pi ] 和 MapAnything [ keetha2025mapanything ] 在內的最近方法聚焦於相機中心的預測。我們的方法與此趨勢一致，採用相機中心的表示法，同時聚焦於聯合幾何和運動估計。
+
+### 2.2 聯合幾何與運動估計
+
+聯合幾何與運動估計旨在從影片中同時預測 3D 點雲和運動軌跡。由於需要進行一致的時空推理，這本質上比單純的幾何估計更具挑戰性。
+
+現有方法通常遵循三個主要方向。首先，受到 2D 點追蹤 [ karaev2024cotracker , karaev2024cotracker3 , li2024taptr , harley2025alltracker , qu2024taptrv3 , doersch2023tapir ] 的啟發，早期方法如 SpatialTracker [ xiao2024spatialtracker ] 和 DELTA [ ngo2024delta ] 在 $(u, v, d)$ 坐標系中表示點，這需要已知的相機內參，可能導致幾何精度下降。較後期的工作，例如 TAPIP3D [ zhang2025tapip3d ] 和 SpatialTrackerV2 [ xiao2025spatialtrackerv2 ]，直接在 $(x, y, z)$ 空間中進行追蹤以提高穩定性。它們依賴於顯式的 3D 空間相關性，這通常需要對每個查詢點執行計算成本高昂的 $k$-最近鄰搜索，隨後進行與目標點的交叉注意力運算。其次，St4RTrack [ feng2025st4rtrack ]、POMATO [ zhang2025pomato ]、Stereo4D [ jin2024stereo4d ] 和 ZeroMSF [ liang2025zero ] 等方法透過隱式回歸方法估計成對點映射或場景流 [ teed2021raft , yang2020upgrading , schmid2025ms ] 來重構運動。第三，TrackingWorld [ lu2025trackingworld ] 等基於優化的方法結合多種線索來恢復所有像素的密集 3D 追蹤，但這些方法計算成本高，通常不利於泛化。
+
+受到這些方法的啟發，我們提出了一個前饋式的整體框架，用於每個像素的密集 3D 追蹤。透過利用一種新穎的 3D 相關方案，我們同時估計任意幀對之間的逐像素 2D 和 3D 密集光流。估計的運動與重構的 3D 幾何結構使得我們能夠隨後高效地計算全域坐標系內每個像素的連續 3D 軌跡。
+
+並行工作。多項並行工作已探索聯合幾何與運動估計中的相似方向 [ zhang20254drt , karhade2025any4d , luo20264rc , alumootil2025dept3r , sucar2026vdpm , zhu2026motioncrafterdensegeometrymotion , liu2025trace ]。其中，TraceAnything [ liu2025trace ]、Any4D [ karhade2025any4d ]、4RC [ luo20264rc ]、DePT3R [ alumootil2025dept3r ]、D4RT [ zhang20254drt ] 和 V-DPM [ sucar2026vdpm ] 也解決了時步之間運動預測的問題。Track4World 引入了兩個關鍵設計選擇，使其與這些方法區分開來。首先，我們利用顯式特徵相關性來增強運動預測精度。其次，我們新穎的 2D-lifted 相關架構緩解了顯式 3D 相關所固有的計算瓶頸，提高了效率，同時使 3D 追蹤模組能夠受益於豐富的 2D 訓練資料。
+
+## 3 Method
+
+### 3.1 Overview
+
+Given a video sequence consisting of T T frames, { 𝐈 i ∈ ℝ H × W × 3 ∣ i = 1 , … , T } \{\mathbf{I}_{i}\in\mathbb{R}^{H\times W\times 3}\mid i=1,\ldots,T\} , Track4World first predicts dense 3D scene flow between arbitrary pairs of source and target timesteps ( i , j ) (i,j) . It then fuses these pairwise 3D scene flows to construct a holistic 3D track for every pixel within the world-centric coordinate system. As illustrated in Fig. 2 , rather than treating 3D tracking as an isolated spatial problem, we initially extract global scene representations, including geometric features, camera-centric point clouds, and camera poses, using a finetuned geometry encoder initialized from recent state-of-the-art feedforward 3D reconstruction models [ wang2025pi , lin2025depth , wang2025moge1 ] , like Pi3 or Depth Anything v3 (DA3), (see supplementary material for details). The core of our framework is a scene flow decoder that builds upon global geometric representations to estimate scene flow. This decoder operates in a sparse-to-dense manner to reduce computational overhead, which introduces a novel 2D-to-3D correlation module that entirely avoids expensive 3D spatial correlation, enabling a 2D-3D joint supervision strategy to circumvent the severe scarcity of 3D ground-truth annotations.
+
+[FIGURE:x1.png] Figure 2 : Overview . Given (a) the input video frames, Track4World first extracts (b) global scene representations (geometric embeddings, point clouds, and camera poses). (c) A sparse-to-dense scene flow decoder then predicts 2D-3D joint flows between arbitrary timesteps, which applies a novel 2D-to-3D correlation scheme to improve efficiency and allows 2D-3D joint supervision. (d) The pairwise flows are ultimately fused to establish holistic world-centric 3D tracking.
+
+### 3.2 場景流解碼器
+
+基於 ViT 骨幹網絡 [ wang2025pi , lin2025depth , wang2025moge1 ] 提取的全域場景表徵（以相機為中心的像素對齊點雲 $\mathbf{P}_{i}$、相機位姿 $\mathbf{T}_{i}$ 和幾何特徵 $\mathbf{F}_{i}$），場景流解碼器預測整個影片中任意幀對 $(i,j)$ 之間的密集 3D 場景流，允許隨後在世界中心坐標系中進行 3D 追蹤。
+
+[FIGURE:x2.png] 圖 3：相關機制的比較。先前的方法依賴於顯式 $k$ 最近鄰搜索和 3D 空間中的交叉注意力，導致計算成本很高。相比之下，我們提出的方法將 3D 更新直接錨定到中間影像平面相關性上。此設計顯著提高了計算效率，並允許 3D 追蹤模組通過豐富的 2D 訓練資料得到有效增強。
+
+#### 3.2.1 錨特徵提取
+
+為了管理全像素流估計的計算開銷，我們避免在完整原始解析度上執行迭代相關更新。相反地，我們對一組稀疏錨點進行操作。我們首先使用全域自注意力增強幾何令牌 $\mathbf{F}_{i}$，以產生精化特徵 $\hat{\mathbf{F}}_{i}$。同時，輕量級上下文編碼器直接從輸入影像中提取語義特徵 $\tilde{\mathbf{F}}_{i}$。之後，我們將點雲 $\mathbf{P}_{i}$ 和兩個特徵映射（$\hat{\mathbf{F}}_{i},\tilde{\mathbf{F}}_{i}$）下採樣至 $1/8$ 解析度，建立了一個稀疏但上下文豐富的流估計基礎，最後將其上採樣回完整解析度流。
+
+#### 3.2.2 2D-到-3D 相關用於流估計
+
+本小節旨在使用相關性在錨點上估計 3D 場景流。先前的方法，如 STV2 [ xiao2025spatialtrackerv2 ] 或 TAPIP3D [ zhang2025tapip3d ]，透過相關性方案展示精確的 3D 追蹤，但在 3D 空間中尋找 $k$ 最近點進行相關性時消耗大量計算，如圖 3（上方）所示，使得這些方法僅限於追蹤稀疏 3D 點。為了將其擴展到密集 3D 流估計，我們引入了一個高效的 2D-到-3D 相關模組，優雅地融合了幾何特徵與影像平面相關性，並將其提升用於 3D 流估計。
+
+在提出的 2D-3D 相關模組中，2D 和 3D 流都通過多次更新迭代來計算相關性並精化目標位置。在每次迭代中，2D 流和 3D 流以耦合的方式依序更新，如圖 3（下方）所示。對於給定的源-目標影像對 $(i,j)$，首先更新 2D 流，作為隨後 3D 流更新的可靠空間基礎。
+
+2D 流 $\mathbf{M}_{2d}^{(0)}$ 和 3D 流 $\mathbf{M}_{3d}^{(0)}$ 均初始化為 0，並使用以下方案進行更新。
+
+**2D 迭代相關**。我們首先在源影像上的源位置與目標影像上的鄰域位置之間，使用當前 2D 流 $\mathbf{M}_{2d}^{(t)}$ 構建幾何特徵相關體積 $\hat{\mathbf{C}}^{(t)}_{i,j}$ 和語義特徵相關體積 $\tilde{\mathbf{C}}^{(t)}_{i,j}$。
+
+在第 $t$ 次迭代中，基於 GRU 的運算子將隱藏上下文特徵從 $\hat{\mathbf{F}}^{(t)}_{i}$ 更新至 $\hat{\mathbf{F}}^{(t+1)}_{i}$，進而驅動 2D 流 $\mathbf{M}_{2d}^{(t)}$ 和可見性信心 $\mathbf{V}^{(t)}$ 的更新：
+
+|  | $\displaystyle\hat{\mathbf{F}}^{(t+1)}_{i}$ | $\displaystyle=\mathrm{GRU}\big(\hat{\mathbf{F}}^{(t)}_{i},\,\tilde{\mathbf{F}}_{i},\,\hat{\mathbf{C}}^{(t)}_{i,j},\,\tilde{\mathbf{C}}^{(t)}_{i,j},\,\mathbf{M}_{2d}^{(t)},\,\mathbf{V}^{(t)}\big),$ |  | (1) |
+| --- | --- | --- | --- | --- |
+|  | $\displaystyle\mathbf{M}_{2d}^{(t+1)}$ | $\displaystyle=\mathbf{M}_{2d}^{(t)}+\mathrm{MLP}\big(\hat{\mathbf{F}}^{(t+1)}_{i}\big),$ |  | (2) |
+|  | $\displaystyle\mathbf{V}^{(t+1)}$ | $\displaystyle=\mathbf{V}^{(t)}+\mathrm{MLP}\big(\hat{\mathbf{F}}^{(t+1)}_{i}\big).$ |  | (3) |
+
+隨後，2D 流更新被用作 3D 流更新的基礎，如下所示。
+
+**用於 3D 流迭代估計的提升**。
+使用 2D 流 $\mathbf{M}_{2d}^{(t)}$ 和 $\mathbf{M}_{2d}^{(t+1)}$，我們可以檢索時間步 $t$ 和 $t+1$ 上對應的 2D 目標位置。隨後，透過在提取的全域點映射 $\mathbf{P}_{j}$ 上進行插值，我們可以計算這兩個目標位置的 3D 坐標 $\mathbf{p}^{(t)}_{j}$ 和 $\mathbf{p}^{(t+1)}_{j}$。隨後，$\mathbf{p}^{(t+1)}_{j}-\mathbf{p}^{(t)}_{j}$ 可以作為 3D 流更新 $\Delta\mathbf{M}_{3d}^{(t)}$ 的初始估計。
+
+然而，這僅將 2D 流更新提升至 3D，而未考慮任何額外的 3D 幾何相關性。我們進一步使用 3D 流頭 $\mathcal{H}_{3d}$ 融合所有 3D 資訊以預測 3D 流更新 $\Delta\mathbf{M}_{3d}^{(t)}$，如下所示：
+
+|  | $\begin{split}\Delta\mathbf{M}^{(t)}_{3d}=\mathcal{H}_{3d}\Big(&\underbrace{\mathbf{p}^{(t)}_{j},\mathbf{p}^{(t+1)}_{j},\mathbf{F}^{(t)}_{j},\mathbf{F}^{(t+1)}_{j}}_{\text{提升的目標樣本}},\\
+&\underbrace{\hat{\mathbf{F}}^{(t+1)}_{i},\mathbf{F}_{i}}_{\text{提升的源上下文}},\underbrace{\mathbf{C}^{(t)}_{3d,i,j},\mathcal{M}_{3d}^{(t)}}_{\text{輔助先驗}}\Big),\end{split}$ |  | (4) |
+| --- | --- | --- | --- |
+
+其中 $\mathbf{F}^{(t)}_{j}$ 和 $\mathbf{F}^{(t+1)}_{j}$ 表示 $\mathbf{F}_{j}$ 在兩個連續迭代中預測目標位置處的插值幾何特徵，提供這兩個預測目標位置的 3D 形狀資訊，$\mathbf{F}^{(t+1)}_{i},\mathbf{F}_{i}$ 是錨點上的源幾何特徵。我們進一步透過將由估計的 3D 流 $\mathbf{M}^{(t)}_{3d}$ 變形的源點雲與目標點雲進行相關性計算，來計算 3D 空間相似性。所得的轉換源點與目標幾何之間的相關性 $\mathbf{C}^{(t)}_{3d,i,j}$ 為精化 3D 流提供了資訊豐富的線索。此外，我們利用歷史 3D 流 $\mathbf{M}_{3d}^{(t)}$ 構建軌跡先驗 $\mathcal{M}_{3d}^{(t)}$，其限制了流更新的光滑性。
+
+隨後，3D 流透過 $\mathbf{M}_{3d}^{(t+1)}\leftarrow\mathbf{M}_{3d}^{(t)}+\Delta\mathbf{M}_{3d}^{(t)}$ 進行更新。
+
+此 2D-到-3D 相關方案使我們能夠準確且迭代地同時更新 2D 和 3D 流，同時即使是所有幀的所有錨點也能保持可管理的計算複雜度。
+
+#### 3.2.3 密集場景流恢復
+
+在最後步驟中，我們恢復整個影像的密集場景流。低解析度（$1/8$）流映射透過學習的像素洗牌運算上採樣至完整解析度，由解碼的上下文權重指導。為了最大化我們 2D 提升架構的實用性，我們引入了混合反投影方案。由於中間 2D 流以高精度捕捉影像平面動態，我們直接將其與 3D 場景流的 Z 軸位移組合。使用從預測點雲導出的相機內參，我們將此組合運動投影到 $(x,y,z)$ 空間以產生最終精化 3D 場景流。此混合設計的優點在表 7 中進行了分析。
+
+### 3.3 討論
+
+**計算效率**。先前的工作 [ xiao2025spatialtrackerv2 , zhang2025tapip3d ] 大量依賴明確的 3D 空間相關性，這通常需要對每個查詢點在 3D 空間中執行計算昂貴的 k k -nearest neighbor ( k k -NN) 搜尋，隨後對檢索到的目標點進行 cross-attention 機制。相比之下，我們的 3D 流估計基本上由提出的 2D-lifted correlation 模組驅動。這種設計完全繞過了 3D k k -NN 搜尋和繁重的 cross-attention 操作，顯著減輕了計算負擔。具體來說，雖然傳統的 3D 點基配對對於 N N 個點產生至少 $\mathcal{O}(N\log N+N\cdot k)$ 的理論複雜度（或 $\mathcal{O}(N^{2})$ 用於密集全局注意力），但我們的 warp-sampling 機制透過從 2D 流直接進行座標查詢，以嚴格的 $\mathcal{O}(N)$ 複雜度運作。
+
+**2D-3D 聯合監督**。這種結構對齐自然支持雙重監督。與先前的工作 [ xiao2025spatialtrackerv2 , zhang2025tapip3d ] 嚴格在 3D 空間中定義相關性不同，我們的架構將 3D 更新直接錨定在影像平面相關性上。這使我們能夠將來自豐富 2D 資料集的輔助訓練信號直接應用於中間的 2D 運動先驗。透過利用大量 2D 資料來引導提升過程，我們有效地規避了 3D 地面真值註解的嚴重稀缺性，並顯著增強了模型的泛化能力。
+
+**全局軌跡推論**。利用預測的任意配對密集流，我們的框架無縫泛化至全局 3D 追蹤。對於長範圍點追蹤，我們推斷從參考幀到所有後續幀的流。此過程由時間聚合器優化，該聚合器對連接的流特徵應用注意力以強制時間一致性。相反地，對於每個像素的密集追蹤，我們計算並鏈接連續的幀對幀流，在全局座標系中產生連續的 3D 軌跡。
+
+**短期到長期監督**。在訓練期間，我們實現了變步長採樣策略：模型同時由不同時間間隔上的密集流地面真值以及整個序列中的稀疏軌跡註解進行監督。透過聯合優化這些短期和長期目標，網路學會協調區域運動精度與全局軌跡一致性，為每個像素構造整體 3D 追蹤。
+
+## 4 實驗
+
+實現細節。值得注意的是，我們採用量身定制的訓練策略來微調基礎幾何模型，從而實現精細化的點雲映射和相機姿態估計。除非另有說明，所有報告的結果都使用 DA3 [ lin2025depth ] 作為預設的骨幹網絡初始化。特定微調策略的實現細節在補充資料中提供。
+
+實驗概述。為了全面評估我們的框架，我們在多種任務上進行實驗，包括 2D/3D 光流估計、2D/3D 追蹤、點雲映射預測和相機姿態估計。此外，我們展示了在多種自然場景視頻上的定性結果，並進行了廣泛的消融研究以驗證每個提出模組的有效性。
+
+[FIGURE_CAPTION] 表 1：場景和光流估計評估。我們在一個域內資料集上評估我們的模型：Kubirc-3D val [ greff2022kubric ] 和兩個域外資料集：KITTI [ geiger2013vision ]、BlinkVision [ li2024blinkvision ]。最佳結果以較深的藍色突出顯示，第二佳結果以較淺的藍色突出顯示。
+
+### 4.1 場景和光流估計
+
+評估數據集。我們在一個域內數據集 Kubric-3D val [ greff2022kubric ]，以及兩個域外數據集 KITTI [ geiger2013vision ] 和 BlinkVision [ li2024blinkvision ] 上評估我們的模型。所有三個數據集都提供真值光流和場景流註解。對於 Kubric-3D 數據集，我們採樣了兩種評估設定：短距離設定，其中源幀和參考幀相隔 4 幀，以及長距離設定，其中它們相隔 16 幀，以評估不同時間間隔下的流估計性能。對於 BlinkVision [ li2024blinkvision ] 數據集，源-目標幀對是隨機採樣的。
+
+評估指標。對於場景流估計，我們遵循先前的工作 [ liang2025zero , gu2019hplflownet , liu2019flownet3d , teed2021raft ]，並報告標準指標：端點誤差 (End Point Error, EPE3D)、嚴格準確性 (Accuracy Strict, AccS) 和寬鬆準確性 (Accuracy Relax, AccR)。此外，我們評估前一幀點雲的品質，以及透過應用預測場景流獲得的轉換點雲。我們採用絕對相對誤差 (Abs Rel) 和內點比例 ( $\delta < 1.25$ ) 進行此評估。為確保公平比較，兩個預測的點雲都通過優化共享的尺度因子和平移來對齐到真值。這個尺度因子進一步應用於在計算 EPE3D、AccS 和 AccR 之前對齊預測場景流。此對齊程序遵循 MoGe [ wang2025moge1 ] 中描述的方法。對於光流估計，我們遵循 [ teed2020raft , zhao2022global , wang2024sea ] 來報告 3 個指標，EPE2D、AccS$_{2D}$、AccR$_{2D}$。
+
+與現有方法的比較。我們將我們的方法與幾種代表性方法進行比較：三種光流方法 (RAFT [ teed2020raft ]、GMFlowNet [ zhao2022global ] 和 SEA-RAFT [ wang2024sea ])、兩種場景流方法 (RAFT-3D [ teed2021raft ] 和 OpticalExpansion [ yang2020upgrading ])、兩種聯合幾何和場景流方法 (POMATO [ zhang2025pomato ] 和 ZeroMSF [ liang2025zero ])，以及並行工作 Any4D [ karhade2025any4d ] 和 V-DPM [ sucar2026vdpm ]。對於 RAFT-3D，我們將由 VGGT [ wang2025vggt ] 預測的深度和相機參數作為輸入提供，而 OpticalExpansion 使用由 POMATO 預測的點雲。表格 1 呈現了定量比較，證明我們的方法在所有四個數據集上始終優於這些先前的工作。這驗證了所提出的 2D-3D 相關性對流估計任務的有效性。
+
+[FIGURE_CAPTION] 表格 2：3D 追蹤估計。我們報告 APD 指標來評估在 PointOdyssey [ zheng2023pointodyssey ]、ADT [ pan2023aria ]、PStudio [ joo2015panoptic ] 和 DriveTrack [ balasingam2024drivetrack ] 數據集上的 3D 點追蹤。L-16 和 L-50 分別表示時間長度為 16 和 50 幀內的追蹤。* 表示使用真值相機內參。† 表示未使用光束法平差。‡ 表示使用由 VGGT [ wang2025vggt ] 估計的相機姿態的方法。
+
+### 4.2 3D 追蹤估計
+
+評估資料集。遵循先前的工作 [ ngo2024delta , xiao2024spatialtracker , zhang2025pomato , xiao2025spatialtrackerv2 ]，我們在 TAPVid-3D [ koppula2024tapvid ] 資料集中的 ADT [ pan2023aria ]、PStudio [ joo2015panoptic ] 和 DriveTrack [ balasingam2024drivetrack ] 基準上評估我們的方法，以及 PointOdyssey [ zheng2023pointodyssey ] 資料集的驗證集。與 POMATO [ zhang2025pomato ] 一致，我們通過將時間窗口內的所有查詢點投影到第一幀來重新制定資料集。評估中的窗口大小分別為 16 和 50。
+
+評估指標。我們使用平均百分比偏差（Average Percent Deviation, APD）指標，該指標測量預測位置在相對於地面真值深度的指定閾值內的點的百分比。APD 提供了追蹤準確度的直接且定量的評估。
+
+與現有方法的比較。我們將我們的方法與代表性的 3D 追蹤和幾何/場景流方法進行比較。基準方法包括 3D 追蹤器 SpatialTracker [ xiao2024spatialtracker ] 和 DELTA [ ngo2024delta ]（兩者都使用地面真值內參數），以及 STV2 [ xiao2025spatialtrackerv2 ]。我們進一步與幾何和場景流方法 MASt3R [ leroy2024grounding ]、MonST3R [ zhang2024monst3r ]、POMATO [ zhang2025pomato ] 和 ZeroMSF [ liang2025zero ] 進行比較，以及並行工作 Any4D [ karhade2025any4d ] 和 V-DPM [ sucar2026vdpm ]。我們在表 2 中評估 3D 追蹤結果，遵循第 3.3 節中描述的方法以實現稠密追蹤，並根據查詢點的 UV 座標執行採樣。結果表明，我們的方法在多個資料集中，在以相機為中心和以世界為中心的座標系中，始終優於大多數現有的 3D 追蹤和成對場景流方法，凸顯了其有效性和泛化能力。
+
+### 4.3 2D 追蹤估計
+
+評估資料集。遵循先前的研究 [ karaev2024cotracker3 , karaev2024cotracker , doersch2024bootstap ]，我們在三個資料集上評估我們的方法：Kinetics [ carreira2017quo ]、RoboTAP [ vecerik2024robotap ] 和 RGB-Stacking [ lee2021beyond ]。Kinetics 包含來自 Kinetics-700–2020 驗證集的 1,144 個 YouTube 影片，具有複雜的攝影機運動和雜亂的背景，每個影片平均有 26 條追蹤軌跡。RoboTAP 由 265 個真實世界機器人操縱影片組成，每個影片的平均時長為 272 幀。RGB-Stacking 是機器人影片的合成資料集，其特點是包含許多無紋理區域，使追蹤特別具有挑戰性。
+
+評估指標。我們使用 TAP-Vid 指標 [ doersch2022tap ] 評估追蹤性能。具體來說，我們報告遮擋準確度（OA），衡量遮擋預測作為二元分類；$\delta_{\text{vis}}^{\text{avg}}$，在 1、2、4、8 和 16 像素內追蹤的可見點的比例，在各閾值上平均；以及平均 Jaccard（AJ），它聯合評估幾何和遮擋預測準確度。
+
+與現有方法的比較。我們將我們的方法與代表性的 2D 追蹤方法進行比較，包括 CoTracker3 [ karaev2024cotracker3 ]、LocoTrack [ cho2024local ] 和其他最先進的方法。在表 3 中，我們展示了來自我們 2D 分支的 2D 追蹤結果。透過利用寶貴的幾何線索和在多模態、多來源資料上的聯合訓練，我們的方法達到了與現有最先進 2D 追蹤方法相當的性能。
+
+[FIGURE_CAPTION] 表 3：2D 追蹤估計。我們在三個資料集上評估我們的模型：Kinetics [ carreira2017quo ]、RoboTAP [ vecerik2024robotap ] 和 RGB-Stacking [ lee2021beyond ]。
+
+[FIGURE_CAPTION] 表 4：點圖估計的評估。結果透過優化整個影片中的共享縮放因子和偏移來與真實情況對齊。
+
+### 4.4 點雲地圖估計
+
+**評估資料集。** 我們在七個資料集上評估我們的模型，涵蓋真實世界和合成場景。對於室內真實世界資料集，我們使用 GMU Kitchen [ georgakis2016multiview ]、ScanNet 測試集 [ dai2017scannet ] 和 TUM [ sturm2012benchmark ]。對於室外真實世界資料，我們使用 KITTI [ geiger2013vision ]。對於合成資料集，我們在 Monkaa [ mayer2016large ]、Sintel [ butler2012naturalistic ] 和 Kubric-3D 驗證集 [ greff2022kubric ] 上進行評估。
+
+**評估指標。** 遵循先前的研究 [ hu2024depthcrafter , zhang2024monst3r , lu2024align3r ]，我們首先使用共享的尺度和位移對齊估計的點雲/深度圖與真實值，然後計算指標。此對齊程序遵循 MoGe [ wang2025moge1 ] 中描述的方法。我們主要報告兩個指標：絕對相對誤差（Abs Rel）和閾值 $\delta<1.25$ 內內點的百分比。
+
+**與現有方法的比較。** 我們將我們的方法與幾種代表性方法進行比較，包括 MoGe [ wang2025moge1 ]、VGGT [ wang2025vggt ]、MapAnything [ keetha2025mapanything ]、Pi3 [ wang2025pi ] 和 DA3 [ lin2025depth ]。表 4 呈現了與這些方法的定量比較。如所示，由於我們量身訂製的訓練策略，我們的方法在幾何估計性能上達到了高度競爭的表現，為 3D 流估計提供了堅實的基礎。
+
+### 4.5 攝影機姿態估計
+
+評估數據集。我們在兩個廣泛使用的基準上評估攝影機姿態估計性能：Sintel [ butler2012naturalistic ] 和 Bonn [ palazzolo2019refusion ]。
+對於 Sintel 數據集，遵循先前的工作 [ chen2024leap , zhao2022particlesfm , zhang2024monst3r ]，
+我們排除靜態或僅包含直線運動的序列，最終得到 14 個動態序列用於評估。
+
+評估指標。與現有工作 [ chen2024leap , zhao2022particlesfm , teed2024deep , zhang2024monst3r ] 一致，
+我們報告三個標準指標：
+ATE ↓ $\downarrow$（絕對平移誤差），
+RTE ↓ $\downarrow$（相對平移誤差），
+以及 RRE ↓ $\downarrow$（相對旋轉誤差）。
+
+與現有方法的比較。我們將我們的方法與多種聯合深度和姿態估計方法進行比較，包括 Align3R [ lu2024align3r ]、CUT3R [ wang2025continuous ]、VGGT [ wang2025vggt ]、MapAnything [ keetha2025mapanything ]、Pi3 [ wang2025pi ] 和 DA3 [ lin2025depth ]，以及聯合深度、姿態和運動估計方法，例如 POMATO [ zhang2025pomato ] 和 STV2 [ xiao2025spatialtrackerv2 ]。
+表 5 報告了攝影機姿態估計結果。
+結果展示了我們方法的有效性，特別是在聯合估計深度、姿態和運動的方法中。
+
+[FIGURE_CAPTION] 表 5：攝影機姿態估計。我們在兩個數據集上評估我們的模型：Sintel [ butler2012naturalistic ] 和 Bonn [ palazzolo2019refusion ]。‡ $\ddagger$ 表示使用真實攝影機內參作為輸入。
+
+### 4.6 消融研究
+
+不同 3D 骨幹 ViT 模型的效果。表 6 報告了使用不同 3D 骨幹 ViT 模型作為全域幾何編碼器初始化所獲得的平均結果。
+這些結果展示了我們框架的靈活性，並表明它在不同骨幹選擇下仍然有效。
+
+[FIGURE_CAPTION] 表 6：不同 3D 基礎模型的效果。
+
+場景流解碼器的消融研究。表 7 驗證了我們的關鍵設計選擇。(1) 2D 監督：僅在 3D 資料集上進行訓練（"w/o 2D Supervision"）導致效能嚴重下降（EPE3D 0.6511），強調了其對引導 3D 流的必要性。(3) 目標提升：移除提升的目標樣本（"w/o Target lifting"）阻止網路透過 2D 位移動態查詢目標空間。所得的效能下降證實將 2D 匹配對應到 3D 殘差對於空間細化是必要的。(4) 迭代更新：用直接的單步迴歸替換迭代細化機制（"w/o iterations"）導致效能下降。這突顯了迭代更新流場對於達到高度精確結果的重要性。(5) 輔助先驗：去除輔助先驗（"w/o $\mathbf{C}^{(t)}_{3d,i,j}$ 與 $\mathcal{M}_{3d}^{(t)}$"）降低了準確性，驗證了它們對全域空間對齊和各迭代間動力學平滑性的不可或缺性。(4) 混合公式（在第 3.2.3 節引入）：我們的完整模型（EPE3D 0.2056）顯著優於啟發式提升 2D 流搭配深度（"2D flow + d"，0.8210）和純 3D 流迴歸（"Pure 3D flow"，0.2854）。這證明了明確交織 2D 流與 Z 軸位移優於依賴孤立領域。
+
+[FIGURE_CAPTION] 表 7：場景流解碼器的消融研究。結果在所有資料集上取平均。最佳和次佳結果已標記。
+
+動作解碼器的效率。表 8 比較了 ADT [ pan2023aria ] 資料集中 16 幀序列的推理時間（Time）、記憶體消耗（Mem.）和參數數量（Parm.）。
+首先，成對場景流方法，如 POMATO [ zhang2025pomato ] 和 ZeroMSF [ liang2025zero ]，透過為每個像素獨立計算流而本質上支援密集追蹤。然而，與我們高效的稀疏到密集公式不同，它們的按像素預測方法導致顯著更高的計算成本，造成增加的延遲而沒有提供明確的記憶體效率優勢。
+另一方面，STV2 [ xiao2025spatialtrackerv2 ] 依賴於傳統的 3D 空間相關機制進行迭代軌跡估計。其高計算複雜性和大型參數數量造成了嚴重的瓶頸。因此，STV2 被限制於稀疏追蹤，並在擴展到密集追蹤情景時遭受記憶體不足（OOM）錯誤。
+為了明確驗證此瓶頸在於傳統 3D 計算，我們用上述傳統 3D 機制替換我們提議的 2D 到 3D 相關模組（Ours w/o 2D-to-3D）。如表 8 的灰色列所示，該變體在密集追蹤設定下同樣因 OOM 錯誤而崩潰。
+總體而言，透過規避明確 3D 相關的禁止成本，我們的方法在運行時間、記憶體佔用和模型大小上實現了優越的效率，同時本質上支援密集追蹤並保持最先進的效能。
+
+[FIGURE_CAPTION] 表 8：16 幀 ADT [ pan2023aria ] 序列上的效率比較。灰色列表示在密集追蹤設定下的記憶體不足（OOM）失敗。
+
+### 4.7 定性視覺化
+
+為了展示我們方法的有效性，圖 4 在五個方面可視化了追蹤和流結果：
+(1) 第一幀 2D 追蹤，其中一致的顏色表示時間像素對應關係。
+(2) 場景流，將原始 RGB 點雲與流變換幾何（彩虹色）進行對比。
+(3) 第一幀 3D 追蹤，展示均勻下採樣的相機中心軌跡以提高渲染效率。
+(4) 全幀 3D 追蹤，捕捉既有物體和新出現物體的密集相機中心軌跡。
+(5) 世界中心追蹤，將軌跡映射到全局坐標系。這有效地將相機自運動與物體動力學解耦，為動態實體產生空間穩定的背景和物理相貫的絕對運動。
+如需動態視覺化，請參考補充視頻。
+
+[FIGURE:x3.png] 圖 4：多種野外視頻上的定性結果。
+
+## 5 結論
+
+在本論文中，我們提出 Track4World，一個在世界中心坐標框架內設計用於高效密集 3D 追蹤的前饋基礎模型。利用由 VGGT 風格 Vision Transformer 參數化的全局 3D 場景表示，我們的方法引入了一種新穎的 3D 相關機制，以同時估計任意幀對之間的密集 2D 和 3D 場景流。通過將這個估計的場景流與重建的 3D 幾何緊密耦合，Track4World 便於在整個視頻中進行高效率的逐像素 3D 軌跡提取。在多個基準上的廣泛評估展示了我們方法的卓越魯棒性、可擴展性和泛化能力，標誌著從野外單目視頻實現整體 4D 重建邁出的重要一步。
+
+補充材料
+
+## 附錄 A 概述
+
+在本補充材料中，我們提供關於所提方法的實現、訓練和評估的全面詳細資訊。該文件組織如下：
+
+- • 第 B 節提供具體的實現細節，包括訓練超參數、資料集配置和最佳化策略。
+- • 第 D 節詳細說明光流估計模組的網路架構。
+- • 第 E 節詳述為聯合光流估計和點追蹤設計的統一目標函數。
+- • 第 F 節描述用於相機姿態估計的最佳化程序和數學公式。
+- • 第 G 節定義用於幾何、光流、追蹤和相機姿態任務的評估指標，以確保清晰性和可重複性。
+- • 第 H 節提供額外的消融研究，進一步驗證我們的設計選擇。
+- • 第 I 節展示在具有挑戰性的真實場景序列上的廣泛定性結果視覺化。
+- • 第 K 節討論當前方法的限制，並概述未來研究的有前景方向。
+
+第 B 節提供具體的實現細節，包括訓練超參數、資料集配置和最佳化策略。
+
+第 D 節詳細說明光流估計模組的網路架構。
+
+第 E 節詳述為聯合光流估計和點追蹤設計的統一目標函數。
+
+第 F 節描述用於相機姿態估計的最佳化程序和數學公式。
+
+第 G 節定義用於幾何、光流、追蹤和相機姿態任務的評估指標，以確保清晰性和可重複性。
+
+第 H 節提供額外的消融研究，進一步驗證我們的設計選擇。
+
+第 I 節展示在具有挑戰性的真實場景序列上的廣泛定性結果視覺化。
+
+第 K 節討論當前方法的限制，並概述未來研究的有前景方向。
+
+## 附錄 B 實作細節
+
+我們的模型分兩個階段進行訓練。在第一個階段，我們專注於幾何估計，使用多個提供高品質深度和姿態監督的數據集，包括 Kubric-3D [ greff2022kubric ] 、GTA-SfM [ wang2020flow ] 、V-KITTI [ gaidon2016virtual ] 、ARKitScenes [ baruch2021arkitscenes ] 、BlinkVision [ li2024blinkvision ] 、DynamicStereo [ karaev2023dynamicstereo ] 、TartanAir [ wang2020tartanair ] 、MVS-Synth [ huang2018deepmvs ] 、ScanNetv2 [ dai2017scannet ] 、ScanNet++ [ yeshwanth2023scannet++ ] 、Spring [ mehl2023spring ] 、OmniWorld [ zhou2025omniworld ] 、PointOdyssey [ zheng2023pointodyssey ] 、Hypersim [ roberts2021hypersim ] 和 IRS [ wang2019irs ] 。
+在第二個階段，我們凍結幾何估計模組，訓練運動估計模組。訓練數據涵蓋多種運動模式，包括光流數據集（AutoFlow [ sun2021autoflow ] 、FlyingChairs [ dosovitskiy2015flyingchairs ] 、OmniWorld [ zhou2025omniworld ] 、HD1K [ kondermann2016hd1k ] 、Spring [ mehl2023spring ] 、TartanAir [ wang2020tartanair ] 、VIPER [ richter2017playing ] ）、二維點追蹤數據集（Kubric [ greff2022kubric ] 、Monkaa [ mayer2016large ] 、Driving [ mayer2016large ] ）、場景流數據集（Kubric-3D [ greff2022kubric ] 、V-KITTI [ gaidon2016virtual ] ）和三維點追蹤數據集（DynamicStereo [ karaev2023dynamicstereo ] 、PointOdyssey [ zheng2023pointodyssey ] ）。
+
+我們在八個 40GB 的 GPU 上訓練模型。
+在第一個階段，我們採用 AdamW [ loshchilov2017decoupled ] 優化器搭配 StepLR 排程器來訓練幾何估計主幹網路，
+初始學習率設為 $1 \times 10^{-4}$。
+此階段執行 100,000 步，耗時約一週。
+在第二個階段，我們使用 AdamW 優化器搭配 OneCycleLR 排程器訓練運動估計模組，
+其峰值學習率設為 $1 \times 10^{-4}$。
+此階段另外訓練 100,000 步，耗時約五天。
+
+## Appendix C Finetuning Geometry Encoder
+
+We employ a backbone-agnostic encoder to process video frames { 𝐈 i } \{\mathbf{I}_{i}\} into a global scene representation. Leveraging state-of-the-art models [ wang2025pi , lin2025depth , wang2025moge1 ] as initialization, we fine-tune specific layers to enhance temporal consistency: adding global attention layers and camera pose tokens for monocular models like MoGe [ wang2025moge1 ] , or updating intermediate layers for 3D reconstruction models like Pi3 [ wang2025pi ] and DA3 [ lin2025depth ] . As shown in Tab. 6 , we demonstrate the effectiveness of our proposed framework across different geometry backbones.
+
+To address the
+inherent scale and focal-length ambiguity while ensuring temporal coherence, we compute a video-level reconstruction loss. We estimate a global optimal scale s ∗ s^{*} and translation t ∗ t^{*} to align the predicted point clouds 𝐏 i \mathbf{P}_{i} with the ground truth 𝐏 ^ i \hat{\mathbf{P}}_{i} :
+
+|  | ℓ r ​ e ​ c ​ o ​ n ​ s = 1 | T | ​ ∑ i ∈ T 1 | ℳ i | ​ ∑ j ∈ ℳ i 1 z i , j ​ ‖ s ∗ ​ 𝐩 i , j + t ∗ − 𝐩 ^ i , j ‖ 1 , \ell_{recons}=\frac{1}{|T|}\sum_{i\in T}\frac{1}{|\mathcal{M}_{i}|}\sum_{j\in\mathcal{M}_{i}}\frac{1}{z_{i,j}}\left\|s^{*}\mathbf{p}_{i,j}+t^{*}-\hat{\mathbf{p}}_{i,j}\right\|_{1}, |  | (5) |
+| --- | --- | --- | --- |
+
+where z i , j z_{i,j} denotes the ground-truth depth used for re-weighting. Furthermore, we enforce global geometric consistency via an affine-invariant pairwise pose loss:
+
+|  | ℓ p ​ o ​ s ​ e = 1 N ​ ( N − 1 ) ∑ i ≠ j ( ℓ g ​ e ​ o ​ ( 𝐑 i ​ j , 𝐑 ^ i ​ j ) + λ t ​ r ​ a ​ n ​ s ℓ h ​ u ​ b ​ e ​ r ( 𝐭 ~ i ​ j , 𝐭 ^ i ​ j ) ) , \begin{split}\ell_{pose}=\frac{1}{N(N-1)}\sum_{i\neq j}\Big(&\ell_{geo}(\mathbf{R}_{ij},\hat{\mathbf{R}}_{ij})\\
+&+\lambda_{trans}\ell_{huber}(\tilde{\mathbf{t}}_{ij},\hat{\mathbf{t}}_{ij})\Big),\end{split} |  | (6) |
+| --- | --- | --- | --- |
+
+where predicted translations are aligned as 𝐭 ~ i ​ j = s ∗ ​ 𝐭 i ​ j + t ∗ − 𝐑 ^ i ​ j ​ t ∗ \tilde{\mathbf{t}}_{ij}=s^{*}\mathbf{t}_{ij}+t^{*}-\hat{\mathbf{R}}_{ij}t^{*} .
+To stabilize convergence, we impose a regularization ℓ r ​ e ​ g = max ⁡ ( 0 , L m ​ e ​ a ​ n − τ ) \ell_{reg}=\max(0,L_{mean}-\tau) on the mean point magnitude L m ​ e ​ a ​ n L_{mean} .
+For geometric fidelity, we further introduce a normal consistency loss ℓ n \ell_{n} and a multi-scale local geometry loss ℓ l ​ o ​ c ​ a ​ l \ell_{local} [ wang2025moge1 ] . The overall training objective is:
+
+|  | ℓ t ​ o ​ t ​ a ​ l = ℓ r ​ e ​ c ​ o ​ n ​ s + λ p ​ o ​ s ​ e ​ ℓ p ​ o ​ s ​ e + λ r ​ e ​ g ​ ℓ r ​ e ​ g + λ n ​ ℓ n + λ l ​ o ​ c ​ a ​ l ​ ℓ l ​ o ​ c ​ a ​ l . \ell_{total}=\ell_{recons}+\lambda_{pose}\ell_{pose}+\lambda_{reg}\ell_{reg}+\lambda_{n}\ell_{n}+\lambda_{local}\ell_{local}. |  | (7) |
+| --- | --- | --- | --- |
+
+## 附錄 D 模型架構細節
+
+遞迴更新運算元 GRU $\mathrm{GRU}$。
+
+更新運算元 GRU $\mathrm{GRU}$ 通過整合相關性線索、遞迴特徵、語義背景和時間運動變化來細化運動表徵 $\mathbf{M}_{2d}^{(t)}$ 和 $\mathbf{V}^{(t)}$。
+在迭代 $(t)$ 時，該運算元的輸入為：
+4D 相關性體積 $\hat{\mathbf{C}}_{i,j}(\mathbf{M}_{2d}^{(t)})$ 和 $\tilde{\mathbf{C}}_{i,j}(\mathbf{M}_{2d}^{(t)})$、
+運動變化梯度 $\nabla(\mathbf{M}_{2d}^{(t)}-\mathbf{M}_{2d}^{(t-1)})$、
+當前遞迴特徵 $\hat{\mathbf{F}}^{(t)}_{i}$、
+語義背景特徵 $\tilde{\mathbf{F}}_{i}$、
+以及當前可見性信心地圖 $\mathbf{V}^{(t)}$。
+首先，運動編碼器 $\phi_{\text{mot}}$ 從相關性體積中提取基於相關性的運動線索：
+
+|  | $\displaystyle\mathbf{F}^{\text{corr}}_{i,j}$ | $\displaystyle=\phi_{\text{mot}1}\!\left(\hat{\mathbf{C}}_{i,j},\nabla\!\left(\mathbf{M}_{2d}^{(t)}-\mathbf{M}_{2d}^{(t-1)}\right)\right)$, |  | (8) |
+| --- | --- | --- | --- | --- |
+|  | $\displaystyle\mathbf{F}^{\text{ctx}}_{i,j}$ | $\displaystyle=\phi_{\text{mot}2}\!\left(\tilde{\mathbf{C}}_{i,j},\nabla\!\left(\mathbf{M}_{2d}^{(t)}-\mathbf{M}_{2d}^{(t-1)}\right)\right)$. |  | (9) |
+
+同時，遞迴特徵和背景特徵通過各自的函數 $\psi_{f}$ 和 $\psi_{c}$ 投影到共享的潛在空間中：
+
+|  | $\hat{\mathbf{F}}^{(t),\text{corr}}_{i}=\psi_{f}(\hat{\mathbf{F}}^{(t)}_{i}),\hskip 28.80008pt\tilde{\mathbf{F}}^{\text{ctx}}_{i}=\psi_{c}(\tilde{\mathbf{F}}_{i})$. |  | (10) |
+| --- | --- | --- | --- |
+
+隨後這些處理過的特徵與未處理的輸入（即運動變化梯度和可見性地圖）進行連接。該聚合張量通過 $1 \times 1$ 卷積 $\psi$ 融合，以形成初始隱藏狀態 $\mathbf{H}_{0}$：
+
+|  | $\mathbf{H}_{0}=\psi\Big([\hat{\mathbf{F}}^{(t),\text{corr}}_{i},\tilde{\mathbf{F}}^{\text{ctx}}_{i},\mathbf{F}^{\text{corr}}_{i,j},\mathbf{F}^{\text{ctx}}_{i,j},\mathbf{V}^{(t)}]\Big)$. |  | (11) |
+| --- | --- | --- | --- |
+
+該初始狀態 $\mathbf{H}_{0}$ 隨後通過多個時間聚合器 (TA) 層進行細化，以沿時間維度進行注意力計算，如第 3.4 節所介紹的：
+
+|  | $\mathbf{H}_{k+1}=\text{TA}_{k}(\mathbf{H}_{k}),\hskip 28.80008ptk=0,\dots,K{-}1$. |  | (12) |
+| --- | --- | --- | --- |
+
+得到的特徵 $\mathbf{H}_{K}$ 通過最終的 $1 \times 1$ 投影 $\psi_{\text{final}}$ 傳遞，以產生下一個迭代 $(t+1)$ 的更新後遞迴特徵 $\hat{\mathbf{F}}^{(t+1)}_{i}$：
+
+|  | $\hat{\mathbf{F}}^{(t+1)}_{i}=\psi_{\text{final}}(\mathbf{H}_{K})$. |  | (13) |
+| --- | --- | --- | --- |
+
+最後，兩個輕量級 MLP 頭使用這個新的隱藏特徵 $\hat{\mathbf{F}}^{(t+1)}_{i}$ 來預測 2D 運動和可見性場的更新 ($\Delta\mathbf{M}_{2d}^{(t)}$ 和 $\Delta\mathbf{V}^{(t)}$)：
+
+|  | $\Delta\mathbf{M}_{2d}^{(t)}=\text{MLP}_{mot}(\hat{\mathbf{F}}^{(t+1)}_{i}),\qquad\mathbf{M}_{2d}^{(t+1)}=\mathbf{M}_{2d}^{(t)}+\Delta\mathbf{M}_{2d}^{(t)}$, |  | (14) |
+| --- | --- | --- | --- |
+
+|  | $\Delta\mathbf{V}^{(t)}=\text{MLP}_{vis}(\hat{\mathbf{F}}^{(t+1)}_{i}),\qquad\mathbf{V}^{(t+1)}=\mathbf{V}^{(t)}+\Delta\mathbf{V}^{(t)}$. |  | (15) |
+| --- | --- | --- | --- |
+
+總的來說，GRU $\mathrm{GRU}$ 作為一個遞迴細化運算元，共同聚合相關性線索、遞迴和語義特徵、時間運動差異以及可見性信心。這能夠使稠密運動和可見性場的迭代更新既穩健又一致。
+
+3D 流頭 $\mathcal{H}_{3d}$。
+
+3D 流頭 $\mathcal{H}_{3d}$ 聚合所有準備好的特徵來預測 3D 流更新 $\Delta\mathbf{M}_{3d}^{(t)}$。
+形式上，給定提升的源特徵 $\hat{\mathbf{F}}^{(t+1)}_{i}$、$\mathbf{F}_{i}$、提升的目標點坐標 $\mathbf{p}_{j}^{(t)}$、$\mathbf{p}_{j}^{(t+1)}$ 和特徵 $\mathbf{F}_{j}^{(t)}$、$\mathbf{F}_{j}^{(t+1)}$、3D-到-2D 點相關性 $\mathbf{C}_{3d,i,j}^{(t)}$ 和 3D 流先驗 $\mathcal{M}_{3d}^{(t)}$，該頭的運作方式如下：
+
+|  | $\displaystyle\mathbf{F}^{\prime}_{i}$ | $\displaystyle=\phi_{f}^{3d}(\hat{\mathbf{F}}^{(t+1)}_{i})$, | $\displaystyle\mathbf{F}^{\prime 3d}_{i}$ | $\displaystyle=\phi_{s}^{3d}(\mathbf{F}_{i})$, |  | (16) |
+| --- | --- | --- | --- | --- | --- | --- |
+|  | $\displaystyle\mathbf{F}^{\prime(t)}_{j}$ | $\displaystyle=\phi_{p}^{3d}(\mathbf{F}_{j}^{(t)})$, | $\displaystyle\mathbf{F}^{\prime(t+1)}_{j}$ | $\displaystyle=\phi_{p}^{3d}(\mathbf{F}_{j}^{(t+1)})$, |  |
+|  | $\displaystyle\mathbf{M}^{3d}_{\text{corr}}$ | $\displaystyle=\phi_{\text{mot}}^{3d}(\mathbf{C}_{3d,i,j}^{(t)},\mathcal{M}_{3d}^{(t)})$, |  |
+
+其中 $\phi_{f}^{3d}$、$\phi_{s}^{3d}$、$\phi_{p}^{3d}$ 和 $\phi_{\text{mot}}^{3d}$ 表示專門的 $1 \times 1$ 卷積投影或運動編碼器。這些特徵被連接並通過 $1 \times 1$ 卷積融合，以形成初始隱藏狀態：
+
+|  | $\mathbf{H}_{0}^{3d}=\psi^{3d}\Big([\mathbf{F}^{\prime}_{i},\mathbf{F}^{\prime 3d}_{i},\mathbf{F}^{\prime(t)}_{j},\mathbf{F}^{\prime(t+1)}_{j},\mathbf{M}^{3d}_{\text{corr}}]\Big)$. |  | (17) |
+| --- | --- | --- | --- |
+
+時間細化使用沿時間維度應用的時間聚合器進行：
+
+|  | $\mathbf{H}_{k+1}^{3d}=\text{TA}^{3d}(\mathbf{H}_{k}^{3d}),\qquad k=0,\dots,K{-}1$. |  | (18) |
+| --- | --- | --- | --- |
+
+經過最終的 $1 \times 1$ 投影後，細化的隱藏特徵與 3D 流先驗 $\mathbf{p}_{j}^{(t+1)}-\mathbf{p}_{j}^{(t)}$ 進行連接：
+
+|  | $\mathbf{F}^{3d}_{\text{out}}=[\psi_{\text{final}}^{3d}(\mathbf{H}_{K}^{3d}),\mathbf{p}_{j}^{(t+1)}-\mathbf{p}_{j}^{(t)}]$. |  | (19) |
+| --- | --- | --- | --- |
+
+最後，由多個卷積層組成的輕量級預測頭 $\text{MLP}_{3d}$ 輸出 3D 流更新：
+
+|  | $\Delta\mathbf{M}_{3d}^{(t)}=\text{MLP}_{3d}(\mathbf{F}^{3d}_{\text{out}}),\qquad\mathbf{M}_{3d}^{(t+1)}=\mathbf{M}_{3d}^{(t)}+\Delta\mathbf{M}_{3d}^{(t)}$. |  | (20) |
+| --- | --- | --- | --- |
+
+總的來說，$\mathcal{H}_{3d}$ 作為一個 3D 運動細化模組，共同利用 2D 運動特徵、3D 源資訊、點相關性、時間依賴性和先驗流，以產生準確且時間上一致的 3D 流更新。
+
+## 附錄 E 流場和追蹤估計的損失函數
+
+我們觀察到成對場景流和長期點追蹤資料集共享類似的資料結構，其特徵是跨時間序列的逐點對應。我們的任意對查詢機制從根本上支持可變時間間隔和靈活的幀數。利用這種結構相似性，我們為兩項任務採用統一的訓練目標，確保無論資料集來源如何都能提供一致的監督。
+
+### E.1 2D 分支的損失函數
+
+對於 2D 分支，我們將監督策略與最先進的點追蹤方法保持一致 [ karaev2024cotracker , karaev2024cotracker3 , harley2025alltracker ]。整體目標函數 $\ell_{\text{total}}$ 是在一系列 $N_{iter}$ 次迭代精化預測上計算的，利用指數加權因子 $\gamma$（通常設定為 0.8）來強調後續更新的品質。
+
+總損失是軌跡損失（$\ell_{\text{traj}}$）、可見性損失（$\ell_{\text{vis}}$）和信心損失（$\ell_{\text{conf}}$）的加權和，聚合所有迭代步驟 $t$：
+
+|  | $\ell_{\text{total}}=\sum_{t=1}^{N_{iter}}\gamma^{N_{iter}-t}\left(\ell_{\text{traj}}^{(t)}+\lambda_{\text{vis}}\ell_{\text{vis}}^{(t)}+\lambda_{\text{conf}}\ell_{\text{conf}}^{(t)}\right)$ |  | (21) |
+| --- | --- | --- | --- |
+
+注：權重 $\lambda_{\text{vis}}$ 和 $\lambda_{\text{conf}}$ 是用來平衡各個元件貢獻的超參數。各個損失元件定義如下：
+
+1. 軌跡迴歸損失（$\ell_{\text{traj}}$）。
+
+此損失測量預測的 2D 座標 $\mathbf{M}_{2d}^{(t)}$ 與地面真實座標 $\mathbf{M}_{2d}^{gt}$ 之間的 $L_1$ 誤差。重要的是，它由地面真實可見性遮罩 $\mathbf{V}^{gt}$ 進行加權：在目標幀中可見的點被分配完整的權重 1，而被遮擋或不可見的點會獲得較小的權重 0.2。這種設計鼓勵模型更專注於準確預測可見點，同時仍為不可見點提供較弱的監督信號：
+
+|  | $\ell_{\text{traj}}^{(t)}=\Big[\mathds{1}(\mathbf{V}^{gt})+0.2\cdot(1-\mathds{1}(\mathbf{V}^{gt}))\Big]\cdot\big\|\mathbf{M}_{2d}^{(t)}-\mathbf{M}_{2d}^{gt}\big\|_{1}.$ |  | (22) |
+| --- | --- | --- | --- |
+
+2. 可見性分類損失（$\ell_{\text{vis}}$）。
+
+可見性損失使用二元交叉熵（BCE）來監督預測的可見性 $\mathbf{V}^{\prime}$，鼓勵模型根據地面真實遮罩 $\mathbf{V}^{gt}$ 正確將點分類為可見或遮擋：
+
+|  | $\ell_{\text{vis}}^{(t)}=\text{BCE}\left(\mathbf{V}^{\prime(t)},\mathbf{V}^{gt}\right).$ |  | (23) |
+| --- | --- | --- | --- |
+
+3. 信心損失（$\ell_{\text{conf}}$）
+
+我們的模型預測一個單獨的信心分數 $\mathbf{V}^{\prime\prime}$（追蹤可靠性或確定性），此損失使用 BCE 來監督它。地面真實標籤是一個二元標誌，指示相應的軌跡預測是否落在可接受的像素誤差容限 $\delta$ 內：
+
+|  | $\ell_{\text{conf}}^{(t)}=\text{BCE}\left(\mathbf{V}^{\prime\prime(t)},\mathds{1}\left(\left\|\mathbf{M}_{2d}^{(t)}-\mathbf{M}_{2d}^{gt}\right\|_{2}<\delta\right)\right).$ |  | (24) |
+| --- | --- | --- | --- |
+
+### E.2 Losses for 3D Branch
+
+For the 3D branch, we first apply the predicted 3D flow, 𝐌 3 ​ d ( t ) \mathbf{M}_{3d}^{(t)} , to the first-frame camera-centric point cloud 𝐏 1 \mathbf{P}_{1} to obtain the predicted corresponding points at all other frames, denoted as 𝐏 ^ 3 ​ d ( t ) \hat{\mathbf{P}}_{3d}^{(t)} :
+
+|  | 𝐏 ^ 3 ​ d ( t ) = 𝐏 1 + 𝐌 3 ​ d ( t ) . \hat{\mathbf{P}}_{3d}^{(t)}=\mathbf{P}_{1}+\mathbf{M}_{3d}^{(t)}. |  | (25) |
+| --- | --- | --- | --- |
+
+The total loss for the 3D branch, ℒ total 3 ​ d \mathcal{L}^{3d}_{\text{total}} , is then composed of the 3D trajectory loss ( ℒ traj 3 ​ d \mathcal{L}_{\text{traj}}^{3d} ) and the scene flow smoothness loss ( ℒ smooth 3 ​ d \mathcal{L}_{\text{smooth}}^{3d} ). Adhering to the iterative refinement structure of CoTracker [ karaev2024cotracker ] , the total loss is aggregated across all iterative steps t t using an exponential weighting factor γ \gamma :
+
+|  | ℒ total 3 ​ d = ∑ t = 1 N i ​ t ​ e ​ r γ N i ​ t ​ e ​ r − t ​ ( ℒ traj ( t ) , 3 ​ d + λ smooth ​ ℒ smooth ( t ) , 3 ​ d ) , \mathcal{L}^{3d}_{\text{total}}=\sum_{t=1}^{N_{iter}}\gamma^{N_{iter}-t}\left(\mathcal{L}_{\text{traj}}^{(t),3d}+\lambda_{\text{smooth}}\mathcal{L}_{\text{smooth}}^{(t),3d}\right), |  | (26) |
+| --- | --- | --- | --- |
+
+where N i ​ t ​ e ​ r N_{iter} is the total number of update iterations and λ smooth \lambda_{\text{smooth}} is the hyperparameter balancing the contribution of the smoothness term.
+
+1. Trajectory regression loss ( ℓ traj 3 ​ d \ell_{\text{traj}}^{3d} ).
+
+Subsequently, we supervise the full 3D trajectory by adopting a loss function structurally similar to the 2D trajectory loss (Equation 22 ). This 3D trajectory loss, ℓ traj 3 ​ d \ell_{\text{traj}}^{3d} , computes the L 1 L_{1} difference between the predicted 3D coordinates and the ground truth 3D coordinates, incorporating a robust weighting scheme based on ground truth visibility, 𝐕 g ​ t \mathbf{V}^{gt} :
+
+|  | ℓ traj ( t ) , 3 ​ d = [ 𝟙 ​ ( 𝐕 g ​ t ) + 0.2 ⋅ ( 1 − 𝟙 ​ ( 𝐕 g ​ t ) ) ] ⋅ ‖ 𝐏 ^ 3 ​ d ( t ) − 𝐏 3 ​ d g ​ t ‖ 1 . \ell_{\text{traj}}^{(t),3d}=\Big[\mathds{1}(\mathbf{V}^{gt})+0.2\cdot(1-\mathds{1}(\mathbf{V}^{gt}))\Big]\cdot\big\|\hat{\mathbf{P}}_{3d}^{(t)}-\mathbf{P}_{3d}^{gt}\big\|_{1}. |  | (27) |
+| --- | --- | --- | --- |
+
+2. Scene flow smoothness loss ( ℓ smooth 3 ​ d \ell_{\text{smooth}}^{3d} ).
+
+In addition to the trajectory supervision, we incorporate a scene flow smoothness loss( ℓ smooth 3 ​ d \ell_{\text{smooth}}^{3d} ) to enforce local rigidity and prevent erratic flow predictions across spatially adjacent points. Given the high dimensionality of the point cloud, calculating this loss across all N N points is computationally expensive ( 𝒪 ​ ( N 2 ) \mathcal{O}(N^{2}) ). To address this, we adopt an efficient sampling strategy based on anchor points.
+
+Specifically, we randomly sample M M anchor points ( 𝐏 a ​ n ​ c ​ h ​ o ​ r \mathbf{P}_{anchor} ) from the ground-truth point cloud 𝐏 3 ​ d g ​ t \mathbf{P}_{3d}^{gt} , where M ≪ N M\ll N . We then retrieve the corresponding M M predicted flow vectors ( 𝐌 ^ a ​ n ​ c ​ h ​ o ​ r \hat{\mathbf{M}}_{anchor} ) and use the spatial structure of 𝐏 a ​ n ​ c ​ h ​ o ​ r \mathbf{P}_{anchor} to establish local neighborhoods via K K -Nearest Neighbors (KNN) search. The loss is computed as the squared L 2 L_{2} distance between the flow vector of each anchor point and its K K neighbors within the sampled set:
+
+|  | ℓ smooth ( t ) , 3 ​ d = 1 M ⋅ K ​ ∑ i = 1 M ∑ j ∈ 𝒩 i K ‖ 𝐌 ^ a ​ n ​ c ​ h ​ o ​ r , i ( t ) − 𝐌 ^ a ​ n ​ c ​ h ​ o ​ r , j ( t ) ‖ 2 2 , \ell_{\text{smooth}}^{(t),3d}=\frac{1}{M\cdot K}\sum_{i=1}^{M}\sum_{j\in\mathcal{N}_{i}^{K}}\left\|\hat{\mathbf{M}}^{(t)}_{anchor,i}-\hat{\mathbf{M}}^{(t)}_{anchor,j}\right\|_{2}^{2}, |  | (28) |
+| --- | --- | --- | --- |
+
+where 𝐌 ^ a ​ n ​ c ​ h ​ o ​ r , i ( t ) \hat{\mathbf{M}}^{(t)}_{anchor,i} is the predicted scene flow for the i i -th anchor point at iteration t t , and 𝒩 i K \mathcal{N}_{i}^{K} denotes the set of K K nearest neighbors of point i i within the sampled M M points. The effectiveness of this loss is illustrated in Fig. S1 , demonstrating its impact on improving scene flow accuracy.
+
+[FIGURE:x4.png] Fig. S1 : Effectiveness of ℓ smooth 3 ​ d \ell_{\text{smooth}}^{3d} .
+
+## 附錄 F 測試時間姿態優化
+
+我們從重建的 3D 軌跡中優化每一幀的相機姿態 $\{\pi_{t}\in\mathrm{SE}(3)\}$。
+首先，我們使用 VLM [achiam2023gpt] 和 Grounding-SAM [sam, liu2024grounding] 計算動態遮罩以分割前景動態物體。
+隨後，靜態 3D 軌跡透過只保留投影落在靜態區域內的軌跡來提取。
+
+給定這些靜態軌跡，我們在目前相機姿態下將每個點從時間步 $t_{1}$ 重投影到時間步 $t_{2}$，並使用下列投影損失來優化姿態：
+
+|  | $\displaystyle\ell_{\text{proj}}$ | $= \sum_{i=1}^{N}\sum_{t_{1}=1}^{T}\sum_{t_{2}=1}^{T}\left\|\pi_{t_{2}}\pi_{t_{1}}^{-1}\big(\mathbf{P}_{\text{static}}(i,t_{1})\big)\right.$ |  | (29) |
+| --- | --- | --- | --- | --- |
+|  |  | $\displaystyle\qquad\qquad\left.-\mathbf{P}_{\text{static}}(i,t_{2})\right\|_{2}^{2},$ |  |
+
+其中 $\pi_{t}(\cdot)$ 表示時間步 $t$ 的變換，$\mathbf{P}_{\text{static}}(i,t)\in\mathbb{R}^{3}$ 是第 $i$ 個靜態軌跡在時間步 $t$ 的 3D 位置，
+$N$ 是靜態軌跡的總數。
+為了提高計算效率，我們將整個影片分成 $C$ 個片段，並平行估計每個片段的相機姿態。
+在優化片段內姿態後，我們估計片段間變換以將所有片段合併成全域一致的相機軌跡。
+最後，一旦初始化了合併的全域姿態，我們透過在整個序列上優化方程式 29 中的重投影損失來再次優化所有相機姿態。
+
+## 附錄 G 評估指標詳情
+
+我們使用涵蓋幾何估計、運動估計和相機姿態準確度的綜合評估指標集合來評估我們的方法。以下，我們用 $(\cdot)$ 表示預測值，用 $\hat{(\cdot)}$ 表示真實標籤。有效像素或點的集合記為 $\Omega$，$N=|\Omega|$。
+
+### G.1 深度與幾何指標
+
+Abs Rel（絕對相對誤差）：此指標測量預測深度 $d_i$ 和真實深度 $\hat{d}_i$ 之間的平均絕對相對差異。其定義如下：
+
+|  | $\text{Abs Rel}=\frac{1}{N}\sum_{i\in\Omega}\frac{\|\hat{d}_{i}-d_{i}\|}{\hat{d}_{i}}$ |  | (30) |
+| --- | --- | --- | --- |
+
+$\boldsymbol{\delta<1.25}$（閾值準確度）：此指標測量像素百分比，其中預測深度與真實深度之間的比率在 1.25 的閾值內。它表示精準預測的普遍程度：
+
+|  | $\delta<\tau=\frac{1}{N}\sum_{i\in\Omega}\mathbb{I}\left(\max\left(\frac{\hat{d}_{i}}{d_{i}},\frac{d_{i}}{\hat{d}_{i}}\right)<\tau\right)$ |  | (31) |
+| --- | --- | --- | --- |
+
+其中 $\tau=1.25$，且 $\mathbb{I}(\cdot)$ 是指示函數。
+
+### G.2 3D 場景流指標
+
+EPE3D（3D 端點誤差）：EPE3D 測量預測 3D 場景流向量與真實值之間的平均歐幾里得距離（單位為公尺）：
+
+|  | $\text{EPE3D}=\frac{1}{N}\sum_{i\in\Omega}\|\mathbf{p}_{i}-\hat{\mathbf{p}}_{i}\|_{2}$ |  | (32) |
+| --- | --- | --- | --- |
+
+其中 $\mathbf{p}_{i}$ 是預測的流向量，$\hat{\mathbf{p}}_{i}$ 是真實值。
+
+AccS（嚴格準確度 - 3D）：EPE3D 嚴格在緊密閾值內的點百分比。根據標準場景流協議，若滿足下列條件，則認為一個點是準確的：
+
+|  | $\text{AccS}=\frac{1}{N}\sum_{i\in\Omega}\mathbb{I}\left(\|\mathbf{p}_{i}-\hat{\mathbf{p}}_{i}\|_{2}<\tau_{1}\lor\frac{\|\mathbf{p}_{i}-\hat{\mathbf{p}}_{i}\|_{2}}{\|\hat{\mathbf{p}}_{i}\|_{2}}<\tau_{2}\right)$ |  | (33) |
+| --- | --- | --- | --- |
+
+典型地，$\tau_{1}=0.05$ m 且 $\tau_{2}=5\%$。注意相對誤差由真實值的大小 $\|\hat{\mathbf{p}}_{i}\|_{2}$ 正規化。
+
+AccR（寬鬆準確度 - 3D）：與 AccS 類似，但使用寬鬆的閾值（典型地 $\tau_{1}=0.10$ m 且 $\tau_{2}=10\%$）以評估對較大運動的魯棒性。
+
+### G.3 2D 光流度量指標
+
+EPE2D（2D 端點誤差）：預測的 2D 坐標 $\mathbf{u}_{i}$ 與真實標籤 $\hat{\mathbf{u}}_{i}$ 之間的平均歐幾里得距離（單位為像素）：
+
+|  | $\text{EPE2D}=\frac{1}{N}\sum_{i\in\Omega}\|\mathbf{u}_{i}-\hat{\mathbf{u}}_{i}\|_{2}$ |  | (34) |
+| --- | --- | --- | --- |
+
+AccS2D（嚴格準確度 - 2D）：EPE2D 小於嚴格閾值（1 像素）的點的百分比：
+
+|  | $\text{AccS2D}=\frac{1}{N}\sum_{i\in\Omega}\mathbb{I}\left(\|\mathbf{u}_{i}-\hat{\mathbf{u}}_{i}\|_{2}<\tau_{\text{strict}}\right)$ |  | (35) |
+| --- | --- | --- | --- |
+
+AccR2D（寬鬆準確度 - 2D）：滿足較寬鬆閾值 $\tau_{\text{relaxed}}$（3 像素）的點的百分比，用於測量粗略追蹤能力。
+
+### G.4 長期點追蹤度量指標（TAP-Vid）
+
+APD（平均位置偏差）：此度量指標測量預測位置落在相對於真實標籤深度的指定閾值內的點的百分比。
+
+AJ（平均 Jaccard）：在某些基準中也稱為「位置準確度」，它測量落在距離真實標籤指定距離閾值內的點的比例，並在整個序列上進行平均。本質上，它是由空間準確度加權的生存率。
+
+$\boldsymbol{\delta_{\text{avg}}^{\text{vis}}}$（平均可見三角洲）：此度量指標專門測量當前可見（未被遮擋）的點的位置準確度。它計算預測誤差低於特定閾值 $\delta$ 的可見點的平均百分比。
+
+OA（遮擋準確度）：OA 評估可見性估計頭的二元分類效能。它是預測點是否被遮擋或可見的準確度：
+
+|  | $\text{OA}=\frac{1}{N_{\text{total}}}\sum_{i}\mathbb{I}(v_{i}=\hat{v}_{i})$ |  | (36) |
+| --- | --- | --- | --- |
+
+其中 $\hat{v}_{i}\in\{0,1\}$ 表示真實標籤的可見性狀態，$v_{i}$ 表示預測值。
+
+### G.5 攝影機位姿度量
+
+**ATE (絕對軌跡誤差)**：ATE 測量估計攝影機軌跡的全局一致性。它計算估計軌跡 $\mathbf{T}_{est}$ 和基準真值 $\mathbf{T}_{gt}$ 之間的平移差異的均方根誤差 (RMSE)，在通過相似變換 (Sim3) 或剛性變換 (SE3) 對齐後：
+
+|  | $\text{ATE}=\sqrt{\frac{1}{M}\sum_{j=1}^{M}\|\text{trans}(\mathbf{T}_{gt,j}^{-1}\mathbf{S}\mathbf{T}_{est,j})\|_{2}^{2}}$ |  | (37) |
+| --- | --- | --- | --- |
+
+**RTE (相對軌跡誤差)**：RTE 通過在固定時間間隔或距離上平均漂移來測量局部一致性。它評估以固定時間差分隔開的幀對之間的相對位姿誤差。
+
+**RRE (相對旋轉誤差)**：RRE 測量預測旋轉矩陣和基準真值旋轉矩陣之間的測地距離，在所有幀對上進行平均。其定義為：
+
+|  | $\text{RRE}=\frac{1}{M}\sum_{j}\arccos\left(\frac{\text{trace}(\mathbf{R}_{gt,j}^{T}\mathbf{R}_{est,j})-1}{2}\right)$ |  | (38) |
+| --- | --- | --- | --- |
+
+## 附錄 H 更多消融研究
+
+幾何編碼器。
+
+我們在幾何編碼器上提供了額外的消融實驗，總結如表 S1 所示。此消融實驗使用 MoGe [ wang2025moge1 ] 作為幾何骨幹初始化。將我們的仿射不變損失替換為尺度不變損失（「w/ scale-inv」）會導致效能下降，證明了仿射不變公式的有效性。移除正則化損失（$\ell_{reg}$）導致性能大幅下降（Abs Rel 0.3530），突顯其在穩定收斂中的關鍵作用。最後，移除區域損失（$\ell_{local}$）也導致輕微的性能下降（Abs Rel 0.1053），確認了其對幾何細節精化的貢獻。
+
+[FIGURE_CAPTION] 表 S1：幾何編碼器消融研究。結果在所有資料集上平均。最佳結果以較深的藍色強調，次佳結果以較淺的藍色強調。
+
+[FIGURE_CAPTION] 表 S2：在 16 幀 ADT [ pan2023aria ] 序列上的效率比較。灰色列表示在密集追蹤設定下的記憶體不足（OOM）失敗。最佳和次佳結果已強調。
+
+測試時位姿精化。利用長期對應關係、預測點雲和初始位姿，我們的方法支援通過 Bundle Adjustment 進行測試時位姿精化。
+表 S2 評估了 Sintel [ butler2012naturalistic ] 資料集上的相機位姿精度，其中「Ours (FF.)」始終優於基於幾何和運動的方法 STV2。應用我們的最佳化策略（詳見補充第 E 節）進一步精化這些預測；此最佳化變體「Ours (FF.+Opt.)」以更低的計算成本達到比 MegaSaM [ li2024megasam ] 更高的精度。
+
+[FIGURE:compare.pdf.png] 圖 S2：場景流視覺化。變形的點圖（彩色）顯示我們的方法產生了在時間上更一致的幾何和運動。
+
+## 附錄 I 更多可視化結果
+
+為進一步展示我們框架的能力，我們提供了額外的定性結果，包括場景流估計、稠密首幀 2D 追蹤、稠密首幀 3D 追蹤、逐像素全幀追蹤以及世界中心稠密追蹤，如圖 S2、圖 S4、圖 S5、圖 S6 和圖 S7 所示。
+
+(1) 場景流可視化。我們首先呈現兩幀之間的配對場景流預測。場景流刻畫了每個點的 3D 運動，是理解動態幾何的重要線索。在我們的可視化中，變形點圖（著色）突顯了預測的逐點位移。與現有最先進方法 ZeroMSF [liang2025zero] 相比，我們的結果在空間過渡上更平滑，在幾何和運動的時間一致性上明顯更高。這表明我們的變形場能更有效地建模相干的 3D 動態，即使在複雜且快速變化的場景中也不例外。
+
+(2) 首幀稠密 2D 追蹤。第二組展示了錨定在首幀上的稠密 2D 對應關係。具有相同顏色的像素追蹤整個序列中同一點的演化，揭示了序列中長期且細粒度的運動模式。
+
+(3) 首幀稠密 3D 軌跡。我們進一步可視化了從首幀開始的重建 3D 軌跡。為了清晰性和渲染效率，我們均勻地對軌跡進行欠採樣，同時保留其整體運動結構和時間平滑性。
+
+(4) 全幀稠密逐像素軌跡。我們呈現了整個序列上的稠密逐像素軌跡（第二行），即使當新物體進入場景時，也能一致地追蹤運動，突出了我們方法在處理複雜動態場景時的魯棒性。
+
+(5) 世界坐標系中的稠密軌跡。最後，我們可視化了全幀稠密軌跡，在將其轉換到統一的全局世界坐標系後的結果。這種世界中心的表示有效地將攝機自我運動與物體動態解耦：靜態背景元素在時間上保持空間穩定性，而動態物體在 3D 空間中表現出相干且物理意義上有意義的絕對運動軌跡。
+
+如需更直觀的演示和連續運動效果，請參考補充視頻。
+
+## 附錄 J 與並行工作的討論
+
+MotionCrafter [ zhu2026motioncrafterdensegeometrymotion ] 是我們的並行工作，也探討幾何和運動的聯合重建。
+關鍵差異在於建模範式：MotionCrafter 探索擴散模型在聯合幾何–運動重建中的潛力，而我們的方法採用純粹基於 ViT 的前饋框架。
+MotionCrafter 主要專注於長序列運動建模，通過預測相鄰幀之間的運動（即 1\rightarrow 2、2\rightarrow 3、\ldots、N-1\rightarrow N）。
+相比之下，我們的方法更具靈活性，因為它支援按需任意配對運動預測，能夠實現跨非相鄰幀的一致 4D 推理。
+我們在表 S3 中比較了以世界為中心的幾何重建結果，並在圖 S3 中提供了定性場景流比較。
+
+[FIGURE_CAPTION] 表 S3：以世界為中心的幾何重建評估。
+
+[FIGURE:compare_motioncrafter.pdf.png] 圖 S3：場景流可視化。變形點圖（以純色顯示）表明我們的方法產生更高品質的幾何和運動。
+
+## 附錄 K 限制與未來工作
+
+儘管我們提議的方法很有效，但仍存在幾個限制。主要約束是對捕獲的 4D 運動資料集的依賴，這些資料集採集勞動密集且規模有限。因此，該模型可能難以泛化到訓練集中未出現的極端姿勢或複雜拓撲變化。
+未來，我們計畫探索合成資料生成管線，可能利用生成擴散模型或物理引擎來建立大規模和多樣化的訓練樣本。此外，我們的目標是研究無監督或半監督學習方案以減少對標籤資料的依賴，最終在可泛化的設置中推進 4D 重建的邊界。
+
+[FIGURE:vis2d.pdf.png] 圖 S4：首幀二維稠密追蹤的可視化。
+
+[FIGURE:vis3d.pdf.png] 圖 S5：首幀三維稠密追蹤的可視化。
+
+[FIGURE:vis3dall.pdf.png] 圖 S6：全幀稠密逐像素軌跡的可視化。
+
+[FIGURE:x5.png] 圖 S7：全球世界座標系中全幀稠密軌跡的可視化。
+
+## 參考文獻

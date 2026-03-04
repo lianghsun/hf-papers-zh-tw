@@ -1,0 +1,23 @@
+{
+  "domain": [
+    "NLP",
+    "Theory"
+  ],
+  "method": [
+    "Process Reward Model",
+    "Inference Algorithm",
+    "Resampling",
+    "Population-based Methods"
+  ],
+  "task": [
+    "Mathematical Reasoning",
+    "Scientific Problem Solving",
+    "Question Answering"
+  ],
+  "dataset": [
+    "AIME25",
+    "HMMT25",
+    "GPQA Diamond"
+  ],
+  "open_source": false
+}

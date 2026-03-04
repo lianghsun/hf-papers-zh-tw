@@ -1,0 +1,460 @@
+# PRISM：透過流程獎勵模型引導推論推進深度思考的前沿
+
+DeepThink 方法透過生成、精化和聚合候選解決方案的群體來改進推理，這使得在複雜的數學和科學任務上能夠實現強大的效能。然而，現有框架在推論過程中往往缺乏可靠的正確性訊號，這造成了群體增強瓶頸，其中更深層的推敲會放大錯誤、抑制正確的少數解決方案，並導致額外計算的回報較弱。在本論文中，我們介紹了 DeepThink 系統的函數分解，並提出 PRISM，一種流程獎勵模型（Process Reward Model, PRM）引導的推論演算法，它使用步驟級驗證來引導群體精化和解決方案聚合。在精化過程中，PRISM 將候選解決方案視為 PRM 定義的能量景觀中的粒子，並透過分數引導的重新採樣和隨機精化來重塑群體，這在保留多樣性的同時將機率質量集中在更高品質的推理上。在數學和科學基準測試中，PRISM 與現有的 DeepThink 方法相競爭或表現更優異，在 AIME25、HMMT25 和 GPQA Diamond 上分別使用 gpt-oss-20b 達到 90.0%、75.4% 和 71.4%，同時與 gpt-oss-120b 相匹配或超越其效能。此外，我們的分析表明 PRISM 在精化過程中產生一致的淨定向修正，當初始群體包含很少正確候選時仍保持可靠，並且通常位於計算-準確率帕雷托前沿上。
+
+[FIGURE:x7.png] 圖 1：AIME25、HMMT25 和 GPQA Diamond 上的準確率。PRISM 相對於最先進的 DeepThink 方法實現了相競爭或優越的效能，使 gpt-oss-20b 能夠與 gpt-oss-120b 相匹配或超越其效能（更多結果見表 5）。
+
+## 1 介紹
+
+大型語言模型（LLMs）的最近進展導致了 DeepThink 的出現，這是一種推理範式，它在產生最終答案之前分配額外的推理時間計算來同時探索和結合多個候選解決方案（Google, 2025, 2026）。DeepThink 系統在嚴格的推理基準測試中展示了最先進的性能，並在國際數學奧林匹克競賽（Luong and Lockhart, 2025）和國際大學生程式設計競賽（Lin and Cheng, 2025）等競賽中達到金牌標準。此外，這些系統越來越多地被用作數學和科學發現的研究合作者，其中它們支持知識檢索和嚴格驗證（Luong and Mirrokni, 2026）。
+
+儘管取得了成功，DeepThink 系統在機制層面上仍然被理解不足。大多數現有框架被呈現為整體管道，這使得很難將改進歸因於特定的設計選擇，診斷失效模式，或理解計算-性能權衡。這種框架表述也掩蓋了組件在擴展推理過程中如何相互作用，這限制了系統改進和跨方法的原則性比較。這種缺乏透明度是令人擔憂的，因為推理能力的增加並不會自動轉化為改進的安全性（Phan et al., 2025）。
+
+為了解決這一差距，我們引入了 DeepThink 框架的功能分類法，將現有方法分解為三個階段：群體創建，生成多樣的候選解決方案；群體增強（也稱為群體精化），迭代地精化和改進這些候選方案；以及解決方案聚合，選擇最終答案（見圖 2，頂部）。這種分解能夠跨方法進行系統性分析和對照比較。
+
+通過這個視角，我們識別了群體增強是改進準確度和效率的主要瓶頸。在評估基準測試中，我們觀察到簡單的並行採樣後跟隨多數投票表現得與幾個複雜的 DeepThink 系統相當競爭，這表明觀察到的性能中大部分來自初始群體多樣性和聚合，而不是迭代精化。
+
+我們的分類法進一步揭示了當前精化策略的關鍵限制。許多方法重複改寫或重做整個解決方案，而沒有穩定的品質信號。因此，增加精化深度（精化迭代次數）並不能可靠地改進群體品質，錯誤可能會在迭代中持續、傳播或放大。依賴於多數基礎增強的方法通過共識向最頻繁的解決方案引導候選方案，提供了部分指導但引入了互補的失效模式：不頻繁但邏輯上正確的推理軌跡被更頻繁但不正確的軌跡所抑制，我們將這種現象稱為多數稀釋。因此，當前系統通常無法充分利用其生成的群體，並展示出次優的計算-性能權衡。
+
+受這些發現的啟發，我們提出了 PRISM（**P**rocess reward model-guided **R**efinement, **I**teration, and **S**election **M**echanisms），一種推理演算法，它將明確的步驟級別正確性信號引入到群體精化和解決方案聚合中（圖 2，底部）。PRISM 使用 Process Reward Model (PRM) 基於其內部步驟評估推理軌跡，這提供了獨立於軌跡在群體中出現頻率的品質反饋。在精化過程中，PRISM 將候選解決方案視為由 PRM 分數定義的能量景觀中的粒子，並通過分數引導的重新採樣和隨機突變迭代地將機率質量集中在更高品質的推理上。這些馬可夫鏈蒙特卡羅（MCMC）風格的轉移在有前景的解決方案的開採和持續探索之間取得平衡，將精化從隨機改寫轉變為方向性錯誤修正。最終預測是通過選擇在推理步驟中具有最高聚合 PRM 分數的候選方案獲得的。
+
+在數學和科學推理基準測試中，PRISM 與最先進的 DeepThink 方法相當或優於它們，在 gpt-oss-20b 上在 AIME25、HMMT25 和 GPQA Diamond 上分別實現了 90.0%、75.4% 和 71.4%，同時匹配或超越了 gpt-oss-120b（Agarwal et al., 2025）。除了準確度外，我們的分析表明 PRISM 緩解了先前 DeepThink 方法的關鍵失效模式。特別是，PRISM 在精化過程中產生了淨方向性修正，表現出強烈的正 NetFlip，這表示不正確的解決方案被修正的頻率比正確的解決方案被降低的頻率更高。在低正確性機制中，其中初始群體包含很少的有效解決方案，PRISM 避免了抑制正確的少數軌跡，而是通過過濾有害更新和放大有前景的部分推理從弱群體進行自舉。最後，PRISM 通常位於或接近固定預算下的計算-準確度帕累托邊界，這表明額外的推理時間計算有效地轉化為改進的正確性。
+
+總結一下，我們的主要貢獻是：
+
+- • **DeepThink 系統的功能分類法**：我們將現有框架分解為群體創建、增強和聚合，這揭示了它們的內部機制並識別了群體增強作為改進準確度和計算效率的主要瓶頸。
+- • **新方法**：我們提出了 PRISM，一種 PRM 引導的推理演算法，它使用步驟級別的正確性信號將迭代精化轉變為方向性錯誤修正，並為最終解決方案聚合提供信息。
+- • **改進的性能、魯棒性和擴展行為**：我們展示了在嚴格的學術基準測試中，PRISM 與最先進的 DeepThink 方法相當或優於它們，在精化過程中產生一致的淨方向性修正，在低正確性機制中保持可靠，並通常位於計算-準確度帕累托邊界上。
+
+DeepThink 系統的功能分類法：我們將現有框架分解為群體創建、增強和聚合，這揭示了它們的內部機制並識別了群體增強作為改進準確度和計算效率的主要瓶頸。
+
+新方法：我們提出了 PRISM，一種 PRM 引導的推理演算法，它使用步驟級別的正確性信號將迭代精化轉變為方向性錯誤修正，並為最終解決方案聚合提供信息。
+
+改進的性能、魯棒性和擴展行為：我們展示了在嚴格的學術基準測試中，PRISM 與最先進的 DeepThink 方法相當或優於它們，在精化過程中產生一致的淨方向性修正，在低正確性機制中保持可靠，並通常位於計算-準確度帕累托邊界上。
+
+總的來說，我們希望我們的工作能夠激發對可擴展和可靠的推理時間推理進行更多原則性研究。
+
+## 2 解析 DeepThink 框架
+
+[FIGURE:x8.png] 圖 2：DeepThink 系統的功能分類法（頂部）與 PRISM 概述（底部）。頂部面板將 DeepThink 分解為群體創建、群體增強和解決方案聚合。底部面板展示了 PRISM 的精化機制，該機制使用 Process Reward Model（PRM）定義的分數來指導能量型群體框架內的重新採樣和隨機精化。
+
+在本節中，我們介紹了 DeepThink 框架向群體創建、增強和聚合的功能分解。通過這個視角，我們識別出群體精化的瓶頸，並呈現實證觀察結果，這些觀察動機了我們在第 3 節中介紹的方法。
+
+### 2.1 DeepThink 框架的功能分類
+
+我們將 DeepThink 框架分解為三個階段：母群體創建（生成候選解）、母群體增強（迭代精煉候選解）和解決方案聚合（合成答案）。每個框架都可以理解為透過不同的設計選擇來實例化這些階段。這種分解方法隔離了每個階段在塑造推理品質中的角色，並使能對額外計算如何轉化為正確性的機制分析。
+
+#### 母群體創建：
+
+此階段生成初始的、多樣化的候選推理軌跡集合。最常見的方法是透過隨機解碼（例如溫度或 nucleus sampling (Holtzman et al., 2020)）獨立地生成多個候選解，如 Wang et al. (2023) 所示；我們將此策略稱為 Sample-N。另一種方法是單次傳遞多候選生成，其中模型在一次生成中產生多個解決方案，有時附帶相關的合理性信號（例如，語言化採樣 (Zhang et al., 2025)）。母群體創建主要促進多樣性而非正確性：它增加至少存在一條正確軌跡的概率，但不會將概率質量集中在正確的解上。因此，下游性能在關鍵程度上取決於後續階段識別和放大高品質候選解的有效性。
+
+#### 母群體增強：
+
+此階段操作初始生成的候選母群體，並迭代精煉候選解，目標是增加正確推理軌跡的密度，同時保留有用的多樣性 (Choi et al., 2025)。現有方法分為幾個廣泛的類別，包括評論家引導精煉，其使用評論家獨立地驗證和修訂每個候選解 (Chai et al., 2025)；多智能體互動，其中智能體迭代地相互挑戰並更新彼此的推理 (Wang et al., 2025)；共識驅動更新，其將候選解引向母群體中的多數信念 (Choi et al., 2025)；以及聚合基礎精煉，其遞歸地重組候選解以產生改進的解 (Venkatraman et al., 2025)。儘管機制不同，這些方法共享一個共同的目標：在精煉深度上改進母群體品質。
+
+然而，在實踐中，母群體增強通常是最不可靠的階段。精煉可能會傳播早期錯誤、抑制正確的少數軌跡，或漂移向頻繁但不正確的推理模式。因此，母群體品質往往會振盪或退化，而不是隨著額外精煉而單調改進，這造成了一個母群體增強瓶頸。
+
+#### 解決方案聚合：
+
+此階段將最終候選母群體轉換為單一預測。最常見的機制選擇候選解中最頻繁的答案（多數投票）。更具表達力的策略使用基於模型的聚合，其中 LLM 透過對整個母群體進行條件設定來合成最終答案（LLM 聚合）。然而，聚合隱含地假設母群體增強已產生足夠高品質的候選集合。當此假設失敗時，聚合可能會放大噪聲而非糾正它，這進一步突顯了母群體增強在決定整體性能中的角色。在本工作中，我們另外探索了 PRM 引導的正確性感知聚合（PRM-score 投票），其選擇具有最高聚合 PRM 分數的候選解。
+
+### 2.2 實證動機：種群細化瓶頸
+
+DeepThink 框架隱含地依賴於單調細化假設：額外的細化迭代應該逐步改進種群品質，並轉化為更高的最終準確性。在種群建立固定而只有增強和聚合變化的受控條件下，我們發現這一假設經常不成立。
+
+首先，多樣性與簡單聚合已經是一個強基線。並行採樣後跟隨多數投票通常以低計算量實現競爭性能，而幾個細化密集的框架儘管 Token 使用量明顯更高，卻只能產生邊際收益。其次，增加細化深度不能可靠地改進種群品質。在各種設置中，正確候選者的比例通常會振盪，並可能在連續的細化迭代中降低，這表明細化更新常常表現為隨機擾動而非方向性改進。最後，聚合性能關鍵地取決於種群增強的輸出。當候選種群存在噪聲時，聚合機制可能會強化或將不正確的多數合理化，而不是過濾它們（詳見第 5.2 節）。
+
+綜合來看，這些發現揭示了一個種群細化瓶頸。沒有正確性敏感信號，細化更新可能會保留、傳播或放大誤差，這限制了額外推理時計算的收益，並阻止系統充分利用其候選種群。克服這一瓶頸需要推理機制納入明確的正確性信號，以指導種群細化和聚合。
+
+## 3 PRISM：PRM 引導的精煉、迭代與選擇機制
+
+我們提出 PRISM，一個 Process Reward Model（PRM）引導的推論演算法，透過將明確的步驟級別正確性訊號注入精煉動態和最終選擇中，解決群體精煉瓶頸。
+
+在精煉過程中，PRISM 將候選推理跡跡視為一個在 PRM 定義的能量景觀下演化的群體，其中更高品質的推理對應更低的能量。直觀地說，精煉過程逐漸將概率質量重新配置到低能量區域，同時保持受控探索。每次精煉迭代執行三個操作：評分、重新取樣和隨機精煉。首先，PRISM 使用 PRM 步驟級別回饋評估每個候選項，並將評分轉換為溫度控制的重要性權重。其次，它監測群體多樣性，當概率質量崩潰到候選項的小子集時進行重新取樣（多樣性較低）。第三，它提出隨機精煉，這些精煉根據 PRM 評分以概率方式被接受，這使得定向性錯誤修正得以進行，同時避免確定性覆蓋。演算法 1 總結了該程序。
+
+[FIGURE_CAPTION] 演算法 1：PRM 引導的重新取樣和知情隨機變異。
+
+#### 評分：
+
+令 $V$ 表示 PRM，$\tau$ 表示從產生器 $G$ 取樣的候選推理跡跡。評分前，我們確定性地將 $\tau$ 強制轉換為明確的逐步表示$^{1}$，$^{1}$ 正規化器首先解析現有的 <step> 區塊，如果未找到任何區塊，則按空行分割並將每個區段包裝在 <step> 標籤中。，即 $\tau\leftarrow{\small\textsc{StepwiseNormalize}}(\tau)$。PRM 隨後生成步驟級別回饋 $\text{fb}=V(\tau)$，我們使用確定性規則 $\textsc{Score}(\cdot)$ 將其映射到純量一致性評分 $s(\tau)\in[0,1]$（詳見附錄 A.3），其中更高的值表示更強的內部一致性。我們隨後將此評分轉換為非正規化的重要性權重
+
+| | $w(\tau)\propto s(\tau)^{1/T_{\text{smc}}}$, | | (1) |
+| --- | --- | --- | --- |
+
+其中 $T_{\text{smc}}$ 控制探索-利用權衡（smc 代表 Sequential Monte Carlo）。較低的溫度將概率質量集中在高評分的候選項上，而較高的溫度保持多樣性。此加權定義了推理軌跡上的隱含能量景觀，對應於能量為 $E(\tau)=-log(s_{\tau})$ 的 Boltzmann（Gibbs）分佈。
+
+#### 透過重新取樣的群體管理：
+
+重要性加權可以將概率質量集中在少數候選項上，我們透過計算有效樣本大小（ESS）來量化此情況
+
+| | $\mathrm{ESS}=\frac{\left(\sum_{i}w_{i}\right)^{2}}{\sum_{i}w_{i}^{2}}$. | | (2) |
+| --- | --- | --- | --- |
+
+如果 $\mathrm{ESS}$ 低於閾值（例如 $\alpha N$）$^{2}$，$^{2}$ ESS 的範圍從 1 到群體大小 $N$。高 ESS 表示相對均勻的權重和保持的多樣性，而低 ESS 表示崩潰，其中少數軌跡主導了群體。，我們進行重新取樣：高權重候選項被複製，低權重候選項被丟棄。重新取樣將計算重新配置到有前景的軌跡，同時維持群體級別的穩定性。
+
+#### 隨機精煉（Metropolis-Hastings 風格的復甦）：
+
+重新取樣重新分配概率質量但不引入新的推理方向。為了啟用修正和探索，PRISM 對每個候選項應用隨機精煉移動。
+
+給定當前跡跡 $\tau$，迭代器模型 $I$ 使用 PRM 回饋提出精煉的跡跡。大多數提案對當前推理進行局部精煉，而小部分（由超參數 $\eta$ 控制）引入替代推理方向以維持探索（詳見附錄 B.1）。定義接受比率
+
+| | $r_{w}=\frac{w(\tau^{\prime})}{w(\tau)}=\left(\frac{s(\tau^{\prime})}{s(\tau)}\right)^{1/T_{\text{smc}}}$, | | (3) |
+| --- | --- | --- | --- |
+
+提案以概率 $A(\tau\rightarrow\tau^{\prime})=\min(1,r_{w})$ 被接受，這偏好 PRM 評分的增加，同時仍然偶爾接受評分下降的移動，幫助精煉過程逃脫局部模式。這將精煉轉變為評分引導的局部搜尋，而非獨立重寫。$^{3}$，$^{3}$ 因為提案運算子 $I$ 是一個具有難以計算提案密度的 LLM，我們使用 Metropolis 啟發的基於能量的接受濾波器（透過權重比率）而非聲稱精確的 Metropolis–Hastings 修正。
+
+#### 實務安全措施：
+
+我們納入兩個穩定器以防止病理群體動態：（i）衝突仲裁透過使用比較模型和將衝突候選項限制到最小評分 $c$ 來解決不同答案獲得類似高 PRM 評分的情況（詳見附錄 C.1）；以及（ii）複製上限限制在重新取樣期間可被重複跡跡佔據的群體比例 $k$，這防止病理性崩潰並使行為對群體大小保持不變。
+
+#### PRM 引導的解決方案聚合：
+
+在精煉後，PRISM 使用 PRM 評分投票將最終候選群體 $P^{(T)}=\{\tau_{i}\}_{i=1}^{N}$ 轉換為單一預測。對於每個唯一提取的答案 $a$，我們聚合其 PRM 評分
+
+| | $S(a)=\sum_{i:Ans({\tau_{i}})=a}s(\tau_{i})$, | | (4) |
+| --- | --- | --- | --- |
+
+其中 $Ans({\tau_{i}})$ 表示從軌跡 $\tau_{i}$ 提取的答案。最終預測則為 $\hat{a}=\arg\max_{a}S(a)$。此聚合偏好由更高品質推理支持的答案，而非單純的頻率。
+
+## 4 實驗設置
+
+確立了 PRISM 方法後，我們現在評估其作為端到端推論演算法的有效性。我們的目標是測量不同的 DeepThink 方法如何將額外的計算轉化為準確度。為了實現受控的比較，所有方法共享相同的推論配置，包括相同的骨幹模型、群體寬度、精化深度和初始化。令牌使用量可能因方法而異，並會明確報告。我們使用 Sample-N 固定群體建立，以便所有方法在相同的初始候選上運作。對於解決方案聚合，我們為所有方法報告多數投票和基於 LLM 的聚合，而 PRISM 額外支援 PRM 分數投票作為其推論過程的一部分。下文詳述基線、基準、模型、推論協議和評估指標。
+
+### 4.1 基線
+
+我們將 PRISM 與一組多樣化的代表性方法進行比較，這些方法在如何跨候選解決方案分配計算方面有所不同。
+
+#### 簡單投票（無精化）：
+
+最終答案通過對初始候選群體的多數投票或 PRM 分數投票來選擇，無需迭代精化。
+
+#### SciMaster（Chai et al. , 2025）：
+
+每個候選推理軌跡在每次迭代時都被獨立批評和重寫。此方法專注於局部錯誤修正，但重寫整個解決方案而無明確的正確性信號。
+
+#### Agentic Debate（Wang et al. , 2025）：
+
+一個多代理框架，其中每個候選使用來自群體中其他候選的信息來修訂自己，實現點對點信息流。這種協作精化可以改善共識，但可能加強共享的錯誤。
+
+#### MAD Conformist（Choi et al. , 2025）：
+
+一個多數驅動框架，將群體錨定到目前的多數答案。與多數相符的候選被保留，而不符合的候選被選擇性地精化以達成共識。
+
+#### MAD Follower（Choi et al. , 2025）：
+
+一個多數驅動變體，在精化前將群體的一部分替換為明確採用多數解決方案的候選。這更積極地將群體朝向一致性推進。
+
+#### 遞迴自聚合（Venkatraman et al. , 2025）：
+
+一個聚合驅動的框架，重複將候選解決方案的子集合成為新的聚合解決方案，然後重新引入到群體中。
+
+### 4.2 評估基準
+
+我們在三個推理基準上進行評估：來自 MathArena（Balunovic et al. , 2025）的 AIME25 和 HMMT25，以及 GPQA Diamond（Rein et al. , 2024）。由於 DeepThink 推論是計算密集型的，我們將 GPQA Diamond 限制在前 120 個範例，以保持評估的可行性。AIME25 和 HMMT25 被完整評估。
+
+### 4.3 模型
+
+我們在兩個模型族系中評估九個生成模型。我們使用 gpt-oss-20b 作為 PRISM 和其他 DeepThink 方法的主要骨幹，而 gpt-oss-120b 主要作為一個強大的零次提示基準。我們還對 Qwen3 家族進行實驗（Yang et al. , 2025）,包括 Qwen-1.7B、Qwen-4B、Qwen-14B 和 Qwen-30B-A3B（混合預訓練+後訓練變體）。我們進一步評估了三個額外的 Qwen-4B 變體（Base、Instruct 和 Thinking），以檢視 PRISM 如何與訓練目標和推理專精度不同的模型互動。
+
+除非另有說明，生成器 $G$ 、驗證器 $V$ 、迭代器 $I$ 和比較器 $C$ 模型均從同一骨幹模型實例化（附錄 A、B、C 包含提示詞）。一個例外是我們的跨生成器-驗證器縮放實驗（第 5.3 節），其中允許驗證器與生成器在大小上有所不同，以研究驗證器強度的影響。對於需要 DeepThink 多樣化回應的生成器和迭代器，我們使用隨機解碼，溫度 $= 0.8$ 和 $top\_p = 0.9$。對於驗證器和比較器，我們始終使用確定性解碼（溫度 $= 0$）。
+
+### 4.4 推論協議
+
+對於每個問題，我們從生成器中採樣以初始化 $N = 10$ 個候選推理跡象的母群。這些跡象形成所有方法的共享起點。每個方法然後在相同的推論配置下執行 $T = 5$ 個細化迭代，同時保持固定寬度的母群。對於 PRISM，我們使用溫度 $T_{\text{smc}} = 0.8$、ESS 閾值 $\alpha = 0.5$、雜訊 $\eta = 0.1$、夾緊 $c = 0.3$、複製上限 $\kappa = 0.3$。所有基準方法都在我們的程式碼庫中實現以保持一致性，盡可能嚴格遵循其官方源程式碼和配置詳情（如有）。gpt-oss 模型使用中等推理努力設置，而 Qwen 模型預設受限於 32K 令牌上下文窗口。
+
+### 4.5 評估指標
+
+除了最終準確度外，我們使用母體層級和計算感知指標來評估推論行為。
+
+#### 母體準確度：
+
+在每個精化深度 $t$ 處，每個候選 $\tau^{(t)}_{q,i}$ 產生一個提取的答案 $Ans(\tau^{(t)}_{q,i})$。我們測量正確候選的比例：
+
+|  | $\mathrm{PopAcc}(t)=\mathbb{E}_{q\sim\mathcal{D}}\left[\frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{Ans(\tau^{(t)}_{q,i})=y_{q}\}\right]$ |  | (5) |
+| --- | --- | --- | --- |
+
+這反映精化是否增加了正確候選的密度。
+
+#### NetFlip：
+
+為了將真正的修正與「隨機遊走」重寫區分開來，我們測量連續精化步驟之間的方向性正確性變化。令 $I2C(t)$ 為不正確 $\rightarrow$ 正確的轉移數量，$C2I(t)$ 為從步驟 $t-1$ 到 $t$ 的正確 $\rightarrow$ 不正確轉移數量。我們定義
+
+|  | $\mathrm{NetFlip}=\sum_{t\in T}\left(I2C(t)-C2I(t)\right)$ |  | (6) |
+| --- | --- | --- | --- |
+
+正值表示淨誤差修正，而負值表示淨退化。
+
+#### 計算：
+
+我們將計算報告為推論期間所有模型呼叫的總 token 使用量（包括生成、驗證和比較），並分析不同方法之間的準確度–計算權衡。我們也在固定定價假設下報告估計成本以進行相對比較（見表 5）。
+
+## 5 結果與討論
+
+[FIGURE_CAPTION] 表 1：在數學和科學基準上，PRISM 與強大的 DeepThink 基線相比具有競爭力或表現更優，同時保持可比的計算量。5 5 5 估計成本是根據所有資料集的總 token 使用量計算，假設輸入/輸出比例為 60/40。輸入和輸出 token 的價格分別為每百萬 token $0.05 和 $0.20（https://www.together.ai/）。顯示的數值用於相對比較，因為絕對成本取決於提供商和輸入/輸出比例。有關我們在 Qwen3 上的實驗，請參見 5.3 節。
+
+[FIGURE:x9.png] 圖 3：GPQA Diamond 上的計算–精度權衡（Pareto 視圖）。每個點代表一個方法配置（增強 + 聚合）。連接的前沿標記 Pareto 最優配置。大多數精化密集型方法花費大量 token 卻獲得邊際或不穩定的收益，而 PRISM 保持在最佳精度-計算權衡之列。
+
+[FIGURE:x10.png] 圖 4：GPQA Diamond 上的群體質量 vs. 精化深度。非 PRM 型方法通常會隨著深度增加而震盪或性能下降，而 PRISM 展現出穩定的向上群體動態。
+
+[FIGURE:x11.png] 圖 5：GPQA Diamond 上跨增強深度的方向校正。條形圖顯示在深度上聚合的 NetFlip，並在各題目上平均。正值表示不正確 $\rightarrow$ 正確的轉移多於正確 $\rightarrow$ 不正確的轉移，反映真實校正而非「隨機遊走」重新洗牌。
+
+[FIGURE:x12.png] 圖 6：以初始群體質量為條件的 GPQA 性能。每列按初始候選池中出現的正確解數量對問題進行分組，每個單元報告精化和多數投票後的最終精度。雖然大多數方法在開始時正確候選較少時表現不佳，但 PRISM 在這些低正確率情況下保持明顯更高的精度，顯示對弱初始群體的更強韌性。
+
+我們在受控設定下評估 PRISM 的有效性，並分析它如何將推理時計算轉化為推理性能。我們與最先進的 DeepThink 基線進行比較，檢查計算–精度權衡，並研究精化動態和魯棒性。在推理基準上，PRISM 持續改進了相對於輕量級和精化密集型基線的最終精度，使 20B 模型能夠匹配或超過 120B 零樣本基線。PRISM 也能高效地將額外計算轉化為收益，經常位於計算-精度 Pareto 前沿上，而幾個精化密集型方法無法超越簡單多數投票。最後，PRISM 展現出穩定的向上群體動態，產生一致的方向誤差校正，改進了在弱或噪雜初始群體下的魯棒性，並產生更可靠的聚合。我們將在下文詳細說明這些發現。
+
+### 5.1 準確度和計算效率
+
+#### PRISM 在保持計算-準確度 Pareto 前沿的同時，持續改進最終準確度：
+
+表 5 報告了在匹配推論配置下各方法的最終準確度。在所有資料集上，PRISM 與強大的 DeepThink 基準相比具有競爭力或超越之，同時保持可比較的計算成本。
+
+在 AIME25 上，PRISM 搭配 PRM -score voting 達到 90.0%，超越遞迴自聚合（87.8%）和 Agentic Debate（85.6%）。在 HMMT 上，PRISM 達到 75.4%，與辯論型和聚合密集型方法保持競爭力。在 GPQA Diamond 上，PRISM 達到 71.4%，改進了遞迴自聚合（68.6%）和所有多數投票方法。值得注意的是，PRISM 使 gpt-oss-20B 能夠匹配或超越 gpt-oss-120B，這表明改進的推論可以取代更大的模型規模。
+
+圖 3 呈現了 GPQA 上的計算-準確度前沿。許多精化密集型基準位於 Pareto 區域內，花費實質上更多的 token 卻獲得邊際或不一致的收益，而 PRISM 持續位於前沿上或接近前沿，表示計算向準確度的更有效轉換。
+
+一個關鍵觀察是多數投票已經是一個強大的基準，在 GPQA 上達到 65.8%。儘管有更高的 token 使用量，幾個精化密集型方法仍未能超越它，這表明在沒有正確性信號的情況下進行迭代改寫經常在不可靠地改進答案的情況下改變答案。PRISM 通過步驟層級驗證避免了這種低效，該驗證引導精化朝向更高品質的推理。
+
+### 5.2 診斷細化動態
+
+我們接著分析群體級別的動態，以理解為什麼額外的細化計算往往無法轉化為正確性。
+
+#### PRISM 使細化具有方向性的糾正：
+
+圖 4 顯示了群體精度作為細化深度的函數。在大多數非 PRM 型方法中，群體品質會振盪或降低，而不是單調改進，這表明細化更新的行為在很大程度上表現為隨機擾動而非方向性改進。相比之下，PRISM 展現出穩定向上的群體動態，這表明 PRM 導引的接受篩選抑制了有害更新並保留了正確軌跡。
+
+為了評估細化是否糾正的錯誤多於引入的錯誤，我們測量 NetFlip。在 GPQA Diamond 上，大多數基準線表現出小的正淨翻轉，這表明方向性糾正有限（圖 5）。在許多情況下，正確軌跡被降低的頻率幾乎與不正確軌跡被修復的頻率相同。相比之下，PRISM 產生了實質上更大的正淨翻轉值，這表明細化更一致地與正確性對齐。
+
+#### PRISM 保留正確的少數解決方案，並在低正確性體制中保持穩健：
+
+為了檢查不同方法在初始群體品質變化下的行為，我們根據細化前初始群體中存在的正確候選者數量對實例進行分組，並使用所有方法的多數投票報告每組內的最終精度。我們在圖 6 的 GPQA Diamond 上視覺化了我們的結果。
+
+多數驅動細化（例如 MAD Conformist/Follower）通過將候選者錨定在頻繁的解決方案來穩定群體。然而，這引入了一個結構性故障模式，其中正確的少數軌跡被更頻繁但不正確的推理所抑制。當初始多數是錯誤的時，共識型動態會將群體推向一個自信但不正確的答案。這種效應在低正確性體制中最為明顯，在這些體制中，一旦不正確的推理變為主導，這些方法很少能夠恢復。
+
+相比之下，PRISM 在低正確性區間中的降低程度實質上要少得多。即使初始群體包含很少的正確候選者，PRISM 也能達到比競爭方法明顯更高的最終精度。這表明 PRISM 可以從弱群體「自舉」而不是簡單地放大主導軌跡。這種行為與 PRISM 的細化機制一致。由於更新由步級正確性信號而非頻率導引，有希望的少數軌跡不太可能被覆蓋。因此，PRISM 避免了多數稀釋，並在正確推理最初罕見時保持恢復能力。
+
+#### 方向性細化使聚合更可靠：
+
+聚合品質取決於精化的群體。對於大多數基準線，從多數投票切換到 LLM 聚合往往會降低精度，這表明聚合器可以對群體嘈雜時的自信但不正確的跡象進行合理化（見表 5）。相比之下，PRISM 在 LLM 聚合下保持穩定的性能，表明方向性細化產生更準確且內部一致的群體。PRM 分數投票在正確答案罕見時進一步減輕多數稀釋（例如在 AIME 上），而在細化已經將正確軌跡推向多數時幾乎沒有影響（例如在 GPQA 上）。
+
+#### PRISM 中的方向性細化和群體穩定化：
+
+我們現在檢查 PRISM 的內部細化動態。在每個迭代 $t$ 處，PRISM 向候選軌跡分配基於 PRM 的權重，並在權重集中變得嚴重時觸發重新採樣，由規範化的 $ESS/N$ 追蹤（更高表示更大的群體多樣性，即權重分佈更均勻）。如表 2 所示，早期細化表現出強的權重集中（$ESS/N \approx 0.24-0.33$），這觸發了頻繁的重新採樣（50.3%–79.5%）。在 $t=4$ 時，$ESS/N$ 上升到 0.81-0.88，重新採樣下降到 3.3%–8.5%，表明候選池的穩定化。如果沒有克隆上限，單個軌跡往往會超過群體的 30% 份額（$P(max>0.3)$），完全接管（$P(max=1)$）會非平凡地發生。克隆上限防止了這種崩潰並保留了可靠聚合和恢復所需的多樣性。
+
+[FIGURE_CAPTION] 表 2：重新採樣動態。$t=0$ 是初始化；$t=4$ 是四個細化步驟後。$ESS/N \in [0,1]$ 測量權重集中度（更高表示權重分佈更均勻）。重新採樣率是觸發重新採樣的迭代分數。無克隆上限的主導率 (%) 報告單個候選者超過下一代的 30%（$P(max>0.3)$）的概率和完全接管（$P(max=1)$）的概率。
+
+[FIGURE_CAPTION] 表 3：提案接受動態。$r$ 是提案與當前軌跡之間的 PRM 分數比率。$P(accept|r_{s}<1)$ 報告下坡接受率（被接受的低分提案的百分比）。$\mathbb{E}[s(\tau^{\prime})|\text{accepted}]$ 和 $\mathbb{E}[s(\tau^{\prime})|\text{rejected}]$ 分別表示被接受或拒絕時提案軌跡的平均 PRM 分數。值是跨運行的平均值，括號中為最小-最大值。
+
+重新採樣後，PRISM 向候選解決方案提出隨機更新，並根據分數比率 $r_s$ 接受或拒絕每個提案。表 3 顯示被接受的提案一致地收到比拒絕的提案更高的 PRM 分數，分數遞減提案（下坡移動）仍以非零概率（0.101-0.179）被接受，這保留了探索。被接受的提案數與 AIME 和 GPQA 上群體正確性改進正相關（$r=0.152$ 和 0.172），而在 HMMT 上保持較弱（$r=0.023$），表明 PRM 提供了有用但不完美的局部信號，同時 PRM 的接受規則仍通過偶爾的低分更新保持探索。
+
+### 5.3 Qwen3 模型族的實驗
+
+#### PRISM 在模型間具有泛化性並受益於更強的驗證器：
+
+在 AIME、HMMT 和 GPQA 上，PRISM 相比零樣本基線持續改進，在較小型模型上觀察到最大的收益（附錄 D 中的圖 15 – 17）。儘管 PRISM 會增加推論時間的計算量，但在 Qwen3 下仍然在準確度–計算 Pareto 邊界上具有競爭力（圖 18 – 20），這表明改進來自於更有效的計算分配，而非僅來自於增加的令牌使用量。我們進一步透過配對不同大小的 Qwen3 生成器和驗證器來探討驗證器強度的作用。圖 21 顯示當驗證器強於生成器時，PRISM 獲得最大的收益（例如，1.7B 生成器配合 14B 或 30B 驗證器）。最後，為了評估跨模型變體的魯棒性，我們將 PRISM 應用於 Qwen-4B Base、Instruct 和 Thinking。在各個數據集中，PRISM 對較弱的變體（例如 base）產生更大的收益，並實質性地縮小與更強模型（例如 thinking）的差距。
+
+## 6 相關工作
+
+#### 測試時縮放和 DeepThink 框架：
+
+越來越多的研究探討額外的推理時計算如何與預訓練計算進行權衡，以改進推理性能。廣泛而言，這些方法沿著兩個軸向縮放推理。**序列縮放**迭代地生成解決方案嘗試，其中後續嘗試以早期嘗試為條件，使得模型擴展和細化其推理（Snell et al., 2025；Muennighoff et al., 2025）。例如，Muennighoff et al.（2025）依賴預算強制，該方法人為地截斷或延伸推理鏈以控制計算分配。相比之下，**並行縮放**同時生成多個解決方案嘗試並在其中進行選擇，例如，透過使用多數投票或 Best-of-N 策略（Snell et al., 2025；Brown et al., 2025）。混合方法將序列推理與並行探索相結合，其中包括基於樹的推理方法，例如 Monte Carlo Tree Search（Zhang et al., 2023；Zhou et al., 2024）和引導式束搜尋（Xie et al., 2023），以及結合過程級獎勵以指導序列搜尋的方法（Wu et al., 2025）。
+
+我們的工作位於新興的 DeepThink 框架類別中，該框架透過協同地細化和組合相互依賴的推理路徑，而不是將候選視為獨立樣本，來擴展並行範式（Google, 2025, 2026；Fu et al., 2026；Dong et al., 2026）。SciMaster（Chai et al., 2025）和 Recursive Self-Aggregation（Venkatraman et al., 2025）等方法依賴迭代細化和結構化聚合，以逐步改進候選解決方案。相比之下，Agentic Debate（Wang et al., 2025）和 MAD Conformist/Follower（Choi et al., 2025）等方法強調代理互動和多數驅動共識，以協調跨候選的推理。在本工作中，我們引入了 DeepThink 的函數分類法，將現有框架分解為種群創建、增強和聚合，並識別了限制精確度和計算效率的細化瓶頸。PRISM 透過將步級正確性信號直接整合到推理中來解決此瓶頸，這使得定向種群更新成為可能，而不是隨機重寫或純粹基於多數的選擇。
+
+#### 過程獎勵模型化：
+
+過程獎勵模型（PRM）在中間推理步驟上提供步級監督，而不僅限於最終答案（Lightman et al., 2024）。先前的工作主要將 PRM 輸出用作評估信號，用於排名、過濾或強化學習，其中它們對完成的軌跡進行評分並引導訓練或選擇（Wang et al., 2024；Wu et al., 2025）。相比之下，PRISM 將 PRM 分數解釋為定義推理軌跡上隱含能量景觀的信號。這些分數透過重新採樣和隨機細化來塑造種群動力學，將步級正確性信號轉換為定向推理更新，使種群朝向更低能量、更高品質的區域移動。透過將 PRM 分數直接嵌入到細化中，PRISM 將評估轉換為結構化的種群最適化。
+
+## 7 Conclusion
+
+We introduced a functional taxonomy of DeepThink systems and identified population enhancement as the key bottleneck that limits the effective use of inference-time compute. To address this limitation, we proposed PRISM , a Process Reward Model ( PRM )-guided inference algorithm that embeds step-level correctness signals directly into refinement and aggregation. By interpreting PRM scores as defining an implicit energy landscape over reasoning trajectories, PRISM converts iterative refinement from stochastic rewriting into directional population optimization. Across mathematical and scientific benchmarks, PRISM consistently improves accuracy, produces stable directional correction, remains robust in low-correctness regimes, and frequently lies on the compute-accuracy Pareto frontier. These results indicate that reliable step-level verification is a key ingredient for scalable inference-time reasoning. More broadly, our findings highlight the importance of correctness-sensitive refinement mechanisms for building principled, efficient, and robust DeepThink systems.
+
+## 8 Limitations
+
+Our conclusions should be viewed in light of several design choices that constrain the scope of this study.
+
+#### PRM instantiation:
+
+PRISM depends on a step-level scalar signal to shape refinement and aggregation. In our experiments, the PRM is instantiated as a prompted model derived from the same base LLM and executed deterministically. This setup allows us to isolate the effect of PRM -guided population dynamics in a controlled setting, but it represents only one possible realization of the framework. In domains where stronger or externally grounded feedback is available, such as executable tests or formal verification tools, the scoring signal could be substantially more reliable. Therefore, our results demonstrate the effectiveness of integrating step-level signals into inference, but they do not fully characterize performance under richer reward sources.
+
+#### Step segmentation:
+
+PRISM assumes that reasoning can be decomposed into meaningful steps. When segmentation does not align with coherent logical units, step-level scoring may be less informative, which weakens refinement guidance. Improved segmentation or more structured reasoning representations could further enhance the effectiveness of step-level signals.
+
+## 參考文獻
+
+- S. Agarwal, L. Ahmad, J. Ai, S. Altman, A. Applebaum, E. Arbus, R. K. Arora, Y. Bai, B. Baker, H. Bao, et al. (2025) Gpt-oss-120b & gpt-oss-20b 模型卡 . arXiv preprint arXiv:2508.10925 . External Links: Link Cited by: §1 .
+- M. Balunovic, J. Dekoninck, I. Petrov, N. Jovanović, and M. Vechev (2025) MathArena：在未受汙染的數學競賽上評估 LLMs . In The Thirty-ninth Annual Conference on Neural Information Processing Systems Datasets and Benchmarks Track , External Links: Link Cited by: §4.2 .
+- B. Brown, J. Juravsky, R. S. Ehrlich, R. Clark, Q. V. Le, C. Re, and A. Mirhoseini (2025) Large language monkeys：透過重複採樣來擴展推理計算 . External Links: Link Cited by: §6 .
+- J. Chai, S. Tang, R. Ye, Y. Du, X. Zhu, M. Zhou, Y. Wang, Y. Zhang, L. Zhang, S. Chen, et al. (2025) SciMaster：邁向通用科學 AI 代理，第一部分。X-Master 作為基礎：我們能否在人類最後的考試中領先？. arXiv preprint arXiv:2507.05241 . External Links: Link Cited by: §2.1 , §4.1 , §6 .
+- H. K. Choi, J. Zhu, and S. Li (2025) 辯論或投票：多代理大型語言模型中哪一種能產生更好的決策？. In The Thirty-ninth Annual Conference on Neural Information Processing Systems , External Links: Link Cited by: §2.1 , §4.1 , §4.1 , §6 .
+- H. Dong, D. Brandfonbrener, E. Helenowski, Y. He, M. Kumar, H. Fang, Y. Chi, and K. A. Sankararaman (2026) 具有相互依存生成的廣義平行擴展 . In The Fourteenth International Conference on Learning Representations , External Links: Link Cited by: §6 .
+- Y. Fu, X. Wang, H. Zhang, Y. Tian, and J. Zhao (2026) 深度思考與信心 . In The Fourteenth International Conference on Learning Representations , External Links: Link Cited by: §6 .
+- Google (2025) 在 Gemini 應用中試試深度思考 . External Links: Link Cited by: §1 , §6 .
+- Google (2026) Gemini 3 深度思考：推進科學、研究和工程 . External Links: Link Cited by: §1 , §6 .
+- A. Holtzman, J. Buys, L. Du, M. Forbes, and Y. Choi (2020) 神經文本生成的奇異案例 . In International Conference on Learning Representations , External Links: Link Cited by: §2.1 .
+- H. Lightman, V. Kosaraju, Y. Burda, H. Edwards, B. Baker, T. Lee, J. Leike, J. Schulman, I. Sutskever, and K. Cobbe (2024) 讓我們逐步驗證 . In The Twelfth International Conference on Learning Representations , External Links: Link Cited by: §6 .
+- H. (. Lin and H. Cheng (2025) Gemini 在國際大學生程式設計競賽世界總決賽中達到金牌水準 . External Links: Link Cited by: §1 .
+- T. Luong and E. Lockhart (2025) 具有深度思考功能的 Gemini 進階版本官方達到國際數學奧林匹克金牌標準 . External Links: Link Cited by: §1 .
+- T. Luong and V. Mirrokni (2026) 使用 Gemini 深度思考加速數學和科學發現 . External Links: Link Cited by: §1 .
+- N. Muennighoff, Z. Yang, W. Shi, X. L. Li, L. Fei-Fei, H. Hajishirzi, L. Zettlemoyer, P. Liang, E. Candes, and T. Hashimoto (2025) S1：簡單的測試時間擴展 . In Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing , C. Christodoulopoulos, T. Chakraborty, C. Rose, and V. Peng (Eds.) , Suzhou, China , pp. 20275–20321 . External Links: Link , Document , ISBN 979-8-89176-332-6 Cited by: §6 .
+- L. Phan, A. Agarwal, and D. Hendrycks (2025) CAIS AI 儀表板 . Center for AI Safety . Note: https://dashboard.safe.ai Cited by: §1 .
+- D. Rein, B. L. Hou, A. C. Stickland, J. Petty, R. Y. Pang, J. Dirani, J. Michael, and S. R. Bowman (2024) GPQA：研究生級別的防 Google 問答基準 . In First Conference on Language Modeling , External Links: Link Cited by: §4.2 .
+- C. V. Snell, J. Lee, K. Xu, and A. Kumar (2025) 最佳擴展 LLM 測試時間計算可能比擴展推理參數更有效 . In The Thirteenth International Conference on Learning Representations , External Links: Link Cited by: §6 .
+- S. Venkatraman, V. Jain, S. Mittal, V. Shah, J. Obando-Ceron, Y. Bengio, B. R. Bartoldson, B. Kailkhura, G. Lajoie, G. Berseth, et al. (2025) 遞迴自聚合解鎖大型語言模型中的深度思考 . arXiv preprint arXiv:2509.26626 . External Links: Link Cited by: §2.1 , §4.1 , §6 .
+- H. Wang, A. Prasad, E. Stengel-Eskin, and M. Bansal (2025) 具有衝突證據的檢索增強生成 . In Second Conference on Language Modeling , External Links: Link Cited by: §2.1 , §4.1 , §6 .
+- P. Wang, L. Li, Z. Shao, R. Xu, D. Dai, Y. Li, D. Chen, Y. Wu, and Z. Sui (2024) Math-shepherd：在沒有人類註解的情況下逐步驗證和強化 LLMs . In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , L. Ku, A. Martins, and V. Srikumar (Eds.) , Bangkok, Thailand , pp. 9426–9439 . External Links: Link , Document Cited by: §6 .
+- X. Wang, J. Wei, D. Schuurmans, Q. V. Le, E. H. Chi, S. Narang, A. Chowdhery, and D. Zhou (2023) 自一致性改進語言模型中的思維鏈推理 . In The Eleventh International Conference on Learning Representations , External Links: Link Cited by: §2.1 .
+- Y. Wu, Z. Sun, S. Li, S. Welleck, and Y. Yang (2025) 推理擴展律則：LLM 問題求解計算最優推理的實證分析 . In The Thirteenth International Conference on Learning Representations , External Links: Link Cited by: §6 , §6 .
+- Y. Xie, K. Kawaguchi, Y. Zhao, X. Zhao, M. Kan, J. He, and Q. Xie (2023) 自評估引導的光束搜索用於推理 . In Thirty-seventh Conference on Neural Information Processing Systems , External Links: Link Cited by: §6 .
+- A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao, C. Huang, C. Lv, et al. (2025) Qwen3 技術報告 . arXiv preprint arXiv:2505.09388 . External Links: Link Cited by: §4.3 .
+- J. Zhang, S. Yu, D. Chong, A. Sicilia, M. R. Tomz, C. D. Manning, and W. Shi (2025) 動詞化採樣：如何緩解模式崩潰並解鎖 LLM 多樣性 . arXiv preprint arXiv:2510.01171 . External Links: Link Cited by: §2.1 .
+- S. Zhang, Z. Chen, Y. Shen, M. Ding, J. B. Tenenbaum, and C. Gan (2023) 使用大型語言模型進行代碼生成的規劃 . In The Eleventh International Conference on Learning Representations , External Links: Link Cited by: §6 .
+- A. Zhou, K. Yan, M. Shlapentokh-Rothman, H. Wang, and Y. Wang (2024) 語言代理樹搜索統一語言模型中的推理、行動和規劃 . In Forty-first International Conference on Machine Learning , External Links: Link Cited by: §6 .
+
+## 附錄 A 步驟驗證器與分數構建
+
+### A.1 步驟驗證器提示詞
+
+我們將驗證器 V 實例化為一個提示驅動的審核模型，該模型在 $\{+1,0,-1\}$ 中產生步驟級別的判斷，以及一個 FINAL ANSWER CHECK。驗證器以確定性方式運行（溫度 0）以減少細化迭代中的變異。
+
+#### 輸入格式化：
+
+給定候選跡象 $\tau$，我們將推理分割為有序步驟序列，並將每個步驟包裝在 `<step i="k">...</step>` 標籤中（1 開始索引）。驗證器輸入包括：
+(i) 問題陳述、(ii) 標籤化步驟序列，以及 (iii) 提議的最終答案。
+
+#### 輸出結構：
+
+驗證器必須為每個輸入步驟（按相同順序）恰好返回一行，每行包含簡短註記和末尾分數標記在 $\{+1,0,-1\}$ 中，其後是一個 FINAL ANSWER CHECK 行，其標記在 $\{+1,0,-1\}$ 中。我們僅解析分數標記並忽略自由格式註記。
+
+### A.2 解析與故障處理
+
+驗證器輸出被視為結構化文本。驗證器調用在以下情況下被認為成功：
+(i) 為每個非最終步驟發出一個可解析的分數標記、
+(ii) 僅使用 $\{+1,0,-1\}$ 中的標記，以及
+(iii) 發出一個可解析的 FINAL ANSWER CHECK 標記。
+
+任何違規（例如，缺少行、格式錯誤的標籤、超出範圍的標記，或破壞解析的額外文本）都被視為 VERIFICATION_FAILED，跡象接收第 A.3 節中指定的固定回退分數。（我們在形成比率/權重之前將分數箝制到小的 $\epsilon > 0$，以避免驗收計算中的除以零。）
+
+### A.3 評分、粒子權重和接受
+
+對於每個軌跡 τ，我們從解析的反饋計算一個標量驗證器分數 s(τ)∈[0,1]。
+
+#### Step ratio：
+
+令 n_correct、n_neutral、n_incorrect 分別為非最終步驟上 +1、0、−1 標籤的計數（不包括 FINAL ANSWER CHECK）。我們定義
+
+|  | step_ratio:=$$\frac{n_{\text{correct}}+0.5\,n_{\text{neutral}}}{n_{\text{correct}}+n_{\text{neutral}}+n_{\text{incorrect}}}$$ |  |
+| --- | --- | --- |
+
+這個加權平均將正確步驟視為滿分、不正確步驟視為零分、中立步驟視為部分分數。部分權重減輕了中立標籤常見的長軌跡上的懲罰，同時仍區分清晰推理與明確錯誤的推理。
+
+#### Final verdict：
+
+FINAL ANSWER CHECK token 產生最終判決：CORRECT（+1）、INCORRECT（−1）或 NEUTRAL（0）。如果最後一行缺失但步驟解析成功，我們將其標記為 MISSING。如果解析失敗，我們標記為 VERIFICATION_FAILED。
+
+#### Scalar PRM score：
+
+驗證器提供兩個互補信號：(i) 推理有多清晰（由 step_ratio 捕獲）和 (ii) 最終答案是否實際正確（由最終判決 v 捕獲）。我們結合它們，使得步驟級別的品質可以在判決類別內精化排名，但無法覆蓋最終正確性信號。
+
+具體而言，我們使用判決相依的仿射變換將 step_ratio 映射到標量分數
+
+|  | s(τ)=$$a_{v}+b_{v}\cdot\text{step\_ratio}$$ |  |
+| --- | --- | --- |
+
+如果 v=INCORRECT，我們將分數上限設定在 0.3 以下，以便錯誤的最終答案即使中間步驟看起來合理也無法達到高分。如果 v=CORRECT，我們將分數下限設定在 0.5 並隨 step_ratio 向上擴展，以便在正確解決方案中偏好更清晰的推理。中立或缺失的最終判決接收中間擴展以反映不確定性。
+
+參數為：
+
+|  | $$(a_{v},b_{v})=\begin{cases}(0,\;0.3),&v=\texttt{INCORRECT}\\(0.5,\;0.5),&v=\texttt{CORRECT}\\(0,\;0.6),&v=\texttt{NEUTRAL}\\(0,\;0.8),&v=\texttt{MISSING}\\(0,\;0),&v=\texttt{VERIFICATION\_FAILED}\end{cases}$$ |  |
+| --- | --- | --- |
+
+## Appendix B Stochastic refinement proposals
+
+### B.1 Mixture proposal distribution
+
+The iterator model I I proposes refinement moves τ → τ ′ \tau\rightarrow\tau^{\prime} using a two-component mixture:
+
+|  | q ​ ( τ ′ ∣ τ ) = ( 1 − η ) ​ q local ​ ( τ ′ ∣ τ , PRM ​ ( τ ) ) + η ​ q explore ​ ( τ ′ ∣ x ) , q(\tau^{\prime}\mid\tau)\;=\;(1-\eta)\,q_{\text{local}}(\tau^{\prime}\mid\tau,\text{{\small{PRM}}}(\tau))\;+\;\eta\,q_{\text{explore}}(\tau^{\prime}\mid x), |  |
+| --- | --- | --- |
+
+where x x is the original problem instance and η ∈ [ 0 , 1 ] \eta\in[0,1] controls exploration.
+
+#### Local refinement ( q local q_{\text{local}} ):
+
+I I is conditioned on x x , the current trace τ \tau , and structured PRM feedback on τ \tau .
+The prompt instructs minimal edits: fix incorrect steps, preserve correct steps, and output a complete
+revised trace with an explicit final answer.
+
+#### Exploration ( q explore q_{\text{explore}} ):
+
+I I is conditioned primarily on x x and is instructed to attempt a qualitatively different approach.
+This component is intended to reduce mode collapse and introduce new reasoning directions.
+
+#### Decoding and formatting constraints:
+
+Outputs must include an explicit final answer line for deterministic answer extraction. If I I produces an
+unparsable output (e.g., missing final answer), we treat the proposal as a no-op ( τ ′ = τ \tau^{\prime}=\tau ).
+
+### B.2 Iterator prompt templates
+
+## Appendix C Conflict arbitration
+
+PRM-style verifiers can assign similarly high scores to candidates with different extracted answers.
+To avoid spending compute on incompatible modes, PRISM invokes an explicit arbitration step using the comparator
+model C C .
+
+### C.1 Trigger, verdict parsing, and score clamping
+
+#### Trigger:
+
+Let 𝒜 \mathcal{A} be the set of distinct extracted answers in the population. We trigger arbitration when
+(i) at least two answers exceed a near-perfect threshold, or (ii) the top answers are in a
+near-tie.
+
+#### Comparator output:
+
+C C outputs exactly one tag: <verdict>A</verdict> , <verdict>B</verdict> , or <verdict>NEITHER</verdict> .
+Malformed outputs are treated as NEITHER .
+
+#### Score clamping:
+
+Let τ A , τ B \tau_{A},\tau_{B} be the compared traces and c ∈ ( 0 , 1 ) c\in(0,1) be a clamp value. If the verdict is A ,
+we clamp s ​ ( τ B ) ← min ⁡ ( s ​ ( τ B ) , c ) s(\tau_{B})\leftarrow\min(s(\tau_{B}),c) and keep s ​ ( τ A ) s(\tau_{A}) unchanged (symmetrically for B );
+for NEITHER , we clamp both. Since weights depend on scores ( w ​ ( τ ) = s ​ ( τ ) 1 / T w(\tau)=s(\tau)^{1/T} ), clamping reduces
+the resampling probability of unresolved conflicts and limits their influence on subsequent refinement.
+
+### C.2 Comparator prompt template
+
+## 附錄 D 額外的圖表
+
+[FIGURE:x13.png] 圖 7：AIME25 上的計算–準確度權衡（Pareto 視圖）。每個點代表一種方法配置（增強 + 聚合）。連接的邊界標記 Pareto 最優配置。大多數精煉密集型方法花費大量額外的 token 卻只能獲得邊際或不一致的收益，而 PRISM 在最佳準確度與計算比例中佔有一席之地。
+
+[FIGURE:x14.png] 圖 8：HMMT25 上的計算–準確度權衡（Pareto 視圖）。每個點代表一種方法配置（增強 + 聚合）。連接的邊界標記 Pareto 最優配置。大多數精煉密集型方法花費大量額外的 token 卻只能獲得邊際或不一致的收益。
+
+[FIGURE:x15.png] 圖 9：AIME25 上的族群品質與精煉深度。非 PRM 為基礎的方法通常會隨著深度增加而振盪或退化，而 PRISM 展現出穩定的向上族群動態。
+
+[FIGURE:x16.png] 圖 10：HMMT25 上的族群品質與精煉深度。非 PRM 為基礎的方法通常會隨著深度增加而振盪或退化，而 PRISM 展現出穩定的向上族群動態。
+
+[FIGURE:x17.png] 圖 11：AIME25 跨增強深度的方向性修正。長條圖顯示在深度上聚合的 NetFlip 並在問題之間平均化。正值表示不正確 $\rightarrow$ 正確的轉變比正確 $\rightarrow$ 不正確的轉變更多，反映真正的修正而非「隨機遊走」重新排列。
+
+[FIGURE:x18.png] 圖 12：HMMT25 跨增強深度的方向性修正。長條圖顯示在深度上聚合的 NetFlip 並在問題之間平均化。正值表示不正確 $\rightarrow$ 正確的轉變比正確 $\rightarrow$ 不正確的轉變更多，反映真正的修正而非「隨機遊走」重新排列。
+
+[FIGURE:x19.png] 圖 13：以初始族群品質為條件的 AIME25 性能。每一欄按初始候選池中出現的正確解數量對問題進行分組，每個儲存格報告精煉和多數投票後的最終準確度。雖然大多數方法在一開始正確候選較少時表現不佳，但 PRISM 在這些低正確率的情況下保持明顯更高的準確度，顯示對弱初始族群的更強韌性。
+
+[FIGURE:x20.png] 圖 14：以初始族群品質為條件的 HMMT25 性能。每一欄按初始候選池中出現的正確解數量對問題進行分組，每個儲存格報告精煉和多數投票後的最終準確度。雖然大多數方法在一開始正確候選較少時表現不佳，但 PRISM 在這些低正確率的情況下保持明顯更高的準確度，顯示對弱初始族群的更強韌性。
+
+[FIGURE:x21.png] 圖 15：Qwen3 在 AIME25 上的結果跨越不同模型尺寸。該長條圖比較了 Qwen3-1.7B、4B、14B 和 30B-A3B 上的零樣本、Recursive Self-Aggregation 和 PRISM 的表現。PRISM 在所有模型尺寸上都能持續改進零樣本效能，其中在較小的模型上觀察到最大的增益。
+
+[FIGURE:x22.png] 圖 16：Qwen3 在 HMMT25 上的結果跨越不同模型尺寸。該長條圖比較了 Qwen3-1.7B、4B、14B 和 30B-A3B 上的零樣本、Recursive Self-Aggregation 和 PRISM 的表現。PRISM 在所有模型尺寸上都能持續改進零樣本效能，其中在較小的模型上觀察到最大的增益。
+
+[FIGURE:x23.png] 圖 17：Qwen3 在 GPQA Diamond 上的結果跨越不同模型尺寸。該長條圖比較了 Qwen3-1.7B、4B、14B 和 30B-A3B 上的零樣本、Recursive Self-Aggregation 和 PRISM 的表現。PRISM 在所有模型尺寸上都能持續改進零樣本效能，其中在較小的模型上觀察到最大的增益。
+
+[FIGURE:x24.png] 圖 18：Qwen3 上 AIME25 的計算-準確度權衡。每個點對應一個方法（顏色）和模型尺寸（標記形狀），x 軸顯示每個問題的平均記號數量（對數尺度），y 軸顯示準確度。帕累托前沿強調了 PRISM 在固定計算預算下保持競爭力，這表明其增益並非單純由增加的記號使用量所驅動。
+
+[FIGURE:x25.png] 圖 19：Qwen3 上 HMMT25 的計算-準確度權衡。每個點對應一個方法（顏色）和模型尺寸（標記形狀），x 軸顯示每個問題的平均記號數量（對數尺度），y 軸顯示準確度。帕累托前沿強調了 PRISM 在固定計算預算下保持競爭力，這表明其增益並非單純由增加的記號使用量所驅動。
+
+[FIGURE:x26.png] 圖 20：Qwen3 上 GPQA Diamond 的計算-準確度權衡。每個點對應一個方法（顏色）和模型尺寸（標記形狀），x 軸顯示每個問題的平均記號數量（對數尺度），y 軸顯示準確度。帕累托前沿強調了 PRISM 在固定計算預算下保持競爭力，這表明其增益並非單純由增加的記號使用量所驅動。
+
+[FIGURE:x27.png] 圖 21：Qwen3 上的跨生成器-驗證器擴展。當生成器固定而驗證器變化時，長條顯示 PRISM 準確度，比較自驗證（V=G）與使用不同驗證器尺寸的交叉驗證。隨著驗證器強度提高，效能會改進，其中當驗證器大於生成器時會出現最大的增益。
+
+[FIGURE:x28.png] 圖 22：Qwen3-4B 上的模型類型比較：Base vs. Instruct vs. Thinking 變體。長條圖比較了每個資料集上密切相關變體的零樣本和 PRISM。PRISM 持續改進效能，在較弱的變體上獲得更大的增益，進而縮小與更強大的調整模型的差距。

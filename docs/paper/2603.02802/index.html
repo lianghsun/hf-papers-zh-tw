@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOVA：稀疏控制、密集合成的無對應視頻編輯 — HF Papers 繁中</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="../../index.html" class="site-logo">📄 HF Papers 繁中</a>
+      <nav>
+        <a href="../../index.html">首頁</a>
+        <a href="https://huggingface.co/papers" target="_blank" rel="noopener">HuggingFace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    
+
+<div class="paper-page-header">
+  <a href="../../2026-03-04/index.html" style="font-size:0.85rem;color:var(--text-muted);">
+    ← 2026-03-04 論文列表
+  </a>
+  <h1 style="margin-top:0.75rem;">NOVA：稀疏控制、密集合成的無對應視頻編輯</h1>
+  
+  <div class="en-title">NOVA: Sparse Control, Dense Synthesis for Pair-Free Video Editing</div>
+  
+
+  <div class="paper-meta">
+    
+    <span>Tianlin Pan, Jiayi Dai, Chenpu Yuan, Zhengyao Lv, Binxin Yang, Hubery Yin, Chen Li, Jing Lyu, Caifeng Shan, Chenyang Si</span>
+    
+    <span>arXiv: <a href="https://arxiv.org/abs/2603.02802" target="_blank">2603.02802</a></span>
+    
+    <span style="color:var(--text-muted);font-size:0.8rem;">
+      來源：arxiv HTML
+    </span>
+    
+  </div>
+
+  <div class="paper-links">
+    <a href="https://arxiv.org/pdf/2603.02802" target="_blank" rel="noopener" class="btn btn-primary">PDF 原文</a>
+    <a href="https://arxiv.org/abs/2603.02802" target="_blank" rel="noopener" class="btn btn-outline">arXiv</a>
+    <a href="https://huggingface.co/papers/2603.02802" target="_blank" rel="noopener" class="btn btn-outline">HF 頁面</a>
+  </div>
+
+  <div class="tags">
+    <span class="tag domain">CV</span><span class="tag domain">Multimodal</span>
+    <span class="tag method">Diffusion</span><span class="tag method">Motion Control</span><span class="tag method">Keyframe Guidance</span>
+    <span class="tag task">Video Editing</span><span class="tag task">Video Synthesis</span>
+    
+  </div>
+</div>
+
+<!-- Abstract -->
+<div class="abstract-box">
+  <h2>摘要</h2>
+  <p># 論文摘要翻譯
+
+近期的影片編輯模型已取得令人印象深刻的成果，但大多數仍需要大規模的配對資料集。在規模上收集自然對齊的配對資料仍然極具挑戰性，且構成了一個關鍵瓶頸，特別是對於區域影片編輯資料而言。現有的因應方案透過全局運動控制將影像編輯轉移至影片以實現無配對影片編輯，但這類設計在背景和時間一致性方面存在困難。在本論文中，我們提出 NOVA：稀疏控制與密集合成，一個用於非配對影片編輯的新框架。具體而言，稀疏分支透過分佈在整個影片中由使用者編輯的關鍵幀提供語義引導，而密集分支持續納入原始影片中的運動和紋理資訊，以維持高保真度和一致性。此外，我們引入了一種降級模擬訓練策略，使模型能夠透過在人工降級影片上進行訓練來學習運動重建和時間一致性，從而消除對配對資料的需求。我們的大量實驗證明，NOVA 在編輯保真度、運動保留和時間一致性方面都優於現有方法。</p>
+  
+  <div class="abstract-en">Recent video editing models have achieved impressive results, but most still require large-scale paired datasets. Collecting such naturally aligned pairs at scale remains highly challenging and constitutes a critical bottleneck, especially for local video editing data. Existing workarounds transfer image editing to video through global motion control for pair-free video editing, but such designs struggle with background and temporal consistency. In this paper, we propose NOVA: Sparse Control \&amp; Dense Synthesis, a new framework for unpaired video editing. Specifically, the sparse branch provides semantic guidance through user-edited keyframes distributed across the video, and the dense branch continuously incorporates motion and texture information from the original video to maintain high fidelity and coherence. Moreover, we introduce a degradation-simulation training strategy that enables the model to learn motion reconstruction and temporal consistency by training on artificially degraded videos, thus eliminating the need for paired data. Our extensive experiments demonstrate that NOVA outperforms existing approaches in edit fidelity, motion preservation, and temporal coherence.</div>
+  
+</div>
+
+<!-- Full translated content -->
+<div class="paper-body">
+  
+    <h1 id="nova">NOVA：稀疏控制、密集合成用於成對無關視頻編輯</h1>
+<p>近期的視頻編輯模型已取得令人印象深刻的成果，但大多數仍需要大規模的成對資料集。在規模上收集這樣自然對齊的成對資料仍然極具挑戰性，並構成了一個關鍵的瓶頸，尤其是對於局部視頻編輯資料而言。現有的替代方案通過全局運動控制將圖像編輯轉移到視頻進行無成對視頻編輯，但這類設計在背景和時間一致性方面存在困難。在本論文中，我們提出 NOVA：稀疏控制與密集合成，一個新的無成對視頻編輯框架。具體來說，稀疏分支通過分佈在視頻中的用戶編輯關鍵幀提供語義指導，密集分支持續地融入來自原始視頻的運動和紋理資訊，以保持高保真度和連貫性。此外，我們引入了一個退化模擬訓練策略，使模型能夠通過在人為降質的視頻上進行訓練來學習運動重建和時間一致性，從而消除對成對資料的需求。我們的廣泛實驗表明 NOVA 在編輯保真度、運動保留和時間連貫性方面都優於現有方法。</p>
+<p>程式碼和模型將在 https://github.com/WeChatCV/NovaEdit 發佈。</p>
+<p>圖 1：我們提出稀疏控制、密集合成，一個多任務視頻編輯框架，使用稀疏的用戶提供的關鍵幀編輯和源自原始視頻的密集資訊。</p>
+<h2 id="1-introduction">1 Introduction</h2>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x2.png" loading="lazy"></figure> Figure 2 : Chanllenges in Local Editing . Exisiting general video editing methods ( e.g . VACE [ 22 ] ) and datasets ( e.g . Senorita-2M [ 58 ] ) perform well on global editing tasks but struggle with local editing, often producing artifacts and inconsistent edits in the targeted areas.</p>
+<p>Recent advances in diffusion models [ 18 , 44 , 36 , 42 , 43 , 38 , 11 , 25 , 34 , 9 , 23 , 46 ] have fundamentally transformed the landscape of digital content creation. Building upon this progress, video editing [ 39 , 24 , 12 , 22 ] is crucial for controllable and practical video content creation, yet its progress is largely constrained by data limitations. While large-scale text-video datasets for generative modeling can be collected relatively easily from open sources, constructing datasets for video editing is far more challenging, as it requires precisely aligned pairs of original and edited videos that rarely occur naturally. To address this limitation, some methods synthesize editing pairs to construct training datasets [ 58 , 51 , 19 ] , and then train diffusion-based video editing models on large-scale synthetic data. Other approaches [ 24 , 35 , 47 , 14 , 58 ] attempt to leverage image editing models to modify the first frame and combine the edited keyframe with motion information extracted from the source video to generate edited video sequences.</p>
+<p>As illustrated in Figure 2 , video editing tasks can be broadly classified into two paradigms: global and local editing. We observe that existing frameworks perform well on global tasks, but face significant challenges with local video editing, which requires targeted modifications within specific spatial regions. This phenomenon can be attributed to two major bottlenecks. 1) The scarcity of high-quality paired data : synthesizing realistic “before” and “after” video pairs for local edits is notoriously difficult, as such edits often involve complex geometric and appearance changes. Consequently, large-scale synthetic datasets usually contain visual artifacts and inconsistencies, limiting the generalization of models trained on them. 2) The fragility of first-frame-based editing : approaches that rely solely on an edited first frame are prone to structural drift and motion misalignment, especially under significant camera or object movement. The discrepancy between the edited keyframe and the original motion dynamics often leads to degraded visual fidelity and poor temporal coherence in the resulting video. Although some techniques attempt to fine-tune a dedicated motion module for each video to improve temporal consistency, this process is labor-intensive and does not scale efficiently.</p>
+<p>In this paper, we propose a novel framework, NOVA, that leverages sparse control and dense synthesis to learn video editing models without paired supervision. Specifically, NOVA adopts a dual-branch architecture designed to balance semantic control and fidelity. We first employ image editing models to modify keyframes within a video, where the edited keyframes serve as temporal anchors that provide stronger and more semantically aligned constraints than using a single edited frame. The Sparse Branch serves as a controllable pathway that encodes multiple edited keyframes to guide spatial and semantic transformations, imposing localized constraints on where and how edits are applied. Meanwhile, the Dense Branch encodes the unedited source video to capture dense motion and texture information. Through multi-level cross-attention, the generator queries the Dense Branch to inject fine-grained motion cues and background details, mitigating hallucination and texture drift in non-keyframe regions.</p>
+<p>To ensure temporal coherence, NOVA integrates two complementary strategies: At inference time, all keyframes are edited sequentially with explicit reference to the first edited frame, effectively reducing flicker and temporal discontinuities caused by independent per-frame edits. During training , a degradation-simulation scheme is introduced to mimic real-world motion inconsistencies through interpolation and blurring of keyframes. This strategy enables the model to learn temporal restoration and texture propagation from unpaired data, thereby enhancing overall robustness and frame-to-frame consistency.</p>
+<p>Our comprehensive experiments demonstrate that NOVA quantitatively surpasses recent approaches across all editing-specific and general quality metrics without requiring per-video fine-tuning. Furthermore, rigorous ablation studies validate the necessity of our core components, confirming Dense Synthesis Branch is crucial for background preservation via guided generative reconstruction
+and that our consistency-aware inference pipeline is essential for maintaining temporal coherence.</p>
+<p>Our contributions are summarized as follows:</p>
+<ul>
+<li>• We introduce and formalize the ‘Sparse Control, Dense Synthesis’ paradigm for video editing, which first decouples dense and sparse signals for video editing, offering a new conceptual framework for the field.</li>
+<li>• We design a complete unpaired learning framework, including a novel degradation-simulation training strategy and a consistency-aware inference pipeline, which together enable learning temporal coherence and motion reconstruction without any paired data.</li>
+<li>• Extensive experiments demonstrate that our method outperforms state-of-the-art video editing approaches across multiple metrics.</li>
+</ul>
+<p>We introduce and formalize the ‘Sparse Control, Dense Synthesis’ paradigm for video editing, which first decouples dense and sparse signals for video editing, offering a new conceptual framework for the field.</p>
+<p>We design a complete unpaired learning framework, including a novel degradation-simulation training strategy and a consistency-aware inference pipeline, which together enable learning temporal coherence and motion reconstruction without any paired data.</p>
+<p>Extensive experiments demonstrate that our method outperforms state-of-the-art video editing approaches across multiple metrics.</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x3.png" loading="lazy"></figure> Figure 3 : The Limitations of Existing Schemes Previous methods are often limited by either requiring costly per-video finetuning [ 35 , 14 ] or pre-training on large-scale paired video data [ 58 , 22 ] , which is difficult to acquire. Our method decouples control and synthesis signals, enabling a self-supervised framework that learns from unpaired data while maintaining high fidelity to the source video.</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x4.png" loading="lazy"></figure> Figure 4 : Inconsistent backgrounds in naive multi-keyframe approach We designate frames 0, 20, 40, 60, and 80 as edited keyframes (anchors). In non-keyframes reconstructed background exhibits inconsistent textures (e.g., on the building wall) and implausible motion (e.g., in the trees), as the model hallucinates content without access to the original video.</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x5.png" loading="lazy"></figure> Figure 5 : Training Pipeline . (1) Center (Model Architecture) : The core model learns to denoise the source video by processing conditional inputs through a Sparse Branch 𝒮 \mathcal{S} and a Dense Branch 𝒟 \mathcal{D} , which interact via cross-attention; (2) Left (Anchored Control Pipe) : A degraded reference video is generated by linearly interpolating between sparsely selected keyframes, providing sparse temporal control; (3) Right (Source Fidelity Pipe) : A synthetic edited video is created using a cut-and-paste method to simulate realistic artifacts, serving as a dense synthesis target.</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x6.png" loading="lazy"></figure> Figure 6 : Inference Pipeline : We first edit the user-specified keyframes sequentially with reference to the first edited frame, producing temporally coherent anchors. We then construct a degraded reference video by interpolating between these keyframes, and feed it into the sparse branch 𝒮 \mathcal{S} . The original unedited video is passed through the dense branch 𝒟 \mathcal{D} .</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x7.png" loading="lazy"></figure> Figure 7 : Qualitative Comparisons with VACE [ 22 ] , LoRA-Edit [ 14 ] , I2VEdit [ 35 ] and AnyV2V [ 24 ] .</p>
+<h2 id="2">2 相關研究</h2>
+<h3 id="21-diffusion-models">2.1 使用 Diffusion Models 進行影片編輯</h3>
+<p>文字引導的圖像編輯 [ 2 , 17 , 8 , 28 , 26 , 50 , 13 ] 的成功激發了在影片領域的大量研究工作。主要挑戰一直是維持幀之間的時間一致性。為了解決這個問題，已提出了各種策略，例如在 diffusion 特徵中強制執行一致性 [ 15 ]、在注意力機制中利用光流 [ 7 ]、合併自注意力 token [ 27 ] 或學習可轉移的運動先驗 [ 16 ]。同時，零次學習（zero-shot）方法已獲得關注，無需任務特定的訓練即可實現影片編輯，方法是從初始幀傳播編輯或使用預訓練的圖像模型 [ 53 , 3 , 48 ]。為了增強使用者控制，後續研究引入了更精確的操作技術，包括交叉注意力控制 [ 31 ]、透過明確控制信號的引導 [ 5 ] 和拖曳式編輯 [ 10 ]。研究也分支到專門應用，例如影片修復，具有用於一致地填充遮罩區域的專用框架 [ 55 , 54 , 56 ]。最近，該領域趨向於統一的多任務模型，能夠在單一框架內處理多樣的影片理解和生成任務 [ 6 , 45 , 4 ]，而其他方法則專注於高速合成 [ 49 ]。</p>
+<h3 id="22">2.2 影片編輯的資料合成</h3>
+<p>為了解決影片編輯中資料稀缺的挑戰，已提出了多種方法來合成訓練資料。DreamVE [ 52 ]、MiniMax-Remover [ 57 ] 和 VACE [ 22 ] 利用分割模型（如 Grounding DINO [ 30 ] 和 SAM2 [ 41 ]）透過組合剪貼技術來建立合成影片對。ReCamMaster [ 1 ] 和 ROSE [ 33 ] 利用遊戲引擎生成具有可控屬性的多樣影片資料集。此外，Senorita-2M [ 58 ] 引入了多個影片專家來為不同任務生成大規模影片編輯資料集。</p>
+<h3 id="23">2.3 幀引導的影片編輯</h3>
+<p>減輕資料稀缺問題的另一種方法是使用幀引導編輯方法 [ 24 , 29 , 47 , 14 , 35 , 32 , 22 ]。這些方法通常使用以編輯後的第一幀為條件的圖像到影片（I2V）模型，將編輯傳播到整個影片。為了保持與原始影片的一致性，AnyV2V [ 24 ] 透過 DDIM inversion 和時間特徵注入來重建運動。FlowV2V [ 47 ] 和 VACE [ 22 ] 納入運動線索（如光流和深度圖）來引導編輯過程。I2VEdit [ 35 ] 和 LoRA-Edit [ 14 ] 為每個影片微調唯一的運動適配器（LoRA [ 20 ]）以達到更好的一致性。雖然這些方法已展示了令人滿意的結果，但它們通常在添加和移除任務上遇到困難，或者需要大量的計算資源進行 LoRA 微調。</p>
+<h2 id="3">3 方法論</h2>
+<h3 id="31-the-limitations-of-existing-paradigms">3.1 The Limitations of Existing Paradigms</h3>
+<p>Current video editing paradigms are constrained by their underlying architectural designs, as shown in Figure 3 . First-frame-guided architectures in Figure 3 (a) and (b) treat editing as a propagation problem. They rely on a single edited frame as a temporal anchor and task the model with extending this edit across the entire sequence. Whether through per-video motion adapters or explicit control modules, these architectures fundamentally entangle appearance generation with motion preservation. This tight coupling makes them fragile; any small discrepancy between the initial edit and the source video’s dynamics can compound over time, leading to structural drift and temporal incoherence.</p>
+<p>Alternatively, unified generative architectures in Figure 3 (c) merge control signals and synthesis into a single pathway. While conceptually simple, this approach places an enormous burden on the model to disentangle what to change from what to preserve. As demonstrated in Figure 4 , even a multi-keyframe approach fails if the architecture lacks a mechanism to preserve source fidelity. This motivates our shift in architecture towards decoupling control from synthesis. We propose the Sparse Control, Dense Synthesis paradigm (Figure 3 (d)), which leverages sparse, edited keyframes for semantic guidance while using the dense, original video to preserve motion and texture integrity. This approach resolves the core bottlenecks of previous methods, enabling high-quality editing without reliance on paired data.</p>
+<h3 id="32">3.2 解耦控制與合成</h3>
+<p>如圖 5 所示，我們設計了一個架構來整合多關鍵幀稀疏控制與密集合成信號。它由三個主要元件組成：一個主要去噪分支、一個稀疏控制分支和一個密集合成分支。
+稀疏分支由幾個 WAN DiT 層組成，將編輯後的關鍵幀信息注入主分支中以引導編輯過程。
+密集合成分支在結構上與主分支相同，從源影片轉移運動和紋理線索，便於在主分支中重建運動和未編輯區域。</p>
+<p>為了防止來自密集分支的特徵直接融合干擾編輯過程，我們在密集分支和主分支對應層之間額外引入了一系列可訓練的交叉注意力模組。在正向傳播過程中，主分支生成查詢，而密集分支提供鍵和值。所得到的交叉注意力輸出被融合回主分支。這種交互可以表述如下：</p>
+<p>|  | $\displaystyle\boldsymbol{z}^{(l)}<em>{\text{m}}\leftarrow\boldsymbol{z}^{(l)}</em>{\text{m}}+\underbrace{\mathcal{S}^{(l)}(\boldsymbol{z}^{(l)}<em>{\text{m}},\boldsymbol{r})}</em>{\begin{subarray}{c}\text{來自編輯關鍵幀的}\
+\text{稀疏控制}\end{subarray}}+\underbrace{\mathcal{D}^{(l)}(\boldsymbol{z}^{(l)}<em>{\text{m}},\boldsymbol{z}^{(l)}</em>{\text{d}})}_{\begin{subarray}{c}\text{來自源影片的}\
+\text{密集合成}\end{subarray}}$ |  | (1) |
+| --- | --- | --- | --- |</p>
+<p>其中 $\boldsymbol{z}^{(l)}<em>{\text{m}}$ 和 $\boldsymbol{z}^{(l)}</em>{\text{d}}$ 分別表示主分支和複製 DiT 的第 $l$ 層的潛在特徵，$\mathcal{S}^{(l)}$ 和 $\mathcal{D}^{(l)}$ 分別表示第 $l$ 層稀疏 VACE [22] 區塊和交叉注意力模組的輸出。$\boldsymbol{r}$ 是從編輯後的關鍵幀構建的參考條件，如第 3.3 節（訓練期間）和 3.4 節（推理期間）所述。</p>
+<h3 id="33">3.3 無配對資料的相干性學習</h3>
+<p>為了實現無配對資料的訓練，我們合成自監督信號來模擬真實的編輯行為。具體來說，每個訓練樣本都通過兩個互補的管道進行處理：錨定控制管道（Anchored Control Pipeline），用於構造降級編輯關鍵幀序列以進行稀疏監督；以及源保真度管道（Source Fidelity Pipeline），用於生成合成源視頻以進行密集監督。</p>
+<p><strong>錨定控制管道</strong>通過一系列合成降級和插值來從目標視頻中採樣並降級一組稀疏的關鍵幀。此過程模擬了手動或自動關鍵幀編輯可能產生的低品質或不一致的序列，這些降級的關鍵幀作為輸入到稀疏分支以指導編輯過程。
+形式上，給定目標視頻 $\mathcal{X}={\boldsymbol{x}<em>{t}}</em>{t=0}^{T}$，我們首先選擇一組稀疏的關鍵幀索引 $\mathcal{K}={k_{0},k_{1},\ldots,k_{N}}\subseteq{0,1,\ldots,T}$，其中 $k_{0}=0$ 和 $k_{N}=T$。
+為了模擬多種局部編輯偽影，包括外觀不匹配和幾何對齊不當（例如扭曲、縮放和抖動），關鍵幀的一個隨機子集經歷隨機降級過程。這應用於由二進制遮罩 $\boldsymbol{b}<em>{k</em>{i}}\in{0,1}^{H\times W\times 1}$ 指定的局域區域。
+每個損壞的關鍵幀 $\hat{\boldsymbol{x}}<em>{k</em>{i}}$ 生成如下：</p>
+<p>|  | $\hat{\boldsymbol{x}}<em>{k</em>{i}}=(\boldsymbol{1}-\boldsymbol{b}<em>{k</em>{i}})\odot\boldsymbol{x}<em>{k</em>{i}}+\boldsymbol{b}<em>{k</em>{i}}\odot\mathcal{D}<em>{\text{aug}}(\boldsymbol{x}</em>{k_{i}}),\quad\forall\,k_{i}\in\mathcal{K}\backslash{0}$ |  | (2) |
+| --- | --- | --- |</p>
+<p>其中 $\mathcal{D}<em>{\text{aug}}$ 是一個隨機降級算子，將常見的影像損壞（例如高斯模糊和隨機仿射變換）的組合應用於輸入幀，$\odot$ 表示逐元素乘法。
+然後通過在相鄰降級關鍵幀之間進行線性插值，重建一個運動降級的視頻 $\hat{\mathcal{X}}={\hat{\boldsymbol{x}}</em>{t}}_{t=0}^{T}$：</p>
+<p>|  | $\hat{\boldsymbol{x}}<em>{t}=\begin{cases}\hat{\boldsymbol{x}}</em>{k_{n}},&amp;t\in\mathcal{K},\(1-\alpha_{t})\hat{\boldsymbol{x}}<em>{k</em>{n-1}}+\alpha_{t}\hat{\boldsymbol{x}}<em>{k</em>{n}},&amp;k_{n-1}&lt;t&lt;k_{n},\end{cases}$ |  | (3) |
+| --- | --- | --- |</p>
+<p>其中 $\alpha_{t}=\frac{t-k_{n-1}}{k_{n}-k_{n-1}}$。
+此插值序列包含運動降級（來自關鍵幀之間的缺失動態）和外觀不一致性（來自模擬編輯噪聲），作為稀疏分支 $\mathcal{S}$ 的編輯參考 $\boldsymbol{r}$ 使用。</p>
+<p><strong>源保真度管道</strong>對目標視頻應用隨機剪切貼上策略，產生一個空間對齊不當的偽源視頻，模擬推論期間的未編輯輸入。此偽源視頻被饋入密集分支以提供運動和紋理參考。
+具體來說，我們通過將隨機採樣的內容貼上到目標幀上來生成合成源視頻，該過程使用經歷隨機平移和旋轉的移動二進制遮罩。
+形式上，設目標視頻 $\mathcal{X}={\boldsymbol{x}<em>{t}}</em>{t=0}^{T}$ 和另一個隨機採樣的視頻 $\mathcal{Y}={\boldsymbol{y}<em>{t}}</em>{t=0}^{T}$，兩者長度均為 $T!+!1$，其中 $\boldsymbol{x}<em>{t},\boldsymbol{y}</em>{t}\in\mathbb{R}^{H\times W\times C}$。
+我們定義一個時間相干的二進制遮罩序列 $\mathcal{M}={\boldsymbol{m}<em>{t}}</em>{t=0}^{T}$，其中每個 $\boldsymbol{m}<em>{t}\in{0,1}^{H\times W\times 1}$ 通過將隨機仿射變換（平移、旋轉和縮放）應用於基礎形狀（例如橢圓或多邊形）來獲得。
+偽源視頻 $\tilde{\mathcal{X}}={\tilde{\boldsymbol{x}}</em>{t}}_{t=0}^{T}$ 的構造如下：</p>
+<p>|  | $\tilde{\boldsymbol{x}}<em>{t}=\boldsymbol{m}</em>{t}\odot\boldsymbol{y}<em>{t}+\bigl(\boldsymbol{1}-\boldsymbol{m}</em>{t}\bigr)\odot\boldsymbol{x}_{t},\qquad\forall\,t\in{0,\dots,T}$ |  | (4) |
+| --- | --- | --- |</p>
+<p>其中 $\odot$ 表示逐元素乘法，$\boldsymbol{1}\in\mathbb{R}^{H\times W\times 1}$ 是全一張量，而 $\boldsymbol{m}<em>{t}$ 沿著通道維度廣播以匹配 $\boldsymbol{x}</em>{t}$ 和 $\boldsymbol{y}_{t}$。
+此偽源視頻作為密集分支 $\mathcal{D}$ 的輸入。</p>
+<p>結合源保真度管道，該設計實現了兩個互補的能力：
+（a）通過密集分支 $\mathcal{D}$ 恢復自然運動和紋理，以及
+（b）通過稀疏分支 $\mathcal{S}$ 跨關鍵幀維持時間相干性。
+整體訓練目標採用標準的去噪損失：</p>
+<p>|  | $\mathcal{L}=\mathbb{E}<em>{\mathcal{X},\epsilon,t}!\left[|\epsilon-\epsilon</em>{\theta}(\boldsymbol{z}<em>{t}(\mathcal{X}),t,\tilde{\mathcal{X}},\hat{\mathcal{X}})|</em>{2}^{2}\right]$ |  | (5) |
+| --- | --- | --- |</p>
+<p>其中 $\tilde{\mathcal{X}}$ 和 $\hat{\mathcal{X}}$ 分別表示偽源和降級編輯視頻，而 $\boldsymbol{z}_{t}$ 是在時間步 $t$ 處從原始視頻 $\mathcal{X}$ 衍生的雜訊潛在向量。</p>
+<h3 id="34">3.4 使用多關鍵幀引導的推論</h3>
+<p><strong>一致性感知關鍵幀編輯</strong>。為了確保獨立編輯的幀之間的視覺一致性，我們採用一致性感知關鍵幀編輯方案。具體來說，我們採用 FLUX.1 Kontext Inpainting 模型 [25]，它支援以參考影像為條件來保留跨編輯的外觀一致性。
+對於第一個關鍵幀（$t=0$），我們基於使用者提示執行標準的文本引導影像到影像的編輯。
+對於後續關鍵幀，每次編輯都以第一個編輯的關鍵幀的結果為條件，以維持風格上的連貫性：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>$\boldsymbol{x}^{\mathrm{edit}}<em>{k</em>{i}}=\text{FLUX}!\left(\boldsymbol{x}<em>{k</em>{i}},\boldsymbol{x}^{\mathrm{edit}}<em>{k</em>{0}},\boldsymbol{m}<em>{k</em>{i}},\mathcal{P}\right),\quad i=1,\ldots,N,$</th>
+<th></th>
+<th>(6)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>其中 $\boldsymbol{m}<em>{k</em>{i}}$ 表示可選的使用者提供的遮罩，$\mathcal{P}$ 是文本提示。
+通過將所有關鍵幀編輯錨定到第一個編輯的幀，我們大大減少了最終影片中的外觀漂移和閃爍。</p>
+<p><strong>構建參考和源輸入</strong>。在獲得編輯的關鍵幀 ${\boldsymbol{x}^{\mathrm{edit}}<em>{k</em>{i}}}$ 之後，我們通過在相鄰關鍵幀之間進行線性插值來生成插值參考影片 $\hat{\mathcal{X}}$，遵循公式 3。
+這個時間上完整的序列作為稀疏分支 $\mathcal{S}$ 的參考條件 $\boldsymbol{r}$。
+與此同時，原始未編輯的影片 $\mathcal{X}$ 由密集 DiT 分支 $\mathcal{D}$ 處理，以提供運動和紋理資訊。
+這種雙輸入推論設計反映了訓練設置，確保模型忠實地保留源動態，同時在關鍵時刻應用使用者指定的編輯。</p>
+<h2 id="4">4 實驗</h2>
+<h3 id="41">4.1 實現細節</h3>
+<p>我們提出的框架是建立在 WAN 2.1 VACE 1.3B [22] 架構之上。為了有效整合新的 Dense Synthesis 能力，我們僅訓練了新引入的交叉注意力模組，這些模組連接主要的 DiT 和密集 DiT 分支，在整個訓練過程中保持基礎 WAN 2.1 VACE 模型的權重凍結。我們在包含 5,000 個來自 Pexels [37] 的高品質影片片段的資料集上訓練了我們的模型。訓練過程使用總共 320GB 的聚合 GPU 記憶體。我們採用了 AdamW 優化器，訓練了約 8,000 步，固定學習率為 $1 \times 10^{-4}$。所有影片都以 $832 \times 480$ 像素的解析度和 81 幀的長度進行處理。在推論過程中，我們使用 FLUX.1 Kontext Dev [26] 來生成編輯的關鍵幀，如第 3.4 節所詳述。我們對於 81 幀長度的影片，利用索引為 ${0,10,\ldots,80}$ 的關鍵幀。</p>
+<p>表 1：與最先進方法的定量比較：我們將我們的方法與最近的影格引導影片編輯方法在多個指標上進行了比較。我們的方法在大多數指標上優於所有基準方法，同時不需要每影片微調。</p>
+<h3 id="42">4.2 主要結果</h3>
+<p>我們將我們的方法與最近的幀引導視頻編輯方法進行比較，包括 AnyV2V [ 24 ] 、I2VEdit [ 35 ] 、LoRA-Edit [ 14 ] 、VACE [ 22 ] 和 Senorita-2M [ 58 ] 。對於測試視頻，我們遵循 I2VEdit [ 35 ] 和 Render-A-Video [ 53 ] 從 Pexels [ 37 ] 收集視頻。為了公平起見，我們也測試了在提供額外幀引導時 LoRA-Edit 和 VACE 的性能。我們確保所有模型的編輯關鍵幀內容相同。</p>
+<p><strong>定性比較</strong> 圖 7 中呈現的視覺比較表明，我們的方法相對於基線方法提供了明顯的優勢，特別是在背景一致性和整體視覺保真度方面。</p>
+<p><strong>定量比較</strong> 遵循 I2VEdit [ 35 ] 和 LoRA-Edit [ 14 ] ，我們首先應用時間一致性（TC）來量化生成序列中的語義對齐，通過測量生成幀與編輯後的第一幀之間的 CLIP [ 40 ] 嵌入相似性。幀一致性（FC）也被引入作為生成輸出幀與原始輸入幀之間的逐幀 CLIP 嵌入相似性，測量對源內容的保真度。此外，我們引入成功率（SR），這是來自我們用戶研究的關鍵指標，通過詢問參與者模型是否成功地將第一幀的編輯結果傳播到序列中的所有後續幀來確定。由於 FC 不適合物體移除或添加任務，我們也引入背景 SSIM（BG-SSIM）來計算未編輯背景區域的結構相似性，這些區域由 SAM2 [ 41 ] 的遮罩確定。最後，我們納入來自 VBench [ 21 ] 的兩個指標：運動平順性（MS）和背景一致性（BC）。</p>
+<h3 id="43">4.3 消融研究</h3>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/clip_sim.png" loading="lazy"></figure> 圖 8：稠密分支的消融：稠密分支的加入使模型能夠捕捉輸入視頻中的背景細節，從而顯著提升與真實標註的逐幀 CLIP 相似度。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x8.png" loading="lazy"></figure> 圖 9：稠密分支的作用和魯棒性消融。（左）完全停用稠密分支導致背景出現幻覺細節。（中）提供乾淨的源視頻可實現近乎完美的重建，保留高頻紋理。（右）模型復原的背景明顯比模糊的輸入更清晰。</p>
+<p><strong>稠密分支的效果</strong> 為了量化驗證我們稠密分支的必要性，我們利用 SAM2 [41] 生成高保真物體掩碼，通過剪貼方法論創建真實標註視頻對，構建物體新增/移除數據集。隨後我們將完整模型與移除稠密分支的消融基線進行比較。我們通過計算生成視頻與真實標註之間的平均逐幀 CLIP 相似度來評估性能。如圖 8 所示，引入稠密分支可以改善編輯視頻中的背景一致性。此外，我們通過在推論時改變其視頻輸入的品質，進行定性消融以探究其機制和魯棒性。詳見圖 9 的結果確認稠密分支對於保持背景一致性至關重要。更重要的是，實驗表明模型即使從降級的源重建細節也能穩健地進行，證實其功能超越簡單的紋理複製，達到更複雜的引導合成。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x9.png" loading="lazy"></figure> 圖 10：一致性感知關鍵幀編輯的消融</p>
+<p><strong>一致性感知關鍵幀編輯的效果</strong> 為了驗證我們的推論流水線，我們測試了一個基線，該基線獨立編輯每個關鍵幀而不參考第一個編輯幀。如圖 10 所示，獨立編輯時，新增的窗口在風格上表現出明顯的不一致；但是使用編輯後的第一幀作為參考則能顯著改善一致性。</p>
+<p>表 2：關鍵幀編輯模型的消融研究。</p>
+<p><strong>關鍵幀編輯模型的敏感性</strong> 我們通過進行消融研究評估框架對關鍵幀編輯模型選擇的敏感性，將 FLUX.1 Kontext 替換為 Qwen-Image-Edit。表 2 呈現的結果表明我們的整體流水線不嚴格耦合於單個模型，凸顯了我們範式的通用性。</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/sensitivity.png" loading="lazy"></figure> 圖 11：推論時使用的關鍵幀間隔的消融研究：模型以固定間隔 10 訓練。我們通過測試不同間隔來評估其魯棒性。</p>
+<p><strong>推論時關鍵幀間隔的敏感性</strong> 我們的模型使用固定的關鍵幀間隔 10 幀進行訓練（見第 4.1 節）。為了評估模型的魯棒性及其泛化到不同指導稀疏度的能力，我們對推論時使用的關鍵幀間隔進行消融研究。我們改變關鍵幀之間的間隔，除了測試預設訓練間隔 10 外，還測試了 8、16 和 20（80 的因數）等間隔。圖 11 呈現的結果表明模型對關鍵幀指導頻率變化的魯棒性。這表明我們的模型沒有過度擬合於特定的關鍵幀頻率，可以靈活地處理使用者提供的不同稀疏度的關鍵幀。</p>
+<h2 id="5-conclusion">5 Conclusion</h2>
+<p>In this paper, we introduced Sparse Control, Dense Synthesis, a novel paradigm for video editing that effectively balances user-guided semantic changes with the preservation of original video dynamics. Our dual-branch architecture, featuring a Sparse Branch for multi-keyframe guidance and a Dense Branch for source detail injection, successfully addresses the common problem of motion and texture hallucination in non-edited regions. We believe this paradigm offers a promising direction for future research in high-quality and efficient video editing.</p>
+<p>Limitations : The performance of our method is influenced by the quality of the edited keyframe anchors. While our context-aware pipeline improves temporal consistency, the single-pass generation of high-fidelity keyframes can be challenging for current image editing models, which may require user iteration to achieve optimal results.</p>
+<h2 id="6-acknowledgement">6 Acknowledgement</h2>
+<p>This study is partially supported by Beijing Natural Science Foundation (QY25188), the Fundamental Research Funds for the Central Universities (KG2025XX) and Jiangsu Science and Technology Major Project (BG2025035). This research is also supported by cash and in-kind funding from Nanjing K&amp;A Center of Cultivation and industry partner(s).</p>
+<h2 id="_1">參考文獻</h2>
+<ul>
+<li>Bai et al. [2025] Jianhong Bai, Menghan Xia, Xiao Fu, Xintao Wang, Lianrui Mu, Jinwen Cao, Zuozhu Liu, Haoji Hu, Xiang Bai, Pengfei Wan, and Di Zhang. Recammaster: Camera-controlled generative rendering from a single video. arXiv preprint arXiv:2508.06147 , 2025.</li>
+<li>Brooks et al. [2023] Tim Brooks, Aleksander Holynski, and Alexei A. Efros. Instructpix2pix: Learning to follow image editing instructions. arXiv preprint arXiv:2211.09800 , 2023.</li>
+<li>Ceylan et al. [2023] Duygu Ceylan, Chun-Hao Paul Huang, and Niloy Jyoti Mitra. Pix2video: Video editing using image diffusion. ICCV , pages 23149–23160, 2023.</li>
+<li>Chen et al. [2025a] Lan Chen, Yuchao Gu, and Qi Mao. Univid: Unifying vision tasks with pre-trained video generation models. arXiv preprint arXiv:2509.21760 , 2025a.</li>
+<li>Chen et al. [2023] Weifeng Chen, Jie Wu, Pan Xie, Hefeng Wu, Jiashi Li, Xin Xia, Xuefeng Xiao, and Liang-Jin Lin. Control-a-video: Controllable text-to-video generation with diffusion models. arXiv preprint arXiv:2305.13840 , 2023.</li>
+<li>Chen et al. [2025b] Yuqing Chen, Junjie Wang, Lin Liu, Ruihang Chu, Xiaopeng Zhang, Qi Tian, and Yujiu Yang. O-disco-edit: Object distortion control for unified realistic video editing. arXiv preprint arXiv:2509.01596 , 2025b.</li>
+<li>Cong et al. [2023] Yuren Cong, Mengmeng Xu, Christian Simon, Shoufa Chen, Jiawei Ren, Yanping Xie, Juan-Manuel Pérez-Rúa, Bodo Rosenhahn, Tao Xiang, and Sen He. Flatten: optical flow-guided attention for consistent text-to-video editing. arXiv preprint arXiv:2310.05922 , 2023.</li>
+<li>Crowson et al. [2022] Katherine Crowson, Stella Biderman, Daniel Kornis, Dashiell Stander, Eric Hallahan, Louis Castricato, and Edward Raff. Vqgan-clip: Open domain image generation and editing with natural language guidance. In ECCV , 2022.</li>
+<li>DeepMind [2025] Google DeepMind. Veo technical report, 2025.</li>
+<li>Deng et al. [2023] Yufan Deng, Ruida Wang, Yuhao Zhang, Yu-Wing Tai, and Chi-Keung Tang. Dragvideo: Interactive drag-style video editing. arXiv preprint arXiv:2312.02216 , 2023.</li>
+<li>Esser et al. [2024] Patrick Esser, Sumith Kulal, Andreas Blattmann, Rahim Entezari, Jonas Müller, Harry Saini, Yam Levi, Dominik Lorenz, Axel Sauer, Frederic Boesel, Dustin Podell, Tim Dockhorn, Zion English, Kyle Lacey, Alex Goodwin, Yannik Marek, and Robin Rombach. Scaling rectified flow transformers for high-resolution image synthesis. arXiv preprint arXiv:2403.03206 , 2024.</li>
+<li>Feng et al. [2023] Ruoyu Feng, Wenming Weng, Yanhui Wang, Yuhui Yuan, Jianmin Bao, Chong Luo, Zhibo Chen, and Baining Guo. Ccedit: Creative and controllable video editing via diffusion models. In CVPR , pages 6712–6722, 2023.</li>
+<li>Fortin et al. [2025] Alisa Fortin, Guillaume Vernade, Kat Kampf, and Ammaar Reshi. Introducing gemini 2.5 flash image, our state-of-the-art image model, 2025.</li>
+<li>Gao et al. [2025] Chenjian Gao, Lihe Ding, Xin Cai, Zhanpeng Huang, Zibin Wang, and Tianfan Xue. Lora-edit: Controllable first-frame-guided video editing via mask-aware lora fine-tuning. arXiv preprint arXiv:2506.10082 , 2025.</li>
+<li>Geyer et al. [2023] Michal Geyer, Omer Bar-Tal, Shai Bagon, and Tali Dekel. Tokenflow: Consistent diffusion features for consistent video editing. arXiv preprint arXiv:2307.10373 , 2023.</li>
+<li>Guo et al. [2023] Yuwei Guo, Ceyuan Yang, Anyi Rao, Yaohui Wang, Y. Qiao, Dahua Lin, and Bo Dai. Animatediff: Animate your personalized text-to-image diffusion models without specific tuning. arXiv preprint arXiv:2307.04725 , 2023.</li>
+<li>Hertz et al. [2022] Amir Hertz, Ron Mokady, Jay M. Tenenbaum, Kfir Aberman, Yael Pritch, and Daniel Cohen-Or. Prompt-to-prompt image editing with cross attention control. arXiv preprint arXiv:2208.01626 , 2022.</li>
+<li>Ho et al. [2020] Jonathan Ho, Ajay Jain, and P. Abbeel. Denoising diffusion probabilistic models. arXiv preprint arXiv:2006.11239 , 2020.</li>
+<li>Hu et al. [2024] Jiahao Hu, Tianxiong Zhong, Xuebo Wang, Boyuan Jiang, Xingye Tian, Fei Yang, Pengfei Wan, and Di Zhang. Vivid-10m: A dataset and baseline for versatile and interactive video local editing. arXiv preprint arXiv:2411.15260 , 2024.</li>
+<li>Hu et al. [2021] J. Edward Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, and Weizhu Chen. LoRA: Low-rank adaptation of large language models. arXiv preprint arXiv:2106.09685 , 2021.</li>
+<li>Huang et al. [2024] Ziqi Huang, Yinan He, Jiashuo Yu, Fan Zhang, Chenyang Si, Yuming Jiang, Yuanhan Zhang, Tianxing Wu, Qingyang Jin, Nattapol Chanpaisit, Yaohui Wang, Xinyuan Chen, Limin Wang, Dahua Lin, Yu Qiao, and Ziwei Liu. VBench: Comprehensive benchmark suite for video generative models. In CVPR , 2024.</li>
+<li>Jiang et al. [2025] Zeyinzi Jiang, Zhen Han, Chaojie Mao, Jingfeng Zhang, Yulin Pan, and Yu Liu. Vace: All-in-one video creation and editing. arXiv preprint arXiv:2508.06148 , 2025.</li>
+<li>Kong et al. [2025] Weijie Kong, Qi Tian, Zijian Zhang, Rox Min, Zuozhuo Dai, Jin Zhou, Jiangfeng Xiong, Xin Li, Bo Wu, Jianwei Zhang, Kathrina Wu, Qin Lin, Junkun Yuan, Yanxin Long, Aladdin Wang, Andong Wang, Changlin Li, Duojun Huang, Fang Yang, Hao Tan, and Hongmei Wang et al. Hunyuanvideo: A systematic framework for large video generative models. arXiv preprint arXiv:2505.06189 , 2025.</li>
+<li>Ku et al. [2024] Max W.F. Ku, Cong Wei, Weiming Ren, Huan Yang, and Wenhu Chen. Anyv2v: A tuning-free framework for any video-to-video editing tasks. Trans. Mach. Learn. Res. , 2024, 2024.</li>
+<li>Labs [2024] Black Forest Labs. Flux, 2024.</li>
+<li>Labs et al. [2025] Black Forest Labs, Stephen Batifol, Andreas Blattmann, Frederic Boesel, Saksham Consul, Cyril Diagne, Tim Dockhorn, Jack English, Zion English, Patrick Esser, Sumith Kulal, Kyle Lacey, Yam Levi, Cheng Li, Dominik Lorenz, Jonas Müller, Dustin Podell, Robin Rombach, Harry Saini, Axel Sauer, and Luke Smith. Flux.1 kontext: Flow matching for in-context image generation and editing in latent space. arXiv preprint arXiv:2506.15742 , 2025.</li>
+<li>Li et al. [2023] Xirui Li, Chao Ma, Xiaokang Yang, and Ming-Hsuan Yang. Vidtome: Video token merging for zero-shot video editing. In CVPR , pages 7486–7495, 2023.</li>
+<li>Ling et al. [2021] Huan Ling, Karsten Kreis, Daiqing Li, Seung Wook Kim, Antonio Torralba, and Sanja Fidler. Editgan: High-precision semantic image editing. In NIPS , 2021.</li>
+<li>Liu et al. [2024] Chang Liu, Rui Li, Kaidong Zhang, Yunwei Lan, and Dong Liu. Stablev2v: Stablizing shape consistency in video-to-video editing. arXiv preprint arXiv:2411.11045 , 2024.</li>
+<li>Liu et al. [2023a] Shilong Liu, Zhaoyang Zeng, Tianhe Ren, Feng Li, Hao Zhang, Jie Yang, Chun yue Li, Jianwei Yang, Hang Su, Jun-Juan Zhu, and Lei Zhang. Grounding dino: Marrying dino with grounded pre-training for open-set object detection. In ECCV , 2023a.</li>
+<li>Liu et al. [2023b] Shaoteng Liu, Yuechen Zhang, Wenbo Li, Zhe Lin, and Jiaya Jia. Video-p2p: Video editing with cross-attention control. CVPR , pages 8599–8608, 2023b.</li>
+<li>Liu et al. [2025] Shaoteng Liu, Tianyu Wang, Jui-Hsien Wang, Qing Liu, Zhifei Zhang, Joon-Young Lee, Yijun Li, Bei Yu, Zhe L. Lin, Soo Ye Kim, and Jiaya Jia. Generative video propagation. In CVPR , 2025.</li>
+<li>Miao et al. [2025] Chenxuan Miao, Yutong Feng, Jianshu Zeng, Zixiang Gao, Hantang Liu, Yunfeng Yan, Donglian Qi, Xi Chen, Bin Wang, and Hengshuang Zhao. Rose: Remove objects with side effects in videos. arXiv preprint arXiv:2508.18633 , 2025.</li>
+<li>OpenAI [2024] OpenAI. Video generation models as world simulators, 2024.</li>
+<li>Ouyang et al. [2024] Wenqi Ouyang, Yi Dong, Lei Yang, Jianlou Si, and Xingang Pan. I2vedit: First-frame-guided video editing via image-to-video diffusion models. SIGGRAPH Asia 2024 Conference Papers , 2024.</li>
+<li>Peebles and Xie [2022] William S. Peebles and Saining Xie. Scalable diffusion models with transformers. In ICCV , pages 4172–4182, 2022.</li>
+<li>Pexels [2025] Pexels. Pexels: The best free stock photos, royalty free images &amp; videos shared by creators, 2025.</li>
+<li>Podell et al. [2023] Dustin Podell, Zion English, Kyle Lacey, Andreas Blattmann, Tim Dockhorn, Jonas Müller, Joe Penna, and Robin Rombach. SDXL: Improving latent diffusion models for high-resolution image synthesis. arXiv preprint arXiv:2307.01952 , 2023.</li>
+<li>Qin et al. [2023] Bosheng Qin, Juncheng Li, Siliang Tang, Tat-Seng Chua, and Yueting Zhuang. Instructvid2vid: Controllable video editing with natural language instructions. 2024 IEEE International Conference on Multimedia and Expo (ICME) , pages 1–6, 2023.</li>
+<li>Radford et al. [2021] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry, Amanda Askell, Pamela Mishkin, Jack Clark, Gretchen Krueger, and Ilya Sutskever. Learning transferable visual models from natural language supervision. In ICML , 2021.</li>
+<li>Ravi et al. [2024] Nikhila Ravi, Valentin Gabeur, Yuan-Ting Hu, Ronghang Hu, Chaitanya K. Ryali, Tengyu Ma, Haitham Khedr, Roman Rädle, Chloé Rolland, Laura Gustafson, Eric Mintun, Junting Pan, Kalyan Vasudev Alwala, Nicolas Carion, Chao-Yuan Wu, Ross B. Girshick, Piotr Doll'ar, and Christoph Feichtenhofer. SAM 2: Segment anything in images and videos. arXiv preprint arXiv:2408.00714 , 2024.</li>
+<li>Rombach et al. [2022] Robin Rombach, Andreas Blattmann, Dominik Lorenz, Patrick Esser, and Björn Ommer. High-resolution image synthesis with latent diffusion models. arXiv preprint arXiv:2112.10752 , 2022.</li>
+<li>Ronneberger et al. [2015] Olaf Ronneberger, Philipp Fischer, and Thomas Brox. U-Net: Convolutional networks for biomedical image segmentation. arXiv preprint arXiv:1505.04597 , 2015.</li>
+<li>Song et al. [2020] Jiaming Song, Chenlin Meng, and Stefano Ermon. Denoising diffusion implicit models. arXiv preprint arXiv:2010.02502 , 2020.</li>
+<li>Tan et al. [2025] Zhiyu Tan, Hao Yang, Luozheng Qin, Jia Gong, Mengping Yang, and Hao Li. Omni-video: Democratizing unified video understanding and generation. arXiv preprint arXiv:2507.06119 , 2025.</li>
+<li>Wan et al. [2025] Team Wan, Ang Wang, Baole Ai, Bin Wen, Chaojie Mao, Chen-Wei Xie, Di Chen, Feiwu Yu, Haiming Zhao, Jianxiao Yang, Jianyuan Zeng, Jiayu Wang, Jingfeng Zhang, Jingren Zhou, Jinkai Wang, Jixuan Chen, Kai Zhu, Kang Zhao, and Keyu Yan et al. Wan: Open and advanced large-scale video generative models. arXiv preprint arXiv:2503.20314 , 2025.</li>
+<li>Wang et al. [2025] Ge Wang, Songlin Fan, Hangxu Liu, Quanjian Song, Hewei Wang, and Jinfeng Xu. Consistent video editing as flow-driven image-to-video generation. arXiv preprint arXiv:2506.07713 , 2025.</li>
+<li>Wang et al. [2023] Wen Wang, Kan Xie, Zide Liu, Hao Chen, Yue Cao, Xinlong Wang, and Chunhua Shen. Zero-shot video editing using off-the-shelf image diffusion models. arXiv preprint arXiv:2303.17599 , 2023.</li>
+<li>Wu et al. [2023] Bichen Wu, Ching-Yao Chuang, Xiaoyan Wang, Yichen Jia, Kapil Krishnakumar, Tong Xiao, Feng Liang, Licheng Yu, and Péter Vajda. Fairy: Fast parallelized instruction-guided video-to-video synthesis. In CVPR , pages 8261–8270, 2023.</li>
+<li>Wu et al. [2025a] Chenfei Wu, Jiahao Li, Jingren Zhou, Junyang Lin, Kaiyuan Gao, Kun Yan, Sheng ming Yin, Shuai Bai, Xiao Xu, Yilei Chen, Yuxiang Chen, Zecheng Tang, Zekai Zhang, Zhengyi Wang, An Yang, Bowen Yu, Chen Cheng, Dayiheng Liu, and Deqing Li et al. Qwen-image technical report. arXiv preprint arXiv:2506.08336 , 2025a.</li>
+<li>Wu et al. [2025b] Yuhui Wu, Liyi Chen, Rui Li, Shihao Wang, Chenxi Xie, and Lei Zhang. Insvie-1m: Effective instruction-based video editing with elaborate dataset construction. arXiv preprint arXiv:2503.20287 , 2025b.</li>
+<li>Xia et al. [2025] Bin Xia, Jiyang Liu, Yuechen Zhang, Bohao Peng, Ruihang Chu, Yitong Wang, Xinglong Wu, Bei Yu, and Jiaya Jia. Dreamve: Unified instruction-based image and video editing. arXiv preprint arXiv:2508.06080 , 2025.</li>
+<li>Yang et al. [2023] Shuai Yang, Yifan Zhou, Ziwei Liu, , and Chen Change Loy. Rerender a video: Zero-shot text-guided video-to-video translation. In ACM SIGGRAPH Asia Conference Proceedings , 2023.</li>
+<li>Zhang et al. [2023] Zhixing Zhang, Bichen Wu, Xiaoyan Wang, Yaqiao Luo, Luxin Zhang, Yinan Zhao, Péter Vajda, Dimitris N. Metaxas, and Licheng Yu. Avid: Any-length video inpainting with diffusion model. In CVPR , pages 7162–7172, 2023.</li>
+<li>Zhou et al. [2023] Shangchen Zhou, Chongyi Li, Kelvin C. K. Chan, and Chen Change Loy. Propainter: Improving propagation and transformer for video inpainting. In ICCV , pages 10443–10452, 2023.</li>
+<li>Zi et al. [2024] Bojia Zi, Shihao Zhao, Xianbiao Qi, Jianan Wang, Yukai Shi, Qianyu Chen, Bin Liang, Kam-Fai Wong, and Lei Zhang. Cococo: Improving text-guided video inpainting for better consistency, controllability and compatibility. arXiv preprint arXiv:2403.12035 , 2024.</li>
+<li>Zi et al. [2025a] Bojia Zi, Weixuan Peng, Xianbiao Qi, Jianan Wang, Shihao Zhao, Rong Xiao, and Kam-Fai Wong. Minimax-remover: Taming bad noise helps video object removal. arXiv preprint arXiv:2505.04852 , 2025a.</li>
+<li>Zi et al. [2025b] Bojia Zi, Penghui Ruan, Marco Chen, Xianbiao Qi, Shaozhe Hao, Shihao Zhao, Youze Huang, Bin Liang, Rong Xiao, and Kam-Fai Wong. Señorita-2m: A high-quality instruction-based dataset for general video editing by video specialists. arXiv preprint arXiv:2508.06149 , 2025b.</li>
+</ul>
+<h2 id="_2">補充材料</h2>
+<h2 id="a">附錄 A 天真型多關鍵幀引導實驗詳情</h2>
+<p>為了探索多關鍵幀引導在時間一致性視頻編輯中的可行性，我們使用參考轉視頻擴散模型 WAN VACE 進行初步實驗。VACE 接受兩個輔助輸入：(1) 參考視頻，提供語義或結構引導（例如編輯後的 RGB 幀、深度圖或姿態骨架），以及 (2) 遮罩視頻，指示每幀中要保留（黑色像素）或重新生成（白色像素）的區域。</p>
+<p>我們最初的嘗試採用了一個直接的多關鍵幀策略：我們通過在相應的時間戳處放置使用者編輯的關鍵幀來構造參考視頻，同時用統一的灰色幀（RGB 值 127）填充所有非關鍵幀位置。同時，遮罩視頻在關鍵幀處設定為黑色（指示模型忠實地重建編輯內容），在其他位置設定為白色（促使基於參考進行內容生成）。然而，這個天真的設置在 VACE 的 1.3B 和 14B 參數變體中都導致了嚴重的時間閃爍和不一致的運動。我們假設這種不穩定性是因為 VACE 未在這種稀疏、不連續的參考信號上進行訓練，導致幻覺紋理和關鍵幀之間不連貫的運動插值。</p>
+<p>為了緩解這個問題，我們設計了一個更穩定的參考配置。具體來說，我們在參考視頻中僅在第一個關鍵幀（通常是視頻的第一幀）處保留編輯後的 RGB 圖像。對於所有後續關鍵幀，我們用從原始編輯幀派生的對應深度圖替換編輯後的 RGB 內容。深度圖被選中是因為它們編碼結構和運動線索，高頻外觀變化遠少於 RGB 圖像，從而降低引入不一致視覺信號的風險。與此同時，遮罩視頻得到簡化：僅第一幀設定為黑色（以錨定編輯後的外觀），所有剩餘幀（包括其他關鍵幀）都設定為白色，指示模型應使用參考引導合成這些幀。</p>
+<p>這個改進的設置有效地解耦了外觀和運動引導：模型從第一個編輯幀學習目標外觀，同時利用來自後續關鍵幀的深度衍生結構線索來保留原始視頻的運動動態。在此配置下，VACE 產生視覺上更穩定的輸出，閃爍現象減少，使我們能夠有意義地分析稀疏多關鍵幀編輯的局限性。</p>
+<h2 id="appendix-b-details-of-training-pipelines">Appendix B Details of Training Pipelines</h2>
+<p>Algorithm 1 Source Fidelity Pipeline (Pseudo-Source Generation)</p>
+<p>Algorithm 2 Anchored Control Pipeline (Degraded Reference)</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x10.png" loading="lazy"></figure> Figure 12 : More visual results (1).</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x11.png" loading="lazy"></figure> Figure 13 : More visual results (2).</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x12.png" loading="lazy"></figure> Figure 14 : More visual results (3).</p>
+<p><figure class="paper-figure"><img src="../../figures/2026-03-04/2603.02802/x13.png" loading="lazy"></figure> Figure 15 : More visual results (4).</p>
+  
+</div>
+
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>每日自動抓取 <a href="https://huggingface.co/papers" target="_blank">HuggingFace Daily Papers</a>，以 Claude AI 翻譯為繁體中文。</p>
+    </div>
+  </footer>
+</body>
+</html>
